@@ -1,0 +1,47 @@
+# pftb — 作業の進め方
+
+single play browser football game。単一HTML・オフライン・スマホ縦持ちの1人プレイ用サッカーゲーム。
+ゲーム内容はまだ未確定(→ [docs/03-game-design.md](docs/03-game-design.md) の D1〜D8)。
+
+## 原則
+
+- **SPEC が正本**。仕様変更は「①`SPEC.md`/`docs/` を更新 → ②実装 → ③一致を検証」の順。
+  実装とSPECが食い違ったらSPECを正とする。
+- **`index.html` は直接編集しない**(ビルド成果物)。`src/js/*.js` と `src/css/*.css` を編集し、
+  `python build.py` で再生成する。
+- **数値は `data.js` の `TUNING` に集約**。確率・係数・閾値をロジックに直書きしない。
+- コミットメッセージは日本語。**プッシュは明示的に指示されたときだけ**行う。
+
+## 変更のたびに走らせるもの
+
+```bash
+python build.py                  # 再埋め込み + 参照ID整合チェック(MISSING ids なし)
+cd src/tests && node integration.js && node hangtest.js
+```
+
+ブラウザでの目視確認まで含めた手順は [docs/04-testing.md](docs/04-testing.md)。
+
+## よくある変更の触る場所
+
+| やること | 触る場所 |
+|---|---|
+| 画面を増やす | `index.html` に `<div id="scr-xxx" class="screen">` → `ui.js` の `SCREENS` に描画関数を登録 |
+| セーブ項目を増やす | `state.js` の `defaultState()`。構造変更なら `SAVE_VER` を上げて `migrate()` を書く |
+| JS/CSSファイルを増やす | `build.py` の `JS_FILES`/`CSS_FILES`(JSは `src/tests/_setup.js` の `JS_FILES` も**両方**更新) |
+| 画像を足す | `src/assets/<グループ>/<名前>.png` に置く → `window.ASSETS["グループ"]["名前"]` で参照 |
+
+## 姉妹プロジェクト card-eleven の参照方針
+
+`c:\Claude\repository\card-eleven` に、同じ土台で作られた収集型カードサッカーゲームがある
+(試合エンジン・ガチャ・カード描画・キャリアモードなどが実装済み)。
+
+- 本プロジェクトは**土台のみを継承**しており、ゲームコードは引き継いでいない。
+- 試合エンジンなどを作る段になったら、**その都度 card-eleven の該当ファイルを読んで考え方だけ取り込む**。
+  ファイルの丸ごとコピーはしない(前提と負債ごと持ち込むことになるため)。
+- 参考にした場合は [docs/05-decisions-backlog.md](docs/05-decisions-backlog.md) の決定事項ログに残す。
+
+参考になりやすい箇所:
+- `src/js/match-core.js` — DOM非依存の純粋な試合計算
+- `src/js/match-flow.js` — 進行制御とレジストリによる拡張の作り方
+- `src/js/match-render.js` — 描画と演出の分離
+- `docs/01-architecture.md` — 土台の設計意図

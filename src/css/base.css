@@ -1,0 +1,87 @@
+/* ================= 変数・土台 =================
+   スマートフォン縦持ちを基準にした1カラムレイアウト。
+   見た目のスキンを重ねる場合は base.css を土台に、別CSSを後段レイヤーとして追加する
+   (build.py の CSS_FILES に後ろから追加すれば上書きレイヤーになる)。 */
+:root{
+  --bg:#0b1220; --panel:#111c2e; --line:#2a3d56; --fg:#e8f0fb; --dim:#9fb3cc;
+  --accent:#39c07a; --accent2:#f0b429; --danger:#e05563;
+  --wrap:520px; --tabh:56px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font:14px/1.6 system-ui,-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px));
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:8px 12px}
+
+/* ================= ヘッダ ================= */
+.apphead{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.ah-l{display:flex;align-items:center;gap:8px;min-width:0}
+.ah-owner{color:var(--dim);font-size:11px;white-space:nowrap}
+.ah-team{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.coins{color:var(--accent2);font-weight:700;white-space:nowrap}
+h1{font-size:22px;letter-spacing:.08em;margin:14px 0 0;text-align:center}
+.sub{color:var(--dim);font-size:10px;letter-spacing:.22em;text-align:center;margin-bottom:12px}
+
+/* ================= 画面切替 ================= */
+.screen{display:none}
+.screen.on{display:block}
+body.on-title .tabs{display:none}      /* タイトル中は下部タブを隠す */
+body.on-title .apphead{display:none}
+
+/* ================= 部品 ================= */
+.btn{
+  display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--accent);color:#06210f;font-weight:700;font-size:14px;cursor:pointer;
+}
+.btn.ghost{background:transparent;color:var(--fg)}
+.btn.tstart{background:var(--accent2);color:#2a1c00}
+.btn:active{transform:translateY(1px)}
+.row{display:flex;gap:8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0}
+.lg{color:var(--dim);font-size:11px}
+.field{margin-top:10px}
+.field label{display:block;color:var(--dim);font-size:11px;margin-bottom:4px}
+.input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
+  background:#0c1626;color:var(--fg);font-size:14px}
+
+/* ================= タイトル画面 ================= */
+.tscreen{padding:24px 0}
+.t-illust{display:flex;align-items:center;justify-content:center;height:180px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.t-logo{font-size:40px;font-weight:900;letter-spacing:.1em;color:var(--accent)}
+.t-actions{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+
+/* ================= モーダル ================= */
+.modal{display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;padding:16px}
+.modal.on{display:flex}
+.sheet{position:relative;width:100%;max-width:var(--wrap);max-height:86vh;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.sheet h3{margin:0 0 4px;font-size:15px}
+.close-btn{position:absolute;top:8px;right:8px;background:none;border:0;color:var(--dim);
+  font-size:16px;cursor:pointer}
+
+/* ================= トースト ================= */
+.toast{display:none;position:fixed;left:50%;bottom:calc(var(--tabh) + 16px);transform:translateX(-50%);
+  z-index:60;max-width:90vw;padding:10px 14px;border-radius:8px;
+  background:#1c2b42;border:1px solid var(--line);font-size:12px}
+
+/* ================= 下部タブ ================= */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;
+  height:calc(var(--tabh) + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:var(--panel);border-top:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;color:var(--dim);font-size:10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.tabs button.on{color:var(--accent)}
+.tabs .ico{font-size:18px;line-height:1}
+
+/* ================= アクセシビリティ ================= */
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}

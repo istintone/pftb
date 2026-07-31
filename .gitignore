@@ -1,0 +1,20 @@
+# テストの一時ファイル
+src/tests/_tmp_*.js
+
+# ローカル検証専用(build.py --dev でのみ使用。本番 index.html には含めない)
+src/js/_dev.js
+index.dev.html
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc

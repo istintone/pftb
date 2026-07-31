@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pftb</title>
+<style>
+/* ================= 変数・土台 =================
+   スマートフォン縦持ちを基準にした1カラムレイアウト。
+   見た目のスキンを重ねる場合は base.css を土台に、別CSSを後段レイヤーとして追加する
+   (build.py の CSS_FILES に後ろから追加すれば上書きレイヤーになる)。 */
+:root{
+  --bg:#0b1220; --panel:#111c2e; --line:#2a3d56; --fg:#e8f0fb; --dim:#9fb3cc;
+  --accent:#39c07a; --accent2:#f0b429; --danger:#e05563;
+  --wrap:520px; --tabh:56px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font:14px/1.6 system-ui,-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom,0px));
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:8px 12px}
+
+/* ================= ヘッダ ================= */
+.apphead{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.ah-l{display:flex;align-items:center;gap:8px;min-width:0}
+.ah-owner{color:var(--dim);font-size:11px;white-space:nowrap}
+.ah-team{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.coins{color:var(--accent2);font-weight:700;white-space:nowrap}
+h1{font-size:22px;letter-spacing:.08em;margin:14px 0 0;text-align:center}
+.sub{color:var(--dim);font-size:10px;letter-spacing:.22em;text-align:center;margin-bottom:12px}
+
+/* ================= 画面切替 ================= */
+.screen{display:none}
+.screen.on{display:block}
+body.on-title .tabs{display:none}      /* タイトル中は下部タブを隠す */
+body.on-title .apphead{display:none}
+
+/* ================= 部品 ================= */
+.btn{
+  display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;
+  background:var(--accent);color:#06210f;font-weight:700;font-size:14px;cursor:pointer;
+}
+.btn.ghost{background:transparent;color:var(--fg)}
+.btn.tstart{background:var(--accent2);color:#2a1c00}
+.btn:active{transform:translateY(1px)}
+.row{display:flex;gap:8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0}
+.lg{color:var(--dim);font-size:11px}
+.field{margin-top:10px}
+.field label{display:block;color:var(--dim);font-size:11px;margin-bottom:4px}
+.input{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
+  background:#0c1626;color:var(--fg);font-size:14px}
+
+/* ================= タイトル画面 ================= */
+.tscreen{padding:24px 0}
+.t-illust{display:flex;align-items:center;justify-content:center;height:180px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.t-logo{font-size:40px;font-weight:900;letter-spacing:.1em;color:var(--accent)}
+.t-actions{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+
+/* ================= モーダル ================= */
+.modal{display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;padding:16px}
+.modal.on{display:flex}
+.sheet{position:relative;width:100%;max-width:var(--wrap);max-height:86vh;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.sheet h3{margin:0 0 4px;font-size:15px}
+.close-btn{position:absolute;top:8px;right:8px;background:none;border:0;color:var(--dim);
+  font-size:16px;cursor:pointer}
+
+/* ================= トースト ================= */
+.toast{display:none;position:fixed;left:50%;bottom:calc(var(--tabh) + 16px);transform:translateX(-50%);
+  z-index:60;max-width:90vw;padding:10px 14px;border-radius:8px;
+  background:#1c2b42;border:1px solid var(--line);font-size:12px}
+
+/* ================= 下部タブ ================= */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;
+  height:calc(var(--tabh) + env(safe-area-inset-bottom,0px));
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:var(--panel);border-top:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;color:var(--dim);font-size:10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.tabs button.on{color:var(--accent)}
+.tabs .ico{font-size:18px;line-height:1}
+
+/* ================= アクセシビリティ ================= */
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="bootStat" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#7a1740;color:#fff;font:11px/1.6 monospace;padding:4px 8px">BOOT 1/2: HTML読込OK / メインJSの解析待ち…</div>
+<script>
+/* 起動診断(ES5・本体JSから独立): 本体が構文エラーで死んでも画面に理由が出るようにする。
+   本体側は window.__boot(msg, ok) で進捗を報告する。 */
+(function(){
+  var st=document.getElementById("bootStat");
+  window.__boot=function(msg,ok){
+    st.style.display="block";
+    st.textContent="BOOT: "+msg;
+    st.style.background=ok?"#0e5c30":"#7a1740";
+    if(ok)setTimeout(function(){st.style.display="none";},3000);
+  };
+  window.addEventListener("error",function(ev){
+    st.style.display="block";st.style.background="#7a1740";
+    st.textContent="⚠ JSエラー: "+(ev.message||"?")+" (行"+(ev.lineno||"?")+":"+(ev.colno||"?")+")";
+  },true);
+  window.addEventListener("unhandledrejection",function(ev){
+    st.style.display="block";st.style.background="#7a1740";
+    st.textContent="⚠ 非同期エラー: "+((ev.reason&&ev.reason.message)||ev.reason||"?");
+  });
+})();
+</script>
+<div class="wrap">
+  <div class="apphead" id="apphead">
+    <div class="ah-l"><span class="ah-owner" id="ahOwner">👤 監督</span><b class="ah-team" id="ahTeam">マイクラブ</b></div>
+    <div class="ah-r"><div class="coins">🪙 <span id="coinN">0</span></div></div>
+  </div>
+  <h1>pftb</h1>
+  <div class="sub">SINGLE PLAY BROWSER FOOTBALL</div>
+
+  <div id="scr-title" class="screen on">
+    <div class="tscreen">
+      <div class="t-illust"><div class="t-logo">pftb</div></div>
+      <div class="t-actions">
+        <button class="btn tstart" id="btnContinue" style="display:none">つづきから</button>
+        <button class="btn ghost" id="btnNew">はじめから</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="scr-home" class="screen">
+    <div id="homeBody"></div>
+  </div>
+
+  <div id="scr-team" class="screen">
+    <div id="teamBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="profileModal">
+  <div class="sheet">
+    <button class="close-btn" id="profileClose">☒</button>
+    <h3>クラブ設立</h3>
+    <div class="field"><label for="pfTeam">クラブ名</label><input id="pfTeam" class="input" maxlength="16" placeholder="クラブ名を入力"></div>
+    <div class="field"><label for="pfCoach">監督名</label><input id="pfCoach" class="input" maxlength="16" placeholder="監督名を入力"></div>
+    <div class="row" style="margin-top:12px"><button class="btn" id="pfSave">はじめる</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="tabs">
+  <button data-s="home" class="on"><span class="ico">⚽</span>試合</button>
+  <button data-s="team"><span class="ico">📋</span>編成</button>
+</div>
+<script>
+"use strict";
+window.ASSETS={};
+// ================= 定義・ユーティリティ =================
+// このファイルは結合時の先頭。1行目の "use strict"; の直後へ build.py が
+// アセット(window.ASSETS)を注入するので、1行目は必ず "use strict"; のままにする。
+
+const GAME={ id:"pftb", title:"pftb", sub:"SINGLE PLAY BROWSER FOOTBALL" };
+
+// --- 汎用ユーティリティ ---
+const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));    // a..b の整数乱数(両端含む)
+const rnd=a=>a[Math.floor(Math.random()*a.length)];     // 配列から1つ
+const clamp=(v,lo,hi)=>v<lo?lo:v>hi?hi:v;
+// Promiseにタイムアウトを付ける。ストレージや画像が応答しなくても起動を止めないための保険。
+function withTimeout(p,ms,fallback=null){
+  return Promise.race([Promise.resolve(p),new Promise(r=>{
+    const t=setTimeout(()=>r(fallback),ms);
+    if(t&&t.unref)t.unref(); // node(テスト)でプロセスを引き止めない
+  })]);
+}
+
+// --- ポジション(大分類。細分ポジションは仕様確定後にここへ足す) ---
+const POS=["GK","DF","MF","FW"];
+
+// --- バランスダイヤル ---
+// 確率・係数・閾値は必ずここに集約し、ロジック側へ数値を直書きしない(調整点を1か所に保つ)。
+const TUNING={};
+
+// ================= 状態と保存 =================
+// セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
+// スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
+const SAVE_KEY="pftb-save";
+const SAVE_VER=1;
+
+function defaultState(){
+  return { v:SAVE_VER, coins:0, coach:"", teamName:"" };
+}
+let S=defaultState();
+
+// --- 永続化 ---
+// 通常のブラウザ/GitHub Pages では localStorage。ホスト側が window.storage(非同期)を
+// 提供する環境ではそちらを優先し、応答が無い場合もタイムアウトで起動を続行する。
+async function readSave(){ // 保存済みJSON文字列(無ければnull)
+  if(typeof window!=="undefined"&&window.storage){
+    try{ const r=await withTimeout(window.storage.get(SAVE_KEY),3000); return (r&&r.value)||null; }catch(e){ return null; }
+  }
+  try{ return localStorage.getItem(SAVE_KEY); }catch(e){ return null; }
+}
+async function _writeRaw(v){ // 生JSON文字列を書き込む(インポート用)
+  if(typeof window!=="undefined"&&window.storage){
+    try{ await withTimeout(window.storage.set(SAVE_KEY,v),2500); }catch(e){}
+    return;
+  }
+  try{ localStorage.setItem(SAVE_KEY,v); }catch(e){}
+}
+async function _writeSave(){ _saveDirty=false; await _writeRaw(JSON.stringify(S)); }
+
+let _saveTimer=null,_saveDirty=false;
+// 保存はデバウンス: 連続した save() を1回の書き込みにまとめる。
+// 取りこぼし防止に、画面非表示/離脱時は必ずフラッシュする。即時resolveなので await save() でも使える。
+function save(){
+  _saveDirty=true;
+  if(!_saveTimer){
+    _saveTimer=setTimeout(()=>{_saveTimer=null;if(_saveDirty)_writeSave();},600);
+    if(_saveTimer&&_saveTimer.unref)_saveTimer.unref(); // node(テスト)でプロセスを引き止めない
+  }
+  return Promise.resolve();
+}
+function flushSave(){ if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;} if(_saveDirty)return _writeSave(); }
+if(typeof window!=="undefined"&&window.addEventListener){
+  if(typeof document!=="undefined"&&document.addEventListener)
+    document.addEventListener("visibilitychange",()=>{ if(document.hidden)flushSave(); });
+  window.addEventListener("pagehide",flushSave);
+  window.addEventListener("beforeunload",flushSave);
+}
+async function hasSave(){ return !!(await readSave()); }
+function deleteSave(){
+  _saveDirty=false; if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;} // 保留中の保存を破棄(削除後に復活させない)
+  if(typeof window!=="undefined"&&window.storage){ try{ window.storage.set(SAVE_KEY,""); }catch(e){} }
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+}
+
+// --- 移行/バックアップ ---
+// 端末・URL間の引っ越し用。エクスポートは保留中の保存をフラッシュしてから現在のSを返す。
+async function exportSave(){ await flushSave(); return JSON.stringify(S); }
+async function importSave(text){
+  let obj;
+  try{ obj=JSON.parse(String(text||"").trim()); }catch(e){ throw new Error("JSONとして読み取れません(コピー漏れの可能性)"); }
+  if(!obj||typeof obj!=="object"||Array.isArray(obj)) throw new Error("セーブデータの形式ではありません");
+  if(typeof obj.v!=="number") throw new Error(GAME.title+"のセーブではないようです(vが無い)");
+  await _writeRaw(JSON.stringify(obj)); // 検証済みをそのまま保存(次回のloadGameで補完/移行)
+  return true;
+}
+
+// 旧スキーマからの補完。SAVE_VER を上げたときに if(S.v<N){...} を積み増す。
+function migrate(){
+  S.v=SAVE_VER;
+}
+
+function applyDefaults(){ S=defaultState(); }              // 新規データ
+async function newGame(){ applyDefaults(); await save(); } // はじめから(上書き確認は呼び出し側)
+async function loadGame(){                                 // つづきから(セーブが無ければ新規)
+  const v=await readSave();
+  if(!v){ applyDefaults(); await save(); return; }
+  try{ S=JSON.parse(v); }catch(e){ applyDefaults(); await save(); return; }
+  if(S.v<SAVE_VER){ migrate(); await save(); }
+  // 版に依らない欠落補完(古いセーブに新フィールドを足したときの保険)
+  const d=defaultState();
+  for(const k in d) if(S[k]===undefined) S[k]=d[k];
+}
+
+// ================= 画面と共通UI =================
+// 画面は #scr-<id> の要素を .on で1つだけ表示する方式。増やすときは
+// index.html に <div id="scr-xxx" class="screen"> を足し、SCREENS に描画関数を登録する。
+
+const $=id=>document.getElementById(id);
+
+// 画面ID → 表示時に呼ぶ描画関数。画面を追加したらここに1行足す。
+const SCREENS={ home:()=>renderHome(), team:()=>renderTeam() };
+
+function show(id){
+  document.querySelectorAll(".screen").forEach(el=>el.classList.remove("on"));
+  const el=$("scr-"+id); if(el)el.classList.add("on");
+  document.body.classList.toggle("on-title",id==="title");
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.s===id));
+  const f=SCREENS[id]; if(f)f();
+}
+
+let _toastTimer=null;
+function toast(msg){
+  const t=$("toast"); if(!t)return;
+  t.textContent=msg; t.style.display="block";
+  if(_toastTimer)clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>{t.style.display="none";},2600);
+}
+
+function coinUI(){
+  $("coinN").textContent=S.coins;
+  $("ahTeam").textContent=S.teamName||"マイクラブ";
+  $("ahOwner").textContent="👤 "+(S.coach||"監督");
+}
+
+// --- 各画面の描画(中身は仕様確定後に実装。今は土台の動作確認用) ---
+function renderHome(){
+  $("homeBody").innerHTML=
+    '<div class="card"><b>試合</b><div class="lg">未実装 — ここに対戦相手の一覧と試合開始を置く。</div></div>';
+}
+function renderTeam(){
+  $("teamBody").innerHTML=
+    '<div class="card"><b>編成</b><div class="lg">未実装 — ここにフォーメーションと選手配置を置く。</div></div>';
+}
+
+// --- クラブ設立モーダル(監督名/クラブ名の入力) ---
+function openProfile(isNew){
+  $("pfTeam").value=S.teamName||"";
+  $("pfCoach").value=S.coach||"";
+  $("profileModal").classList.add("on");
+  $("pfSave").onclick=async()=>{
+    const tn=($("pfTeam").value||"").trim(), cn=($("pfCoach").value||"").trim();
+    if(!tn||!cn){ toast("クラブ名と監督名を入力してください"); return; }
+    if(isNew)await newGame();
+    S.teamName=tn; S.coach=cn; await save();
+    $("profileModal").classList.remove("on");
+    coinUI(); show("home");
+  };
+}
+
+// --- 配線(結合時に一度だけ実行される) ---
+document.querySelectorAll(".tabs button").forEach(b=>{ b.onclick=()=>show(b.dataset.s); });
+$("profileClose").onclick=()=>$("profileModal").classList.remove("on");
+
+// ================= 起動 =================
+// 結合順の最後。ここだけが起動の副作用(即時実行)を持つ。
+// テスト(src/tests/_setup.js)は boot.js を読み込まず、必要な関数を明示的に呼ぶ。
+function showErr(m){
+  try{
+    const t=document.getElementById("toast");
+    t.textContent="⚠ "+((m&&m.message)||m||"不明なエラー");
+    t.style.display="block";
+    setTimeout(()=>t.style.display="none",5000);
+  }catch(e){}
+}
+window.addEventListener("error",ev=>showErr(ev.message));
+window.addEventListener("unhandledrejection",ev=>showErr(ev.reason));
+
+// タイトルの「つづきから/はじめから」を配線。セーブの有無でボタンの主従を入れ替える。
+function setupTitleButtons(exists){
+  const cont=document.getElementById("btnContinue"), nw=document.getElementById("btnNew");
+  cont.style.display=exists?"":"none";
+  nw.className=exists?"btn ghost":"btn tstart";
+  cont.onclick=async()=>{ await loadGame(); coinUI(); show("home"); };
+  nw.onclick=async()=>{
+    if(await hasSave()&&!confirm("はじめからプレイすると、現在のセーブデータは消えます。よろしいですか?"))return;
+    openProfile(true);
+  };
+}
+
+document.body.classList.add("on-title"); // 起動時はタイトル表示=下部タブ非表示
+(async()=>{
+  try{
+    coinUI();
+    setupTitleButtons(await hasSave());
+    window.__boot&&window.__boot("2/2: 起動完了!",true);
+  }catch(e){
+    showErr(e);
+    try{ setupTitleButtons(false); }catch(_){}
+    window.__boot&&window.__boot("2/2: 起動完了(初期化に一部失敗)",true);
+  }
+})();
+</script>
+</body>
+</html>
