@@ -26,6 +26,18 @@ import pathlib
 ROOT = pathlib.Path(__file__).parent
 HTML = ROOT / "index.html"
 ASSET_DIR = ROOT / "src" / "assets"   # 画像アセット。<グループ名>/<名前>.png|webp|jpg で置く
+FONT_DIR = ASSET_DIR / "fonts"        # 埋め込みフォント(latinサブセットのwoff2)
+
+# 埋め込むフォント: (ファイル名, CSSのfamily名, 可変ウェイトの範囲)
+# いずれも可変フォント1本で全ウェイトを賄うため、@font-face は family ごとに1つで足りる。
+FONTS = [
+    ("inter-latin.woff2", "Inter", "100 900"),
+    ("oswald-latin.woff2", "Oswald", "200 700"),
+    ("jetbrainsmono-latin.woff2", "JetBrains Mono", "100 800"),
+]
+# Google Fonts の latin サブセットと同じ範囲。日本語はシステムフォントに落ちる。
+LATIN_RANGE = ("U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,"
+               "U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD")
 
 # 結合順序。JSはグローバルスコープに連結されるため定義順は基本自由だが、
 # data.js は先頭(1行目の "use strict"; 直後にアセットを注入するため)、
@@ -61,6 +73,30 @@ def _asset_block():
     return "window.ASSETS={%s};" % ",".join(groups)
 
 
+def _font_block():
+    """src/assets/fonts/*.woff2 を base64 データURI化して @font-face 群を生成する。
+    外部リクエストを一切発生させないための埋め込み(→docs/01-architecture.md「オフライン動作」)。
+    未配置のフォントは黙って飛ばす(システムフォントへフォールバックして動作は続く)。"""
+    out = []
+    for fname, family, weight in FONTS:
+        f = FONT_DIR / fname
+        if not f.is_file():
+            print("⚠ フォント未配置(システムフォントで代替):", fname)
+            continue
+        b64 = base64.b64encode(f.read_bytes()).decode("ascii")
+        out.append(
+            "@font-face{font-family:'%s';font-style:normal;font-weight:%s;font-display:swap;"
+            "src:url(data:font/woff2;base64,%s) format('woff2');unicode-range:%s}"
+            % (family, weight, b64, LATIN_RANGE)
+        )
+    return "\n".join(out)
+
+
+def _assemble_css():
+    """@font-face(埋め込みフォント)を先頭に、src/css/*.css を結合したものを返す。"""
+    return _font_block() + "\n\n" + _join("css", CSS_FILES)
+
+
 def _assemble_js(dev=False):
     """JS本体を結合し、先頭の "use strict"; 直後にアセットのグローバルを差し込む
     (strictモードを保ちつつ、データ定義より前に画像を用意する)。
@@ -82,7 +118,7 @@ def main():
 
     html = HTML.read_text(encoding="utf-8")  # テンプレートは常に index.html
     js_src = _assemble_js(dev)
-    css_src = _join("css", CSS_FILES)
+    css_src = _assemble_css()
 
     style_blocks = list(re.finditer(r"(<style>)(.*?)(</style>)", html, re.S))
     script_blocks = list(re.finditer(r"(<script[^>]*>)(.*?)(</script>)", html, re.S))

@@ -12,27 +12,27 @@ function showErr(m){
 window.addEventListener("error",ev=>showErr(ev.message));
 window.addEventListener("unhandledrejection",ev=>showErr(ev.reason));
 
-// タイトルの「つづきから/はじめから」を配線。セーブの有無でボタンの主従を入れ替える。
-function setupTitleButtons(exists){
-  const cont=document.getElementById("btnContinue"), nw=document.getElementById("btnNew");
-  cont.style.display=exists?"":"none";
-  nw.className=exists?"btn ghost":"btn tstart";
-  cont.onclick=async()=>{ await loadGame(); coinUI(); show("home"); };
-  nw.onclick=async()=>{
-    if(await hasSave()&&!confirm("はじめからプレイすると、現在のセーブデータは消えます。よろしいですか?"))return;
-    openProfile(true);
+// タイトルをタップしたときの入口。セーブがあれば続きから、無ければ就任契約書へ。
+function setupTitle(exists){
+  const t=document.getElementById("scr-title");
+  document.getElementById("tFoot").textContent=exists?"タップして続きから":"© P-FOOTBALL";
+  t.onclick=async()=>{
+    t.onclick=null;                      // 二重起動を防ぐ
+    try{
+      if(exists){ await loadGame(); headUI(); show("home"); }
+      else openContract();
+    }catch(e){ showErr(e); t.onclick=null; openContract(); }
   };
 }
 
-document.body.classList.add("on-title"); // 起動時はタイトル表示=下部タブ非表示
 (async()=>{
   try{
-    coinUI();
-    setupTitleButtons(await hasSave());
+    headUI();
+    setupTitle(await hasSave());
     window.__boot&&window.__boot("2/2: 起動完了!",true);
   }catch(e){
     showErr(e);
-    try{ setupTitleButtons(false); }catch(_){}
+    try{ setupTitle(false); }catch(_){}
     window.__boot&&window.__boot("2/2: 起動完了(初期化に一部失敗)",true);
   }
 })();

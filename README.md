@@ -54,6 +54,11 @@ for t in integration hangtest; do
 done
 ```
 
+### ブラウザでの確認
+```bash
+node tools/drive.js       # headless Chrome で画面を辿ってスクリーンショットを撮る(依存なし)
+```
+
 詳しい手順は [docs/04-testing.md](docs/04-testing.md) を参照。
 
 ## GitHub Pages での公開手順

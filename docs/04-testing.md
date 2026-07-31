@@ -12,8 +12,13 @@
 
 | テスト | 内容 | 位置づけ |
 |---|---|---|
-| `integration.js` | 新規作成 → 保存 → 読込 → 書き出し/読み込み → 画面切替 | 必須 |
+| `integration.js` | 新規作成 → 保存 → 読込 → 書き出し/読み込み → 削除 → **画面レジストリ整合** → 画面切替/戻る | 必須 |
 | `hangtest.js` | ストレージ無応答でも起動が止まらない(タイムアウトで既定データ続行) | 必須 |
+
+> **画面レジストリ整合**は `SCREENS` のキーと `index.html` の `id="scr-*"` が1対1であること、
+> タブが5つでそれぞれ同名画面を指していること、`under` が実在するタブを指していることを検査する。
+> `index.html` には JS/CSS が丸ごと埋め込まれているため、走査前に `<script>`/`<style>` を落としている
+> (落とさないとコード中のコメント文字列まで拾ってしまう)。
 
 ### 4.2 実行
 
@@ -36,8 +41,31 @@ foreach ($t in @("integration","hangtest")) {
 ### 4.3 三層の検証
 
 1. **ビルド検証**(`python build.py`): CSS/JSの再埋め込み一致 + 参照ID整合(`getElementById` ↔ `id=`)。
-2. **ロジック検証**(`src/tests/*.js`): 状態遷移・保存・異常系。
+2. **ロジック検証**(`src/tests/*.js`): 状態遷移・保存・異常系・画面レジストリ整合。
 3. **目視確認**: `index.html` をブラウザ(できればスマホ幅)で開き、実際に触る。
+
+**CSSのレイアウト崩れはこの3層では捕まらない**。表示に関わる変更をしたときは必ず 3 を行うこと
+(実例: `#scr-title{display:flex}` と書いたために `.screen{display:none}` が効かず、
+タイトル画面が消えなくなるバグは、ビルドもロジックテストも素通りした)。
+
+### 4.4 ブラウザでの確認(`tools/drive.js`)
+
+目視確認を毎回手作業でやらずに済むよう、**headless Chrome を自動操作するドライバ**を用意してある。
+
+```bash
+node tools/drive.js            # 導入フロー〜タブ巡回を辿ってスクリーンショットを撮る
+node tools/drive.js --out=<dir>  # 出力先(既定: OSのtemp/pftb-shots)
+node tools/drive.js --keep       # プロファイルを残す(セーブを引き継いで再実行)
+```
+
+- 依存パッケージなし。Node 22+ の組み込み `fetch` / `WebSocket` で CDP を直接叩いている。
+- ページ側で例外や `console.error` が出ていれば終了コード 1。
+- フローを足すときは `STEPS` に1エントリ追加する(`ctx.js` / `ctx.shot` / `ctx.screen` が使える)。
+- **撮った PNG は必ず開いて目視する**。遷移ログが正しくても崩れは検出できない。
+
+手順の詳細と「見るべきポイント」は [`.claude/skills/run-app/SKILL.md`](../.claude/skills/run-app/SKILL.md)
+にスキルとしてまとめてある(`/run-app` で呼べる)。ユーザーに触ってもらう場合は
+`Start-Process index.html` で実ブラウザを開く。
 
 ### 4.4 リリース手順
 

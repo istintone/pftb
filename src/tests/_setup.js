@@ -85,7 +85,8 @@ function setup(opts = {}) {
   let code = JS_FILES.map(f => fs.readFileSync(path.join(SRC_DIR, f), "utf8").trim()).join("\n\n");
   if (opts.transform) code = opts.transform(code);
   const extra = opts.exports ? "," + opts.exports : "";
-  code += `\nmodule.exports={getS:()=>S,setS:v=>{S=v;},newGame,loadGame,save,flushSave,hasSave,deleteSave,exportSave,importSave,show,toast,coinUI,SAVE_VER${extra}};`;
+  code += `\nmodule.exports={getS:()=>S,setS:v=>{S=v;},newGame,loadGame,save,flushSave,hasSave,deleteSave,`
+        + `exportSave,importSave,show,goBack,toast,headUI,openContract,SCREENS,SAVE_VER${extra}};`;
 
   const tmpPath = path.join(__dirname, opts.tmpName || "_tmp_run.js");
   fs.writeFileSync(tmpPath, code);

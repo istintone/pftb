@@ -19,7 +19,11 @@ python build.py                  # 再埋め込み + 参照ID整合チェック(
 cd src/tests && node integration.js && node hangtest.js
 ```
 
-ブラウザでの目視確認まで含めた手順は [docs/04-testing.md](docs/04-testing.md)。
+**表示・レイアウト・画面遷移を触ったときは、加えて必ずブラウザで確認する**
+(CSSの崩れは上の2つを素通りする)。`/run-app` スキル、または `node tools/drive.js` で
+headless Chrome を自動操作してスクリーンショットを撮り、**PNGを実際に開いて見る**。
+手順は [docs/04-testing.md](docs/04-testing.md) と
+[.claude/skills/run-app/SKILL.md](.claude/skills/run-app/SKILL.md)。
 
 ## よくある変更の触る場所
 

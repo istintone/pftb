@@ -4,8 +4,16 @@
 const SAVE_KEY="pftb-save";
 const SAVE_VER=1;
 
+// 新規データ。キーを足しただけの変更なら SAVE_VER を上げなくても
+// loadGame() の欠落補完が古いセーブを救う(→docs/02-data-model.md §2.3)。
 function defaultState(){
-  return { v:SAVE_VER, coins:0, coach:"", teamName:"" };
+  return {
+    v:SAVE_VER,
+    coach:"", teamName:"",   // 監督名 / クラブ名(就任契約書で記入)
+    coins:0, tickets:0,      // コイン(クラブ予算) / チケット(報酬券)
+    fame:0,                  // 名声。クラブを移っても失われない監督個人の資産
+    season:1, matchday:1,    // 任期の進行(1シーズン=12節)
+  };
 }
 let S=defaultState();
 
