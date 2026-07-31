@@ -21,7 +21,7 @@ const arg = (k, d) => (process.argv.find(a => a.startsWith("--" + k + "=")) || "
 const has = k => process.argv.includes("--" + k);
 const OUT = arg("out", path.join(os.tmpdir(), "pftb-shots"));
 const PORT = Number(arg("port", 9333));
-const PAGE = "file:///" + path.join(ROOT, "index.html").replace(/\\/g, "/");
+const PAGE = process.env.PFTB_URL || "file:///" + path.join(ROOT, "index.html").replace(/\\/g, "/");
 
 // Chrome か Edge のどちらかがあれば動く(Windows / macOS / Linux)
 const CANDIDATES = [
