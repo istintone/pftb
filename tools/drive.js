@@ -80,27 +80,85 @@ const STEPS = [
     ctx.log("フォント:", fonts);
     await ctx.shot("01-title");
   }],
-  ["就任契約書へ", async ctx => {
+  ["就任先の選択(名声0で届く範囲)", async ctx => {
     await ctx.js("document.getElementById('scr-title').click()");
+    await ctx.wait(700);
+    ctx.log("画面:", await ctx.screen(),
+      "/ オファー数:", await ctx.js("document.querySelectorAll('#offerList [data-club]').length"));
+    await ctx.shot("02-offers");
+  }],
+  ["クラブを選ぶ → 契約書", async ctx => {
+    await ctx.js("document.querySelectorAll('#offerList [data-club]')[0].click()");
     await ctx.wait(400);
-    ctx.log("画面:", await ctx.screen(), "/ 締結日:", await ctx.js("document.getElementById('ctDate').textContent"));
-    await ctx.shot("02-contract");
+    ctx.log("画面:", await ctx.screen(),
+      "/ クラブ:", await ctx.js("document.getElementById('ctPickClub').textContent"),
+      "/ リーグ:", await ctx.js("document.getElementById('ctLeague').textContent"),
+      "/ 格:", await ctx.js("document.getElementById('ctGrade').textContent"));
+    // 署名欄は入力に追従する
+    await ctx.js("(()=>{const i=document.getElementById('ctCoach');i.value='C. モレッティ';i.dispatchEvent(new Event('input'))})()");
+    await ctx.wait(150);
+    ctx.log("署名欄:", JSON.stringify(await ctx.js("document.getElementById('ctSignPreview').textContent")));
+    await ctx.shot("03-contract");
   }],
   ["未記入で署名(弾かれること)", async ctx => {
-    await ctx.js("document.getElementById('ctSign').click()");
+    await ctx.js("(()=>{const i=document.getElementById('ctCoach');i.value='';i.dispatchEvent(new Event('input'));document.getElementById('ctSign').click()})()");
     await ctx.wait(300);
     ctx.log("画面:", await ctx.screen(), "/ toast:", await ctx.js("document.getElementById('toast').textContent"));
   }],
-  ["記入して署名 → ホーム", async ctx => {
-    await ctx.js(`document.getElementById('ctCoach').value='C. モレッティ';
-                  document.getElementById('ctClub').value='AC SOLENNE';
-                  document.getElementById('ctSign').click()`);
-    await ctx.wait(600);
-    ctx.log("画面:", await ctx.screen(), "/ ヘッダー:", await ctx.js("document.getElementById('hdClubName').textContent"));
-    await ctx.shot("03-home");
+  ["記入して署名 → 就任", async ctx => {
+    await ctx.js(`(()=>{const i=document.getElementById('ctCoach');i.value='C. モレッティ';i.dispatchEvent(new Event('input'));
+                  document.getElementById('ctSign').click()})()`);
+    await ctx.wait(700);
+    ctx.log("画面:", await ctx.screen(),
+      "/ ヘッダー:", await ctx.js("document.getElementById('hdClubName').textContent"),
+      "/ コイン:", await ctx.js("document.getElementById('hdCoin').textContent"));
+    await ctx.shot("04-home");
+  }],
+  ["HOME → 任期スケジュール → リーグ戦 → 試合", async ctx => {
+    ctx.log("次戦:", await ctx.js("document.querySelector('#homeNext .next-vs').textContent"));
+    await ctx.js("document.getElementById('btnPlay').click()");     // 直接は戦わずスケジュールへ
+    await ctx.wait(300);
+    ctx.log("遷移先:", await ctx.screen(),
+      "/ 大会数:", await ctx.js("document.querySelectorAll('#seasonComps [data-comp]').length"),
+      "/ 任期:", await ctx.js("document.querySelector('#tenureBar .num').textContent"),
+      "/ 打ち手:", await ctx.js("document.querySelectorAll('#seasonCal .hand').length"),
+      "/ カレンダー行:", await ctx.js("document.querySelectorAll('#seasonCal .cal').length"));
+    await ctx.shot("05-season-hub");
+
+    // 大会カード → 日程表(参照用。打ち手はここには無い)
+    await ctx.js(`document.querySelector('#seasonComps [data-comp="league"]').click()`);
+    await ctx.wait(300);
+    ctx.log("日程:", await ctx.screen(),
+      "/ 見出し:", await ctx.js("document.getElementById('schedHead').textContent"),
+      "/ 行数:", await ctx.js("document.querySelectorAll('#schedList .cal').length"),
+      "/ 次戦マーク:", await ctx.js("!!document.querySelector('#schedList .cal.next')"),
+      "/ 打ち手が無いこと:", await ctx.js("document.querySelectorAll('#schedList .hand').length === 0"));
+    await ctx.shot("06-schedule-league");
+
+    // カップ戦タブへ切り替えて戻す
+    await ctx.js(`document.querySelector('#scr-schedule .comp[data-comp="cup"]').click()`);
+    await ctx.wait(250);
+    ctx.log("カップ戦:", await ctx.js("document.getElementById('schedHead').textContent"));
+    await ctx.shot("07-schedule-cup");
+    await ctx.js("document.getElementById('hdBack').click()");
+    await ctx.wait(300);
+
+    // 試合は SEASON の任期カレンダーから始める
+    ctx.log("開始ボタン(打ち手なし):", await ctx.js("document.getElementById('calGo').disabled"));
+    await ctx.js(`document.querySelector('#seasonCal .hand[data-hand="train"]').click()`);
+    await ctx.wait(250);
+    ctx.log("打ち手を選んだ後:", await ctx.js("document.getElementById('calGo').disabled"));
+    await ctx.js("document.getElementById('calGo').click()");
+    await ctx.wait(500);
+    ctx.log("試合結果:", await ctx.screen(),
+      await ctx.js("document.getElementById('resultHead').textContent"),
+      await ctx.js("document.querySelector('#resultBody .sc').textContent"));
+    await ctx.shot("08-result");
+    await ctx.js("document.getElementById('btnResultOk').click()");
+    await ctx.wait(300);
   }],
   ["タブ巡回", async ctx => {
-    for (const [tab, name] of [["cards", "04-cards"], ["deck", "05-deck"], ["season", "06-season"], ["clubhouse", "07-club"]]) {
+    for (const [tab, name] of [["cards", "09-cards"], ["deck", "10-deck"], ["season", "11-season"], ["clubhouse", "12-club"]]) {
       await ctx.js(`document.querySelector('#tabs button[data-s="${tab}"]').click()`);
       await ctx.wait(250);
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
@@ -110,24 +168,72 @@ const STEPS = [
   ["サブ画面と戻る", async ctx => {
     await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
     await ctx.wait(200);
-    await ctx.js("document.getElementById('btnSchedule').click()");
+    await ctx.js(`document.querySelector('#seasonComps [data-comp="league"]').click()`);
     await ctx.wait(300);
     ctx.log("画面:", await ctx.screen(),
       "/ 戻るボタン:", await ctx.js("!document.getElementById('hdBack').classList.contains('off')"),
       "/ 親タブ点灯:", await ctx.js(`document.querySelector('#tabs button[data-s="season"]').classList.contains('on')`));
-    await ctx.shot("08-schedule");
+    ctx.log("日程の消化行:", await ctx.js("document.querySelectorAll('#schedList .cal.done').length"));
+    // 順位表の要約をタップ → 詳細へ
+    await ctx.js("document.getElementById('schedStandH').click()");
+    await ctx.wait(300);
+    ctx.log("順位表:", await ctx.screen());
+    await ctx.shot("13-standings");
     await ctx.js("document.getElementById('hdBack').click()");
     await ctx.wait(300);
     ctx.log("戻り先:", await ctx.screen());
+    // 任期カレンダー(SEASON)に打ち手と結果が残っているか
+    await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
+    await ctx.wait(300);
+    ctx.log("カレンダーの過去行:", await ctx.js("document.querySelectorAll('#seasonCal .cal.done').length"),
+      "/ 内容:", await ctx.js("(document.querySelector('#seasonCal .cal.done')||{}).textContent"));
+    await ctx.shot("12b-tenure-calendar");
   }],
-  ["リロードして続きから", async ctx => {
+  ["シーズンを最後まで進める", async ctx => {
+    for (let i = 0; i < 20; i++) {
+      await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
+      await ctx.wait(100);
+      const playable = await ctx.js("!!document.getElementById('calGo')");
+      if (!playable) break;
+      await ctx.js("document.querySelector('#seasonCal .hand').click()");
+      await ctx.wait(60);
+      await ctx.js("document.getElementById('calGo').click()");
+      await ctx.wait(120);
+      await ctx.js("document.getElementById('btnResultOk').click()");
+      await ctx.wait(120);
+    }
+    await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
+    await ctx.wait(200);
+    ctx.log("節:", await ctx.js("document.getElementById('homeSeason').textContent"));
+    await ctx.shot("14-season-end");
+    await ctx.js("document.getElementById('btnFinishSeason').click()");
+    await ctx.wait(600);
+    ctx.log("審判後の画面:", await ctx.screen(),
+      "/ 名声:", await ctx.js("document.getElementById('offerHead').textContent"));
+    await ctx.shot("15-offers-2");
+  }],
+  ["2つ目のクラブへ就任", async ctx => {
+    await ctx.js("document.querySelectorAll('#offerList [data-club]')[0].click()");
+    await ctx.wait(600);
+    ctx.log("画面:", await ctx.screen(),
+      "/ クラブ:", await ctx.js("document.getElementById('hdClubName').textContent"),
+      "/ 節:", await ctx.js("document.getElementById('homeSeason').textContent"));
+    await ctx.shot("16-second-club");
+  }],
+  ["リロード → RETURN TO CAREER で再開", async ctx => {
     await ctx.reload();
     await ctx.wait(1500);
-    ctx.log("タイトル注記:", await ctx.js("document.getElementById('tFoot').textContent"));
+    ctx.log("TAP TO START 表示:", await ctx.js("getComputedStyle(document.getElementById('tStart')).display"),
+      "/ メニュー表示:", await ctx.js("getComputedStyle(document.getElementById('tMenu')).display"));
+    await ctx.shot("17-title-resume");
+    // セーブがある間は全画面タップを無効にしてある(誤タップで消さないため)
     await ctx.js("document.getElementById('scr-title').click()");
-    await ctx.wait(600);
-    ctx.log("画面:", await ctx.screen(), "/ クラブ:", await ctx.js("document.getElementById('hdClubName').textContent"));
-    await ctx.shot("09-continue");
+    await ctx.wait(300);
+    ctx.log("画面タップ後(変わらないはず):", await ctx.screen());
+    await ctx.js("document.getElementById('tResume').click()");
+    await ctx.wait(700);
+    ctx.log("再開後:", await ctx.screen(), "/ クラブ:", await ctx.js("document.getElementById('hdClubName').textContent"));
+    await ctx.shot("18-continue");
   }],
 ];
 

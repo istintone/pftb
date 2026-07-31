@@ -211,25 +211,81 @@ body{
   font:400 12px/1 var(--f-head); letter-spacing:2px;
   animation:tpulse 2s ease-in-out infinite;
 }
+.t-menu{ z-index:1; display:flex; flex-direction:column; gap:10px; width:236px; margin-top:10px }
+.t-btn{
+  width:100%; padding:13px 0; cursor:pointer; border-radius:24px;
+  background:var(--accent); border:1px solid var(--accent); color:var(--surface);
+  font:600 12px/1 var(--f-head); letter-spacing:2px;
+}
+.t-btn.ghost{ background:transparent; border-color:var(--accent-dim); color:var(--accent-hi); font-weight:400 }
+.t-btn:active{ transform:translateY(1px) }
 .t-foot{ position:absolute; bottom:22px; z-index:1; font:9px/1 var(--f-mono); color:var(--text-mute) }
 @keyframes tpulse{ 0%,100%{opacity:.55} 50%{opacity:1} }
 
 /* =========================================================================
-   就任契約書
+   就任契約書 — 暗い画面の中に「紙の書類」を置く。
+   ここだけ明色(クリーム地に黒文字)にするのは、契約という行為を他の画面から
+   際立たせるため。デザインモック(src/assets/design/P-footBall.html)に準拠。
    ========================================================================= */
-.contract{ padding:22px 20px 28px }
-.ct-assoc{ text-align:center; font:9px/1.4 var(--f-mono); letter-spacing:3px; color:var(--text-mute) }
-.ct-title{ margin:10px 0 2px; text-align:center; font:700 22px/1.3 var(--f-head); letter-spacing:6px; color:var(--text) }
-.ct-sub{ text-align:center; font:9px/1.4 var(--f-mono); letter-spacing:2px; color:var(--accent-dim) }
-.ct-rule{ height:1px; margin:16px 0; background:linear-gradient(90deg, transparent, var(--line), transparent) }
-.ct-art{ margin-top:16px }
-.ct-art .no{ font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--accent) }
-.ct-terms{ margin-top:18px; border-top:1px solid var(--line-2); padding-top:12px }
-.ct-terms dl{ display:flex; justify-content:space-between; margin:6px 0; font-size:11px }
-.ct-terms dt{ color:var(--text-dim) }
-.ct-terms dd{ margin:0; font-family:var(--f-mono); color:var(--text-2) }
-.ct-sign{ margin-top:18px }
-.ct-sign .input{ font-size:16px; letter-spacing:1px }
+#scr-contract{ padding:22px 18px 30px; background:oklch(0.12 0.015 255) }
+/* 紙より下も暗いままにする(本文領域の高さいっぱいまで敷く) */
+#scr-contract.on{ display:block; min-height:100% }
+.ct-paper{
+  position:relative; overflow:hidden; padding:26px 24px 30px;
+  background:oklch(0.93 0.012 85); border-radius:3px;
+  box-shadow:0 20px 50px rgba(0,0,0,.5);
+}
+.ct-paper::before{ content:""; position:absolute; top:0; left:0; right:0; height:5px;
+  background:oklch(0.55 0.10 85) }
+
+.ct-head{ text-align:center; padding-bottom:16px; margin-bottom:20px;
+  border-bottom:1.5px double oklch(0.45 0.02 255) }
+.ct-assoc{ font:8px/1.4 var(--f-mono); letter-spacing:3px; color:oklch(0.45 0.03 255); margin-bottom:8px }
+.ct-title{ font:700 20px/1.3 var(--f-head); letter-spacing:2px; color:oklch(0.20 0.02 255) }
+.ct-sub{ margin-top:6px; font:8px/1.4 var(--f-mono); letter-spacing:2px; color:oklch(0.45 0.03 255) }
+
+.ct-body{ margin:0 0 22px; font-size:11px; line-height:2; color:oklch(0.30 0.02 255); text-wrap:pretty }
+
+.ct-arts{ display:flex; flex-direction:column; gap:18px; margin-bottom:24px }
+.ct-art-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px }
+.ct-art-h .no{ font:8px/1 var(--f-mono); letter-spacing:1px; color:oklch(0.50 0.03 255) }
+.ct-art-h .lb{ font-size:11px; font-weight:600; color:oklch(0.25 0.02 255) }
+/* 記入欄は枠を持たず、下線だけの「書き込む欄」にする */
+.ct-input{
+  display:block; width:100%; padding:6px 2px; outline:none;
+  background:transparent; border:none; border-bottom:1.5px solid oklch(0.40 0.02 255);
+  font:400 16px/1.4 var(--f-body); color:oklch(0.18 0.02 255);
+  text-align:left; border-radius:0;
+}
+.ct-input::placeholder{ color:oklch(0.60 0.02 255) }
+.ct-pick{ cursor:pointer; color:oklch(0.55 0.03 255) }
+.ct-pick.picked{ color:oklch(0.18 0.02 255) }
+
+.ct-terms{
+  display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px; padding:14px 0;
+  border-top:1px solid oklch(0.75 0.02 85); border-bottom:1px solid oklch(0.75 0.02 85);
+}
+.ct-terms .k{ display:block; margin-bottom:3px; font:8px/1 var(--f-mono); color:oklch(0.50 0.03 255) }
+.ct-terms .v{ font-size:11px; color:oklch(0.25 0.02 255) }
+
+.ct-sign{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:24px }
+.ct-sign-l{ flex:1; min-width:0 }
+.ct-sign .k{ display:block; margin-bottom:8px; font:8px/1 var(--f-mono); color:oklch(0.50 0.03 255) }
+.ct-sign-line{ min-height:26px; padding-bottom:3px; font-size:17px; color:oklch(0.20 0.05 255);
+  border-bottom:1.5px solid oklch(0.40 0.02 255); white-space:nowrap; overflow:hidden }
+.ct-seal{
+  flex-shrink:0; width:56px; height:56px; border-radius:50%;
+  border:1.5px solid oklch(0.55 0.16 25); color:oklch(0.55 0.16 25);
+  font-size:8px; line-height:1.3; text-align:center;
+  display:flex; align-items:center; justify-content:center;
+}
+.ct-btn{
+  display:block; width:100%; padding:14px; cursor:pointer; border:0; border-radius:4px;
+  background:oklch(0.22 0.03 255); color:oklch(0.95 0.01 90);
+  font:600 14px/1 var(--f-head); letter-spacing:1px;
+}
+.ct-btn:active{ transform:translateY(1px) }
+.ct-note{ margin-top:10px; text-align:center; font-size:10px; color:oklch(0.45 0.03 255) }
 
 /* =========================================================================
    タブバー(5つ・増やさない)
@@ -274,6 +330,241 @@ body{
   border:1px solid var(--line); border-radius:7px; background:var(--panel-2);
   color:var(--text-dim); font-size:13px; line-height:1; cursor:pointer;
 }
+
+/* =========================================================================
+   データ表示の部品
+   ========================================================================= */
+.big{ font:600 20px/1.2 var(--f-head); letter-spacing:1px }
+.kv{ display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:11px;
+  border-bottom:1px solid oklch(0.24 0.02 255) }
+.kv:last-child{ border-bottom:0 }
+.kv span{ color:var(--text-dim) }
+.kv b{ font-family:var(--f-mono); font-weight:400; color:var(--text-2); text-align:right }
+.bubble{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+  padding:10px 12px; font-size:12px; line-height:1.7 }
+.news{ padding:7px 0; font-size:11px; line-height:1.7; color:var(--text-2);
+  border-bottom:1px solid oklch(0.24 0.02 255) }
+.news:last-child{ border-bottom:0 }
+.next-vs{ display:flex; align-items:center; justify-content:space-between; gap:8px;
+  font:600 13px/1.3 var(--f-head); letter-spacing:.5px }
+.next-vs .vs{ font:10px/1 var(--f-mono); color:var(--accent); letter-spacing:2px }
+
+/* フィルタのチップ */
+.filters{ display:flex; gap:6px; margin:10px 0 }
+.chip{ flex:1; padding:6px 0; cursor:pointer; border-radius:7px;
+  border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim);
+  font:400 10px/1 var(--f-head); letter-spacing:1px }
+.chip.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+
+/* カードタイル */
+.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px }
+.ptile{ position:relative; padding:8px 8px 6px; cursor:pointer; overflow:hidden;
+  background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--rar-std);
+  border-radius:9px }
+.ptile.r-rare{ border-left-color:var(--rar-rare) }
+.ptile.r-super{ border-left-color:var(--rar-super) }
+.ptile.r-ultra{ border-left-color:var(--rar-ultra) }
+.ptile.empty{ display:flex; align-items:center; justify-content:center; cursor:default;
+  color:var(--text-mute); font-size:10px; border-style:dashed; border-left-style:dashed }
+.pt-top{ display:flex; justify-content:space-between; align-items:baseline }
+.pt-pos{ font:10px/1 var(--f-mono); color:var(--text-dim) }
+.pt-ovr{ font:600 16px/1 var(--f-head); color:var(--text) }
+.pt-name{ margin-top:4px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pt-name .own{ color:var(--accent) }
+.pt-foot{ margin-top:2px; font-size:9px }
+
+/* カード詳細モーダル */
+.cm-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px }
+.cm-name{ font:600 15px/1.3 var(--f-head); letter-spacing:.5px }
+.cm-ovr{ font:600 30px/1 var(--f-head); color:var(--accent) }
+.bars{ margin-top:8px }
+.bar{ display:flex; align-items:center; gap:8px; margin:5px 0; font:10px/1 var(--f-mono) }
+.bar span{ width:30px; color:var(--text-dim) }
+.bar i{ height:6px; border-radius:3px; background:var(--accent-dim); display:block }
+.bar b{ margin-left:auto; font-weight:400; color:var(--text-2) }
+.skills{ display:flex; flex-wrap:wrap; gap:5px; margin-top:6px }
+.skill{ padding:3px 7px; border-radius:4px; background:var(--panel-2);
+  border:1px solid var(--line); font-size:10px; color:var(--text-2) }
+
+/* ピッチ(編成) */
+.pitch{ position:relative; height:330px; margin-top:12px; border-radius:12px;
+  background:linear-gradient(180deg, oklch(0.20 0.03 160), oklch(0.16 0.02 160));
+  border:1px solid var(--line); overflow:hidden }
+.pitch::before{ content:""; position:absolute; left:8%; right:8%; top:50%; height:1px;
+  background:oklch(0.40 0.02 160) }
+.slot{ position:absolute; transform:translate(-50%,-50%); width:62px; text-align:center;
+  padding:5px 2px; border-radius:8px; cursor:pointer;
+  background:oklch(0.17 0.02 255 / .88); border:1px solid var(--line) }
+.sl-pos{ font:9px/1 var(--f-mono); color:var(--text-dim) }
+.sl-ovr{ font:600 14px/1.2 var(--f-head); color:var(--text) }
+.sl-name{ font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-2) }
+.sl-own{ position:absolute; top:-5px; right:-4px; font-size:10px; color:var(--accent) }
+
+/* 順位表・日程 */
+.strow{ display:flex; align-items:center; gap:10px; padding:6px 0; font-size:11px;
+  border-bottom:1px solid oklch(0.24 0.02 255) }
+.strow:last-child{ border-bottom:0 }
+.strow .nm{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.strow.me{ color:var(--accent) }
+.tbl{ width:100%; border-collapse:collapse; margin-top:10px }
+.tbl th{ padding:6px 3px; font:10px/1 var(--f-mono); color:var(--text-dim);
+  border-bottom:1px solid var(--line); text-align:right }
+.tbl th:nth-child(2){ text-align:left }
+.tbl td{ padding:7px 3px; font-size:11px; border-bottom:1px solid oklch(0.22 0.02 255); text-align:right }
+.tbl td.nm{ text-align:left; max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.tbl td.pt{ color:var(--accent) }
+.tbl tr.me td{ color:var(--accent) }
+.fx{ display:flex; align-items:center; gap:10px; padding:7px 0; font-size:11px;
+  border-bottom:1px solid oklch(0.24 0.02 255) }
+.fx .nm{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.fx.done{ color:var(--text-mute) }
+.fx.now{ color:var(--accent) }
+
+/* ---- 大会の切替(リーグ戦 / カップ戦) ---- */
+.comp-tabs{ display:flex; gap:6px; margin-bottom:14px }
+.comp{
+  flex:1; padding:9px 0; cursor:pointer; border-radius:8px;
+  border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim);
+  font:600 12px/1 var(--f-head); letter-spacing:.5px;
+}
+.comp.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+
+/* ---- 参加中の大会カード(任期スケジュールの起点) ---- */
+.comp-card{
+  display:flex; align-items:center; gap:10px; padding:12px 14px; margin:8px 0; cursor:pointer;
+  background:var(--panel); border:1px solid var(--line); border-radius:11px;
+}
+.comp-card.off{ opacity:.55 }
+.comp-card .cc-l{ flex:1; min-width:0 }
+.comp-card .cc-k{ font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--accent); margin-bottom:4px }
+.comp-card b{ display:block; font:600 13px/1.4 var(--f-head); letter-spacing:.5px }
+.comp-card .cc-r{ color:var(--text-dim); font-size:16px }
+
+/* ---- 日程の1行(節 / クラブ色 / 相手 / 結果 or 試合開始) ---- */
+.fxrow{
+  display:flex; align-items:center; gap:10px; padding:10px; margin-bottom:8px;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+}
+.fxrow.next{ background:oklch(0.24 0.04 85 / .30); border-color:var(--accent-dim) }
+.fxrow.done{ opacity:.62 }
+.fx-d{ width:22px; text-align:center; font-size:10px; color:var(--text-dim) }
+.fx-c{ width:24px; height:24px; border-radius:50%; flex-shrink:0 }
+.fx-m{ flex:1; min-width:0 }
+.fx-m b{ display:block; font-size:12px; font-weight:400; color:oklch(0.92 0.01 90);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.fx-m .lg{ font-size:10px }
+.fx-s{ font:600 13px/1 var(--f-head); color:var(--text-2) }
+.fx-v{ font:400 12px/1 var(--f-head); color:var(--text-mute) }
+.fx-go{
+  flex-shrink:0; padding:7px 14px; cursor:pointer; border:0; border-radius:7px;
+  background:var(--accent); color:var(--surface);
+  font:600 12px/1 var(--f-head); letter-spacing:.5px;
+}
+.fx-go:active{ transform:translateY(1px) }
+
+/* =========================================================================
+   任期カレンダー — card-eleven のキャリア日程と同じ「上から下へ」の縦一列。
+   過去(何をやってきたか) / 現在(打ち手→試合) / 未来(分かっている予定) を
+   1本の帯として見せる。→ docs/03 §3.2.3
+   ========================================================================= */
+.tenure-bar{ margin-bottom:14px }
+.tb-h{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:5px }
+.tb-h .num{ font-size:11px; color:var(--text-2) }
+.tb-bar{ height:5px; border-radius:3px; background:var(--panel-2); overflow:hidden }
+.tb-bar i{ display:block; height:100%; background:var(--accent) }
+.tb-note{ margin-top:6px; font-size:10px; color:var(--text-dim) }
+.tb-note.warn{ color:var(--accent-hi) }
+
+.cal{
+  display:flex; align-items:center; gap:10px; padding:9px 10px; margin-bottom:6px;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+}
+.cal-n{ width:26px; text-align:center; font-size:10px; color:var(--text-dim); flex-shrink:0 }
+.cal-h{ width:22px; text-align:center; font-size:14px; flex-shrink:0 }
+.cal-c{ width:22px; height:22px; border-radius:50%; flex-shrink:0 }
+.cal-b{ flex:1; min-width:0 }
+.cal-b b{ display:block; font-size:12px; font-weight:400; color:oklch(0.92 0.01 90);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.cal-b .lg{ font-size:10px }
+.cal-s{ font:600 12px/1 var(--f-head); flex-shrink:0 }
+.cal-s.w{ color:oklch(0.72 0.14 150) }
+.cal-s.d{ color:var(--text-dim) }
+.cal-s.l{ color:oklch(0.65 0.15 25) }
+.cal-r{ font:400 12px/1 var(--f-head); color:var(--text-mute); flex-shrink:0 }
+.cal.done{ opacity:.72 }
+.cal.fut{ background:transparent }
+.cal.none{ background:transparent; border-style:dashed; color:var(--text-mute) }
+.cal.next{ border-color:var(--accent-dim) }
+.next-lb{ color:var(--accent) }
+/* シーズンとクラブの区切り(任期カレンダーの見出し行) */
+.cal-div{
+  display:flex; align-items:baseline; gap:8px; margin:14px 0 6px;
+  padding-bottom:5px; border-bottom:1px solid var(--line);
+}
+.cal-div span{ font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--accent) }
+.cal-div b{ font:600 12px/1 var(--f-head); letter-spacing:.5px; color:var(--text-2) }
+/* 着地(そのシーズンの結末) */
+.cal.judge{ background:oklch(0.22 0.02 255); border-style:dashed }
+.cal.judge b{ font-size:11px; color:var(--text-2) }
+
+/* 現在節は行ではなくカード(打ち手の選択を内蔵する) */
+.cal.cur{
+  display:block; padding:12px; margin:10px 0;
+  background:oklch(0.24 0.04 85 / .30); border-color:var(--accent-dim);
+}
+.cal-cur-h{ display:flex; align-items:center; gap:10px; margin-bottom:10px }
+.step-k{ margin:10px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
+.comps{ display:flex; gap:6px }
+.compbtn{
+  flex:1; padding:10px 0; cursor:pointer; border-radius:9px;
+  background:var(--panel-2); border:1px solid var(--line); color:var(--text-2);
+  font:600 11px/1 var(--f-head); letter-spacing:.5px;
+}
+.compbtn.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+.compbtn:disabled{ opacity:.35; cursor:default }
+.cal-target{
+  display:flex; align-items:center; gap:10px; margin:10px 0;
+  padding:9px 10px; border-radius:9px; background:oklch(0.17 0.02 255); border:1px solid var(--line);
+}
+/* 予定が確定している枠(カップの連戦など) */
+.cal.planned{ border-color:var(--accent-dim); background:oklch(0.20 0.03 85 / .18) }
+/* 空枠は詰めて出す(96〜120枠あるため) */
+.cal.none{ padding:5px 10px; margin-bottom:3px }
+.cal.none .cal-b b{ font-size:10px; color:var(--text-mute); font-weight:400 }
+.hands{ display:flex; gap:6px; margin-bottom:8px }
+.hand{
+  flex:1; padding:9px 0; cursor:pointer; border-radius:9px;
+  background:var(--panel-2); border:1px solid var(--line); color:var(--text-2);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  line-height:1; font-family:inherit;
+}
+.hand.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+.hd-i{ display:block; font-size:16px; line-height:1 }
+.hd-l{ font:600 10px/1 var(--f-head); letter-spacing:.5px }
+.hand-desc{ margin-bottom:10px; min-height:16px }
+
+/* 任期満了 */
+.end-t{ font:700 22px/1.3 var(--f-head); letter-spacing:3px; color:var(--accent); text-align:center; margin:18px 0 6px }
+
+/* ---- 順位表の要約 ---- */
+.stand-h{ display:flex; align-items:center; justify-content:space-between;
+  margin:18px 0 10px; cursor:pointer }
+.stand-h .more{ font:400 11px/1 var(--f-head); color:var(--accent) }
+.stand-box{ border:1px solid var(--line); border-radius:10px; overflow:hidden; cursor:pointer }
+.stand-box .strow{ padding:8px 12px; border-bottom:1px solid oklch(0.24 0.02 255) }
+.stand-box .strow:last-child{ border-bottom:0 }
+
+/* 結果 */
+.score{ display:flex; align-items:center; justify-content:space-between; gap:8px;
+  font:600 13px/1.3 var(--f-head) }
+.score .sc{ font:600 26px/1 var(--f-head); color:var(--accent) }
+
+/* オファー */
+.offer{ display:flex; align-items:center; gap:10px; padding:11px 12px; margin:8px 0; cursor:pointer;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px }
+.offer .of-l{ flex:1; min-width:0 }
+.offer .of-l b{ font:600 13px/1.4 var(--f-head); letter-spacing:.5px }
+.offer .of-r{ font-size:11px; color:var(--accent-dim) }
 
 /* =========================================================================
    アクセシビリティ

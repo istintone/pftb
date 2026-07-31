@@ -49,7 +49,7 @@ python build.py --dev     # _dev.js 込みの index.dev.html を出力(Git管理
 ### テスト
 ```bash
 cd src/tests
-for t in integration hangtest; do
+for t in integration hangtest worldtest careertest tenuretest; do
   echo -n "$t: "; node $t.js >/dev/null 2>&1 && echo OK || echo FAIL
 done
 ```

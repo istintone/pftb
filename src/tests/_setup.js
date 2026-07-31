@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SRC_DIR = path.join(__dirname, "..", "js");
-const JS_FILES = ["data.js", "state.js", "ui.js"];
+const JS_FILES = ["data.js", "cards.js", "world.js", "match-core.js", "state.js", "ui.js"];
 // boot.js は含めない(起動時の即時実行を避け、各テストが必要な関数を明示的に呼ぶ)
 
 function mkEl() {
@@ -86,7 +86,11 @@ function setup(opts = {}) {
   if (opts.transform) code = opts.transform(code);
   const extra = opts.exports ? "," + opts.exports : "";
   code += `\nmodule.exports={getS:()=>S,setS:v=>{S=v;},newGame,loadGame,save,flushSave,hasSave,deleteSave,`
-        + `exportSave,importSave,show,goBack,toast,headUI,openContract,SCREENS,SAVE_VER${extra}};`;
+        + `exportSave,importSave,exportSquad,show,goBack,toast,headUI,openContract,SCREENS,SAVE_VER,`
+        + `CLUBS,COUNTRIES,TUNING,RARITY,FORMATIONS,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
+        + `standings,rankOf,expectedRank,requiredFame,offersFor,startTenure,playMatchday,seasonOver,`
+        + `judgeSeason,myFixture,squadCards,autoSquad,availableCards,squadPower,resolveMatch,`
+        + `mulberry32,calcOvr,makeCard,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
 
   const tmpPath = path.join(__dirname, opts.tmpName || "_tmp_run.js");
   fs.writeFileSync(tmpPath, code);

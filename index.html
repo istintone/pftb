@@ -223,25 +223,81 @@ body{
   font:400 12px/1 var(--f-head); letter-spacing:2px;
   animation:tpulse 2s ease-in-out infinite;
 }
+.t-menu{ z-index:1; display:flex; flex-direction:column; gap:10px; width:236px; margin-top:10px }
+.t-btn{
+  width:100%; padding:13px 0; cursor:pointer; border-radius:24px;
+  background:var(--accent); border:1px solid var(--accent); color:var(--surface);
+  font:600 12px/1 var(--f-head); letter-spacing:2px;
+}
+.t-btn.ghost{ background:transparent; border-color:var(--accent-dim); color:var(--accent-hi); font-weight:400 }
+.t-btn:active{ transform:translateY(1px) }
 .t-foot{ position:absolute; bottom:22px; z-index:1; font:9px/1 var(--f-mono); color:var(--text-mute) }
 @keyframes tpulse{ 0%,100%{opacity:.55} 50%{opacity:1} }
 
 /* =========================================================================
-   就任契約書
+   就任契約書 — 暗い画面の中に「紙の書類」を置く。
+   ここだけ明色(クリーム地に黒文字)にするのは、契約という行為を他の画面から
+   際立たせるため。デザインモック(src/assets/design/P-footBall.html)に準拠。
    ========================================================================= */
-.contract{ padding:22px 20px 28px }
-.ct-assoc{ text-align:center; font:9px/1.4 var(--f-mono); letter-spacing:3px; color:var(--text-mute) }
-.ct-title{ margin:10px 0 2px; text-align:center; font:700 22px/1.3 var(--f-head); letter-spacing:6px; color:var(--text) }
-.ct-sub{ text-align:center; font:9px/1.4 var(--f-mono); letter-spacing:2px; color:var(--accent-dim) }
-.ct-rule{ height:1px; margin:16px 0; background:linear-gradient(90deg, transparent, var(--line), transparent) }
-.ct-art{ margin-top:16px }
-.ct-art .no{ font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--accent) }
-.ct-terms{ margin-top:18px; border-top:1px solid var(--line-2); padding-top:12px }
-.ct-terms dl{ display:flex; justify-content:space-between; margin:6px 0; font-size:11px }
-.ct-terms dt{ color:var(--text-dim) }
-.ct-terms dd{ margin:0; font-family:var(--f-mono); color:var(--text-2) }
-.ct-sign{ margin-top:18px }
-.ct-sign .input{ font-size:16px; letter-spacing:1px }
+#scr-contract{ padding:22px 18px 30px; background:oklch(0.12 0.015 255) }
+/* 紙より下も暗いままにする(本文領域の高さいっぱいまで敷く) */
+#scr-contract.on{ display:block; min-height:100% }
+.ct-paper{
+  position:relative; overflow:hidden; padding:26px 24px 30px;
+  background:oklch(0.93 0.012 85); border-radius:3px;
+  box-shadow:0 20px 50px rgba(0,0,0,.5);
+}
+.ct-paper::before{ content:""; position:absolute; top:0; left:0; right:0; height:5px;
+  background:oklch(0.55 0.10 85) }
+
+.ct-head{ text-align:center; padding-bottom:16px; margin-bottom:20px;
+  border-bottom:1.5px double oklch(0.45 0.02 255) }
+.ct-assoc{ font:8px/1.4 var(--f-mono); letter-spacing:3px; color:oklch(0.45 0.03 255); margin-bottom:8px }
+.ct-title{ font:700 20px/1.3 var(--f-head); letter-spacing:2px; color:oklch(0.20 0.02 255) }
+.ct-sub{ margin-top:6px; font:8px/1.4 var(--f-mono); letter-spacing:2px; color:oklch(0.45 0.03 255) }
+
+.ct-body{ margin:0 0 22px; font-size:11px; line-height:2; color:oklch(0.30 0.02 255); text-wrap:pretty }
+
+.ct-arts{ display:flex; flex-direction:column; gap:18px; margin-bottom:24px }
+.ct-art-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px }
+.ct-art-h .no{ font:8px/1 var(--f-mono); letter-spacing:1px; color:oklch(0.50 0.03 255) }
+.ct-art-h .lb{ font-size:11px; font-weight:600; color:oklch(0.25 0.02 255) }
+/* 記入欄は枠を持たず、下線だけの「書き込む欄」にする */
+.ct-input{
+  display:block; width:100%; padding:6px 2px; outline:none;
+  background:transparent; border:none; border-bottom:1.5px solid oklch(0.40 0.02 255);
+  font:400 16px/1.4 var(--f-body); color:oklch(0.18 0.02 255);
+  text-align:left; border-radius:0;
+}
+.ct-input::placeholder{ color:oklch(0.60 0.02 255) }
+.ct-pick{ cursor:pointer; color:oklch(0.55 0.03 255) }
+.ct-pick.picked{ color:oklch(0.18 0.02 255) }
+
+.ct-terms{
+  display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px; padding:14px 0;
+  border-top:1px solid oklch(0.75 0.02 85); border-bottom:1px solid oklch(0.75 0.02 85);
+}
+.ct-terms .k{ display:block; margin-bottom:3px; font:8px/1 var(--f-mono); color:oklch(0.50 0.03 255) }
+.ct-terms .v{ font-size:11px; color:oklch(0.25 0.02 255) }
+
+.ct-sign{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:24px }
+.ct-sign-l{ flex:1; min-width:0 }
+.ct-sign .k{ display:block; margin-bottom:8px; font:8px/1 var(--f-mono); color:oklch(0.50 0.03 255) }
+.ct-sign-line{ min-height:26px; padding-bottom:3px; font-size:17px; color:oklch(0.20 0.05 255);
+  border-bottom:1.5px solid oklch(0.40 0.02 255); white-space:nowrap; overflow:hidden }
+.ct-seal{
+  flex-shrink:0; width:56px; height:56px; border-radius:50%;
+  border:1.5px solid oklch(0.55 0.16 25); color:oklch(0.55 0.16 25);
+  font-size:8px; line-height:1.3; text-align:center;
+  display:flex; align-items:center; justify-content:center;
+}
+.ct-btn{
+  display:block; width:100%; padding:14px; cursor:pointer; border:0; border-radius:4px;
+  background:oklch(0.22 0.03 255); color:oklch(0.95 0.01 90);
+  font:600 14px/1 var(--f-head); letter-spacing:1px;
+}
+.ct-btn:active{ transform:translateY(1px) }
+.ct-note{ margin-top:10px; text-align:center; font-size:10px; color:oklch(0.45 0.03 255) }
 
 /* =========================================================================
    タブバー(5つ・増やさない)
@@ -286,6 +342,241 @@ body{
   border:1px solid var(--line); border-radius:7px; background:var(--panel-2);
   color:var(--text-dim); font-size:13px; line-height:1; cursor:pointer;
 }
+
+/* =========================================================================
+   データ表示の部品
+   ========================================================================= */
+.big{ font:600 20px/1.2 var(--f-head); letter-spacing:1px }
+.kv{ display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:11px;
+  border-bottom:1px solid oklch(0.24 0.02 255) }
+.kv:last-child{ border-bottom:0 }
+.kv span{ color:var(--text-dim) }
+.kv b{ font-family:var(--f-mono); font-weight:400; color:var(--text-2); text-align:right }
+.bubble{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px;
+  padding:10px 12px; font-size:12px; line-height:1.7 }
+.news{ padding:7px 0; font-size:11px; line-height:1.7; color:var(--text-2);
+  border-bottom:1px solid oklch(0.24 0.02 255) }
+.news:last-child{ border-bottom:0 }
+.next-vs{ display:flex; align-items:center; justify-content:space-between; gap:8px;
+  font:600 13px/1.3 var(--f-head); letter-spacing:.5px }
+.next-vs .vs{ font:10px/1 var(--f-mono); color:var(--accent); letter-spacing:2px }
+
+/* フィルタのチップ */
+.filters{ display:flex; gap:6px; margin:10px 0 }
+.chip{ flex:1; padding:6px 0; cursor:pointer; border-radius:7px;
+  border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim);
+  font:400 10px/1 var(--f-head); letter-spacing:1px }
+.chip.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+
+/* カードタイル */
+.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px }
+.ptile{ position:relative; padding:8px 8px 6px; cursor:pointer; overflow:hidden;
+  background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--rar-std);
+  border-radius:9px }
+.ptile.r-rare{ border-left-color:var(--rar-rare) }
+.ptile.r-super{ border-left-color:var(--rar-super) }
+.ptile.r-ultra{ border-left-color:var(--rar-ultra) }
+.ptile.empty{ display:flex; align-items:center; justify-content:center; cursor:default;
+  color:var(--text-mute); font-size:10px; border-style:dashed; border-left-style:dashed }
+.pt-top{ display:flex; justify-content:space-between; align-items:baseline }
+.pt-pos{ font:10px/1 var(--f-mono); color:var(--text-dim) }
+.pt-ovr{ font:600 16px/1 var(--f-head); color:var(--text) }
+.pt-name{ margin-top:4px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pt-name .own{ color:var(--accent) }
+.pt-foot{ margin-top:2px; font-size:9px }
+
+/* カード詳細モーダル */
+.cm-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px }
+.cm-name{ font:600 15px/1.3 var(--f-head); letter-spacing:.5px }
+.cm-ovr{ font:600 30px/1 var(--f-head); color:var(--accent) }
+.bars{ margin-top:8px }
+.bar{ display:flex; align-items:center; gap:8px; margin:5px 0; font:10px/1 var(--f-mono) }
+.bar span{ width:30px; color:var(--text-dim) }
+.bar i{ height:6px; border-radius:3px; background:var(--accent-dim); display:block }
+.bar b{ margin-left:auto; font-weight:400; color:var(--text-2) }
+.skills{ display:flex; flex-wrap:wrap; gap:5px; margin-top:6px }
+.skill{ padding:3px 7px; border-radius:4px; background:var(--panel-2);
+  border:1px solid var(--line); font-size:10px; color:var(--text-2) }
+
+/* ピッチ(編成) */
+.pitch{ position:relative; height:330px; margin-top:12px; border-radius:12px;
+  background:linear-gradient(180deg, oklch(0.20 0.03 160), oklch(0.16 0.02 160));
+  border:1px solid var(--line); overflow:hidden }
+.pitch::before{ content:""; position:absolute; left:8%; right:8%; top:50%; height:1px;
+  background:oklch(0.40 0.02 160) }
+.slot{ position:absolute; transform:translate(-50%,-50%); width:62px; text-align:center;
+  padding:5px 2px; border-radius:8px; cursor:pointer;
+  background:oklch(0.17 0.02 255 / .88); border:1px solid var(--line) }
+.sl-pos{ font:9px/1 var(--f-mono); color:var(--text-dim) }
+.sl-ovr{ font:600 14px/1.2 var(--f-head); color:var(--text) }
+.sl-name{ font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-2) }
+.sl-own{ position:absolute; top:-5px; right:-4px; font-size:10px; color:var(--accent) }
+
+/* 順位表・日程 */
+.strow{ display:flex; align-items:center; gap:10px; padding:6px 0; font-size:11px;
+  border-bottom:1px solid oklch(0.24 0.02 255) }
+.strow:last-child{ border-bottom:0 }
+.strow .nm{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.strow.me{ color:var(--accent) }
+.tbl{ width:100%; border-collapse:collapse; margin-top:10px }
+.tbl th{ padding:6px 3px; font:10px/1 var(--f-mono); color:var(--text-dim);
+  border-bottom:1px solid var(--line); text-align:right }
+.tbl th:nth-child(2){ text-align:left }
+.tbl td{ padding:7px 3px; font-size:11px; border-bottom:1px solid oklch(0.22 0.02 255); text-align:right }
+.tbl td.nm{ text-align:left; max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.tbl td.pt{ color:var(--accent) }
+.tbl tr.me td{ color:var(--accent) }
+.fx{ display:flex; align-items:center; gap:10px; padding:7px 0; font-size:11px;
+  border-bottom:1px solid oklch(0.24 0.02 255) }
+.fx .nm{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.fx.done{ color:var(--text-mute) }
+.fx.now{ color:var(--accent) }
+
+/* ---- 大会の切替(リーグ戦 / カップ戦) ---- */
+.comp-tabs{ display:flex; gap:6px; margin-bottom:14px }
+.comp{
+  flex:1; padding:9px 0; cursor:pointer; border-radius:8px;
+  border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim);
+  font:600 12px/1 var(--f-head); letter-spacing:.5px;
+}
+.comp.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+
+/* ---- 参加中の大会カード(任期スケジュールの起点) ---- */
+.comp-card{
+  display:flex; align-items:center; gap:10px; padding:12px 14px; margin:8px 0; cursor:pointer;
+  background:var(--panel); border:1px solid var(--line); border-radius:11px;
+}
+.comp-card.off{ opacity:.55 }
+.comp-card .cc-l{ flex:1; min-width:0 }
+.comp-card .cc-k{ font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--accent); margin-bottom:4px }
+.comp-card b{ display:block; font:600 13px/1.4 var(--f-head); letter-spacing:.5px }
+.comp-card .cc-r{ color:var(--text-dim); font-size:16px }
+
+/* ---- 日程の1行(節 / クラブ色 / 相手 / 結果 or 試合開始) ---- */
+.fxrow{
+  display:flex; align-items:center; gap:10px; padding:10px; margin-bottom:8px;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+}
+.fxrow.next{ background:oklch(0.24 0.04 85 / .30); border-color:var(--accent-dim) }
+.fxrow.done{ opacity:.62 }
+.fx-d{ width:22px; text-align:center; font-size:10px; color:var(--text-dim) }
+.fx-c{ width:24px; height:24px; border-radius:50%; flex-shrink:0 }
+.fx-m{ flex:1; min-width:0 }
+.fx-m b{ display:block; font-size:12px; font-weight:400; color:oklch(0.92 0.01 90);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.fx-m .lg{ font-size:10px }
+.fx-s{ font:600 13px/1 var(--f-head); color:var(--text-2) }
+.fx-v{ font:400 12px/1 var(--f-head); color:var(--text-mute) }
+.fx-go{
+  flex-shrink:0; padding:7px 14px; cursor:pointer; border:0; border-radius:7px;
+  background:var(--accent); color:var(--surface);
+  font:600 12px/1 var(--f-head); letter-spacing:.5px;
+}
+.fx-go:active{ transform:translateY(1px) }
+
+/* =========================================================================
+   任期カレンダー — card-eleven のキャリア日程と同じ「上から下へ」の縦一列。
+   過去(何をやってきたか) / 現在(打ち手→試合) / 未来(分かっている予定) を
+   1本の帯として見せる。→ docs/03 §3.2.3
+   ========================================================================= */
+.tenure-bar{ margin-bottom:14px }
+.tb-h{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:5px }
+.tb-h .num{ font-size:11px; color:var(--text-2) }
+.tb-bar{ height:5px; border-radius:3px; background:var(--panel-2); overflow:hidden }
+.tb-bar i{ display:block; height:100%; background:var(--accent) }
+.tb-note{ margin-top:6px; font-size:10px; color:var(--text-dim) }
+.tb-note.warn{ color:var(--accent-hi) }
+
+.cal{
+  display:flex; align-items:center; gap:10px; padding:9px 10px; margin-bottom:6px;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+}
+.cal-n{ width:26px; text-align:center; font-size:10px; color:var(--text-dim); flex-shrink:0 }
+.cal-h{ width:22px; text-align:center; font-size:14px; flex-shrink:0 }
+.cal-c{ width:22px; height:22px; border-radius:50%; flex-shrink:0 }
+.cal-b{ flex:1; min-width:0 }
+.cal-b b{ display:block; font-size:12px; font-weight:400; color:oklch(0.92 0.01 90);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.cal-b .lg{ font-size:10px }
+.cal-s{ font:600 12px/1 var(--f-head); flex-shrink:0 }
+.cal-s.w{ color:oklch(0.72 0.14 150) }
+.cal-s.d{ color:var(--text-dim) }
+.cal-s.l{ color:oklch(0.65 0.15 25) }
+.cal-r{ font:400 12px/1 var(--f-head); color:var(--text-mute); flex-shrink:0 }
+.cal.done{ opacity:.72 }
+.cal.fut{ background:transparent }
+.cal.none{ background:transparent; border-style:dashed; color:var(--text-mute) }
+.cal.next{ border-color:var(--accent-dim) }
+.next-lb{ color:var(--accent) }
+/* シーズンとクラブの区切り(任期カレンダーの見出し行) */
+.cal-div{
+  display:flex; align-items:baseline; gap:8px; margin:14px 0 6px;
+  padding-bottom:5px; border-bottom:1px solid var(--line);
+}
+.cal-div span{ font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--accent) }
+.cal-div b{ font:600 12px/1 var(--f-head); letter-spacing:.5px; color:var(--text-2) }
+/* 着地(そのシーズンの結末) */
+.cal.judge{ background:oklch(0.22 0.02 255); border-style:dashed }
+.cal.judge b{ font-size:11px; color:var(--text-2) }
+
+/* 現在節は行ではなくカード(打ち手の選択を内蔵する) */
+.cal.cur{
+  display:block; padding:12px; margin:10px 0;
+  background:oklch(0.24 0.04 85 / .30); border-color:var(--accent-dim);
+}
+.cal-cur-h{ display:flex; align-items:center; gap:10px; margin-bottom:10px }
+.step-k{ margin:10px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
+.comps{ display:flex; gap:6px }
+.compbtn{
+  flex:1; padding:10px 0; cursor:pointer; border-radius:9px;
+  background:var(--panel-2); border:1px solid var(--line); color:var(--text-2);
+  font:600 11px/1 var(--f-head); letter-spacing:.5px;
+}
+.compbtn.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+.compbtn:disabled{ opacity:.35; cursor:default }
+.cal-target{
+  display:flex; align-items:center; gap:10px; margin:10px 0;
+  padding:9px 10px; border-radius:9px; background:oklch(0.17 0.02 255); border:1px solid var(--line);
+}
+/* 予定が確定している枠(カップの連戦など) */
+.cal.planned{ border-color:var(--accent-dim); background:oklch(0.20 0.03 85 / .18) }
+/* 空枠は詰めて出す(96〜120枠あるため) */
+.cal.none{ padding:5px 10px; margin-bottom:3px }
+.cal.none .cal-b b{ font-size:10px; color:var(--text-mute); font-weight:400 }
+.hands{ display:flex; gap:6px; margin-bottom:8px }
+.hand{
+  flex:1; padding:9px 0; cursor:pointer; border-radius:9px;
+  background:var(--panel-2); border:1px solid var(--line); color:var(--text-2);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  line-height:1; font-family:inherit;
+}
+.hand.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+.hd-i{ display:block; font-size:16px; line-height:1 }
+.hd-l{ font:600 10px/1 var(--f-head); letter-spacing:.5px }
+.hand-desc{ margin-bottom:10px; min-height:16px }
+
+/* 任期満了 */
+.end-t{ font:700 22px/1.3 var(--f-head); letter-spacing:3px; color:var(--accent); text-align:center; margin:18px 0 6px }
+
+/* ---- 順位表の要約 ---- */
+.stand-h{ display:flex; align-items:center; justify-content:space-between;
+  margin:18px 0 10px; cursor:pointer }
+.stand-h .more{ font:400 11px/1 var(--f-head); color:var(--accent) }
+.stand-box{ border:1px solid var(--line); border-radius:10px; overflow:hidden; cursor:pointer }
+.stand-box .strow{ padding:8px 12px; border-bottom:1px solid oklch(0.24 0.02 255) }
+.stand-box .strow:last-child{ border-bottom:0 }
+
+/* 結果 */
+.score{ display:flex; align-items:center; justify-content:space-between; gap:8px;
+  font:600 13px/1.3 var(--f-head) }
+.score .sc{ font:600 26px/1 var(--f-head); color:var(--accent) }
+
+/* オファー */
+.offer{ display:flex; align-items:center; gap:10px; padding:11px 12px; margin:8px 0; cursor:pointer;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px }
+.offer .of-l{ flex:1; min-width:0 }
+.offer .of-l b{ font:600 13px/1.4 var(--f-head); letter-spacing:.5px }
+.offer .of-r{ font-size:11px; color:var(--accent-dim) }
 
 /* =========================================================================
    アクセシビリティ
@@ -342,39 +633,42 @@ body{
     <!-- ---------- HOME(監督のデバイス) ---------- -->
     <div id="scr-home" class="screen"><div class="pad">
       <div class="eyebrow" id="homeSeason">SEASON 1 · MATCHDAY 01</div>
-      <div class="card" id="homeNext">
-        <div class="sect-t">NEXT MATCH</div>
-        <div class="stub"><b>次の一戦</b><span>対戦カードと試合開始の導線が入る</span></div>
-      </div>
-      <div class="card" id="homeSec">
-        <div class="sect-t">秘書</div>
-        <div class="stub"><b>ナラティブ誘導 / お知らせ</b><span>次に何をすべきか・新要素の登場を伝える窓口</span></div>
-      </div>
-      <div class="card" id="homeNews">
-        <div class="sect-t">CLUB NEWS</div>
-        <div class="stub"><b>クラブの今</b><span>目標 / ライバル戦 / サポーターの相談 / けが人 / 施設</span></div>
-      </div>
+      <div class="card"><div class="sect-t">NEXT MATCH</div><div id="homeNext"></div></div>
+      <div class="card"><div class="sect-t">秘書</div><div id="homeSec"></div></div>
+      <div class="card"><div class="sect-t">CLUB NEWS</div><div id="homeNews"></div></div>
     </div></div>
 
     <!-- ---------- CARDS(所持選手) ---------- -->
     <div id="scr-cards" class="screen"><div class="pad">
-      <div class="eyebrow">COLLECTION</div>
-      <div class="stub"><b>所持カード一覧</b><span>ポジション絞り込み(ALL/GK/DF/MF/FW)とカードグリッド<br>タップでカード詳細</span></div>
+      <div class="eyebrow" id="cardsCount">COLLECTION</div>
+      <div class="filters" id="cardsFilter"></div>
+      <div class="grid" id="cardsGrid"></div>
     </div></div>
 
     <!-- ---------- DECK(編成) ---------- -->
     <div id="scr-deck" class="screen"><div class="pad">
-      <div class="eyebrow">SQUAD</div>
-      <div class="stub"><b>ピッチ配置</b><span>11人の配置・総合力・ベンチ</span></div>
-      <div class="stub"><b>監督と戦術</b><span>戦術の選択(チーム熟練度で解禁)・采配スキルの確認</span></div>
+      <div class="row" style="align-items:center">
+        <div><div class="eyebrow">SQUAD POWER</div><div class="big" id="deckPower">0</div></div>
+        <div style="text-align:right"><div class="eyebrow">FORMATION</div><div class="big" id="deckForm">4-4-2</div></div>
+      </div>
+      <div class="pitch" id="deckPitch"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost" id="btnAutoSquad">自動編成</button>
+        <button class="btn ghost" id="btnForm">陣形変更</button>
+      </div>
+      <div class="lg" id="deckNote" style="margin-top:10px"></div>
     </div></div>
 
-    <!-- ---------- SEASON(任期スケジュール) ---------- -->
+    <!-- ---------- SEASON(任期スケジュール = クラブ進行の起点) ---------- -->
     <div id="scr-season" class="screen"><div class="pad">
-      <div class="eyebrow">任期スケジュール</div>
-      <div class="stub"><b>エントリー中の大会</b><span>リーグ / 大陸大会の現在成績</span></div>
-      <div class="stub"><b>期待順位と会長の評価</b><span>クラブの格と持ち込んだ編成から決まる期待値との差</span></div>
-      <button class="btn ghost" id="btnSchedule">日程を見る</button>
+      <div class="eyebrow" id="seasonHead">任期スケジュール</div>
+      <div class="tenure-bar" id="tenureBar"></div>
+      <div class="card" id="seasonBox"></div>
+      <div class="sect-t" style="margin-top:14px">エントリー中の大会</div>
+      <div id="seasonComps"></div>
+      <div class="sect-t" style="margin-top:16px">任期の記録</div>
+      <div class="lg" style="margin-bottom:8px">打った手と、その結果。クラブを移っても1本で続きます。</div>
+      <div id="seasonCal"></div>
     </div></div>
 
     <!-- ---------- CLUB(クラブハウス) ---------- -->
@@ -385,44 +679,55 @@ body{
           <div class="emblem" style="flex:0 0 auto">M</div>
           <div style="flex:1">
             <div id="clubMgrName" style="font:600 14px/1.3 var(--f-head);letter-spacing:.5px">監督</div>
-            <div class="lg">名声 <span class="num" id="clubFame">0</span></div>
+            <div class="lg">名声 <span class="num" id="clubFame">0</span> ／ チケット <span class="num" id="clubTickets">0</span></div>
           </div>
         </div>
       </div>
-      <div class="stub"><b>TROPHIES</b><span>キャリアを通じて蓄積・集めると報酬</span></div>
-      <div class="stub"><b>CLUB FACILITIES</b><span>練習場 / 医療施設 / スタジアム / スカウト網</span></div>
+      <div class="card"><div class="sect-t">CAREER</div><div id="clubHistory"></div></div>
+      <div class="card"><div class="sect-t">CLUB FACILITIES</div><div id="clubFac"></div></div>
     </div></div>
 
-    <!-- ---------- SCHEDULE(日程) ---------- -->
+    <!-- ---------- SCHEDULE(任期カレンダー = 試合の起点) ---------- -->
     <div id="scr-schedule" class="screen"><div class="pad">
-      <div class="eyebrow">FIXTURES</div>
-      <div class="stub"><b>リーグ戦 / カップ戦</b><span>節ごとの日程と結果</span></div>
-      <button class="btn ghost" id="btnLeague">リーグを見る</button>
-    </div></div>
-
-    <!-- ---------- LEAGUE(リーグ表示) ---------- -->
-    <div id="scr-league" class="screen"><div class="pad">
-      <div class="eyebrow">PREMIER LEAGUE</div>
-      <div class="stub"><b>次戦カードと試合開始</b><span>順位表の要約</span></div>
-      <button class="btn ghost" id="btnStandings">順位表を見る</button>
+      <div class="comp-tabs">
+        <button class="comp on" data-comp="league">リーグ戦</button>
+        <button class="comp" data-comp="cup">カップ戦</button>
+      </div>
+      <div class="eyebrow" id="schedHead"></div>
+      <div id="schedList"></div>
+      <div id="schedStand"></div>
     </div></div>
 
     <!-- ---------- STANDINGS(順位表) ---------- -->
     <div id="scr-standings" class="screen"><div class="pad">
       <div class="eyebrow">FULL STANDINGS</div>
-      <div class="stub"><b># / CLUB / W / D / L / GF / GA / PTS</b><span>7クラブ・12節</span></div>
+      <table class="tbl" id="standTbl"></table>
     </div></div>
 
     <!-- ---------- MATCH(試合) ---------- -->
     <div id="scr-match" class="screen"><div class="pad">
       <div class="eyebrow">MATCH</div>
-      <div class="stub"><b>2Dピッチ + 実況</b><span>倍速 / スキップ / 戦術切替 / 采配</span></div>
+      <div class="stub"><b>2Dピッチ + 実況</b><span>第3段で実装。今は結果だけ出る</span></div>
     </div></div>
 
     <!-- ---------- RESULT(結果) ---------- -->
     <div id="scr-result" class="screen"><div class="pad">
-      <div class="eyebrow">FULL TIME</div>
-      <div class="stub"><b>スコア / MOM / 選手採点</b><span>報酬(コイン・チーム熟練度EXP)</span></div>
+      <div class="eyebrow" id="resultHead">FULL TIME</div>
+      <div id="resultBody"></div>
+      <button class="btn" id="btnResultOk" style="margin-top:14px">ホームへ</button>
+    </div></div>
+
+    <!-- ---------- CAREER END(任期満了 = キャリア1周の終わり) ---------- -->
+    <div id="scr-career" class="screen"><div class="pad">
+      <div id="endBody"></div>
+      <button class="btn" id="btnNewCareer" style="margin-top:18px">新しいキャリアを始める</button>
+    </div></div>
+
+    <!-- ---------- OFFER(就任先の選択) ---------- -->
+    <div id="scr-offer" class="screen"><div class="pad">
+      <div class="eyebrow" id="offerHead">OFFERS</div>
+      <div class="lg" id="offerNote" style="margin-bottom:8px"></div>
+      <div id="offerList"></div>
     </div></div>
 
     <!-- ---------- GACHA(スカウト/パック) ---------- -->
@@ -438,31 +743,46 @@ body{
     </div></div>
 
     <!-- ---------- CONTRACT(就任契約書・ヘッダーとタブは隠す) ---------- -->
-    <div id="scr-contract" class="screen"><div class="contract">
-    <div class="ct-assoc">P-FOOTBALL FOOTBALL ASSOCIATION</div>
-    <div class="ct-title">監督就任契約書</div>
-    <div class="ct-sub">MANAGERIAL CONTRACT</div>
-    <div class="ct-rule"></div>
+    <div id="scr-contract" class="screen">
+      <div class="ct-paper">
+        <div class="ct-head">
+          <div class="ct-assoc">P-FOOTBALL FOOTBALL ASSOCIATION</div>
+          <div class="ct-title">監 督 就 任 契 約 書</div>
+          <div class="ct-sub" id="ctSeason">MANAGERIAL CONTRACT</div>
+        </div>
 
-    <div class="ct-art">
-      <div class="no">第一条</div>
-      <div class="field"><label for="ctCoach">就任者氏名</label>
-        <input id="ctCoach" class="input" maxlength="16" placeholder="監督名を記入"></div>
-    </div>
-    <div class="ct-art">
-      <div class="no">第二条</div>
-      <div class="field"><label for="ctClub">所属クラブ名称</label>
-        <input id="ctClub" class="input" maxlength="16" placeholder="クラブ名を記入"></div>
-    </div>
+        <p class="ct-body">本協会は、下記の者を下記クラブの監督として任命し、<span id="ctSeasonRef">本シーズン</span>における全公式競技会の指揮権および選手編成の全権を委任する。就任者は所属選手の育成、クラブ施設の運営、ならびに勝利の追求に最善を尽くすものとする。</p>
 
-    <div class="ct-terms">
-      <dl><dt>契約期間</dt><dd>1シーズン（更新可）</dd></dl>
-      <dl><dt>締結日</dt><dd id="ctDate">—</dd></dl>
-    </div>
+        <div class="ct-arts">
+          <div class="ct-art">
+            <div class="ct-art-h"><span class="no">第一条</span><span class="lb">就任者氏名</span></div>
+            <input id="ctCoach" class="ct-input" maxlength="16" placeholder="監督名を記入">
+          </div>
+          <div class="ct-art">
+            <div class="ct-art-h"><span class="no">第二条</span><span class="lb">所属クラブ名称</span></div>
+            <button id="ctPickClub" class="ct-input ct-pick">クラブを選ぶ</button>
+          </div>
+        </div>
 
-    <div class="ct-rule"></div>
-    <button class="btn" id="ctSign">契約に署名して就任する</button>
-    </div></div>
+        <div class="ct-terms">
+          <div><span class="k">契約期間</span><span class="v">1シーズン（更新可）</span></div>
+          <div><span class="k">締結日</span><span class="v" id="ctDate">—</span></div>
+          <div><span class="k">所属リーグ</span><span class="v" id="ctLeague">—</span></div>
+          <div><span class="k">クラブの格</span><span class="v" id="ctGrade">—</span></div>
+        </div>
+
+        <div class="ct-sign">
+          <div class="ct-sign-l">
+            <div class="k">署名 / SIGNATURE</div>
+            <div class="ct-sign-line" id="ctSignPreview"></div>
+          </div>
+          <div class="ct-seal">協会<br>認証印</div>
+        </div>
+
+        <button class="ct-btn" id="ctSign">契約に署名して就任する</button>
+        <div class="ct-note" id="ctNote">クラブを選ぶと契約内容が確定します</div>
+      </div>
+    </div>
 
   </div><!-- /#appBody -->
 
@@ -473,7 +793,13 @@ body{
       <div class="t-name">P-foot<span>Ball</span></div>
       <div class="t-sub">CLUB CARD FOOTBALL</div>
     </div>
+    <!-- セーブが無ければ TAP TO START(画面のどこを押しても開始)、
+         あれば RETURN TO CAREER / NEW CAREER の選択に切り替える(boot.js) -->
     <div class="t-start" id="tStart">TAP TO START</div>
+    <div class="t-menu" id="tMenu" style="display:none">
+      <button class="t-btn" id="tResume">RETURN TO CAREER</button>
+      <button class="t-btn ghost" id="tNew">NEW CAREER</button>
+    </div>
     <div class="t-foot" id="tFoot">© P-FOOTBALL</div>
   </div>
 
@@ -510,49 +836,618 @@ const GAME={ id:"pftb", title:"P-footBall", sub:"CLUB CARD FOOTBALL" };
 const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));    // a..b の整数乱数(両端含む)
 const rnd=a=>a[Math.floor(Math.random()*a.length)];     // 配列から1つ
 const clamp=(v,lo,hi)=>v<lo?lo:v>hi?hi:v;
-const fmtNum=n=>String(n||0).replace(/\B(?=(\d{3})+(?!\d))/g,",");  // 12400 → "12,400"
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const fmtNum=n=>String(Math.round(n||0)).replace(/\B(?=(\d{3})+(?!\d))/g,",");  // 12400 → "12,400"
 function todayLabel(){                                   // 契約書の締結日
   const d=new Date();
   return d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
 }
-// Promiseにタイムアウトを付ける。ストレージや画像が応答しなくても起動を止めないための保険。
-function withTimeout(p,ms,fallback=null){
-  return Promise.race([Promise.resolve(p),new Promise(r=>{
-    const t=setTimeout(()=>r(fallback),ms);
-    if(t&&t.unref)t.unref(); // node(テスト)でプロセスを引き止めない
-  })]);
-}
 
-// --- ポジション(大分類。細分ポジション favPos は選手データ側に持たせる) ---
+// --- 決定的な乱数(mulberry32) ---
+// 世界(クラブの選手)はセーブに持たず、シード + クラブIDから毎回同じ内容を再生成する。
+// これでセーブが軽くなり、同じキャリアなら何度開いても同じ選手が並ぶ。
+function mulberry32(seed){
+  let a=seed>>>0;
+  return function(){
+    a=(a+0x6D2B79F5)>>>0;
+    let t=Math.imul(a^(a>>>15),1|a);
+    t=(t+Math.imul(t^(t>>>7),61|t))^t;
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+// 文字列 → 32bit ハッシュ(シードの合成に使う)
+function hashStr(s){
+  let h=2166136261>>>0;
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return h>>>0;
+}
+// rng を受け取るヘルパ(Math.random 版と使い分ける)
+const rri=(rng,a,b)=>a+Math.floor(rng()*(b-a+1));
+const rpick=(rng,a)=>a[Math.floor(rng()*a.length)];
+
+// --- ポジション ---
 const POS=["GK","DF","MF","FW"];
+// 細分ポジション(favPos)。大分類 → 細分。
+const SUBPOS={
+  GK:["GK"],
+  DF:["CB","CB","SB","SB"],           // CBを厚めに(生成時の出現比を兼ねる)
+  MF:["DMF","CMF","CMF","OMF","SMF"],
+  FW:["CF","CF","WG","SS"],
+};
 
 // --- レアリティ(デザインモックの4段階。色は base.css の --rar-* と対応) ---
 const RARITY={
-  STD:  { label:"STANDARD",   v:"std"   },
-  RARE: { label:"RARE",       v:"rare"  },
-  SUPER:{ label:"SUPER RARE", v:"super" },
-  ULTRA:{ label:"ULTRA RARE", v:"ultra" },
+  STD:  { label:"STANDARD",   ovr:[68,78], w:60 },
+  RARE: { label:"RARE",       ovr:[76,84], w:28 },
+  SUPER:{ label:"SUPER RARE", ovr:[83,89], w:9  },
+  ULTRA:{ label:"ULTRA RARE", ovr:[88,94], w:3  },
 };
+const RAR_KEYS=Object.keys(RARITY);
+
+// --- スキル(ポジション別のプール。効果は第4段で実装する) ---
+const SKILLS={
+  GK:["セービング","反射神経","飛び出し判断","PKストップ","ハイボール処理"],
+  DF:["対人守備","カバーリング","空中戦","ロングパス","オーバーラップ","クロス","スピード","タックル"],
+  MF:["スルーパス","視野の広さ","キープ力","ボール奪取","ロングシュート","ドリブル","展開力","運動量"],
+  FW:["決定力","ポストプレー","オフザボール","ドリブル突破","カットイン","フィニッシュ","スピード","空中戦"],
+};
+
+// --- フォーメーション ---
+// 各枠は [細分ポジション, ピッチ上の位置(%)]。DECK画面の配置と編成の妥当性判定に使う。
+const FORMATIONS={
+  "4-4-2":[["GK",50,92],["SB",14,72],["CB",38,76],["CB",62,76],["SB",86,72],
+           ["SMF",14,48],["CMF",38,52],["CMF",62,52],["SMF",86,48],["CF",38,18],["CF",62,18]],
+  "4-3-3":[["GK",50,92],["SB",14,72],["CB",38,76],["CB",62,76],["SB",86,72],
+           ["DMF",50,58],["CMF",26,46],["CMF",74,46],["WG",14,20],["CF",50,14],["WG",86,20]],
+};
+const DEFAULT_FORM="4-4-2";
+
+// --- 打ち手(各節に1つ選ぶ。→docs/03 §3.2.3) ---
+// WCCF を踏襲した3種。**効果の詳細は D16 で決める**ため、ここでは選択肢の定義だけを持つ。
+// 1手 = 1エントリなので、後から足すのも効果を実装するのもこの表を触ればよい。
+const HANDS=[
+  { id:"train", icon:"💪", label:"訓練", desc:"選手の★が上がる（最大★5）",            done:"訓練" },
+  { id:"bond",  icon:"🤝", label:"交流", desc:"選手同士の連携が上がる（最大3段階）",  done:"交流" },
+  { id:"rest",  icon:"🛌", label:"休息", desc:"全員のメンタル回復。負傷者がいれば治療", done:"休息" },
+];
+const handById=id=>HANDS.find(h=>h.id===id);
 
 // --- バランスダイヤル ---
 // 確率・係数・閾値は必ずここに集約し、ロジック側へ数値を直書きしない(調整点を1か所に保つ)。
-const TUNING={};
+const TUNING={
+  league:{ clubs:8, rounds:14 },        // 1リーグのクラブ数 / 節数(ホーム&アウェイ・休みなし)
+  // 任期 = キャリア1周(→docs/03 §3.2.3)。節で通算し、シーズンとは切り離す。
+  tenure:{ limit:96, extend:24, hardMax:120, extendRank:3 }, // extendRank位以内で延命
+  squad:{ starters:11, bench:5 },
+  // 収入(→docs/03 §3.5)。数値は暫定。
+  reward:{ win:900, draw:400, lose:120, rankBase:2500, titleBonus:6000 },
+  // 会長の評価。期待順位との差(上回るとプラス)で毎節動く。
+  eval:{ start:50, max:100, perRank:6, floorDismiss:15 },
+  // 期待順位: クラブの格と「持ち込んだ編成の強さ」の合成(→docs/03 §3.9)
+  expect:{ squadWeight:0.45 },
+  // 暫定リゾルバ(第3段で match-core の本実装に置き換える)
+  sim:{ base:1.15, spread:22, homeAdv:0.18, maxGoals:6 },
+};
+
+// ================= 選手カード =================
+// 選手は「プレイヤーの資産(コレクション)」と「クラブからの貸与」の2種類があるが、
+// カードそのものの形は同じ。所有の区別は持ち主側(S.player.coll / S.club.loan)で表す。
+// → docs/03-game-design.md §3.2.2(二層) / §3.4(D13 貸与)
+
+// 名前の素材。国ごとに雰囲気を変えるため、姓のプールを国に紐づける。
+const GIVEN=["A.","B.","C.","D.","E.","F.","G.","H.","J.","K.","L.","M.","N.","O.","P.","R.","S.","T.","V.","Y."];
+// 1クラブ16人を同じ国から取るので、姓は各国20個以上ないと同姓が並んでしまう。
+const FAMILY={
+  nordia:["ハルヴォルセン","ベリストローム","リンドクヴィスト","バッカー","エリクソン","ソルベリ","ノルドヴァル","ハーゲン",
+          "オルセン","ダールベリ","フォシュベリ","ニルソン","ヴィークランド","サンドバリ","ユーハンソン","レンベリ",
+          "アスプルンド","ヘルガソン","ブロム","シェーグレン"],
+  iberia:["シルヴェイラ","ドゥアルテ","コスタ","アルメイダ","ロブレド","ミランダ","ベルナル","キンタナ",
+          "アギレラ","カルヴァーリョ","フェレイラ","エスコバル","バリオス","ソラーノ","メンドーサ","パチェコ",
+          "ヴィエイラ","サンチェス","ナヴァロ","レイス"],
+  estra: ["コワルスキ","リッチ","オセイ","ノヴァク","ヴァレンタ","マルティネク","ブラホ","シュミット",
+          "ホルヴァート","ヴォイタ","ザヤツ","ペトロフ","ドヴォルザーク","クラウス","バルトシュ","マズル",
+          "ヤンコフ","ステファノフ","ルカーチ","ネメシュ"],
+  garia: ["ヴァントロワ","ヴァンドーレン","ルフェーヴル","モロー","デュラン","ボネ","ラミレス","カロン",
+          "ドラクロワ","ベルナール","フォンテーヌ","ジラール","マルソー","ロシェ","テヴナン","ヴィアル",
+          "オービュッソン","クレマン","ダルモン","ペリエ"],
+};
+const NATIONS=Object.keys(FAMILY);
+
+// 6桁のカードID。生成元(クラブ/パック)に依らず一意になるよう uid を回す。
+let uid=1;
+function nextCardId(){ return uid++; }
+
+/** OVR からポジション別に4能力へ配分する。合計は OVR×4 前後に収める。 */
+function statsFor(rng,pos,ovr){
+  // [atk, def, spd, tec] の重み。GKは def を「守備=セービング」として扱う。
+  const W={ GK:[0.55,1.35,0.85,1.05], DF:[0.70,1.30,1.00,0.90],
+            MF:[0.95,0.95,1.00,1.15], FW:[1.35,0.60,1.15,0.95] }[pos];
+  const st=W.map(w=>{
+    const v=ovr*w+rri(rng,-4,4);
+    return clamp(Math.round(v),35,99);
+  });
+  return { atk:st[0], def:st[1], spd:st[2], tec:st[3] };
+}
+
+/** 4能力から OVR を再計算する(ステータスを変えたら必ずこれで揃える)。 */
+function calcOvr(pos,st){
+  const W={ GK:[0.10,0.45,0.15,0.30], DF:[0.12,0.46,0.22,0.20],
+            MF:[0.24,0.24,0.22,0.30], FW:[0.42,0.08,0.26,0.24] }[pos];
+  return Math.round(W[0]*st.atk+W[1]*st.def+W[2]*st.spd+W[3]*st.tec);
+}
+
+/** レアリティを抽選する(重みは RARITY.w)。opts.min で下限を指定できる。 */
+function rollRarity(rng,minKey){
+  const from=minKey?RAR_KEYS.indexOf(minKey):0;
+  const pool=RAR_KEYS.slice(from);
+  const total=sum(pool.map(k=>RARITY[k].w));
+  let x=rng()*total;
+  for(const k of pool){ x-=RARITY[k].w; if(x<=0)return k; }
+  return pool[pool.length-1];
+}
+
+/**
+ * カードを1枚作る。
+ *   rng    決定的乱数(同じシードなら同じ選手が出る)
+ *   pos    大分類ポジション
+ *   opts   { rarity, club, nation, ovrBias }
+ */
+function makeCard(rng,pos,opts={}){
+  const rarity=opts.rarity||rollRarity(rng);
+  const [lo,hi]=RARITY[rarity].ovr;
+  const ovr=clamp(rri(rng,lo,hi)+(opts.ovrBias||0),50,99);
+  // 自国籍が中心だが、3割ほどは外国籍にして顔ぶれに幅を出す
+  const nation=(opts.nation&&rng()<0.7)?opts.nation:rpick(rng,NATIONS);
+  const st=statsFor(rng,pos,ovr);
+  const pool=SKILLS[pos];
+  const n=rarity==="ULTRA"?3:rarity==="SUPER"?3:rarity==="RARE"?2:1;
+  const skills=[];
+  while(skills.length<n){ const s=rpick(rng,pool); if(!skills.includes(s))skills.push(s); }
+  return {
+    id:nextCardId(),
+    name:rpick(rng,GIVEN)+" "+rpick(rng,FAMILY[nation]),
+    pos, favPos:rpick(rng,SUBPOS[pos]),
+    rarity, ovr:calcOvr(pos,st),
+    age:rri(rng,18,34), nation,
+    atk:st.atk, def:st.def, spd:st.spd, tec:st.tec,
+    skills,
+    club:opts.club||"",          // 所属クラブ(コンビネーション combo の判定に使う)
+  };
+}
+
+/** 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。 */
+function makeRoster(rng,opts={}){
+  const plan=["GK","GK","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];
+  return plan.map(pos=>makeCard(rng,pos,opts));
+}
+
+/** カードの表示用レア度ラベル。 */
+const rarLabel=c=>RARITY[c.rarity].label;
+
+/** 編成の強さ(平均OVR)。期待順位やCPUの戦力比較に使う。 */
+function squadPower(cards){
+  const a=cards.filter(Boolean);
+  return a.length?Math.round(sum(a.map(c=>c.ovr))/a.length):0;
+}
+
+/** 枠(細分ポジション)に対する適性。ぴったり=1、大分類が同じ=0.85、それ以外=0.6。 */
+function slotFit(card,subPos){
+  if(!card)return 0;
+  if(card.favPos===subPos)return 1;
+  const group=Object.keys(SUBPOS).find(g=>SUBPOS[g].includes(subPos));
+  return card.pos===group?0.85:0.6;
+}
+
+// ================= 世界(国・クラブ・リーグ・日程) =================
+// クラブの選手はセーブに持たない。world.seed とクラブIDから毎回同じ内容を再生成する
+// (→ data.js の mulberry32)。セーブが軽く、同じキャリアなら何度開いても同じ顔ぶれになる。
+
+// --- 国(格 tier が高いほど上位リーグ。キャリアの階段になる) ---
+const COUNTRIES=[
+  { id:"garia",  name:"ガリア",     en:"GARIA",  abbr:"GAR", tier:4, style:"技巧",   money:1.00 },
+  { id:"iberia", name:"イベリア",   en:"IBERIA", abbr:"IBE", tier:3, style:"攻撃的", money:0.82 },
+  { id:"estra",  name:"エストラ",   en:"ESTRA",  abbr:"EST", tier:2, style:"堅守",   money:0.66 },
+  { id:"nordia", name:"ノルディア", en:"NORDIA", abbr:"NOR", tier:1, style:"走力",   money:0.50 },
+];
+const countryById=id=>COUNTRIES.find(c=>c.id===id);
+
+// --- クラブ(各国8クラブ = 計32)。rank 1 が国内最上位。 ---
+const CLUB_NAMES={
+  garia: ["リオーネ・カルチョ","AC ソレンヌ","パラディン・ガリア","オリンピク・ヴェール","FCムーラン","レアル・カロン","US ボネ","スタッド・デュラン"],
+  iberia:["カサブランカ・ユニオン","CFミランダ","アトレティコ・ロブレド","デポルティボ・キンタナ","SDベルナル","CDアルメイダ","ラシン・コスタ","UDドゥアルテ"],
+  estra: ["メリディアン・アスレチック","FKノヴァク","SKヴァレンタ","ディナモ・ブラホ","FCシュミット","MTKマルティネク","スパルタ・コワル","AC リッチ"],
+  nordia:["ノルフィエルFC","ソルヴィク・ユナイテッド","IFベリストローム","ハーゲンBK","FKソルベリ","ノルドヴァルIF","エリクソンFC","BKリンド"],
+};
+const CLUBS=[];
+COUNTRIES.forEach(co=>{
+  CLUB_NAMES[co.id].forEach((name,i)=>{
+    CLUBS.push({
+      id:co.id+"-"+(i+1), name, country:co.id, rank:i+1,
+      abbr:(co.abbr+(i+1)),
+      // クラブの格(1..10)。国の格とクラブ順位から決める。就任先選びの目安になる。
+      grade:clamp(Math.round(co.tier*2.2+(8-i)*0.55),1,10),
+    });
+  });
+});
+const clubById=id=>CLUBS.find(c=>c.id===id);
+const clubsOf=country=>CLUBS.filter(c=>c.country===country);
+
+/** クラブの戦力水準(生成される選手のOVR補正)。国の格 × クラブ順位。 */
+function clubBias(club){
+  const co=countryById(club.country);
+  return Math.round((co.tier-2.5)*4 + (4.5-club.rank)*2.2);
+}
+
+/** クラブの所属選手を決定的に再生成する(貸与される戦力・CPUの戦力の両方に使う)。 */
+function clubRoster(seed,clubId){
+  const club=clubById(clubId);
+  const rng=mulberry32((seed^hashStr(clubId))>>>0);
+  const saveUid=uid; uid=1000000+(hashStr(clubId)%900000);   // クラブ選手のIDは別空間に置く
+  const roster=makeRoster(rng,{ club:club.name, nation:club.country, ovrBias:clubBias(club) });
+  uid=saveUid;
+  return roster;
+}
+
+/** クラブの総合力(順位表の初期並びやCPU同士の試合に使う)。 */
+function clubPower(seed,clubId){
+  const r=clubRoster(seed,clubId);
+  return squadPower(r.slice(0,TUNING.squad.starters));
+}
+
+// --- 日程(ホーム&アウェイの総当たり) ---
+/**
+ * 偶数クラブの円卓法(1つを固定して残りを回す)。
+ * n=8 なら 7ラウンド、往復で14節。休みが出ないので順位表が常に揃う。
+ * 返り値: [ [ {h,a}, ... ], ... ] (節ごとの対戦カード)
+ */
+function makeFixtures(clubIds,rng){
+  const ids=clubIds.slice();
+  const n=ids.length, half=n/2, rounds=[];
+  for(let r=0;r<n-1;r++){
+    const pairs=[];
+    for(let i=0;i<half;i++){
+      const h=ids[i], a=ids[n-1-i];
+      pairs.push(r%2===0?{h,a}:{h:a,a:h});     // ホーム/アウェイを交互にして偏りを消す
+    }
+    rounds.push(pairs);
+    ids.splice(1,0,ids.pop());                  // 先頭を固定して回す
+  }
+  const back=rounds.map(p=>p.map(m=>({h:m.a,a:m.h})));  // 後半戦はホームを入れ替える
+  const all=rounds.concat(back);
+  // 節の順番だけシャッフルして、毎キャリア同じ並びにならないようにする
+  for(let i=all.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [all[i],all[j]]=[all[j],all[i]]; }
+  return all;
+}
+
+/** 空の順位表を作る。 */
+function emptyTable(clubIds){
+  const t={};
+  clubIds.forEach(id=>{ t[id]={ w:0,d:0,l:0,gf:0,ga:0 }; });
+  return t;
+}
+const pts=r=>r.w*3+r.d;
+const gd=r=>r.gf-r.ga;
+
+/** 順位表を勝点 → 得失点差 → 総得点で並べ、[{id,...,pts,gd,rank}] を返す。 */
+function standings(table){
+  const rows=Object.keys(table).map(id=>({ id, ...table[id], pts:pts(table[id]), gd:gd(table[id]) }));
+  rows.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.id.localeCompare(b.id));
+  rows.forEach((r,i)=>r.rank=i+1);
+  return rows;
+}
+const rankOf=(table,clubId)=>standings(table).find(r=>r.id===clubId).rank;
+
+/** 結果を順位表に反映する。 */
+function applyResult(table,h,a,hg,ag){
+  table[h].gf+=hg; table[h].ga+=ag; table[a].gf+=ag; table[a].ga+=hg;
+  if(hg>ag){ table[h].w++; table[a].l++; }
+  else if(hg<ag){ table[a].w++; table[h].l++; }
+  else { table[h].d++; table[a].d++; }
+}
+
+// --- 期待順位(→docs/03 §3.9) ---
+/**
+ * クラブの格だけで決めると、強いコレクションを弱小クラブに持ち込んで
+ * 期待を楽に上回れてしまう。持ち込んだ編成の強さも合成して、
+ * 「あなたほどの陣容なら勝って当然だ」という圧がかかるようにする。
+ */
+function expectedRank(seed,clubId,squadPow){
+  const league=clubsOf(clubById(clubId).country).map(c=>c.id);
+  const powers=league.map(id=>({ id, p:clubPower(seed,id) }));
+  const mine=powers.find(p=>p.id===clubId);
+  const blended=mine.p*(1-TUNING.expect.squadWeight)+squadPow*TUNING.expect.squadWeight;
+  const better=powers.filter(p=>p.id!==clubId&&p.p>blended).length;
+  return clamp(better+1,1,league.length);
+}
+
+// --- キャリア(就任・任期・評価) ---
+/** 就任できるクラブ(名声が届く範囲)。名声が上がるほど上位国・上位クラブが解禁される。
+ *  末尾の -560 は「キャリア開始時点で最下位国の下位4クラブが選べる」ようにするための下駄。
+ *  最初から選択肢がないと就任がただの通過儀礼になるため。 */
+function requiredFame(club){
+  const co=countryById(club.country);
+  return Math.max(0,Math.round((co.tier-1)*1200+(8-club.rank)*180-560));
+}
+const offersFor=fame=>CLUBS.filter(c=>requiredFame(c)<=fame);
+
+/** 新しい任期を開始する(就任)。S.club / S.world をこのクラブ用に組み直す。 */
+function startTenure(clubId){
+  const seed=S.world.seed;
+  const league=clubsOf(clubById(clubId).country).map(c=>c.id);
+  const rng=mulberry32((seed^hashStr(clubId+":"+S.world.season))>>>0);
+  S.club={
+    id:clubId,
+    coins:Math.round(3000*countryById(clubById(clubId).country).money),
+    fac:{ training:0, medical:0, stadium:0, scouting:0 },   // 施設(第4段で使う)
+    exp:0,                                                   // チーム熟練度(→§3.7)
+    eval:TUNING.eval.start,                                  // 会長の評価
+    loan:clubRoster(seed,clubId),                            // 任期中だけ借りる所属選手
+    expect:0,
+  };
+  S.world.table=emptyTable(league);
+  S.world.fixtures=makeFixtures(league,rng);
+  S.world.results={};
+  S.world.matchday=1;
+  S.squad=autoSquad();
+  S.club.expect=expectedRank(seed,clubId,squadPower(squadCards().slice(0,TUNING.squad.starters)));
+  S.player.history.push({ season:S.world.season, clubId, result:"在任" });
+}
+
+/** 使える選手 = 手持ちカード(恒久) + クラブからの貸与(任期中だけ)。 */
+const availableCards=()=>S.player.coll.concat(S.club.loan);
+const cardById=id=>availableCards().find(c=>c.id===id)||null;
+const isLoaned=card=>!!card&&S.club.loan.some(c=>c.id===card.id);
+
+/** 現在の編成(11枠)をカードで返す。埋まっていない枠は null。 */
+const squadCards=()=>(S.squad||[]).map(id=>cardById(id));
+
+/** 枠との適性が高い順に自動編成する。 */
+function autoSquad(){
+  const slots=FORMATIONS[S.form||DEFAULT_FORM];
+  const pool=availableCards().slice();
+  const used=new Set();
+  return slots.map(([sub])=>{
+    let best=null,bestScore=-1;
+    for(const c of pool){
+      if(used.has(c.id))continue;
+      const score=slotFit(c,sub)*c.ovr;
+      if(score>bestScore){ bestScore=score; best=c; }
+    }
+    if(best)used.add(best.id);
+    return best?best.id:null;
+  });
+}
+
+// --- 会長の評価(→docs/03 §3.9) ---
+/**
+ * 評価は**累積しない**。「今の順位が期待に対してどうか」から毎回導出する。
+ *
+ * 累積式にすると、期待1位のクラブは (期待-順位) が常に0以下にしかならず評価が減る一方になり、
+ * 逆に期待最下位のクラブは常に0以上で決してクビにならない、という非対称が生まれる。
+ * 導出式なら「期待どおり = start」「上回れば上、下回れば下」が順位に関わらず対称に効く。
+ */
+function chairmanEval(){
+  const r=rankOf(S.world.table,S.club.id);
+  return clamp(TUNING.eval.start+(S.club.expect-r)*TUNING.eval.perRank,0,TUNING.eval.max);
+}
+
+// --- 節の進行 ---
+/** その節の自クラブのカード(ホーム/アウェイと相手)を返す。無ければ null。 */
+function myFixture(md){
+  const round=(S.world.fixtures||[])[(md||S.world.matchday)-1]||[];
+  const m=round.find(x=>x.h===S.club.id||x.a===S.club.id);
+  if(!m)return null;
+  return { home:m.h===S.club.id, opp:m.h===S.club.id?m.a:m.h };
+}
+
+/**
+ * 1節を進める。自クラブの試合と、同じ節の他クラブ同士の試合をまとめて解決し、
+ * 順位表・コイン・チーム熟練度・会長の評価を更新する。
+ * 返り値: { my:{opp,home,hg,ag,win}, others:[...] }  シーズン終了なら my=null もありうる。
+ */
+// --- 任期(キャリア1周) → docs/03 §3.2.3 ---
+const tenureLeft=()=>Math.max(0,S.career.limit-S.career.node+1);
+/** 上限に達したか。達したら新規大会にはエントリーしないが、進行中の大会は最後まで戦う。 */
+function checkTenureClosing(){
+  if(!S.career.closing&&S.career.node>S.career.limit)S.career.closing=true;
+  return S.career.closing;
+}
+/**
+ * 大会(シーズン)が決着した時点で任期の去就を決める。
+ * 上限前なら何も起きない。上限に達していれば、成績次第で延命 or 任期終了。
+ */
+function judgeTenure(rank){
+  if(!checkTenureClosing())return null;
+  if(S.career.limit<TUNING.tenure.hardMax&&rank<=TUNING.tenure.extendRank){
+    S.career.limit=Math.min(TUNING.tenure.hardMax,S.career.limit+TUNING.tenure.extend);
+    S.career.closing=false;
+    return { extended:true, limit:S.career.limit };
+  }
+  S.career.over=true;
+  return { extended:false };
+}
+
+/** 今節の打ち手を選ぶ。選ぶまで試合には進めない(→§3.2.3)。 */
+function pickHand(id){
+  if(!handById(id))return false;
+  S.career.hand=id;
+  return true;
+}
+
+/**
+ * 今節に出る大会を選ぶ。
+ * 節は「打ち手 → どの大会に出るか」の順で決める。リーグの日程は節に固定されておらず、
+ * リーグを選んだ節に次の1試合を消化する(カップが割り込むため → docs/03 §3.2.3)。
+ */
+function compsAvailable(){
+  const out=[];
+  const planned=S.career.plan[S.career.node];
+  if(planned)return [planned.comp];                          // 先に予定が埋まっている節は選べない
+  if(!seasonOver())out.push("league");
+  // "cup" は大陸大会の実装後に足す
+  return out;
+}
+function pickComp(id){
+  if(!compsAvailable().includes(id))return false;
+  S.career.comp=id;
+  return true;
+}
+
+function playMatchday(){
+  if(!S.career.hand)return null;                            // 打ち手が未選択なら進めない
+  if(!S.career.comp&&!pickComp("league"))return null;       // 大会が未選択なら進めない
+  const W=S.world, md=W.matchday, round=(W.fixtures||[])[md-1]||[];
+  const rng=mulberry32((W.seed^hashStr(S.club.id+":"+W.season+":"+md))>>>0);
+  const mine=squadCards().slice(0,TUNING.squad.starters);
+  const myPow=teamStrength(mine,S.form);
+  const out={ my:null, others:[] };
+
+  round.forEach(m=>{
+    const isMine=m.h===S.club.id||m.a===S.club.id;
+    const hp=m.h===S.club.id?myPow:clubPower(W.seed,m.h);
+    const ap=m.a===S.club.id?myPow:clubPower(W.seed,m.a);
+    const { hg, ag }=resolveMatch({strength:hp},{strength:ap},rng);
+    applyResult(W.table,m.h,m.a,hg,ag);
+    if(isMine){
+      const home=m.h===S.club.id, gf=home?hg:ag, ga=home?ag:hg;
+      out.my={ opp:home?m.a:m.h, home, gf, ga, win:gf>ga, draw:gf===ga };
+      W.results[md]=out.my;                                  // 日程画面で過去のスコアを出すため
+      S.club.coins+=gf>ga?TUNING.reward.win:gf===ga?TUNING.reward.draw:TUNING.reward.lose;
+      S.club.exp+=gf>ga?350:gf===ga?220:150;              // チーム熟練度(→§3.7)
+      S.club.eval=chairmanEval();
+    }else out.others.push({ h:m.h, a:m.a, hg, ag });
+  });
+
+  // 任期の記録(カレンダーの過去行になる)。打ち手と試合を1節としてまとめる。
+  const my=out.my;
+  S.career.log.push({
+    node:S.career.node, season:W.season, clubId:S.club.id, hand:S.career.hand,
+    comp:"league", md,
+    opp:my?my.opp:null, home:my?my.home:null, gf:my?my.gf:null, ga:my?my.ga:null,
+    res:my?(my.win?"win":my.draw?"draw":"lose"):null,
+  });
+  S.career.node++;
+  S.career.hand=null; S.career.comp=null;                   // 次節はまた選び直す
+  checkTenureClosing();
+  W.matchday++;
+  return out;
+}
+
+const seasonOver=()=>S.world.matchday>(S.world.fixtures||[]).length;
+
+/** シーズン終了時の審判: 期待順位との差で 続投 / 解任 / オファー を決める。 */
+function judgeSeason(){
+  const rank=rankOf(S.world.table,S.club.id);
+  const diff=S.club.expect-rank;                 // 正なら期待を上回った
+  S.club.eval=chairmanEval();
+  const fameGain=Math.round(diff*140+(rank===1?900:0));
+  S.player.fame=Math.max(0,S.player.fame+fameGain);
+  const h=S.player.history[S.player.history.length-1];
+  if(h){ h.rank=rank; h.result=S.club.eval<TUNING.eval.floorDismiss?"解任":"続投"; }
+  // 大会が決着したこの時点で、任期の去就も決まる(→§3.2.3)
+  const tenure=judgeTenure(rank);
+  return { rank, diff, fameGain, dismissed:S.club.eval<TUNING.eval.floorDismiss, tenure };
+}
+
+// ================= 試合の純粋計算 =================
+// DOM に一切触らない。ここが独立していることで
+//   ・他クラブ同士の試合を毎節そのまま解決できる(描画しないので一瞬)
+//   ・スキップ / 自動消化が同じ経路に乗る
+//   ・headless Node でシーズンを何百回も回してバランス検証できる
+// → docs/03-game-design.md §3.6
+//
+// ⚠ 現状は**暫定の強さ比較リゾルバ**。第3段でフル試合エンジン(起点→連鎖→シュート)に
+//   置き換えるが、resolveMatch の入出力は変えない。呼び出し側はそのまま動く。
+
+/** チーム1つ分の「試合に効く強さ」。編成のOVRと枠適性から出す。 */
+function teamStrength(cards,form){
+  const slots=FORMATIONS[form||DEFAULT_FORM];
+  let total=0,n=0;
+  cards.forEach((c,i)=>{
+    if(!c)return;
+    const sub=slots[i]?slots[i][0]:null;
+    total+=c.ovr*(sub?slotFit(c,sub):1);
+    n++;
+  });
+  return n?total/n:0;
+}
+
+/** ポアソン分布から得点を引く(rng は 0..1 を返す関数)。 */
+function poisson(rng,lambda){
+  const L=Math.exp(-lambda);
+  let k=0,p=1;
+  do{ k++; p*=rng(); }while(p>L);
+  return clamp(k-1,0,TUNING.sim.maxGoals);
+}
+
+/**
+ * 1試合を解決する。
+ *   home/away : { strength:number }
+ *   rng       : 決定的乱数(省略時は Math.random)
+ * 返り値: { hg, ag }  ホーム/アウェイの得点
+ */
+function resolveMatch(home,away,rng){
+  const R=rng||Math.random;
+  const S_=TUNING.sim;
+  const d=(home.strength-away.strength)/S_.spread;      // 強さ差 → 期待得点の傾き
+  const hl=clamp(S_.base+d*0.55+S_.homeAdv,0.15,4.5);
+  const al=clamp(S_.base-d*0.55,0.15,4.5);
+  return { hg:poisson(R,hl), ag:poisson(R,al) };
+}
 
 // ================= 状態と保存 =================
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=1;
+const SAVE_VER=3;
 
-// 新規データ。キーを足しただけの変更なら SAVE_VER を上げなくても
-// loadGame() の欠落補完が古いセーブを救う(→docs/02-data-model.md §2.3)。
+// 新規データ。
+// **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
+//   player … プレイヤー(監督)の恒久資産。クラブを移っても持ち越す
+//   club   … 契約中のクラブのもの。退任すると丸ごと捨てる
+//   world  … 世界の状態(シード・シーズン・順位表・日程)
+// この分け方のおかげで、退任処理は「S.club を作り直すだけ」で済む。
 function defaultState(){
   return {
     v:SAVE_VER,
-    coach:"", teamName:"",   // 監督名 / クラブ名(就任契約書で記入)
-    coins:0, tickets:0,      // コイン(クラブ予算) / チケット(報酬券)
-    fame:0,                  // 名声。クラブを移っても失われない監督個人の資産
-    season:1, matchday:1,    // 任期の進行(1シーズン=12節)
+    coach:"",                       // 監督名(就任契約書で記入)
+    form:DEFAULT_FORM,              // 使用フォーメーション
+    player:{
+      fame:0,                       // 名声 = 次にどのクラブへ行けるか(→§3.9)
+      tickets:0,                    // チケット(報酬券)。コインを使わずパックを引ける
+      coll:[],                      // 集めた選手カード = プレイヤーの資産(→§3.2.2)
+      tactics:[],                   // 習得した采配(→§3.7)
+      trophies:[],                  // 獲得トロフィー(→§3.9)
+      history:[],                   // キャリアの軌跡 [{season,clubId,rank,result}]
+    },
+    club:null,                      // 就任するまで null(→startTenure で作る)
+    world:{ seed:0, season:1, matchday:1, table:{}, fixtures:[], results:{} },
+    squad:[],                       // 編成(11枠。カードIDまたは null)
+    // 任期 = キャリア1周(→docs/03 §3.2.3)。シーズンとは切り離し、節で通算する。
+    career:{
+      node:1,                       // 通算の節(1..limit)
+      limit:TUNING.tenure.limit,    // 現在の上限(延命で伸びる)
+      closing:false,                // 上限に達した = 新規大会へエントリーしない
+      over:false,                   // 任期終了(キャリア1周の終わり)
+      hand:null,                    // 今節の打ち手(選ぶまで試合に進めない)
+      comp:null,                    // 今節に出る大会("league" / "cup")
+      // 先に決まっている予定。node番号 → {comp,label}。
+      // カップの連戦のように「この節はこの大会」と先に埋まるケースをここで表す。
+      // 埋まっていない節は「未定」の枠として表示する(→docs/03 §3.2.3)。
+      plan:{},
+      log:[],                       // 消化した節の記録(カレンダーの過去行になる)
+    },
+  };
+}
+
+/**
+ * 編成を単体で持ち出せる形にする(将来の非同期対戦の前提 → §3.2.2)。
+ * 相手の環境にはこちらのセーブが無いので、**カードの実体ごと**書き出す。
+ */
+function exportSquad(){
+  return {
+    coach:S.coach, club:S.club?clubById(S.club.id).name:"",
+    form:S.form, cards:squadCards().filter(Boolean),
   };
 }
 let S=defaultState();
@@ -614,28 +1509,57 @@ async function importSave(text){
 
 // 旧スキーマからの補完。SAVE_VER を上げたときに if(S.v<N){...} を積み増す。
 function migrate(){
+  // v1 → v2: 平置きだった項目を player / club / world に分けた。
+  // v1 には就任という概念が無くコレクションも無いので、監督名だけ引き継いで作り直す。
+  if(S.v<2){
+    const coach=S.coach||"";
+    S=defaultState();
+    S.coach=coach;
+  }
+  // v2 → v3: 任期(キャリア1周=96節)を導入した。v2 には通算節の概念が無く、
+  // 途中から数え始めると任期の意味が壊れるので、進行中のキャリアは作り直す。
+  if(S.v<3){
+    const coach=S.coach||"";
+    S=defaultState();
+    S.coach=coach;
+  }
   S.v=SAVE_VER;
 }
 
 function applyDefaults(){ S=defaultState(); }              // 新規データ
-async function newGame(){ applyDefaults(); await save(); } // はじめから(上書き確認は呼び出し側)
+// はじめから。世界のシードをここで固定する(以後クラブの顔ぶれは毎回同じになる)。
+async function newGame(){
+  applyDefaults();
+  S.world.seed=(Date.now()^Math.floor(Math.random()*0xffffffff))>>>0;
+  uid=1;
+  await save();
+}
 async function loadGame(){                                 // つづきから(セーブが無ければ新規)
   const v=await readSave();
   if(!v){ applyDefaults(); await save(); return; }
   try{ S=JSON.parse(v); }catch(e){ applyDefaults(); await save(); return; }
   if(S.v<SAVE_VER){ migrate(); await save(); }
-  // 版に依らない欠落補完(古いセーブに新フィールドを足したときの保険)
+  // 版に依らない欠落補完(古いセーブに新フィールドを足したときの保険)。
+  // player / world は入れ子なので、その中のキーまで補う。
   const d=defaultState();
   for(const k in d) if(S[k]===undefined) S[k]=d[k];
+  for(const k in d.player) if(S.player[k]===undefined) S.player[k]=d.player[k];
+  for(const k in d.world)  if(S.world[k]===undefined)  S.world[k]=d.world[k];
+  for(const k in d.career) if(S.career[k]===undefined) S.career[k]=d.career[k];
+  if(!S.world.seed) S.world.seed=(Date.now()&0xffffffff)>>>0;
+  // カードIDが衝突しないよう、既存の最大IDの次から再開する
+  const ids=S.player.coll.map(c=>c.id).concat((S.club&&S.club.loan||[]).map(c=>c.id));
+  uid=Math.max(1,...ids.filter(n=>n<1000000))+1;
 }
 
 // ================= 画面と共通UI =================
 // 画面は #scr-<id> を .on で1つだけ表示する。画面を増やすときは
-//   1) index.html に <div id="scr-xxx" class="screen"> を足す
+//   1) index.html の #appBody に <div id="scr-xxx" class="screen"> を足す
 //   2) SCREENS に1エントリ足す(ヘッダー・タブ・戻るの出し方はここで決まる)
 // の2手順で済むようにしてある。
 
 const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 
 /**
  * 画面レジストリ。
@@ -648,18 +1572,19 @@ const $=id=>document.getElementById(id);
 const SCREENS={
   title:     { chrome:"bare" },
   contract:  { chrome:"bare" },
+  offer:     { title:"OFFERS",    chrome:"back",  render:()=>renderOffers() },
   home:      { title:"HOME",      tab:"home",      chrome:"full", render:()=>renderHome() },
-  cards:     { title:"CARDS",     tab:"cards",     chrome:"full" },
-  deck:      { title:"DECK",      tab:"deck",      chrome:"full" },
-  season:    { title:"SEASON",    tab:"season",    chrome:"full" },
+  cards:     { title:"CARDS",     tab:"cards",     chrome:"full", render:()=>renderCards() },
+  deck:      { title:"DECK",      tab:"deck",      chrome:"full", render:()=>renderDeck() },
+  season:    { title:"SEASON",    tab:"season",    chrome:"full", render:()=>renderSeason() },
   clubhouse: { title:"CLUB",      tab:"clubhouse", chrome:"full", render:()=>renderClubhouse() },
-  schedule:  { title:"SCHEDULE",  under:"season",  chrome:"back" },
-  league:    { title:"LEAGUE",    under:"season",  chrome:"back" },
-  standings: { title:"STANDINGS", under:"season",  chrome:"back" },
+  schedule:  { title:"FIXTURES",  under:"season",  chrome:"back", render:()=>renderSchedule() },
+  standings: { title:"STANDINGS", under:"season",  chrome:"back", render:()=>renderStandings() },
   gacha:     { title:"SCOUT",     under:"home",    chrome:"back" },
   secretary: { title:"SECRETARY", under:"home",    chrome:"back" },
   match:     { title:"MATCH",     chrome:"bare" },
-  result:    { title:"RESULT",    chrome:"bare" },
+  result:    { title:"RESULT",    chrome:"bare",   render:()=>renderResult() },
+  career:    { title:"CAREER",    chrome:"bare",   render:()=>renderCareerEnd() },
 };
 
 let _scr="title";      // 現在の画面
@@ -684,6 +1609,8 @@ function show(id,opts){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.s===lit));
 
   if(def.render)def.render();
+  $("appBody").scrollTop=0;
+  if(def.after)def.after();      // 描画後の後処理(現在節へスクロール等)
 }
 function goBack(){ show(_back.pop()||"home"); }
 
@@ -697,45 +1624,515 @@ function toast(msg){
 
 // ヘッダーの共通表示(クラブ名・エンブレム・コイン)を現在のセーブ状態に同期する。
 function headUI(){
-  const club=S.teamName||"マイクラブ";
-  $("hdClubName").textContent=club;
-  $("hdEmblem").textContent=(club.trim()[0]||"P").toUpperCase();
-  $("hdCoin").textContent=fmtNum(S.coins);
+  const name=S.club?clubById(S.club.id).name:"—";
+  $("hdClubName").textContent=name;
+  $("hdEmblem").textContent=(name.trim()[0]||"P").toUpperCase();
+  $("hdCoin").textContent=fmtNum(S.club?S.club.coins:0);
 }
 
-// --- 各画面の描画(中身は段階的に実装する。今は骨格の同期のみ) ---
-function renderHome(){
-  $("homeSeason").textContent="SEASON "+S.season+" · MATCHDAY "+String(S.matchday).padStart(2,"0");
+// ---------- 共通の小部品 ----------
+const rarClass=c=>"r-"+RARITY[c.rarity].label.split(" ")[0].toLowerCase();
+/** カード1枚のタイル。所有(★)と貸与を見分けられるようにする(→§3.4 D13)。 */
+function cardTile(c){
+  if(!c)return '<div class="ptile empty">空き</div>';
+  const own=!isLoaned(c);
+  return '<div class="ptile '+rarClass(c)+'" data-card="'+c.id+'">'
+    +'<div class="pt-top"><span class="pt-pos">'+c.favPos+'</span>'
+    +'<span class="pt-ovr num">'+c.ovr+'</span></div>'
+    +'<div class="pt-name">'+(own?'<span class="own">★</span>':'')+esc(c.short||c.name)+'</div>'
+    +'<div class="pt-foot lg">'+(own?'所有':'貸与')+'</div></div>';
 }
+const clubName=id=>clubById(id)?clubById(id).name:id;
+
+// ---------- HOME(監督のデバイス → docs/06 §6.8) ----------
+function renderHome(){
+  const W=S.world;
+  $("homeSeason").textContent="SEASON "+W.season+" · MATCHDAY "+String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0");
+
+  const f=myFixture();
+  if(seasonOver()){
+    $("homeNext").innerHTML='<div class="lg">今季の全日程が終了しました。'
+      +(S.career.closing?'<br><b>任期の上限に達しています。ここで去就が決まります。</b>':'')+'</div>'
+      +'<button class="btn" id="btnFinishSeason" style="margin-top:10px">シーズンを終える</button>';
+    $("btnFinishSeason").onclick=finishSeason;
+  }else if(f){
+    // 試合そのものはスケジュール画面(=クラブ進行の起点)から始める。
+    // HOME は「監督のデバイス」であって、進行の操作盤ではない(→docs/06 §6.8)。
+    $("homeNext").innerHTML='<div class="next-vs"><b>'+esc(clubName(S.club.id))+'</b>'
+      +'<span class="vs">vs</span><b>'+esc(clubName(f.opp))+'</b></div>'
+      +'<div class="lg" style="margin:6px 0 10px">'+(f.home?"HOME":"AWAY")+' ／ 第'+W.matchday+'節</div>'
+      +'<button class="btn" id="btnPlay">試合を進める</button>';
+    $("btnPlay").onclick=()=>show("season");
+  }
+  // 秘書: 次に何をすればよいかを示す(ナラティブ誘導)
+  $("homeSec").innerHTML='<div class="bubble">'+esc(secretaryLine())+'</div>';
+  // CLUB NEWS: クラブの今(一時的なコンディションの表示でもある)
+  $("homeNews").innerHTML=clubNews().map(n=>'<div class="news">'+n+'</div>').join("");
+}
+function secretaryLine(){
+  if(seasonOver())return "監督、今季の全日程が終わりました。会長がお待ちです。";
+  if(S.world.matchday===1)return "監督、就任おめでとうございます。まずは編成を確認してから初戦に臨みましょう。";
+  const r=rankOf(S.world.table,S.club.id);
+  if(r<=S.club.expect)return "現在"+r+"位。期待を上回っています、この調子で。";
+  return "現在"+r+"位。会長の期待は"+S.club.expect+"位です。巻き返しましょう。";
+}
+function clubNews(){
+  const r=rankOf(S.world.table,S.club.id), t=S.world.table[S.club.id];
+  const co=countryById(clubById(S.club.id).country);
+  return [
+    "今季の目標は<b>"+S.club.expect+"位以内</b>。現在 <b>"+r+"位</b>（"+t.w+"勝"+t.d+"分"+t.l+"敗）",
+    co.name+"リーグは<b>"+co.style+"</b>のチームが多い。",
+    "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ 会長の評価 "+evalLabel(S.club.eval),
+  ];
+}
+const evalLabel=v=>v>=75?"良好":v>=45?"普通":v>=TUNING.eval.floorDismiss?"不満":"危機的";
+
+// ---------- CARDS(コレクション) ----------
+let _cardFilter="ALL";
+function renderCards(){
+  const own=S.player.coll, loan=S.club?S.club.loan:[];
+  $("cardsCount").textContent="COLLECTION · 所有 "+own.length+" / 貸与 "+loan.length;
+  $("cardsFilter").innerHTML=["ALL"].concat(POS).map(p=>
+    '<button class="chip'+(p===_cardFilter?" on":"")+'" data-f="'+p+'">'+p+'</button>').join("");
+  $("cardsFilter").querySelectorAll("button").forEach(b=>{
+    b.onclick=()=>{ _cardFilter=b.dataset.f; renderCards(); };
+  });
+  const list=availableCards().filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter)
+    .sort((a,b)=>b.ovr-a.ovr);
+  $("cardsGrid").innerHTML=list.length?list.map(cardTile).join("")
+    :'<div class="stub"><b>カードがありません</b><span>パックは第4段で実装します</span></div>';
+  wireCardTiles($("cardsGrid"));
+}
+function wireCardTiles(root){
+  root.querySelectorAll("[data-card]").forEach(el=>{
+    el.onclick=()=>openCard(Number(el.dataset.card));
+  });
+}
+function openCard(id){
+  const c=cardById(id); if(!c)return;
+  $("cardModalBody").innerHTML=
+    '<div class="cm-head"><div><div class="cm-name">'+esc(c.name)+'</div>'
+    +'<div class="lg">'+c.favPos+' ／ '+c.age+'歳 ／ '+esc(c.club||"—")+'</div></div>'
+    +'<div class="cm-ovr num">'+c.ovr+'</div></div>'
+    +'<div class="lg" style="margin:8px 0 4px">'+rarLabel(c)+' ／ '+(isLoaned(c)?"クラブからの貸与":"所有カード")+'</div>'
+    +'<div class="bars">'+[["ATK","atk"],["DEF","def"],["SPD","spd"],["TEC","tec"]].map(([l,k])=>
+      '<div class="bar"><span>'+l+'</span><i style="width:'+c[k]+'%"></i><b class="num">'+c[k]+'</b></div>').join("")+'</div>'
+    +'<div class="sect-t" style="margin-top:10px">SKILLS</div>'
+    +'<div class="skills">'+c.skills.map(s=>'<span class="skill">'+esc(s)+'</span>').join("")+'</div>';
+  $("cardModal").classList.add("on");
+}
+
+// ---------- DECK(編成) ----------
+function renderDeck(){
+  const slots=FORMATIONS[S.form], cards=squadCards();
+  $("deckPower").textContent=squadPower(cards.slice(0,TUNING.squad.starters));
+  $("deckForm").textContent=S.form;
+  $("deckPitch").innerHTML=slots.map(([sub,x,y],i)=>{
+    const c=cards[i];
+    return '<div class="slot" style="left:'+x+'%;top:'+y+'%" data-slot="'+i+'"'
+      +(c?' data-card="'+c.id+'"':'')+'>'
+      +'<div class="sl-pos">'+sub+'</div>'
+      +'<div class="sl-ovr num">'+(c?c.ovr:"—")+'</div>'
+      +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
+      +(c&&!isLoaned(c)?'<div class="sl-own">★</div>':'')+'</div>';
+  }).join("");
+  wireCardTiles($("deckPitch"));
+  const loaned=cards.filter(c=>c&&isLoaned(c)).length;
+  $("deckNote").innerHTML="先発11人のうち <b>"+loaned+"人</b> はクラブからの貸与です"
+    +"（退任するとクラブに残ります）。★ が自分のカードです。";
+}
+const shortName=c=>c.name.split(" ").slice(-1)[0];
+
+// ---------- SEASON(任期スケジュール = クラブ進行の起点) ----------
+// card-eleven のキャリア画面にあたる位置づけ。就任から任期満了までを一望し、
+// ここから各大会(リーグ戦/カップ戦)の日程へ降りていく。
+function renderSeason(){
+  const W=S.world, club=clubById(S.club.id), co=countryById(club.country);
+  const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
+  $("seasonHead").textContent="SEASON "+W.season+" · 任期スケジュール";
+  $("seasonBox").innerHTML='<div class="sect-t">契約</div>'
+    +kv("クラブ",esc(club.name)+"（"+co.name+"・格★"+club.grade+"）")
+    +kv("期待順位",S.club.expect+"位")
+    +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
+    +kv("会長の評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
+    +kv("チーム熟練度",fmtNum(S.club.exp));
+
+  renderTenureBar();
+  renderTenureCalendar();
+
+  // 参加中の大会。タップするとその大会の日程(順位表と結果の参照)へ。
+  const played=Math.min(W.matchday-1,W.fixtures.length);
+  $("seasonComps").innerHTML=
+    '<div class="comp-card" data-comp="league">'
+      +'<div class="cc-l"><div class="cc-k">LEAGUE</div>'
+      +'<b>'+esc(co.name)+'リーグ</b>'
+      +'<div class="lg">'+r+'位 · 勝点'+pts(t)+'（'+played+'/'+W.fixtures.length+'節）</div></div>'
+      +'<div class="cc-r">›</div></div>'
+    +'<div class="comp-card off" data-comp="cup">'
+      +'<div class="cc-l"><div class="cc-k">CUP</div>'
+      +'<b>大陸大会</b>'
+      +'<div class="lg">未開催（実装予定）</div></div>'
+      +'<div class="cc-r">›</div></div>';
+  $("seasonComps").querySelectorAll("[data-comp]").forEach(el=>{
+    el.onclick=()=>{ _comp=el.dataset.comp; show("schedule",{push:1}); };
+  });
+}
+
+/**
+ * 任期カレンダー(SEASON画面の主役)。
+ * 監督が「どんな手を打って、どんなキャリアをクラブと描いたか」を1本の帯で見せる。
+ * card-eleven のキャリア日程と同じ上から下への並び。→ docs/03 §3.2.3
+ */
+function renderTenureCalendar(){
+  const W=S.world, C=S.career, rows=[];
+  let lastSeason=null, lastClub=null;
+
+  // --- 過去: 消化した節(クラブが変わっても1本で続く) ---
+  C.log.forEach((e,i)=>{
+    if(e.season!==lastSeason||e.clubId!==lastClub){
+      rows.push(seasonDivider(e.season,e.clubId));
+      lastSeason=e.season; lastClub=e.clubId;
+    }
+    rows.push(logRow(e));
+    // シーズンの区切り(次の記録が別シーズン)なら、その年の着地を挟む
+    const nx=C.log[i+1];
+    if(!nx||nx.season!==e.season||nx.clubId!==e.clubId){
+      const h=S.player.history.find(x=>x.season===e.season&&x.clubId===e.clubId);
+      if(h&&h.rank)rows.push('<div class="cal judge"><span class="cal-n">◆</span>'
+        +'<span class="cal-b"><b>'+h.rank+'位で終了（期待に対して '+h.result+'）</b></span></div>');
+    }
+  });
+
+  // --- 現在: 打ち手 → 試合 ---
+  if(!C.over){
+    if(lastSeason!==W.season||lastClub!==S.club.id)rows.push(seasonDivider(W.season,S.club.id));
+    if(seasonOver())rows.push('<div class="cal judge"><span class="cal-n">◆</span>'
+      +'<span class="cal-b"><b>全日程を終了。HOMEで今季を終えられます</b></span></div>');
+    else rows.push(currentRow());
+  }
+
+  // --- 未来: 任期の上限まで枠を並べる ---
+  // リーグの日程は節に固定しない(カップが割り込むため)。既に決まっている予定だけを
+  // 枠に書き込み、それ以外は「未定」の空枠として先に見せる(→docs/03 §3.2.3)。
+  for(let n=C.node+(C.over?0:1);n<=C.limit;n++){
+    const p=C.plan[n];
+    if(p)rows.push('<div class="cal fut planned"><span class="cal-n num">'+n+'</span>'
+      +'<span class="cal-b"><b>'+esc(p.label)+'</b>'
+      +'<span class="lg">'+(p.comp==="cup"?"カップ戦":"リーグ戦")+'（予定確定）</span></span>'
+      +'<span class="cal-r">▣</span></div>');
+    else rows.push('<div class="cal none"><span class="cal-n num">'+n+'</span>'
+      +'<span class="cal-b"><b>未定</b></span></div>');
+  }
+
+  $("seasonCal").innerHTML=rows.join("");
+  wireCurrentRow();
+}
+const seasonDivider=(season,clubId)=>
+  '<div class="cal-div"><span>SEASON '+season+'</span><b>'+esc(clubName(clubId))+'</b></div>';
+const kv=(k,v)=>'<div class="kv"><span>'+k+'</span><b>'+v+'</b></div>';
+
+// ---------- SCHEDULE(大会の日程表。参照用) ----------
+// ここは「その大会がどうなっているか」を見る画面。
+// 監督が何を選んでどんなキャリアを描いたかは SEASON の任期カレンダーが持つ(→§3.2.3)。
+let _comp="league";
+function renderSchedule(){
+  document.querySelectorAll("#scr-schedule .comp").forEach(b=>b.classList.toggle("on",b.dataset.comp===_comp));
+  if(_comp==="cup"){ renderCupSchedule(); return; }
+
+  const W=S.world, co=countryById(clubById(S.club.id).country);
+  $("schedHead").textContent=co.en+" LEAGUE · CLUB CHAMPIONSHIP";
+  $("schedList").innerHTML=W.fixtures.map((round,i)=>{
+    const m=round.find(x=>x.h===S.club.id||x.a===S.club.id);
+    const md=i+1, done=md<W.matchday, next=md===W.matchday;
+    const home=m.h===S.club.id, opp=home?m.a:m.h;
+    return '<div class="cal'+(next?" next":"")+(done?" done":"")+'">'
+      +'<span class="cal-n num">'+md+'</span>'
+      +'<span class="cal-c" style="background:'+clubColor(opp)+'"></span>'
+      +'<span class="cal-b"><b>'+esc(clubName(opp))+'</b>'
+      +'<span class="lg">'+(home?"HOME":"AWAY")+'</span></span>'
+      +(done?'<span class="cal-s num '+resClass(md)+'">'+scoreOf(md)+'</span>'
+        :next?'<span class="cal-r next-lb">次戦</span>'
+             :'<span class="cal-r">vs</span>')
+      +'</div>';
+  }).join("");
+
+  // 順位表の要約(タップで詳細へ)
+  $("schedStand").innerHTML='<div class="stand-h" id="schedStandH">'
+    +'<span class="sect-t">STANDINGS</span><span class="more">詳細を見る ›</span></div>'
+    +'<div class="stand-box" id="schedStandBox">'+standings(W.table).slice(0,6).map(row=>
+      '<div class="strow'+(row.id===S.club.id?" me":"")+'"><span class="num">'+row.rank+'</span>'
+      +'<span class="nm">'+esc(clubName(row.id))+'</span><span class="num pt">'+row.pts+'</span></div>').join("")
+    +'</div>';
+  $("schedStandH").onclick=$("schedStandBox").onclick=()=>show("standings",{push:1});
+}
+/** 任期の残りを帯で見せる(何節目/上限・延命の有無)。 */
+function renderTenureBar(){
+  const C=S.career, pct=clamp(Math.round((C.node-1)/C.limit*100),0,100);
+  $("tenureBar").innerHTML='<div class="tb-h"><span class="eyebrow">TENURE</span>'
+    +'<span class="num">'+(C.node-1)+' / '+C.limit+' 節'
+    +(C.limit>TUNING.tenure.limit?'（延命 +'+(C.limit-TUNING.tenure.limit)+'）':'')+'</span></div>'
+    +'<div class="tb-bar"><i style="width:'+pct+'%"></i></div>'
+    +(C.over?'<div class="tb-note">任期は終了しました</div>'
+      :C.closing?'<div class="tb-note warn">上限に到達。この大会の決着で去就が決まります</div>':'');
+}
+
+/** 過去1節の行。「何をやってきたか」= 打ち手 + 試合結果。 */
+function logRow(e){
+  const h=handById(e.hand);
+  const cls=e.res==="win"?"w":e.res==="draw"?"d":"l";
+  const mark=e.res==="win"?"○":e.res==="draw"?"△":"●";
+  return '<div class="cal done">'
+    +'<span class="cal-n num">'+e.node+'</span>'
+    +'<span class="cal-h" title="'+(h?h.label:"")+'">'+(h?h.icon:"—")+'</span>'
+    +'<span class="cal-b"><b>'+esc(clubName(e.opp))+'</b>'
+    +'<span class="lg">S'+e.season+' 第'+e.md+'節 ／ '+(e.home?"HOME":"AWAY")+'</span></span>'
+    +'<span class="cal-s num '+cls+'">'+mark+' '+e.gf+'-'+e.ga+'</span></div>';
+}
+
+/**
+ * 現在節のカード。1節は「打ち手を選ぶ → どの大会に出るかを選ぶ → 試合」の順で決める。
+ * リーグの日程は節に固定されていないので、リーグを選んだ節に次の1試合を消化する。
+ */
+function currentRow(){
+  const C=S.career, avail=compsAvailable();
+  const planned=C.plan[C.node];
+  const f=myFixture();
+  const comp=C.comp||(avail.length===1?avail[0]:null);
+
+  let target="";
+  if(comp==="league"&&f)
+    target='<div class="cal-target"><span class="cal-c" style="background:'+clubColor(f.opp)+'"></span>'
+      +'<span class="cal-b"><b>'+esc(clubName(f.opp))+'</b>'
+      +'<span class="lg">リーグ 第'+S.world.matchday+'節 ／ '+(f.home?"HOME":"AWAY")+'</span></span></div>';
+  else if(comp==="cup")
+    target='<div class="cal-target"><span class="cal-b"><b>'+esc(planned?planned.label:"カップ戦")+'</b>'
+      +'<span class="lg">カップ戦</span></span></div>';
+
+  return '<div class="cal cur" id="calCur">'
+    +'<div class="cal-cur-h"><span class="cal-n num">'+C.node+'</span>'
+    +'<span class="cal-b"><b>この節にすること</b>'
+    +(planned?'<span class="lg">予定が確定しています</span>':'<span class="lg">打ち手 → 出場する大会</span>')+'</span></div>'
+    // ① 打ち手
+    +'<div class="step-k">① 打ち手</div>'
+    +'<div class="hands">'+HANDS.map(h=>
+      '<button class="hand'+(C.hand===h.id?" on":"")+'" data-hand="'+h.id+'">'
+      +'<span class="hd-i">'+h.icon+'</span><span class="hd-l">'+h.label+'</span></button>').join("")+'</div>'
+    +'<div class="lg hand-desc">'+(C.hand?esc(handById(C.hand).desc):"打ち手を選んでください")+'</div>'
+    // ② 出場する大会
+    +'<div class="step-k">② 出場する大会</div>'
+    +'<div class="comps">'
+      +'<button class="compbtn'+(comp==="league"?" on":"")+'" data-comp2="league"'
+        +(avail.includes("league")?"":" disabled")+'>リーグ戦</button>'
+      +'<button class="compbtn'+(comp==="cup"?" on":"")+'" data-comp2="cup"'
+        +(avail.includes("cup")?"":" disabled")+'>カップ戦</button>'
+    +'</div>'
+    +(avail.includes("cup")?"":'<div class="lg hand-desc">カップ戦は未実装です（大陸大会は今後）</div>')
+    +target
+    +'<button class="btn" id="calGo"'+(C.hand&&comp?"":" disabled")+'>試合開始</button></div>';
+}
+function wireCurrentRow(){
+  document.querySelectorAll("#scr-season [data-hand]").forEach(b=>{
+    b.onclick=()=>{ pickHand(b.dataset.hand); save(); renderSeason(); scrollToCurrent(); };
+  });
+  document.querySelectorAll("#scr-season [data-comp2]").forEach(b=>{
+    b.onclick=()=>{ if(pickComp(b.dataset.comp2)){ save(); renderSeason(); scrollToCurrent(); } };
+  });
+  const go=$("calGo");
+  if(go)go.onclick=()=>{
+    if(!S.career.hand){ toast("打ち手を選んでください"); return; }
+    if(!S.career.comp&&!pickComp("league")){ toast("出場する大会を選んでください"); return; }
+    doMatchday();
+  };
+}
+/** 現在節が画面に入るまでスクロールする(96節あるので必須)。 */
+function scrollToCurrent(){
+  const el=$("calCur"); if(!el)return;
+  try{ el.scrollIntoView({block:"center"}); }catch(e){}
+}
+
+function renderCupSchedule(){
+  $("schedHead").textContent="CONTINENTAL CUP · KNOCKOUT STAGE";
+  $("schedList").innerHTML='<div class="stub"><b>大陸大会</b>'
+    +'<span>各国の上位が集まるノックアウト方式。<br>まだ実装していません（→ docs/03 §3.8）</span></div>';
+  $("schedStand").innerHTML="";
+}
+/** 任期カレンダーを開いたら現在節へ寄せる(96節あるので必須)。 */
+SCREENS.season.after=()=>setTimeout(scrollToCurrent,30);
+/** クラブごとの識別色(モックの丸いクラブカラーに相当)。
+ *  ハッシュの剰余だと色相が固まって数色しか出ないので、CLUBS の並び順から
+ *  黄金角(137.5°)で回して均等に散らす。 */
+function clubColor(clubId){
+  const i=CLUBS.findIndex(c=>c.id===clubId);
+  return "oklch(0.58 0.14 "+((i*137.5+20)%360).toFixed(1)+")";
+}
+/** 消化済みの節のスコア表示。順位表からは復元できないので保存済みの結果を使う。 */
+function scoreOf(md){
+  const r=(S.world.results||{})[md];
+  return r?r.gf+" - "+r.ga:"—";
+}
+function resClass(md){
+  const r=(S.world.results||{})[md];
+  return r?(r.win?"w":r.draw?"d":"l"):"";
+}
+function renderStandings(){
+  const rows=standings(S.world.table);
+  $("standTbl").innerHTML='<tr><th>#</th><th>CLUB</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>PTS</th></tr>'
+    +rows.map(r=>'<tr'+(r.id===S.club.id?' class="me"':'')+'><td class="num">'+r.rank+'</td>'
+      +'<td class="nm">'+esc(clubName(r.id))+'</td><td class="num">'+r.w+'</td><td class="num">'+r.d+'</td>'
+      +'<td class="num">'+r.l+'</td><td class="num">'+r.gf+'</td><td class="num">'+r.ga+'</td>'
+      +'<td class="num pt">'+r.pts+'</td></tr>').join("");
+}
+
+// ---------- CLUB(クラブハウス) ----------
 function renderClubhouse(){
   $("clubMgrName").textContent=S.coach||"監督";
-  $("clubFame").textContent=fmtNum(S.fame);
+  $("clubFame").textContent=fmtNum(S.player.fame);
+  $("clubTickets").textContent=S.player.tickets;
+  const h=S.player.history;
+  $("clubHistory").innerHTML=h.length?h.slice().reverse().map(x=>
+    '<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'
+    +(x.rank?x.rank+"位 ":"")+x.result+'</b></div>').join(""):'<div class="lg">まだ記録がありません</div>';
+  const F={ training:"練習場", medical:"医療施設", stadium:"スタジアム", scouting:"スカウト網" };
+  $("clubFac").innerHTML=Object.keys(F).map(k=>kv(F[k],"Lv."+S.club.fac[k])).join("")
+    +'<div class="lg" style="margin-top:6px">投資は第4段で実装します。</div>';
 }
 
-// --- 就任契約書(監督名・クラブ名を記入して開始) ---
+// ---------- 試合(第3段までは結果だけ) ----------
+let _lastResult=null;
+function doMatchday(){
+  const out=playMatchday();
+  _lastResult=out;
+  save(); headUI(); show("result");
+}
+function renderResult(){
+  const o=_lastResult; if(!o||!o.my){ show("home"); return; }
+  const m=o.my;
+  $("resultHead").textContent=m.win?"WIN":m.draw?"DRAW":"LOSE";
+  $("resultBody").innerHTML=
+    '<div class="score"><b>'+esc(clubName(S.club.id))+'</b>'
+    +'<span class="num sc">'+m.gf+' - '+m.ga+'</span>'
+    +'<b>'+esc(clubName(m.opp))+'</b></div>'
+    +'<div class="lg" style="margin:10px 0">'+(m.home?"HOME":"AWAY")+'</div>'
+    +kv("コイン",'+'+fmtNum(m.win?TUNING.reward.win:m.draw?TUNING.reward.draw:TUNING.reward.lose))
+    +kv("チーム熟練度",'+'+(m.win?350:m.draw?220:150))
+    +kv("現在順位",rankOf(S.world.table,S.club.id)+"位")
+    +'<div class="sect-t" style="margin-top:14px">他会場</div>'
+    +o.others.map(x=>'<div class="fx"><span class="nm">'+esc(clubName(x.h))+'</span>'
+      +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
+      +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("");
+  $("btnResultOk").onclick=()=>show("home");
+}
+
+/** シーズン終了 → 審判 → 続投 or 解任 → 次の就任先へ。
+ *  任期が上限に達していれば、ここで延命 or キャリア終了も決まる(→§3.2.3)。 */
+async function finishSeason(){
+  const expect=S.club.expect;
+  const j=judgeSeason();
+  S.world.season++;
+  await save();
+  toast(j.rank+"位（期待"+expect+"位）／名声 "+(j.fameGain>=0?"+":"")+j.fameGain);
+  if(j.tenure&&j.tenure.extended){
+    toast("好成績により任期が延長されました（上限 "+j.tenure.limit+" 節）");
+  }
+  if(S.career.over){ show("career"); return; }
+  show("offer",{push:1});
+}
+/** 任期終了 = キャリア1周の終わり。積み上げたものを見せて次の周へ送り出す。 */
+function renderCareerEnd(){
+  const C=S.career, h=S.player.history;
+  const w=C.log.filter(e=>e.res==="win").length;
+  const d=C.log.filter(e=>e.res==="draw").length;
+  const l=C.log.filter(e=>e.res==="lose").length;
+  $("endBody").innerHTML=
+    '<div class="end-t">任期満了</div>'
+    +'<div class="lg" style="margin-bottom:14px">'+esc(S.coach||"監督")+' のキャリアが幕を閉じました。</div>'
+    +kv("戦った節",C.log.length+" 節")
+    +kv("通算成績",w+"勝 "+d+"分 "+l+"敗")
+    +kv("渡り歩いたクラブ",new Set(h.map(x=>x.clubId)).size+" クラブ")
+    +kv("最終的な名声",fmtNum(S.player.fame))
+    +kv("集めたカード",S.player.coll.length+" 枚")
+    +'<div class="sect-t" style="margin-top:14px">CAREER</div>'
+    +h.map(x=>'<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'
+      +(x.rank?x.rank+"位 "+x.result:"—")+'</b></div>').join("");
+}
+
+// ---------- 就任先の選択 ----------
+let _pickedClub=null;
+function renderOffers(){
+  const fame=S.player.fame;
+  const list=offersFor(fame).sort((a,b)=>b.grade-a.grade||a.rank-b.rank).slice(0,12);
+  $("offerHead").textContent="OFFERS · 名声 "+fmtNum(fame);
+  $("offerNote").textContent="名声が届いたクラブから声がかかります。格が高いほど期待も高くなります。";
+  $("offerList").innerHTML=list.map(c=>{
+    const co=countryById(c.country);
+    return '<div class="offer" data-club="'+c.id+'">'
+      +'<div class="of-l"><b>'+esc(c.name)+'</b>'
+      +'<div class="lg">'+co.name+' ／ 国内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
+      +'<div class="of-r num">'+fmtNum(requiredFame(c))+'</div></div>';
+  }).join("");
+  $("offerList").querySelectorAll("[data-club]").forEach(el=>{
+    el.onclick=async()=>{
+      _pickedClub=el.dataset.club;
+      if(S.club){ await joinClub(_pickedClub); }      // 2シーズン目以降は即就任
+      else{ openContract(); }                          // 初回は契約書へ戻る
+    };
+  });
+}
+async function joinClub(clubId){
+  startTenure(clubId);
+  await save(); headUI(); show("home");
+  toast(clubName(clubId)+"に就任しました");
+}
+
+// ---------- 就任契約書 ----------
+// 暗い画面の中に1枚だけ「紙の書類」を置く。記入 → 署名欄に反映 → 押印して就任、
+// という手順そのものを見せることで、就任を通過儀礼ではなく儀式にする。
 function openContract(){
   $("ctCoach").value=S.coach||"";
-  $("ctClub").value=S.teamName||"";
   $("ctDate").textContent=todayLabel();
+  $("ctSeason").textContent="MANAGERIAL CONTRACT · SEASON "+S.world.season;
+  $("ctSeasonRef").textContent="シーズン"+S.world.season;
+  const c=_pickedClub?clubById(_pickedClub):null;
+  $("ctPickClub").textContent=c?c.name:"クラブを選ぶ";
+  $("ctPickClub").classList.toggle("picked",!!c);
+  $("ctLeague").textContent=c?countryById(c.country).name+"リーグ":"—";
+  $("ctGrade").textContent=c?"★"+c.grade+"（国内"+c.rank+"位相当）":"—";
+  $("ctNote").textContent=c?c.name+" 監督として登録されます":"クラブを選ぶと契約内容が確定します";
+  updateSignature();
   show("contract");
 }
+/** 記入した氏名を署名欄へ即時に反映する(書いている実感を出すため)。 */
+function updateSignature(){
+  $("ctSignPreview").textContent=($("ctCoach").value||"").trim();
+}
 async function signContract(){
-  const coach=($("ctCoach").value||"").trim(), club=($("ctClub").value||"").trim();
-  if(!coach||!club){ toast("監督名とクラブ名を記入してください"); return; }
-  await newGame();
-  S.coach=coach; S.teamName=club;
-  await save();
-  headUI(); show("home");
+  const coach=($("ctCoach").value||"").trim();
+  if(!coach){ toast("監督名を記入してください"); return; }
+  if(!_pickedClub){ toast("就任先クラブを選んでください"); return; }
+  S.coach=coach;
+  await joinClub(_pickedClub);
 }
 
 // --- 配線(結合時に一度だけ実行される) ---
 document.querySelectorAll("#tabs button").forEach(b=>{ b.onclick=()=>show(b.dataset.s); });
 $("hdBack").onclick=goBack;
 $("ctSign").onclick=signContract;
-$("btnSchedule").onclick=()=>show("schedule",{push:1});
-$("btnLeague").onclick=()=>show("league",{push:1});
-$("btnStandings").onclick=()=>show("standings",{push:1});
+$("ctPickClub").onclick=()=>show("offer",{push:1});
+$("ctCoach").oninput=updateSignature;
+document.querySelectorAll("#scr-schedule .comp").forEach(b=>{
+  b.onclick=()=>{ _comp=b.dataset.comp; renderSchedule(); };
+});
+$("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast("自動編成しました"); };
+$("btnForm").onclick=()=>{
+  const keys=Object.keys(FORMATIONS);
+  S.form=keys[(keys.indexOf(S.form)+1)%keys.length];
+  S.squad=autoSquad(); save(); renderDeck(); toast("陣形を "+S.form+" に変更");
+};
 $("cardModalClose").onclick=()=>$("cardModal").classList.remove("on");
+$("btnNewCareer").onclick=async()=>{
+  if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;
+  await newGame(); _pickedClub=null; show("offer");
+};
 
 // ================= 起動 =================
 // 結合順の最後。ここだけが起動の副作用(即時実行)を持つ。
@@ -751,16 +2148,36 @@ function showErr(m){
 window.addEventListener("error",ev=>showErr(ev.message));
 window.addEventListener("unhandledrejection",ev=>showErr(ev.reason));
 
-// タイトルをタップしたときの入口。セーブがあれば続きから、無ければ就任契約書へ。
+// タイトルの入口。
+//   セーブ無し … 画面のどこを押しても開始(TAP TO START)
+//   セーブ有り … 「RETURN TO CAREER(再開)」と「NEW CAREER(最初から)」の選択
+// 続きがあるのに誤タップで消えては困るので、セーブがある間は全画面タップを無効にする。
 function setupTitle(exists){
   const t=document.getElementById("scr-title");
-  document.getElementById("tFoot").textContent=exists?"タップして続きから":"© P-FOOTBALL";
-  t.onclick=async()=>{
-    t.onclick=null;                      // 二重起動を防ぐ
-    try{
-      if(exists){ await loadGame(); headUI(); show("home"); }
-      else openContract();
-    }catch(e){ showErr(e); t.onclick=null; openContract(); }
+  const start=document.getElementById("tStart"), menu=document.getElementById("tMenu");
+  start.style.display=exists?"none":"";
+  menu.style.display=exists?"flex":"none";
+  document.getElementById("tFoot").textContent="© P-FOOTBALL";
+
+  const begin=async()=>{
+    await newGame();                     // 世界のシードをここで固定する
+    _pickedClub=null;
+    show("offer");                       // 名声0 → 下位クラブだけが声をかけてくる
+  };
+  const resume=async()=>{
+    await loadGame(); headUI();
+    show(S.club?"home":"offer");         // 就任前で終わっていたら就任先選択から
+  };
+  const once=fn=>async()=>{              // 二重起動を防ぐ
+    t.onclick=null; start.onclick=null;
+    try{ await fn(); }catch(e){ showErr(e); }
+  };
+
+  t.onclick=exists?null:once(begin);
+  document.getElementById("tResume").onclick=once(resume);
+  document.getElementById("tNew").onclick=async()=>{
+    if(!confirm("新しくキャリアを始めると、いまのセーブデータは消えます。よろしいですか?"))return;
+    await once(begin)();
   };
 }
 

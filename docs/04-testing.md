@@ -14,6 +14,9 @@
 |---|---|---|
 | `integration.js` | 新規作成 → 保存 → 読込 → 書き出し/読み込み → 削除 → **画面レジストリ整合** → 画面切替/戻る | 必須 |
 | `hangtest.js` | ストレージ無応答でも起動が止まらない(タイムアウトで既定データ続行) | 必須 |
+| `worldtest.js` | クラブ構成・**選手生成の決定性**・OVR整合・日程(14節/各クラブH7A7/重複なし)・期待順位・名声の階段 | 必須 |
+| `tenuretest.js` | 任期(96節/最大120節)の通算・打ち手を選ばないと進めない・大会の決着で延命/終了が決まる | 必須 |
+| `careertest.js` | 複数シーズンを回して**評価が期待との差に対して対称**か、名声・解任・試合結果の分布が妥当か | バランス変更時 |
 
 > **画面レジストリ整合**は `SCREENS` のキーと `index.html` の `id="scr-*"` が1対1であること、
 > タブが5つでそれぞれ同名画面を指していること、`under` が実在するタブを指していることを検査する。
@@ -24,7 +27,7 @@
 
 ```bash
 cd src/tests
-for t in integration hangtest; do
+for t in integration hangtest worldtest careertest tenuretest; do
   echo -n "$t: "; node $t.js >/dev/null 2>&1 && echo OK || echo FAIL
 done
 ```
@@ -33,7 +36,7 @@ PowerShell の場合:
 
 ```powershell
 cd src\tests
-foreach ($t in @("integration","hangtest")) {
+foreach ($t in @("integration","hangtest","worldtest","careertest","tenuretest")) {
   node "$t.js" *> $null; if ($?) { "$t : OK" } else { "$t : FAIL" }
 }
 ```
@@ -67,7 +70,7 @@ node tools/drive.js --keep       # プロファイルを残す(セーブを引�
 にスキルとしてまとめてある(`/run-app` で呼べる)。ユーザーに触ってもらう場合は
 `Start-Process index.html` で実ブラウザを開く。
 
-### 4.4 リリース手順
+### 4.5 リリース手順
 
 1. `src/` を編集
 2. `python build.py`(検証がすべて True・MISSING ids なし)
@@ -76,7 +79,7 @@ node tools/drive.js --keep       # プロファイルを残す(セーブを引�
 5. SPEC/docs を実装に合わせて更新
 6. コミット(日本語メッセージ)。プッシュは明示指示時のみ
 
-### 4.5 テストの足し方
+### 4.6 テストの足し方
 
 - 新しい機能はまず `integration.js` の流れに1ステップ足せないかを考える(1周の流れを守るテストが一番効く)。
 - 独立した観点(異常系・バランス・長時間実行)は別ファイルにし、この表に追記する。

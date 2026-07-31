@@ -12,16 +12,36 @@ function showErr(m){
 window.addEventListener("error",ev=>showErr(ev.message));
 window.addEventListener("unhandledrejection",ev=>showErr(ev.reason));
 
-// タイトルをタップしたときの入口。セーブがあれば続きから、無ければ就任契約書へ。
+// タイトルの入口。
+//   セーブ無し … 画面のどこを押しても開始(TAP TO START)
+//   セーブ有り … 「RETURN TO CAREER(再開)」と「NEW CAREER(最初から)」の選択
+// 続きがあるのに誤タップで消えては困るので、セーブがある間は全画面タップを無効にする。
 function setupTitle(exists){
   const t=document.getElementById("scr-title");
-  document.getElementById("tFoot").textContent=exists?"タップして続きから":"© P-FOOTBALL";
-  t.onclick=async()=>{
-    t.onclick=null;                      // 二重起動を防ぐ
-    try{
-      if(exists){ await loadGame(); headUI(); show("home"); }
-      else openContract();
-    }catch(e){ showErr(e); t.onclick=null; openContract(); }
+  const start=document.getElementById("tStart"), menu=document.getElementById("tMenu");
+  start.style.display=exists?"none":"";
+  menu.style.display=exists?"flex":"none";
+  document.getElementById("tFoot").textContent="© P-FOOTBALL";
+
+  const begin=async()=>{
+    await newGame();                     // 世界のシードをここで固定する
+    _pickedClub=null;
+    show("offer");                       // 名声0 → 下位クラブだけが声をかけてくる
+  };
+  const resume=async()=>{
+    await loadGame(); headUI();
+    show(S.club?"home":"offer");         // 就任前で終わっていたら就任先選択から
+  };
+  const once=fn=>async()=>{              // 二重起動を防ぐ
+    t.onclick=null; start.onclick=null;
+    try{ await fn(); }catch(e){ showErr(e); }
+  };
+
+  t.onclick=exists?null:once(begin);
+  document.getElementById("tResume").onclick=once(resume);
+  document.getElementById("tNew").onclick=async()=>{
+    if(!confirm("新しくキャリアを始めると、いまのセーブデータは消えます。よろしいですか?"))return;
+    await once(begin)();
   };
 }
 

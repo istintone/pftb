@@ -2,17 +2,55 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=1;
+const SAVE_VER=3;
 
-// 新規データ。キーを足しただけの変更なら SAVE_VER を上げなくても
-// loadGame() の欠落補完が古いセーブを救う(→docs/02-data-model.md §2.3)。
+// 新規データ。
+// **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
+//   player … プレイヤー(監督)の恒久資産。クラブを移っても持ち越す
+//   club   … 契約中のクラブのもの。退任すると丸ごと捨てる
+//   world  … 世界の状態(シード・シーズン・順位表・日程)
+// この分け方のおかげで、退任処理は「S.club を作り直すだけ」で済む。
 function defaultState(){
   return {
     v:SAVE_VER,
-    coach:"", teamName:"",   // 監督名 / クラブ名(就任契約書で記入)
-    coins:0, tickets:0,      // コイン(クラブ予算) / チケット(報酬券)
-    fame:0,                  // 名声。クラブを移っても失われない監督個人の資産
-    season:1, matchday:1,    // 任期の進行(1シーズン=12節)
+    coach:"",                       // 監督名(就任契約書で記入)
+    form:DEFAULT_FORM,              // 使用フォーメーション
+    player:{
+      fame:0,                       // 名声 = 次にどのクラブへ行けるか(→§3.9)
+      tickets:0,                    // チケット(報酬券)。コインを使わずパックを引ける
+      coll:[],                      // 集めた選手カード = プレイヤーの資産(→§3.2.2)
+      tactics:[],                   // 習得した采配(→§3.7)
+      trophies:[],                  // 獲得トロフィー(→§3.9)
+      history:[],                   // キャリアの軌跡 [{season,clubId,rank,result}]
+    },
+    club:null,                      // 就任するまで null(→startTenure で作る)
+    world:{ seed:0, season:1, matchday:1, table:{}, fixtures:[], results:{} },
+    squad:[],                       // 編成(11枠。カードIDまたは null)
+    // 任期 = キャリア1周(→docs/03 §3.2.3)。シーズンとは切り離し、節で通算する。
+    career:{
+      node:1,                       // 通算の節(1..limit)
+      limit:TUNING.tenure.limit,    // 現在の上限(延命で伸びる)
+      closing:false,                // 上限に達した = 新規大会へエントリーしない
+      over:false,                   // 任期終了(キャリア1周の終わり)
+      hand:null,                    // 今節の打ち手(選ぶまで試合に進めない)
+      comp:null,                    // 今節に出る大会("league" / "cup")
+      // 先に決まっている予定。node番号 → {comp,label}。
+      // カップの連戦のように「この節はこの大会」と先に埋まるケースをここで表す。
+      // 埋まっていない節は「未定」の枠として表示する(→docs/03 §3.2.3)。
+      plan:{},
+      log:[],                       // 消化した節の記録(カレンダーの過去行になる)
+    },
+  };
+}
+
+/**
+ * 編成を単体で持ち出せる形にする(将来の非同期対戦の前提 → §3.2.2)。
+ * 相手の環境にはこちらのセーブが無いので、**カードの実体ごと**書き出す。
+ */
+function exportSquad(){
+  return {
+    coach:S.coach, club:S.club?clubById(S.club.id).name:"",
+    form:S.form, cards:squadCards().filter(Boolean),
   };
 }
 let S=defaultState();
@@ -74,17 +112,45 @@ async function importSave(text){
 
 // 旧スキーマからの補完。SAVE_VER を上げたときに if(S.v<N){...} を積み増す。
 function migrate(){
+  // v1 → v2: 平置きだった項目を player / club / world に分けた。
+  // v1 には就任という概念が無くコレクションも無いので、監督名だけ引き継いで作り直す。
+  if(S.v<2){
+    const coach=S.coach||"";
+    S=defaultState();
+    S.coach=coach;
+  }
+  // v2 → v3: 任期(キャリア1周=96節)を導入した。v2 には通算節の概念が無く、
+  // 途中から数え始めると任期の意味が壊れるので、進行中のキャリアは作り直す。
+  if(S.v<3){
+    const coach=S.coach||"";
+    S=defaultState();
+    S.coach=coach;
+  }
   S.v=SAVE_VER;
 }
 
 function applyDefaults(){ S=defaultState(); }              // 新規データ
-async function newGame(){ applyDefaults(); await save(); } // はじめから(上書き確認は呼び出し側)
+// はじめから。世界のシードをここで固定する(以後クラブの顔ぶれは毎回同じになる)。
+async function newGame(){
+  applyDefaults();
+  S.world.seed=(Date.now()^Math.floor(Math.random()*0xffffffff))>>>0;
+  uid=1;
+  await save();
+}
 async function loadGame(){                                 // つづきから(セーブが無ければ新規)
   const v=await readSave();
   if(!v){ applyDefaults(); await save(); return; }
   try{ S=JSON.parse(v); }catch(e){ applyDefaults(); await save(); return; }
   if(S.v<SAVE_VER){ migrate(); await save(); }
-  // 版に依らない欠落補完(古いセーブに新フィールドを足したときの保険)
+  // 版に依らない欠落補完(古いセーブに新フィールドを足したときの保険)。
+  // player / world は入れ子なので、その中のキーまで補う。
   const d=defaultState();
   for(const k in d) if(S[k]===undefined) S[k]=d[k];
+  for(const k in d.player) if(S.player[k]===undefined) S.player[k]=d.player[k];
+  for(const k in d.world)  if(S.world[k]===undefined)  S.world[k]=d.world[k];
+  for(const k in d.career) if(S.career[k]===undefined) S.career[k]=d.career[k];
+  if(!S.world.seed) S.world.seed=(Date.now()&0xffffffff)>>>0;
+  // カードIDが衝突しないよう、既存の最大IDの次から再開する
+  const ids=S.player.coll.map(c=>c.id).concat((S.club&&S.club.loan||[]).map(c=>c.id));
+  uid=Math.max(1,...ids.filter(n=>n<1000000))+1;
 }
