@@ -114,7 +114,7 @@ function cardFace(c){
   const own=!isLoaned(c);
   return '<span class="pc-crest">'+RARITY[c.rarity].abbr+'</span>'
     +'<span class="pc-ovr">'+c.ovr+'</span>'
-    +'<div class="pc-art"><span class="pc-ph">PLAYER</span></div>'
+    +'<div class="pc-art">'+playerArt(c)+'</div>'
     +sparks(c)   // 粒子はカード面全体に散らす(絵の中に閉じ込めない)
     +'<div class="pc-stats">'+STAT_KEYS.map(k=>
       '<div'+(c[k]>=STAT_MAX?' class="mx"':'')+'><span>'+STAT_LABEL[k]+'</span>'
@@ -124,6 +124,15 @@ function cardFace(c){
       +'<span>'+primarySub(c)+(c.subs.length>1?" +"+(c.subs.length-1):"")
       +' · '+esc(c.club||"—")+'</span>'
     +'</div>';
+}
+/**
+ * 選手のイラスト。カードでは**プレイ絵(play)**を使う(→player-art-prompt.md)。
+ * 画像を持たないカード(自動生成の選手)はプレースホルダのままにする。
+ */
+function playerArt(c,kind){
+  const src=c.art&&(window.ASSETS&&window.ASSETS.players||{})[c.art+"_"+(kind||"play")];
+  return src?'<img class="pc-img" src="'+src+'" alt="">'
+            :'<span class="pc-ph">PLAYER</span>';
 }
 /** レアリティに対応する背景画像を CSS 変数で渡す(画像が未配置でも地色で成立する)。 */
 function cardBgStyle(c){
@@ -205,8 +214,13 @@ function galleryCards(){
   if(_gallery)return _gallery;
   const rng=mulberry32(20260801);          // 固定シード = 毎回同じ見本
   const saveUid=uid; uid=9000000;          // 見本のIDは所持カードとぶつけない
-  _gallery=RAR_KEYS.map(k=>makeCard(rng,rnd(["GK","DF","MF","FW"]),
-    { rarity:k, club:"ノルフィエルFC", nation:"nordia" }));
+  // 自動生成の段は見本を作り、実在選手の段は定義済みのカードがあればそれを見せる
+  const sigs=signatureCards();
+  _gallery=RAR_KEYS.map(k=>{
+    const real=sigs.find(s=>s.rarity===k);
+    return real||makeCard(rng,rnd(["GK","DF","MF","FW"]),
+      { rarity:k, club:"ノルフィエルFC", nation:"nordia" });
+  });
   uid=saveUid;
   return _gallery;
 }

@@ -43,7 +43,7 @@ LATIN_RANGE = ("U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,
 # data.js は先頭(1行目の "use strict"; 直後にアセットを注入するため)、
 # boot.js は起動の副作用を持つので必ず最後に置く。
 # (src/tests/_setup.js も同じ並びを使う。変更したら両方更新すること)
-JS_FILES = ["data.js", "cards.js", "world.js", "match-core.js", "state.js", "ui.js", "boot.js"]
+JS_FILES = ["data.js", "cards.js", "signatures.js", "world.js", "match-core.js", "state.js", "ui.js", "boot.js"]
 CSS_FILES = ["base.css"]
 
 _MIME = {".png": "image/png", ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}

@@ -419,6 +419,9 @@ body{
   display:flex; align-items:flex-end; justify-content:center; isolation:isolate;
 }
 .pc-ph{ font:6cqw/1 var(--f-mono); color:var(--ink); opacity:.28 }
+/* 選手イラスト。ピクセルアートなので拡大時に補間しない */
+.pc-img{ width:100%; height:100%; object-fit:contain; object-position:bottom;
+  image-rendering:pixelated; pointer-events:none }
 /* 能力欄(右・下ぞろえ) */
 .pc-stats{
   position:absolute; right:7%; bottom:24%; width:26%; z-index:2;

@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SRC_DIR = path.join(__dirname, "..", "js");
-const JS_FILES = ["data.js", "cards.js", "world.js", "match-core.js", "state.js", "ui.js"];
+const JS_FILES = ["data.js", "cards.js", "signatures.js", "world.js", "match-core.js", "state.js", "ui.js"];
 // boot.js は含めない(起動時の即時実行を避け、各テストが必要な関数を明示的に呼ぶ)
 
 function mkEl() {
@@ -90,7 +90,7 @@ function setup(opts = {}) {
         + `CLUBS,COUNTRIES,TUNING,RARITY,RAR_KEYS,RAR_DROPS,FORMATIONS,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
         + `standings,rankOf,expectedRank,requiredFame,offersFor,startTenure,playMatchday,seasonOver,`
         + `judgeSeason,myFixture,squadCards,autoSquad,availableCards,squadPower,resolveMatch,`
-        + `mulberry32,calcOvr,makeCard,STAT_KEYS,STAT_MAX,OVR_MAX,SUBPOS,subGroup,slotFit,primarySub,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
+        + `mulberry32,calcOvr,makeCard,SIGNATURES,signatureCards,STAT_KEYS,STAT_MAX,OVR_MAX,SUBPOS,subGroup,slotFit,primarySub,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
 
   const tmpPath = path.join(__dirname, opts.tmpName || "_tmp_run.js");
   fs.writeFileSync(tmpPath, code);

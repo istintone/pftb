@@ -195,6 +195,14 @@ const STEPS = [
           "[...document.querySelectorAll('#galleryGrid .pc-crest')].map(e=>e.textContent).join(' ')"),
           "/ 枚数:", await ctx.js("document.querySelectorAll('#galleryGrid .pcard').length"));
         await ctx.shot("09e-gallery");
+        // 実在選手カード(イラスト入り)を拡大で確認する
+        await ctx.js("openCard(signatureCards()[0])");
+        await ctx.wait(350);
+        ctx.log("  実在選手:", await ctx.js("document.querySelector('#cardModalBody .cm-name').textContent"),
+          "/ イラスト:", await ctx.js("!!document.querySelector('#cardModalBody .pc-img')"));
+        await ctx.shot("09f-signature-detail");
+        await ctx.js("closeCard()");
+        await ctx.wait(150);
         await ctx.js("goBack()");
         await ctx.wait(250);
         // 通常のカードでも詳細が開くこと
