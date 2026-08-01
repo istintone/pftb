@@ -387,22 +387,26 @@ body{
 .pcard{
   /* --ink  … クレスト・OVR・名前(カードの「顔」になる文字。レアリティの色を出す)
      --stat … 6能力の文字(常に白か黒。地の明暗で決める)
-     --mx   … 20 に到達した能力だけの色(全段で共通の赤) */
+     --mx   … 20 に到達した能力だけの色(全段で共通の赤)
+     --halo … 文字の縁取り。文字が選手の上に乗るため、地ではなく**文字色の反対**で決める */
   --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .30);
   --ink:oklch(0.95 0.01 90); --stat:oklch(0.95 0.01 90); --mx:oklch(0.62 0.23 27);
+  --halo:oklch(0.11 0.02 255);
   position:relative; aspect-ratio:360/525; cursor:pointer; overflow:hidden;
   border-radius:9px; background:var(--face) center/100% 100% no-repeat, oklch(0.19 0.02 255);
   box-shadow:0 0 12px var(--glow);
   container-type:inline-size;              /* 枠内の文字をカード幅に追従させる */
 }
 /* 白い地 … 文字は黒 */
-.pcard.r-std{ --ink:oklch(0.24 0.02 255); --stat:oklch(0.24 0.02 255) }
+.pcard.r-std{ --ink:oklch(0.24 0.02 255); --stat:oklch(0.24 0.02 255);
+              --halo:oklch(0.99 0 0) }
 /* 黒い地 … 文字は白 */
 .pcard.r-reg{ --rar:var(--rar-reg); --glow:oklch(0.80 0.01 255 / .22) }
 .pcard.r-spe{ --rar:var(--rar-spe); --glow:oklch(0.66 0.15 285 / .38) }
 /* 銀の地 … 顔の文字はマゼンタ、能力値は黒 */
 .pcard.r-wc { --rar:var(--rar-wc); --glow:oklch(0.72 0.19 335 / .42);
-              --ink:#c71585; --stat:oklch(0.24 0.02 255) }
+              --ink:#c71585; --stat:oklch(0.24 0.02 255);
+              --halo:oklch(0.99 0 0) }
 /* 黒金の地 … 顔の文字は金、能力値は白 */
 .pcard.r-leg{ --rar:var(--rar-leg); --glow:oklch(0.78 0.14 85 / .45);
               --ink:var(--rar-leg) }
@@ -410,6 +414,22 @@ body{
   display:flex; align-items:center; justify-content:center; cursor:default;
   box-shadow:none; background:transparent; border:1px dashed var(--line);
   color:var(--text-mute); font-size:10px;
+}
+
+/* 重なり順 — **文字 > 選手 > ホロ > 背景**(→docs/06 §6.13)。
+   ホロを選手より上に置くと選手が沈んで見えないため、選手の上には文字しか置かない。
+     0 背景(.pcard の background)
+     1 ホロ / キラ流光(::after / ::before)
+     2 選手(.pc-art)
+     3 文字(クレスト・OVR・能力欄・名前帯)
+     4 ✦粒子(カード全体に散る飾りなので最前面)
+   文字は選手の上に乗るので、地ではなく**文字色の反対**で縁取る(--halo)。 */
+.pc-crest,.pc-ovr,.pc-stats,.pc-name{ z-index:3 }
+.pc-crest,.pc-ovr,.pc-stats span,.pc-stats b,.pc-name b,.pc-name span{
+  /* 小さいぼかしを3回重ねて実質のアウトラインにする。1発のぼかしだと
+     一覧サイズ(カード幅120px)では選手の色に負けて読めない。 */
+  text-shadow:0 0 .55cqw var(--halo), 0 0 .55cqw var(--halo),
+              0 0 .55cqw var(--halo), 0 0 1.8cqw var(--halo);
 }
 
 /* 左上のクレスト(背景画像の盾の中に置く。正式名称は入らないので2文字)。
@@ -421,13 +441,14 @@ body{
 }
 /* 右上の OVR */
 .pc-ovr{
-  position:absolute; right:7%; top:4%; z-index:2;
+  position:absolute; right:7%; top:4%;
   font:700 17cqw/1 var(--f-head); color:var(--ink);
-  text-shadow:0 1px 3px oklch(0 0 0 / .35);
 }
-/* 選手(いまはプレースホルダ。ピクセル選手は第3段) */
+/* 選手。カードの主役なので**中央に大きく**置き、文字が上に乗るのを許す。
+   下端(bottom)は名前帯のすぐ上。object-position:bottom と合わせて
+   **どの選手も足元が同じ高さに揃う**ようにしている。 */
 .pc-art{
-  position:absolute; left:8%; top:16%; width:58%; height:56%;
+  position:absolute; left:12%; right:12%; top:12%; bottom:20%; z-index:2;
   display:flex; align-items:flex-end; justify-content:center; isolation:isolate;
 }
 .pc-ph{ font:6cqw/1 var(--f-mono); color:var(--ink); opacity:.28 }
@@ -436,15 +457,16 @@ body{
   image-rendering:pixelated; pointer-events:none }
 /* 能力欄(右・下ぞろえ) */
 .pc-stats{
-  position:absolute; right:7%; bottom:24%; width:26%; z-index:2;
+  position:absolute; right:7%; bottom:24%; width:26%;
   display:flex; flex-direction:column; gap:.6cqw;
 }
 .pc-stats div{ display:flex; align-items:baseline; justify-content:space-between; gap:2px }
-.pc-stats span{ font:5.4cqw/1.55 var(--f-mono); color:var(--stat); opacity:.62 }
+.pc-stats span{ font:5.4cqw/1.55 var(--f-mono);
+  color:color-mix(in oklch, var(--stat) 74%, var(--halo)) }  /* opacity だと縁取りまで薄くなる */
 .pc-stats b{ font:400 6.6cqw/1.55 var(--f-mono); color:var(--stat) }
 .pc-stats .mx span,.pc-stats .mx b{ color:var(--mx); opacity:1 }   /* 上限20だけ赤 */
 /* 名前帯(下) */
-.pc-name{ position:absolute; left:8%; right:8%; bottom:5.5%; z-index:2 }
+.pc-name{ position:absolute; left:8%; right:8%; bottom:5.5% }
 .pc-name b{
   display:block; font:600 7.4cqw/1.35 var(--f-body); color:var(--ink);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -504,7 +526,7 @@ body{
 
 /* ✦粒子 — 明滅する光の点。上位ほど数が多い */
 .pcard .spark{
-  position:absolute; z-index:3; pointer-events:none; opacity:0;
+  position:absolute; z-index:4; pointer-events:none; opacity:0;
   font:8cqw/1 var(--f-body); color:oklch(0.99 0 0);
   text-shadow:0 0 7px currentColor, 0 0 14px currentColor;
   animation:sparkle 3.4s ease-in-out infinite;
