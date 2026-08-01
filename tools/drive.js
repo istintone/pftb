@@ -6,6 +6,7 @@
  *   node tools/drive.js --out=<dir>     # スクリーンショットの出力先(既定: OSのtemp/pftb-shots)
  *   node tools/drive.js --port=9333     # DevTools のポート
  *   node tools/drive.js --keep          # 終了後もプロファイルを残す(状態を引き継いで再実行したいとき)
+ *   node tools/drive.js --mobile        # スマホ実寸(390x844)で確認する
  *
  * 依存パッケージなし。Node 22+ の組み込み fetch / WebSocket で CDP を直接叩く。
  * フローを増やすときは下の STEPS に足す。ヘルパー(ctx)の使い方はそこのコメント参照。
@@ -210,6 +211,37 @@ const STEPS = [
       }
     }
   }],
+  ["ヘッダーとタブが固定されているか", async ctx => {
+    // 96行の任期カレンダー = 一番長いページで確かめる
+    await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
+    await ctx.wait(300);
+    const before = await ctx.js(`(()=>{
+      const t=document.getElementById('tabs').getBoundingClientRect();
+      const h=document.getElementById('appHead').getBoundingClientRect();
+      const b=document.getElementById('appBody');
+      return { tabsTop:Math.round(t.top), headTop:Math.round(h.top),
+               pageScrollable: document.documentElement.scrollHeight > window.innerHeight + 1,
+               bodyScrollable: b.scrollHeight > b.clientHeight };
+    })()`);
+    ctx.log("初期:", JSON.stringify(before));
+    // 本文を大きくスクロールさせる
+    await ctx.js("document.getElementById('appBody').scrollTop = 99999");
+    await ctx.wait(250);
+    const after = await ctx.js(`(()=>{
+      const t=document.getElementById('tabs').getBoundingClientRect();
+      const h=document.getElementById('appHead').getBoundingClientRect();
+      const b=document.getElementById('appBody');
+      return { tabsTop:Math.round(t.top), headTop:Math.round(h.top), scrolled:Math.round(b.scrollTop) };
+    })()`);
+    ctx.log("スクロール後:", JSON.stringify(after));
+    ctx.log("→ タブ固定:", before.tabsTop === after.tabsTop,
+      "/ ヘッダー固定:", before.headTop === after.headTop,
+      "/ 本文がスクロール:", after.scrolled > 0,
+      "/ ページ自体はスクロールしない:", !before.pageScrollable);
+    await ctx.shot("11b-fixed-chrome");
+    await ctx.js("document.getElementById('appBody').scrollTop = 0");
+    await ctx.wait(150);
+  }],
   ["サブ画面と戻る", async ctx => {
     await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
     await ctx.wait(200);
@@ -298,8 +330,11 @@ const STEPS = [
 
   await send("Page.enable");
   await send("Runtime.enable");
-  // 端末枠(874px)+bodyの余白が収まる高さ。低いとタブバーが写らない。
-  await send("Emulation.setDeviceMetricsOverride", { width: 440, height: 960, deviceScaleFactor: 1, mobile: false });
+  // 既定は端末枠(874px)+余白が収まる 440x960(低いとタブバーが写らない)。
+  // --mobile でスマホ実寸(390x844)に切り替える。
+  await send("Emulation.setDeviceMetricsOverride", has("mobile")
+    ? { width: 390, height: 844, deviceScaleFactor: 2, mobile: true }
+    : { width: 440, height: 960, deviceScaleFactor: 1, mobile: false });
 
   const problems = [];
   ws.addEventListener("message", ev => {

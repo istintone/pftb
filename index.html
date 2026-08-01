@@ -74,16 +74,21 @@ body{
 /* =========================================================================
    端末枠 — スマホ縦持ちが基準。PCでは中央に枠として置く。
    ========================================================================= */
+/* ヘッダーとタブバーは動かさず、本文だけがスクロールする。
+   **高さは min-height ではなく height で確定させる**こと。min-height だと中身に
+   合わせて #app が伸び、#appBody の overflow が効かずページ全体がスクロールして
+   しまい、下部のメインメニュー(タブ)まで一緒に流れてしまう。 */
 #app{
   position:relative; display:flex; flex-direction:column;
-  width:var(--app-w); max-width:100%; min-height:var(--app-h);
+  width:var(--app-w); max-width:100%;
+  height:var(--app-h); max-height:calc(100dvh - 64px);
   background:var(--surface); border:1px solid var(--line);
   border-radius:28px; overflow:hidden;
   box-shadow:0 30px 80px rgba(0,0,0,.6);
 }
 @media (max-width:440px){
-  body{ padding:0 }
-  #app{ border:0; border-radius:0; min-height:100vh; min-height:100dvh }
+  body{ padding:0; min-height:100dvh }
+  #app{ border:0; border-radius:0; height:100dvh; max-height:none }
 }
 
 /* =========================================================================
@@ -133,7 +138,9 @@ body{
 /* =========================================================================
    本文領域と画面切替
    ========================================================================= */
-#appBody{ flex:1; overflow-y:auto; scrollbar-width:none }
+/* min-height:0 が無いと flex 子要素が縮まず、overflow が効かない */
+#appBody{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  scrollbar-width:none }
 .screen{ display:none }
 .screen.on{ display:block }
 .pad{ padding:16px 18px 24px }
@@ -304,7 +311,7 @@ body{
    タブバー(5つ・増やさない)
    ========================================================================= */
 #tabs{
-  display:flex; flex-shrink:0; padding:8px 6px 12px;
+  display:flex; flex-shrink:0; z-index:5; padding:8px 6px 12px;
   background:oklch(0.16 0.02 255); border-top:1px solid var(--line-2);
 }
 #tabs.off{ display:none }

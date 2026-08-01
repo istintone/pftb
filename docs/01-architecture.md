@@ -69,6 +69,10 @@ tools/
   (`build.py` がビルド時に検査し、欠けていればエラーで停止する)。
 - **画面レジストリ整合**: `SCREENS` のキーと HTML の `id="scr-<キー>"` が1対1に対応する。
   タブは5つで、各 `data-s` は同名画面の `tab` として登録されている(`integration.js` が検査)。
+- **ヘッダーとタブは固定**: 本文(`#appBody`)だけがスクロールする。
+  そのために `#app` の高さは **`min-height` ではなく `height` で確定**させ、
+  `#appBody` に **`min-height:0`** を与える。どちらかを欠くと中身に合わせて `#app` が伸び、
+  `overflow` が効かずページ全体がスクロールして**下部のメインメニューまで流れてしまう**。
 - **CSSの display 指定**: 画面の表示/非表示は `.screen` / `.screen.on` だけで制御する。
   **IDセレクタに `display` を書かない**(`#scr-x{display:flex}` は `.screen{display:none}` に勝ってしまい、
   画面が消えなくなる)。

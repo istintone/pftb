@@ -59,6 +59,7 @@ foreach ($t in @("integration","hangtest","worldtest","careertest","tenuretest")
 node tools/drive.js            # 導入フロー〜タブ巡回を辿ってスクリーンショットを撮る
 node tools/drive.js --out=<dir>  # 出力先(既定: OSのtemp/pftb-shots)
 node tools/drive.js --keep       # プロファイルを残す(セーブを引き継いで再実行)
+node tools/drive.js --mobile     # スマホ実寸(390x844)で確認する
 ```
 
 - 依存パッケージなし。Node 22+ の組み込み `fetch` / `WebSocket` で CDP を直接叩いている。
