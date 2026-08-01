@@ -22,9 +22,29 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   assert.ok(a.length >= 16, "1クラブ16人以上");
   assert.ok(a.filter(x => x.pos === "GK").length >= 2, "GKが2人以上いる");
   for (const p of a) {
-    assert.strictEqual(p.ovr, E.calcOvr(p.pos, p), "OVRが4能力と整合する: " + p.name);
+    // OVR は6能力の合計(最大120)
+    assert.strictEqual(p.ovr, E.calcOvr(p.pos, p), "OVRが6能力の合計と一致する: " + p.name);
+    assert.strictEqual(p.ovr, E.STAT_KEYS.reduce((s, k) => s + p[k], 0), "合計の定義どおり");
+    assert.ok(p.ovr <= E.OVR_MAX, "OVRが上限 " + E.OVR_MAX + " を超えない: " + p.ovr);
+    for (const k of E.STAT_KEYS) {
+      assert.ok(p[k] >= 1 && p[k] <= E.STAT_MAX, k + " が 1〜" + E.STAT_MAX + " に収まる: " + p[k]);
+    }
+    // サブポジションは複数持て、プライマリは必ずメインの側から選ばれる
+    assert.ok(Array.isArray(p.subs) && p.subs.length >= 1, "サブポジションを持つ");
+    assert.strictEqual(E.subGroup(p.subs[0]), p.pos, "プライマリがメインと一致する: " + p.subs[0] + " / " + p.pos);
+    assert.strictEqual(new Set(p.subs).size, p.subs.length, "サブポジションが重複しない");
     assert.ok(p.skills.length >= 1, "スキルが1つ以上");
     assert.ok(p.age >= 18 && p.age <= 34, "年齢が範囲内");
+  }
+  const multi = a.filter(p => p.subs.length > 1).length;
+  const cross = a.filter(p => p.subs.some(s => E.subGroup(s) !== p.pos)).length;
+  console.log("  複数サブ:", multi, "/", a.length, "人 / 大分類をまたぐサブ持ち:", cross, "人");
+  // 枠適性: プライマリ > 他サブ > 同グループ > それ以外
+  const sample = a.find(p => p.subs.length > 1);
+  if (sample) {
+    assert.strictEqual(E.slotFit(sample, sample.subs[0]), 1, "プライマリ一致は 1.0");
+    assert.ok(E.slotFit(sample, sample.subs[1]) < 1 && E.slotFit(sample, sample.subs[1]) > 0.85,
+      "他サブ一致はプライマリ未満・同グループ超");
   }
   console.log("選手生成OK 決定的 / OVR整合 / 例:", a[0].name, a[0].pos, a[0].ovr);
 

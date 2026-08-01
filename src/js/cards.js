@@ -26,23 +26,56 @@ const NATIONS=Object.keys(FAMILY);
 let uid=1;
 function nextCardId(){ return uid++; }
 
-/** OVR からポジション別に4能力へ配分する。合計は OVR×4 前後に収める。 */
+// ポジション別の能力の重み。各行の合計は 6.0 にそろえてあるので、
+// 「OVR を6等分したもの × 重み」で配ると合計が OVR に一致する。
+// 順は STAT_KEYS(atk, def, pow, tec, spd, sta)。GKの def はセービングにあたる。
+const STAT_W={
+  GK:[0.45,1.75,1.05,1.15,0.75,0.85],
+  DF:[0.70,1.55,1.20,0.85,0.85,0.85],
+  MF:[0.95,0.95,0.85,1.35,0.95,0.95],
+  FW:[1.55,0.55,1.15,1.05,1.25,0.45],
+};
+
+/**
+ * 目標OVRを6能力へ配分する。各能力は 1..STAT_MAX(20)、合計はぴったり目標OVRになる。
+ * 端数と上限クランプで合計がずれるため、最後に余りを配り直して必ず一致させる
+ * (OVR = 6能力の合計、という定義を崩さないため)。
+ */
 function statsFor(rng,pos,ovr){
-  // [atk, def, spd, tec] の重み。GKは def を「守備=セービング」として扱う。
-  const W={ GK:[0.55,1.35,0.85,1.05], DF:[0.70,1.30,1.00,0.90],
-            MF:[0.95,0.95,1.00,1.15], FW:[1.35,0.60,1.15,0.95] }[pos];
-  const st=W.map(w=>{
-    const v=ovr*w+rri(rng,-4,4);
-    return clamp(Math.round(v),35,99);
-  });
-  return { atk:st[0], def:st[1], spd:st[2], tec:st[3] };
+  const W=STAT_W[pos], per=ovr/STAT_KEYS.length;
+  const v=W.map(w=>clamp(Math.round(per*w+rri(rng,-2,2)),1,STAT_MAX));
+  let diff=ovr-sum(v);
+  for(let guard=0;diff!==0&&guard<400;guard++){
+    const i=Math.floor(rng()*v.length);
+    if(diff>0&&v[i]<STAT_MAX){ v[i]++; diff--; }
+    else if(diff<0&&v[i]>1){ v[i]--; diff++; }
+  }
+  const st={};
+  STAT_KEYS.forEach((k,i)=>st[k]=v[i]);
+  return st;
 }
 
-/** 4能力から OVR を再計算する(ステータスを変えたら必ずこれで揃える)。 */
+/** OVR は6能力の**合計**(最大120)。能力を触ったら必ずこれで揃える。 */
 function calcOvr(pos,st){
-  const W={ GK:[0.10,0.45,0.15,0.30], DF:[0.12,0.46,0.22,0.20],
-            MF:[0.24,0.24,0.22,0.30], FW:[0.42,0.08,0.26,0.24] }[pos];
-  return Math.round(W[0]*st.atk+W[1]*st.def+W[2]*st.spd+W[3]*st.tec);
+  return sum(STAT_KEYS.map(k=>st[k]||0));
+}
+
+/**
+ * サブポジションを決める。subs[0] がプライマリで、必ずメイン(大分類)の側から選ぶ。
+ * 例外として隣接するサブ(FWのSTがOMFもこなす等)を1つ持つことがあるが、
+ * プライマリはメイン側のままなので所属する大分類は揺らがない。
+ */
+function rollSubs(rng,pos,rarity){
+  const own=SUBPOS[pos];
+  const subs=[rpick(rng,own)];
+  // レアなほど「複数ポジションをこなす」ことが多い
+  const extra=rarity==="ULTRA"?rri(rng,1,2):rarity==="SUPER"?rri(rng,0,2):rri(rng,0,1);
+  for(let i=0;i<extra;i++){
+    const pool=(rng()<0.22&&NEIGHBOR_SUBS[pos].length)?NEIGHBOR_SUBS[pos]:own;
+    const s=rpick(rng,pool);
+    if(!subs.includes(s))subs.push(s);
+  }
+  return subs;
 }
 
 /** レアリティを抽選する(重みは RARITY.w)。opts.min で下限を指定できる。 */
@@ -64,7 +97,7 @@ function rollRarity(rng,minKey){
 function makeCard(rng,pos,opts={}){
   const rarity=opts.rarity||rollRarity(rng);
   const [lo,hi]=RARITY[rarity].ovr;
-  const ovr=clamp(rri(rng,lo,hi)+(opts.ovrBias||0),50,99);
+  const ovr=clamp(rri(rng,lo,hi)+(opts.ovrBias||0),STAT_KEYS.length,OVR_MAX);
   // 自国籍が中心だが、3割ほどは外国籍にして顔ぶれに幅を出す
   const nation=(opts.nation&&rng()<0.7)?opts.nation:rpick(rng,NATIONS);
   const st=statsFor(rng,pos,ovr);
@@ -72,17 +105,21 @@ function makeCard(rng,pos,opts={}){
   const n=rarity==="ULTRA"?3:rarity==="SUPER"?3:rarity==="RARE"?2:1;
   const skills=[];
   while(skills.length<n){ const s=rpick(rng,pool); if(!skills.includes(s))skills.push(s); }
+  const subs=rollSubs(rng,pos,rarity);
   return {
     id:nextCardId(),
     name:rpick(rng,GIVEN)+" "+rpick(rng,FAMILY[nation]),
-    pos, favPos:rpick(rng,SUBPOS[pos]),
+    pos,                          // メイン(大分類)
+    subs,                         // サブ(複数)。subs[0] がプライマリ
     rarity, ovr:calcOvr(pos,st),
     age:rri(rng,18,34), nation,
-    atk:st.atk, def:st.def, spd:st.spd, tec:st.tec,
+    ...st,                        // atk/def/pow/tec/spd/sta
     skills,
-    club:opts.club||"",          // 所属クラブ(コンビネーション combo の判定に使う)
+    club:opts.club||"",           // 所属クラブ(コンビネーション combo の判定に使う)
   };
 }
+/** プライマリのサブポジション(表示の既定)。 */
+const primarySub=c=>c.subs[0];
 
 /** 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。 */
 function makeRoster(rng,opts={}){
@@ -99,10 +136,16 @@ function squadPower(cards){
   return a.length?Math.round(sum(a.map(c=>c.ovr))/a.length):0;
 }
 
-/** 枠(細分ポジション)に対する適性。ぴったり=1、大分類が同じ=0.85、それ以外=0.6。 */
+/**
+ * 枠(サブポジション)に対する適性。
+ *   プライマリが一致    = 1.00
+ *   他のサブが一致      = 0.95(複数ポジションをこなす選手の価値)
+ *   大分類だけ同じ      = 0.85
+ *   それ以外            = 0.60
+ */
 function slotFit(card,subPos){
   if(!card)return 0;
-  if(card.favPos===subPos)return 1;
-  const group=Object.keys(SUBPOS).find(g=>SUBPOS[g].includes(subPos));
-  return card.pos===group?0.85:0.6;
+  if(card.subs[0]===subPos)return 1;
+  if(card.subs.includes(subPos))return 0.95;
+  return card.pos===subGroup(subPos)?0.85:0.6;
 }

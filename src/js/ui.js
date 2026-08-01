@@ -77,16 +77,32 @@ function headUI(){
 }
 
 // ---------- 共通の小部品 ----------
-const rarClass=c=>"r-"+RARITY[c.rarity].label.split(" ")[0].toLowerCase();
-/** カード1枚のタイル。所有(★)と貸与を見分けられるようにする(→§3.4 D13)。 */
+const rarClass=c=>"r-"+c.rarity.toLowerCase();
+/**
+ * 選手カード1枚(→docs/06 §6.12)。デザインモックの構成に準拠:
+ *   枠と発光 = レア度 / 絵柄 = クラブカラーの斜めストライプ /
+ *   左上 = レア度ラベル / 右上 = OVR / 下 = 名前・ポジション・クラブ
+ * ★ は「自分のカード」の印(クラブからの貸与と見分ける → §3.4 D13)。
+ */
 function cardTile(c){
-  if(!c)return '<div class="ptile empty">空き</div>';
+  if(!c)return '<div class="pcard empty">空き</div>';
   const own=!isLoaned(c);
-  return '<div class="ptile '+rarClass(c)+'" data-card="'+c.id+'">'
-    +'<div class="pt-top"><span class="pt-pos">'+c.favPos+'</span>'
-    +'<span class="pt-ovr num">'+c.ovr+'</span></div>'
-    +'<div class="pt-name">'+(own?'<span class="own">★</span>':'')+esc(c.short||c.name)+'</div>'
-    +'<div class="pt-foot lg">'+(own?'所有':'貸与')+'</div></div>';
+  return '<div class="pcard '+rarClass(c)+'" data-card="'+c.id+'">'
+    +'<div class="pc-art" style="--club:'+cardClubColor(c)+'">'
+      +'<span class="pc-rar">'+rarLabel(c)+'</span>'
+      +'<span class="pc-ovr">'+c.ovr+'</span>'
+      +'<span class="pc-ph">PLAYER PHOTO</span>'
+    +'</div>'
+    +'<div class="pc-b">'
+      +'<div class="pc-n">'+(own?'<span class="own">★</span>':'')+esc(shortName(c))+'</div>'
+      +'<div class="pc-m"><span>'+primarySub(c)+(c.subs.length>1?'<i>+'+(c.subs.length-1)+'</i>':'')
+      +'</span><span>'+esc(c.club||"—")+'</span></div>'
+    +'</div></div>';
+}
+/** カードの絵柄に使うクラブカラー。所属クラブ名から決定的に決める。 */
+function cardClubColor(c){
+  const club=CLUBS.find(x=>x.name===c.club);
+  return club?clubColor(club.id):"oklch(0.45 0.03 255)";
 }
 const clubName=id=>clubById(id)?clubById(id).name:id;
 
@@ -136,17 +152,17 @@ const evalLabel=v=>v>=75?"良好":v>=45?"普通":v>=TUNING.eval.floorDismiss?"�
 // ---------- CARDS(コレクション) ----------
 let _cardFilter="ALL";
 function renderCards(){
-  const own=S.player.coll, loan=S.club?S.club.loan:[];
-  $("cardsCount").textContent="COLLECTION · 所有 "+own.length+" / 貸与 "+loan.length;
+  const all=availableCards(), own=S.player.coll.length;
   $("cardsFilter").innerHTML=["ALL"].concat(POS).map(p=>
     '<button class="chip'+(p===_cardFilter?" on":"")+'" data-f="'+p+'">'+p+'</button>').join("");
   $("cardsFilter").querySelectorAll("button").forEach(b=>{
     b.onclick=()=>{ _cardFilter=b.dataset.f; renderCards(); };
   });
-  const list=availableCards().filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter)
-    .sort((a,b)=>b.ovr-a.ovr);
+  const list=all.filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter).sort((a,b)=>b.ovr-a.ovr);
+  $("cardsCount").innerHTML="所持カード "+list.length+" / "+all.length
+    +"　<span class=\"own\">★</span> 自分のカード "+own+" 枚";
   $("cardsGrid").innerHTML=list.length?list.map(cardTile).join("")
-    :'<div class="stub"><b>カードがありません</b><span>パックは第4段で実装します</span></div>';
+    :'<div class="stub"><b>該当するカードがありません</b><span>パックは第4段で実装します</span></div>';
   wireCardTiles($("cardsGrid"));
 }
 function wireCardTiles(root){
@@ -154,18 +170,51 @@ function wireCardTiles(root){
     el.onclick=()=>openCard(Number(el.dataset.card));
   });
 }
+/** カード詳細(→docs/06 §6.12)。モックの構成: 絵柄 → 名前 → 属性 → ABILITY → SKILLS → COMBINATION。 */
 function openCard(id){
   const c=cardById(id); if(!c)return;
+  const nation=countryById(c.nation);
+  $("cardModalBody").className="cm-sheet "+rarClass(c);
   $("cardModalBody").innerHTML=
-    '<div class="cm-head"><div><div class="cm-name">'+esc(c.name)+'</div>'
-    +'<div class="lg">'+c.favPos+' ／ '+c.age+'歳 ／ '+esc(c.club||"—")+'</div></div>'
-    +'<div class="cm-ovr num">'+c.ovr+'</div></div>'
-    +'<div class="lg" style="margin:8px 0 4px">'+rarLabel(c)+' ／ '+(isLoaned(c)?"クラブからの貸与":"所有カード")+'</div>'
-    +'<div class="bars">'+[["ATK","atk"],["DEF","def"],["SPD","spd"],["TEC","tec"]].map(([l,k])=>
-      '<div class="bar"><span>'+l+'</span><i style="width:'+c[k]+'%"></i><b class="num">'+c[k]+'</b></div>').join("")+'</div>'
-    +'<div class="sect-t" style="margin-top:10px">SKILLS</div>'
-    +'<div class="skills">'+c.skills.map(s=>'<span class="skill">'+esc(s)+'</span>').join("")+'</div>';
+    '<button class="cm-x" id="cardModalClose" aria-label="閉じる">×</button>'
+    +'<div class="cm-art" style="--club:'+cardClubColor(c)+'">'
+      +'<span class="cm-rar">'+rarLabel(c)+'</span>'
+      +'<span class="cm-ovr">'+c.ovr+'</span>'
+      +'<span class="pc-ph">PLAYER PHOTO</span>'
+    +'</div>'
+    +'<div class="cm-b">'
+      +'<div class="cm-name">'+esc(c.name)+'</div>'
+      +'<div class="cm-sub">'+c.pos+' · '+esc(c.club||"—")+' · '+esc(nation?nation.name:c.nation)+'</div>'
+      +'<div class="cm-facts">'
+        +'<div><span>年齢</span><b>'+c.age+'歳</b></div>'
+        +'<div><span>得意ポジション</span><b>'+c.subs.join(" / ")+'</b></div>'
+      +'</div>'
+      +'<div class="cm-k">ABILITY <span class="cm-cap">/ '+STAT_MAX+'</span></div>'
+      +'<div class="bars">'+STAT_KEYS.map(k=>
+        '<div class="bar"><span>'+STAT_LABEL[k]+'</span>'
+        +'<div class="tr"><i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i></div>'
+        +'<b>'+c[k]+'</b></div>').join("")+'</div>'
+      +'<div class="cm-k">SKILLS</div>'
+      +'<div class="skills">'+c.skills.map(s=>'<span class="skill">'+esc(s)+'</span>').join("")+'</div>'
+      +'<div class="cm-k">COMBINATION</div>'
+      +'<div class="cm-combo">'+esc(c.club||"—")+'</div>'
+      +'<div class="cm-k">PROFILE</div>'
+      +'<div class="cm-bio">'+esc(bioOf(c))+'</div>'
+      +'<div class="cm-own">'+(isLoaned(c)
+        ? "クラブからの貸与 — 退任するとこのクラブに残ります"
+        : "<span class=\"own\">★</span> 自分のカード — 移籍しても連れて行けます")+'</div>'
+    +'</div>';
+  $("cardModalClose").onclick=closeCard;
   $("cardModal").classList.add("on");
+}
+const closeCard=()=>$("cardModal").classList.remove("on");
+/** PROFILE の紹介文。カードの属性から組み立てる(専用のテキストは持たない)。 */
+function bioOf(c){
+  const n=countryById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
+  const age=c.age<=21?"若手":c.age>=31?"ベテラン":"円熟期";
+  const multi=c.subs.length>1?"、"+c.subs.join("と")+"をこなす":"";
+  return (n?n.name:c.nation)+"出身の"+c.age+"歳"+multi+"。"
+    +age+"の"+primarySub(c)+"で、"+STAT_LABEL[best]+"に長ける。";
 }
 
 // ---------- DECK(編成) ----------
@@ -574,7 +623,7 @@ $("btnForm").onclick=()=>{
   S.form=keys[(keys.indexOf(S.form)+1)%keys.length];
   S.squad=autoSquad(); save(); renderDeck(); toast("陣形を "+S.form+" に変更");
 };
-$("cardModalClose").onclick=()=>$("cardModal").classList.remove("on");
+$("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
 $("btnNewCareer").onclick=async()=>{
   if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;
   await newGame(); _pickedClub=null; show("offer");

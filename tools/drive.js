@@ -163,6 +163,18 @@ const STEPS = [
       await ctx.wait(250);
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
+      if (tab === "cards") {
+        // カード詳細を開いて閉じる
+        await ctx.js("document.querySelector('#cardsGrid [data-card]').click()");
+        await ctx.wait(300);
+        ctx.log("  カード詳細:", await ctx.js("document.querySelector('#cardModalBody .cm-name').textContent"),
+          "/ レア:", await ctx.js("document.querySelector('#cardModalBody .cm-rar').textContent"),
+          "/ 能力バー:", await ctx.js("document.querySelectorAll('#cardModalBody .bar').length"));
+        await ctx.shot("09b-card-detail");
+        await ctx.js("document.getElementById('cardModalClose').click()");
+        await ctx.wait(200);
+        ctx.log("  閉じた:", await ctx.js("!document.getElementById('cardModal').classList.contains('on')"));
+      }
     }
   }],
   ["サブ画面と戻る", async ctx => {

@@ -90,7 +90,7 @@ function setup(opts = {}) {
         + `CLUBS,COUNTRIES,TUNING,RARITY,FORMATIONS,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
         + `standings,rankOf,expectedRank,requiredFame,offersFor,startTenure,playMatchday,seasonOver,`
         + `judgeSeason,myFixture,squadCards,autoSquad,availableCards,squadPower,resolveMatch,`
-        + `mulberry32,calcOvr,makeCard,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
+        + `mulberry32,calcOvr,makeCard,STAT_KEYS,STAT_MAX,OVR_MAX,SUBPOS,subGroup,slotFit,primarySub,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
 
   const tmpPath = path.join(__dirname, opts.tmpName || "_tmp_run.js");
   fs.writeFileSync(tmpPath, code);

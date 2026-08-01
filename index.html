@@ -361,42 +361,100 @@ body{
   font:600 13px/1.3 var(--f-head); letter-spacing:.5px }
 .next-vs .vs{ font:10px/1 var(--f-mono); color:var(--accent); letter-spacing:2px }
 
-/* フィルタのチップ */
-.filters{ display:flex; gap:6px; margin:10px 0 }
-.chip{ flex:1; padding:6px 0; cursor:pointer; border-radius:7px;
+/* フィルタのチップ(ピル・横スクロール) */
+.filters{ display:flex; gap:6px; margin:4px 0 12px; overflow-x:auto }
+.chip{
+  flex-shrink:0; padding:7px 14px; cursor:pointer; border-radius:20px;
   border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim);
-  font:400 10px/1 var(--f-head); letter-spacing:1px }
+  font:500 12px/1 var(--f-head);
+}
 .chip.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
 
-/* カードタイル */
-.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px }
-.ptile{ position:relative; padding:8px 8px 6px; cursor:pointer; overflow:hidden;
-  background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--rar-std);
-  border-radius:9px }
-.ptile.r-rare{ border-left-color:var(--rar-rare) }
-.ptile.r-super{ border-left-color:var(--rar-super) }
-.ptile.r-ultra{ border-left-color:var(--rar-ultra) }
-.ptile.empty{ display:flex; align-items:center; justify-content:center; cursor:default;
-  color:var(--text-mute); font-size:10px; border-style:dashed; border-left-style:dashed }
-.pt-top{ display:flex; justify-content:space-between; align-items:baseline }
-.pt-pos{ font:10px/1 var(--f-mono); color:var(--text-dim) }
-.pt-ovr{ font:600 16px/1 var(--f-head); color:var(--text) }
-.pt-name{ margin-top:4px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.pt-name .own{ color:var(--accent) }
-.pt-foot{ margin-top:2px; font-size:9px }
+/* =========================================================================
+   選手カード — レア度で枠と発光、絵柄はクラブカラーの斜めストライプ。
+   デザインモック(src/assets/design/P-footBall.html)の構成に準拠。
+   ========================================================================= */
+.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px }
+.pcard{
+  --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .35);
+  border-radius:10px; overflow:hidden; cursor:pointer;
+  background:var(--panel); border:1px solid var(--rar); box-shadow:0 0 14px var(--glow);
+}
+.pcard.r-rare { --rar:var(--rar-rare);  --glow:oklch(0.65 0.14 240 / .35) }
+.pcard.r-super{ --rar:var(--rar-super); --glow:oklch(0.72 0.15 300 / .35) }
+.pcard.r-ultra{ --rar:var(--rar-ultra); --glow:oklch(0.78 0.14 85 / .35) }
+.pcard.empty{
+  display:flex; align-items:center; justify-content:center; cursor:default; box-shadow:none;
+  aspect-ratio:3/4.6; border-style:dashed; border-color:var(--line);
+  color:var(--text-mute); font-size:10px;
+}
+/* 絵柄。選手画像はまだ無いのでプレースホルダ(ピクセル選手は第3段) */
+.pc-art{
+  position:relative; aspect-ratio:3/4; padding:6px;
+  display:flex; align-items:flex-end;
+  background:repeating-linear-gradient(135deg,
+    var(--club) 0 6px, oklch(0.20 0.02 255) 6px 12px);
+}
+.pc-rar{ position:absolute; top:5px; left:5px; font:600 9px/1 var(--f-mono); color:var(--rar);
+  text-shadow:0 1px 3px #000 }
+.pc-ovr{ position:absolute; top:5px; right:5px;
+  font:700 16px/1 var(--f-head); color:#fff; text-shadow:0 1px 3px #000 }
+.pc-ph{ font:8px/1 var(--f-mono); color:rgba(255,255,255,.7) }
+.pc-b{ padding:6px 7px }
+.pc-n{ font:600 11px/1.4 var(--f-body); color:oklch(0.92 0.01 90);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pc-n .own{ color:var(--accent) }
+.pc-m{ display:flex; justify-content:space-between; gap:4px; font-size:9px; color:var(--text-dim) }
+.pc-m span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.pc-m i{ margin-left:2px; font-style:normal; color:var(--accent) }
+#cardsCount .own{ color:var(--accent) }
 
-/* カード詳細モーダル */
-.cm-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px }
-.cm-name{ font:600 15px/1.3 var(--f-head); letter-spacing:.5px }
-.cm-ovr{ font:600 30px/1 var(--f-head); color:var(--accent) }
-.bars{ margin-top:8px }
-.bar{ display:flex; align-items:center; gap:8px; margin:5px 0; font:10px/1 var(--f-mono) }
-.bar span{ width:30px; color:var(--text-dim) }
-.bar i{ height:6px; border-radius:3px; background:var(--accent-dim); display:block }
-.bar b{ margin-left:auto; font-weight:400; color:var(--text-2) }
-.skills{ display:flex; flex-wrap:wrap; gap:5px; margin-top:6px }
-.skill{ padding:3px 7px; border-radius:4px; background:var(--panel-2);
-  border:1px solid var(--line); font-size:10px; color:var(--text-2) }
+/* カード詳細(モックの構成: 絵柄 → 名前 → 属性 → ABILITY → SKILLS → COMBINATION) */
+.cm-sheet{
+  --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .35);
+  position:relative; width:100%; max-width:320px; max-height:100%; overflow-y:auto;
+  border-radius:16px; background:oklch(0.17 0.02 255); border:2px solid var(--rar);
+  box-shadow:0 24px 60px rgba(0,0,0,.6), 0 0 30px var(--glow);
+}
+.cm-sheet.r-rare { --rar:var(--rar-rare);  --glow:oklch(0.65 0.14 240 / .35) }
+.cm-sheet.r-super{ --rar:var(--rar-super); --glow:oklch(0.72 0.15 300 / .35) }
+.cm-sheet.r-ultra{ --rar:var(--rar-ultra); --glow:oklch(0.78 0.14 85 / .35) }
+.cm-x{
+  position:absolute; top:10px; right:10px; z-index:2; width:30px; height:30px; cursor:pointer;
+  border-radius:50%; background:oklch(0.15 0.02 255 / .85); border:1px solid oklch(0.40 0.02 255);
+  color:var(--text-2); font-size:17px; line-height:1;
+}
+.cm-art{
+  position:relative; aspect-ratio:4/3; padding:14px; display:flex; align-items:flex-end;
+  background:repeating-linear-gradient(135deg,
+    var(--club) 0 8px, oklch(0.20 0.02 255) 8px 16px);
+}
+.cm-rar{ position:absolute; top:12px; left:14px;
+  font:700 11px/1 var(--f-mono); letter-spacing:1px; color:var(--rar); text-shadow:0 1px 3px #000 }
+.cm-ovr{ position:absolute; top:6px; right:46px;
+  font:700 40px/1 var(--f-head); color:#fff; text-shadow:0 2px 6px #000 }
+.cm-b{ padding:16px 18px 20px }
+.cm-name{ margin-bottom:2px; font:700 19px/1.3 var(--f-head); color:oklch(0.96 0.01 90) }
+.cm-sub{ margin-bottom:14px; font-size:11px; color:oklch(0.58 0.02 255) }
+.cm-facts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px }
+.cm-facts > div{ padding:8px 10px; border-radius:8px; background:oklch(0.21 0.02 255) }
+.cm-facts span{ display:block; margin-bottom:2px; font-size:9px; color:oklch(0.55 0.02 255) }
+.cm-facts b{ font:400 13px/1 var(--f-mono); color:oklch(0.92 0.01 90) }
+.cm-k{ margin-bottom:8px; font:400 11px/1 var(--f-head); letter-spacing:1.5px; color:oklch(0.60 0.02 255) }
+.cm-combo{ margin-bottom:16px; font-size:12px; color:var(--accent) }
+.cm-cap{ color:var(--text-mute); font-size:9px; letter-spacing:0 }
+.cm-bio{ margin-bottom:10px; font-size:12px; line-height:1.7; color:oklch(0.75 0.01 90) }
+.cm-own{ font-size:11px; line-height:1.7; color:var(--text-2) }
+.cm-own .own{ color:var(--accent) }
+.bars{ margin-bottom:16px }
+.bar{ display:flex; align-items:center; gap:8px; margin:7px 0 }
+.bar > span{ width:32px; font-size:10px; color:oklch(0.60 0.02 255) }
+.bar .tr{ flex:1; height:6px; border-radius:3px; overflow:hidden; background:oklch(0.28 0.02 255) }
+.bar i{ display:block; height:100%; background:var(--accent) }
+.bar b{ width:22px; text-align:right; font:400 10px/1 var(--f-mono); color:var(--text-2) }
+.skills{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px }
+.skill{ padding:4px 10px; border-radius:12px; background:oklch(0.24 0.03 255);
+  border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
 
 /* ピッチ(編成) */
 .pitch{ position:relative; height:330px; margin-top:12px; border-radius:12px;
@@ -640,8 +698,8 @@ body{
 
     <!-- ---------- CARDS(所持選手) ---------- -->
     <div id="scr-cards" class="screen"><div class="pad">
-      <div class="eyebrow" id="cardsCount">COLLECTION</div>
       <div class="filters" id="cardsFilter"></div>
+      <div class="lg" id="cardsCount"></div>
       <div class="grid" id="cardsGrid"></div>
     </div></div>
 
@@ -814,11 +872,7 @@ body{
 
   <!-- ===== カード詳細(モーダル) ===== -->
   <div class="modal" id="cardModal">
-    <div class="sheet">
-      <button class="close-btn" id="cardModalClose" aria-label="閉じる">✕</button>
-      <h3>PLAYER</h3>
-      <div id="cardModalBody"></div>
-    </div>
+    <div class="cm-sheet" id="cardModalBody"></div>
   </div>
 
   <div id="toast"></div>
@@ -865,22 +919,44 @@ function hashStr(s){
 const rri=(rng,a,b)=>a+Math.floor(rng()*(b-a+1));
 const rpick=(rng,a)=>a[Math.floor(rng()*a.length)];
 
+// --- 能力 ---
+// WCCF に由来し、上限は各20。OVR は6つの**合計**なので最大120になる。
+// card-eleven と同じ6軸にすることで、試合ロジックを card-eleven の考え方の上で
+// 差別化できるようにしてある(→docs/03 §3.13)。
+const STAT_KEYS=["atk","def","pow","tec","spd","sta"];
+const STAT_LABEL={ atk:"ATK", def:"DEF", pow:"POW", tec:"TEC", spd:"SPD", sta:"STA" };
+const STAT_MAX=20;
+const OVR_MAX=STAT_MAX*STAT_KEYS.length;   // 120
+
 // --- ポジション ---
+// メイン(大分類)とサブの組み合わせ。カードは**サブを複数**持ち、subs[0] がプライマリ。
 const POS=["GK","DF","MF","FW"];
-// 細分ポジション(favPos)。大分類 → 細分。
 const SUBPOS={
   GK:["GK"],
-  DF:["CB","CB","SB","SB"],           // CBを厚めに(生成時の出現比を兼ねる)
-  MF:["DMF","CMF","CMF","OMF","SMF"],
-  FW:["CF","CF","WG","SS"],
+  DF:["CB","CB","LSB","RSB"],              // CBを厚めに(生成時の出現比を兼ねる)
+  MF:["DMF","CMF","CMF","OMF","LMF","RMF"],
+  FW:["CF","ST","LWG","RWG"],
 };
+// 例外的に持てる「隣接する」サブ。FWのSTがOMFもこなす、といったケース。
+// プライマリは必ずメインの側から選ぶので、メインが揺らぐことはない。
+const NEIGHBOR_SUBS={
+  GK:[],
+  DF:["DMF"],
+  MF:["CB","ST","CF"],
+  FW:["OMF"],
+};
+/** サブポジションが属する大分類を返す(隣接サブも含めて引ける)。 */
+function subGroup(sub){
+  return POS.find(g=>SUBPOS[g].includes(sub))||null;
+}
 
 // --- レアリティ(デザインモックの4段階。色は base.css の --rar-* と対応) ---
+// ovr は6ステータス合計の目安(最大120)。
 const RARITY={
-  STD:  { label:"STANDARD",   ovr:[68,78], w:60 },
-  RARE: { label:"RARE",       ovr:[76,84], w:28 },
-  SUPER:{ label:"SUPER RARE", ovr:[83,89], w:9  },
-  ULTRA:{ label:"ULTRA RARE", ovr:[88,94], w:3  },
+  STD:  { label:"STANDARD",   ovr:[54,72],  w:60 },
+  RARE: { label:"RARE",       ovr:[68,86],  w:28 },
+  SUPER:{ label:"SUPER RARE", ovr:[82,98],  w:9  },
+  ULTRA:{ label:"ULTRA RARE", ovr:[94,112], w:3  },
 };
 const RAR_KEYS=Object.keys(RARITY);
 
@@ -895,10 +971,10 @@ const SKILLS={
 // --- フォーメーション ---
 // 各枠は [細分ポジション, ピッチ上の位置(%)]。DECK画面の配置と編成の妥当性判定に使う。
 const FORMATIONS={
-  "4-4-2":[["GK",50,92],["SB",14,72],["CB",38,76],["CB",62,76],["SB",86,72],
-           ["SMF",14,48],["CMF",38,52],["CMF",62,52],["SMF",86,48],["CF",38,18],["CF",62,18]],
-  "4-3-3":[["GK",50,92],["SB",14,72],["CB",38,76],["CB",62,76],["SB",86,72],
-           ["DMF",50,58],["CMF",26,46],["CMF",74,46],["WG",14,20],["CF",50,14],["WG",86,20]],
+  "4-4-2":[["GK",50,92],["LSB",14,72],["CB",38,76],["CB",62,76],["RSB",86,72],
+           ["LMF",14,48],["CMF",38,52],["CMF",62,52],["RMF",86,48],["CF",38,18],["ST",62,18]],
+  "4-3-3":[["GK",50,92],["LSB",14,72],["CB",38,76],["CB",62,76],["RSB",86,72],
+           ["DMF",50,58],["CMF",26,46],["CMF",74,46],["LWG",14,20],["CF",50,14],["RWG",86,20]],
 };
 const DEFAULT_FORM="4-4-2";
 
@@ -957,23 +1033,56 @@ const NATIONS=Object.keys(FAMILY);
 let uid=1;
 function nextCardId(){ return uid++; }
 
-/** OVR からポジション別に4能力へ配分する。合計は OVR×4 前後に収める。 */
+// ポジション別の能力の重み。各行の合計は 6.0 にそろえてあるので、
+// 「OVR を6等分したもの × 重み」で配ると合計が OVR に一致する。
+// 順は STAT_KEYS(atk, def, pow, tec, spd, sta)。GKの def はセービングにあたる。
+const STAT_W={
+  GK:[0.45,1.75,1.05,1.15,0.75,0.85],
+  DF:[0.70,1.55,1.20,0.85,0.85,0.85],
+  MF:[0.95,0.95,0.85,1.35,0.95,0.95],
+  FW:[1.55,0.55,1.15,1.05,1.25,0.45],
+};
+
+/**
+ * 目標OVRを6能力へ配分する。各能力は 1..STAT_MAX(20)、合計はぴったり目標OVRになる。
+ * 端数と上限クランプで合計がずれるため、最後に余りを配り直して必ず一致させる
+ * (OVR = 6能力の合計、という定義を崩さないため)。
+ */
 function statsFor(rng,pos,ovr){
-  // [atk, def, spd, tec] の重み。GKは def を「守備=セービング」として扱う。
-  const W={ GK:[0.55,1.35,0.85,1.05], DF:[0.70,1.30,1.00,0.90],
-            MF:[0.95,0.95,1.00,1.15], FW:[1.35,0.60,1.15,0.95] }[pos];
-  const st=W.map(w=>{
-    const v=ovr*w+rri(rng,-4,4);
-    return clamp(Math.round(v),35,99);
-  });
-  return { atk:st[0], def:st[1], spd:st[2], tec:st[3] };
+  const W=STAT_W[pos], per=ovr/STAT_KEYS.length;
+  const v=W.map(w=>clamp(Math.round(per*w+rri(rng,-2,2)),1,STAT_MAX));
+  let diff=ovr-sum(v);
+  for(let guard=0;diff!==0&&guard<400;guard++){
+    const i=Math.floor(rng()*v.length);
+    if(diff>0&&v[i]<STAT_MAX){ v[i]++; diff--; }
+    else if(diff<0&&v[i]>1){ v[i]--; diff++; }
+  }
+  const st={};
+  STAT_KEYS.forEach((k,i)=>st[k]=v[i]);
+  return st;
 }
 
-/** 4能力から OVR を再計算する(ステータスを変えたら必ずこれで揃える)。 */
+/** OVR は6能力の**合計**(最大120)。能力を触ったら必ずこれで揃える。 */
 function calcOvr(pos,st){
-  const W={ GK:[0.10,0.45,0.15,0.30], DF:[0.12,0.46,0.22,0.20],
-            MF:[0.24,0.24,0.22,0.30], FW:[0.42,0.08,0.26,0.24] }[pos];
-  return Math.round(W[0]*st.atk+W[1]*st.def+W[2]*st.spd+W[3]*st.tec);
+  return sum(STAT_KEYS.map(k=>st[k]||0));
+}
+
+/**
+ * サブポジションを決める。subs[0] がプライマリで、必ずメイン(大分類)の側から選ぶ。
+ * 例外として隣接するサブ(FWのSTがOMFもこなす等)を1つ持つことがあるが、
+ * プライマリはメイン側のままなので所属する大分類は揺らがない。
+ */
+function rollSubs(rng,pos,rarity){
+  const own=SUBPOS[pos];
+  const subs=[rpick(rng,own)];
+  // レアなほど「複数ポジションをこなす」ことが多い
+  const extra=rarity==="ULTRA"?rri(rng,1,2):rarity==="SUPER"?rri(rng,0,2):rri(rng,0,1);
+  for(let i=0;i<extra;i++){
+    const pool=(rng()<0.22&&NEIGHBOR_SUBS[pos].length)?NEIGHBOR_SUBS[pos]:own;
+    const s=rpick(rng,pool);
+    if(!subs.includes(s))subs.push(s);
+  }
+  return subs;
 }
 
 /** レアリティを抽選する(重みは RARITY.w)。opts.min で下限を指定できる。 */
@@ -995,7 +1104,7 @@ function rollRarity(rng,minKey){
 function makeCard(rng,pos,opts={}){
   const rarity=opts.rarity||rollRarity(rng);
   const [lo,hi]=RARITY[rarity].ovr;
-  const ovr=clamp(rri(rng,lo,hi)+(opts.ovrBias||0),50,99);
+  const ovr=clamp(rri(rng,lo,hi)+(opts.ovrBias||0),STAT_KEYS.length,OVR_MAX);
   // 自国籍が中心だが、3割ほどは外国籍にして顔ぶれに幅を出す
   const nation=(opts.nation&&rng()<0.7)?opts.nation:rpick(rng,NATIONS);
   const st=statsFor(rng,pos,ovr);
@@ -1003,17 +1112,21 @@ function makeCard(rng,pos,opts={}){
   const n=rarity==="ULTRA"?3:rarity==="SUPER"?3:rarity==="RARE"?2:1;
   const skills=[];
   while(skills.length<n){ const s=rpick(rng,pool); if(!skills.includes(s))skills.push(s); }
+  const subs=rollSubs(rng,pos,rarity);
   return {
     id:nextCardId(),
     name:rpick(rng,GIVEN)+" "+rpick(rng,FAMILY[nation]),
-    pos, favPos:rpick(rng,SUBPOS[pos]),
+    pos,                          // メイン(大分類)
+    subs,                         // サブ(複数)。subs[0] がプライマリ
     rarity, ovr:calcOvr(pos,st),
     age:rri(rng,18,34), nation,
-    atk:st.atk, def:st.def, spd:st.spd, tec:st.tec,
+    ...st,                        // atk/def/pow/tec/spd/sta
     skills,
-    club:opts.club||"",          // 所属クラブ(コンビネーション combo の判定に使う)
+    club:opts.club||"",           // 所属クラブ(コンビネーション combo の判定に使う)
   };
 }
+/** プライマリのサブポジション(表示の既定)。 */
+const primarySub=c=>c.subs[0];
 
 /** 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。 */
 function makeRoster(rng,opts={}){
@@ -1030,12 +1143,18 @@ function squadPower(cards){
   return a.length?Math.round(sum(a.map(c=>c.ovr))/a.length):0;
 }
 
-/** 枠(細分ポジション)に対する適性。ぴったり=1、大分類が同じ=0.85、それ以外=0.6。 */
+/**
+ * 枠(サブポジション)に対する適性。
+ *   プライマリが一致    = 1.00
+ *   他のサブが一致      = 0.95(複数ポジションをこなす選手の価値)
+ *   大分類だけ同じ      = 0.85
+ *   それ以外            = 0.60
+ */
 function slotFit(card,subPos){
   if(!card)return 0;
-  if(card.favPos===subPos)return 1;
-  const group=Object.keys(SUBPOS).find(g=>SUBPOS[g].includes(subPos));
-  return card.pos===group?0.85:0.6;
+  if(card.subs[0]===subPos)return 1;
+  if(card.subs.includes(subPos))return 0.95;
+  return card.pos===subGroup(subPos)?0.85:0.6;
 }
 
 // ================= 世界(国・クラブ・リーグ・日程) =================
@@ -1631,16 +1750,32 @@ function headUI(){
 }
 
 // ---------- 共通の小部品 ----------
-const rarClass=c=>"r-"+RARITY[c.rarity].label.split(" ")[0].toLowerCase();
-/** カード1枚のタイル。所有(★)と貸与を見分けられるようにする(→§3.4 D13)。 */
+const rarClass=c=>"r-"+c.rarity.toLowerCase();
+/**
+ * 選手カード1枚(→docs/06 §6.12)。デザインモックの構成に準拠:
+ *   枠と発光 = レア度 / 絵柄 = クラブカラーの斜めストライプ /
+ *   左上 = レア度ラベル / 右上 = OVR / 下 = 名前・ポジション・クラブ
+ * ★ は「自分のカード」の印(クラブからの貸与と見分ける → §3.4 D13)。
+ */
 function cardTile(c){
-  if(!c)return '<div class="ptile empty">空き</div>';
+  if(!c)return '<div class="pcard empty">空き</div>';
   const own=!isLoaned(c);
-  return '<div class="ptile '+rarClass(c)+'" data-card="'+c.id+'">'
-    +'<div class="pt-top"><span class="pt-pos">'+c.favPos+'</span>'
-    +'<span class="pt-ovr num">'+c.ovr+'</span></div>'
-    +'<div class="pt-name">'+(own?'<span class="own">★</span>':'')+esc(c.short||c.name)+'</div>'
-    +'<div class="pt-foot lg">'+(own?'所有':'貸与')+'</div></div>';
+  return '<div class="pcard '+rarClass(c)+'" data-card="'+c.id+'">'
+    +'<div class="pc-art" style="--club:'+cardClubColor(c)+'">'
+      +'<span class="pc-rar">'+rarLabel(c)+'</span>'
+      +'<span class="pc-ovr">'+c.ovr+'</span>'
+      +'<span class="pc-ph">PLAYER PHOTO</span>'
+    +'</div>'
+    +'<div class="pc-b">'
+      +'<div class="pc-n">'+(own?'<span class="own">★</span>':'')+esc(shortName(c))+'</div>'
+      +'<div class="pc-m"><span>'+primarySub(c)+(c.subs.length>1?'<i>+'+(c.subs.length-1)+'</i>':'')
+      +'</span><span>'+esc(c.club||"—")+'</span></div>'
+    +'</div></div>';
+}
+/** カードの絵柄に使うクラブカラー。所属クラブ名から決定的に決める。 */
+function cardClubColor(c){
+  const club=CLUBS.find(x=>x.name===c.club);
+  return club?clubColor(club.id):"oklch(0.45 0.03 255)";
 }
 const clubName=id=>clubById(id)?clubById(id).name:id;
 
@@ -1690,17 +1825,17 @@ const evalLabel=v=>v>=75?"良好":v>=45?"普通":v>=TUNING.eval.floorDismiss?"�
 // ---------- CARDS(コレクション) ----------
 let _cardFilter="ALL";
 function renderCards(){
-  const own=S.player.coll, loan=S.club?S.club.loan:[];
-  $("cardsCount").textContent="COLLECTION · 所有 "+own.length+" / 貸与 "+loan.length;
+  const all=availableCards(), own=S.player.coll.length;
   $("cardsFilter").innerHTML=["ALL"].concat(POS).map(p=>
     '<button class="chip'+(p===_cardFilter?" on":"")+'" data-f="'+p+'">'+p+'</button>').join("");
   $("cardsFilter").querySelectorAll("button").forEach(b=>{
     b.onclick=()=>{ _cardFilter=b.dataset.f; renderCards(); };
   });
-  const list=availableCards().filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter)
-    .sort((a,b)=>b.ovr-a.ovr);
+  const list=all.filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter).sort((a,b)=>b.ovr-a.ovr);
+  $("cardsCount").innerHTML="所持カード "+list.length+" / "+all.length
+    +"　<span class=\"own\">★</span> 自分のカード "+own+" 枚";
   $("cardsGrid").innerHTML=list.length?list.map(cardTile).join("")
-    :'<div class="stub"><b>カードがありません</b><span>パックは第4段で実装します</span></div>';
+    :'<div class="stub"><b>該当するカードがありません</b><span>パックは第4段で実装します</span></div>';
   wireCardTiles($("cardsGrid"));
 }
 function wireCardTiles(root){
@@ -1708,18 +1843,51 @@ function wireCardTiles(root){
     el.onclick=()=>openCard(Number(el.dataset.card));
   });
 }
+/** カード詳細(→docs/06 §6.12)。モックの構成: 絵柄 → 名前 → 属性 → ABILITY → SKILLS → COMBINATION。 */
 function openCard(id){
   const c=cardById(id); if(!c)return;
+  const nation=countryById(c.nation);
+  $("cardModalBody").className="cm-sheet "+rarClass(c);
   $("cardModalBody").innerHTML=
-    '<div class="cm-head"><div><div class="cm-name">'+esc(c.name)+'</div>'
-    +'<div class="lg">'+c.favPos+' ／ '+c.age+'歳 ／ '+esc(c.club||"—")+'</div></div>'
-    +'<div class="cm-ovr num">'+c.ovr+'</div></div>'
-    +'<div class="lg" style="margin:8px 0 4px">'+rarLabel(c)+' ／ '+(isLoaned(c)?"クラブからの貸与":"所有カード")+'</div>'
-    +'<div class="bars">'+[["ATK","atk"],["DEF","def"],["SPD","spd"],["TEC","tec"]].map(([l,k])=>
-      '<div class="bar"><span>'+l+'</span><i style="width:'+c[k]+'%"></i><b class="num">'+c[k]+'</b></div>').join("")+'</div>'
-    +'<div class="sect-t" style="margin-top:10px">SKILLS</div>'
-    +'<div class="skills">'+c.skills.map(s=>'<span class="skill">'+esc(s)+'</span>').join("")+'</div>';
+    '<button class="cm-x" id="cardModalClose" aria-label="閉じる">×</button>'
+    +'<div class="cm-art" style="--club:'+cardClubColor(c)+'">'
+      +'<span class="cm-rar">'+rarLabel(c)+'</span>'
+      +'<span class="cm-ovr">'+c.ovr+'</span>'
+      +'<span class="pc-ph">PLAYER PHOTO</span>'
+    +'</div>'
+    +'<div class="cm-b">'
+      +'<div class="cm-name">'+esc(c.name)+'</div>'
+      +'<div class="cm-sub">'+c.pos+' · '+esc(c.club||"—")+' · '+esc(nation?nation.name:c.nation)+'</div>'
+      +'<div class="cm-facts">'
+        +'<div><span>年齢</span><b>'+c.age+'歳</b></div>'
+        +'<div><span>得意ポジション</span><b>'+c.subs.join(" / ")+'</b></div>'
+      +'</div>'
+      +'<div class="cm-k">ABILITY <span class="cm-cap">/ '+STAT_MAX+'</span></div>'
+      +'<div class="bars">'+STAT_KEYS.map(k=>
+        '<div class="bar"><span>'+STAT_LABEL[k]+'</span>'
+        +'<div class="tr"><i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i></div>'
+        +'<b>'+c[k]+'</b></div>').join("")+'</div>'
+      +'<div class="cm-k">SKILLS</div>'
+      +'<div class="skills">'+c.skills.map(s=>'<span class="skill">'+esc(s)+'</span>').join("")+'</div>'
+      +'<div class="cm-k">COMBINATION</div>'
+      +'<div class="cm-combo">'+esc(c.club||"—")+'</div>'
+      +'<div class="cm-k">PROFILE</div>'
+      +'<div class="cm-bio">'+esc(bioOf(c))+'</div>'
+      +'<div class="cm-own">'+(isLoaned(c)
+        ? "クラブからの貸与 — 退任するとこのクラブに残ります"
+        : "<span class=\"own\">★</span> 自分のカード — 移籍しても連れて行けます")+'</div>'
+    +'</div>';
+  $("cardModalClose").onclick=closeCard;
   $("cardModal").classList.add("on");
+}
+const closeCard=()=>$("cardModal").classList.remove("on");
+/** PROFILE の紹介文。カードの属性から組み立てる(専用のテキストは持たない)。 */
+function bioOf(c){
+  const n=countryById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
+  const age=c.age<=21?"若手":c.age>=31?"ベテラン":"円熟期";
+  const multi=c.subs.length>1?"、"+c.subs.join("と")+"をこなす":"";
+  return (n?n.name:c.nation)+"出身の"+c.age+"歳"+multi+"。"
+    +age+"の"+primarySub(c)+"で、"+STAT_LABEL[best]+"に長ける。";
 }
 
 // ---------- DECK(編成) ----------
@@ -2128,7 +2296,7 @@ $("btnForm").onclick=()=>{
   S.form=keys[(keys.indexOf(S.form)+1)%keys.length];
   S.squad=autoSquad(); save(); renderDeck(); toast("陣形を "+S.form+" に変更");
 };
-$("cardModalClose").onclick=()=>$("cardModal").classList.remove("on");
+$("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
 $("btnNewCareer").onclick=async()=>{
   if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;
   await newGame(); _pickedClub=null; show("offer");

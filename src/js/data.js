@@ -38,22 +38,44 @@ function hashStr(s){
 const rri=(rng,a,b)=>a+Math.floor(rng()*(b-a+1));
 const rpick=(rng,a)=>a[Math.floor(rng()*a.length)];
 
+// --- 能力 ---
+// WCCF に由来し、上限は各20。OVR は6つの**合計**なので最大120になる。
+// card-eleven と同じ6軸にすることで、試合ロジックを card-eleven の考え方の上で
+// 差別化できるようにしてある(→docs/03 §3.13)。
+const STAT_KEYS=["atk","def","pow","tec","spd","sta"];
+const STAT_LABEL={ atk:"ATK", def:"DEF", pow:"POW", tec:"TEC", spd:"SPD", sta:"STA" };
+const STAT_MAX=20;
+const OVR_MAX=STAT_MAX*STAT_KEYS.length;   // 120
+
 // --- ポジション ---
+// メイン(大分類)とサブの組み合わせ。カードは**サブを複数**持ち、subs[0] がプライマリ。
 const POS=["GK","DF","MF","FW"];
-// 細分ポジション(favPos)。大分類 → 細分。
 const SUBPOS={
   GK:["GK"],
-  DF:["CB","CB","SB","SB"],           // CBを厚めに(生成時の出現比を兼ねる)
-  MF:["DMF","CMF","CMF","OMF","SMF"],
-  FW:["CF","CF","WG","SS"],
+  DF:["CB","CB","LSB","RSB"],              // CBを厚めに(生成時の出現比を兼ねる)
+  MF:["DMF","CMF","CMF","OMF","LMF","RMF"],
+  FW:["CF","ST","LWG","RWG"],
 };
+// 例外的に持てる「隣接する」サブ。FWのSTがOMFもこなす、といったケース。
+// プライマリは必ずメインの側から選ぶので、メインが揺らぐことはない。
+const NEIGHBOR_SUBS={
+  GK:[],
+  DF:["DMF"],
+  MF:["CB","ST","CF"],
+  FW:["OMF"],
+};
+/** サブポジションが属する大分類を返す(隣接サブも含めて引ける)。 */
+function subGroup(sub){
+  return POS.find(g=>SUBPOS[g].includes(sub))||null;
+}
 
 // --- レアリティ(デザインモックの4段階。色は base.css の --rar-* と対応) ---
+// ovr は6ステータス合計の目安(最大120)。
 const RARITY={
-  STD:  { label:"STANDARD",   ovr:[68,78], w:60 },
-  RARE: { label:"RARE",       ovr:[76,84], w:28 },
-  SUPER:{ label:"SUPER RARE", ovr:[83,89], w:9  },
-  ULTRA:{ label:"ULTRA RARE", ovr:[88,94], w:3  },
+  STD:  { label:"STANDARD",   ovr:[54,72],  w:60 },
+  RARE: { label:"RARE",       ovr:[68,86],  w:28 },
+  SUPER:{ label:"SUPER RARE", ovr:[82,98],  w:9  },
+  ULTRA:{ label:"ULTRA RARE", ovr:[94,112], w:3  },
 };
 const RAR_KEYS=Object.keys(RARITY);
 
@@ -68,10 +90,10 @@ const SKILLS={
 // --- フォーメーション ---
 // 各枠は [細分ポジション, ピッチ上の位置(%)]。DECK画面の配置と編成の妥当性判定に使う。
 const FORMATIONS={
-  "4-4-2":[["GK",50,92],["SB",14,72],["CB",38,76],["CB",62,76],["SB",86,72],
-           ["SMF",14,48],["CMF",38,52],["CMF",62,52],["SMF",86,48],["CF",38,18],["CF",62,18]],
-  "4-3-3":[["GK",50,92],["SB",14,72],["CB",38,76],["CB",62,76],["SB",86,72],
-           ["DMF",50,58],["CMF",26,46],["CMF",74,46],["WG",14,20],["CF",50,14],["WG",86,20]],
+  "4-4-2":[["GK",50,92],["LSB",14,72],["CB",38,76],["CB",62,76],["RSB",86,72],
+           ["LMF",14,48],["CMF",38,52],["CMF",62,52],["RMF",86,48],["CF",38,18],["ST",62,18]],
+  "4-3-3":[["GK",50,92],["LSB",14,72],["CB",38,76],["CB",62,76],["RSB",86,72],
+           ["DMF",50,58],["CMF",26,46],["CMF",74,46],["LWG",14,20],["CF",50,14],["RWG",86,20]],
 };
 const DEFAULT_FORM="4-4-2";
 

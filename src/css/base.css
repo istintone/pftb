@@ -349,42 +349,100 @@ body{
   font:600 13px/1.3 var(--f-head); letter-spacing:.5px }
 .next-vs .vs{ font:10px/1 var(--f-mono); color:var(--accent); letter-spacing:2px }
 
-/* フィルタのチップ */
-.filters{ display:flex; gap:6px; margin:10px 0 }
-.chip{ flex:1; padding:6px 0; cursor:pointer; border-radius:7px;
+/* フィルタのチップ(ピル・横スクロール) */
+.filters{ display:flex; gap:6px; margin:4px 0 12px; overflow-x:auto }
+.chip{
+  flex-shrink:0; padding:7px 14px; cursor:pointer; border-radius:20px;
   border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim);
-  font:400 10px/1 var(--f-head); letter-spacing:1px }
+  font:500 12px/1 var(--f-head);
+}
 .chip.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
 
-/* カードタイル */
-.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px }
-.ptile{ position:relative; padding:8px 8px 6px; cursor:pointer; overflow:hidden;
-  background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--rar-std);
-  border-radius:9px }
-.ptile.r-rare{ border-left-color:var(--rar-rare) }
-.ptile.r-super{ border-left-color:var(--rar-super) }
-.ptile.r-ultra{ border-left-color:var(--rar-ultra) }
-.ptile.empty{ display:flex; align-items:center; justify-content:center; cursor:default;
-  color:var(--text-mute); font-size:10px; border-style:dashed; border-left-style:dashed }
-.pt-top{ display:flex; justify-content:space-between; align-items:baseline }
-.pt-pos{ font:10px/1 var(--f-mono); color:var(--text-dim) }
-.pt-ovr{ font:600 16px/1 var(--f-head); color:var(--text) }
-.pt-name{ margin-top:4px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.pt-name .own{ color:var(--accent) }
-.pt-foot{ margin-top:2px; font-size:9px }
+/* =========================================================================
+   選手カード — レア度で枠と発光、絵柄はクラブカラーの斜めストライプ。
+   デザインモック(src/assets/design/P-footBall.html)の構成に準拠。
+   ========================================================================= */
+.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px }
+.pcard{
+  --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .35);
+  border-radius:10px; overflow:hidden; cursor:pointer;
+  background:var(--panel); border:1px solid var(--rar); box-shadow:0 0 14px var(--glow);
+}
+.pcard.r-rare { --rar:var(--rar-rare);  --glow:oklch(0.65 0.14 240 / .35) }
+.pcard.r-super{ --rar:var(--rar-super); --glow:oklch(0.72 0.15 300 / .35) }
+.pcard.r-ultra{ --rar:var(--rar-ultra); --glow:oklch(0.78 0.14 85 / .35) }
+.pcard.empty{
+  display:flex; align-items:center; justify-content:center; cursor:default; box-shadow:none;
+  aspect-ratio:3/4.6; border-style:dashed; border-color:var(--line);
+  color:var(--text-mute); font-size:10px;
+}
+/* 絵柄。選手画像はまだ無いのでプレースホルダ(ピクセル選手は第3段) */
+.pc-art{
+  position:relative; aspect-ratio:3/4; padding:6px;
+  display:flex; align-items:flex-end;
+  background:repeating-linear-gradient(135deg,
+    var(--club) 0 6px, oklch(0.20 0.02 255) 6px 12px);
+}
+.pc-rar{ position:absolute; top:5px; left:5px; font:600 9px/1 var(--f-mono); color:var(--rar);
+  text-shadow:0 1px 3px #000 }
+.pc-ovr{ position:absolute; top:5px; right:5px;
+  font:700 16px/1 var(--f-head); color:#fff; text-shadow:0 1px 3px #000 }
+.pc-ph{ font:8px/1 var(--f-mono); color:rgba(255,255,255,.7) }
+.pc-b{ padding:6px 7px }
+.pc-n{ font:600 11px/1.4 var(--f-body); color:oklch(0.92 0.01 90);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pc-n .own{ color:var(--accent) }
+.pc-m{ display:flex; justify-content:space-between; gap:4px; font-size:9px; color:var(--text-dim) }
+.pc-m span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.pc-m i{ margin-left:2px; font-style:normal; color:var(--accent) }
+#cardsCount .own{ color:var(--accent) }
 
-/* カード詳細モーダル */
-.cm-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px }
-.cm-name{ font:600 15px/1.3 var(--f-head); letter-spacing:.5px }
-.cm-ovr{ font:600 30px/1 var(--f-head); color:var(--accent) }
-.bars{ margin-top:8px }
-.bar{ display:flex; align-items:center; gap:8px; margin:5px 0; font:10px/1 var(--f-mono) }
-.bar span{ width:30px; color:var(--text-dim) }
-.bar i{ height:6px; border-radius:3px; background:var(--accent-dim); display:block }
-.bar b{ margin-left:auto; font-weight:400; color:var(--text-2) }
-.skills{ display:flex; flex-wrap:wrap; gap:5px; margin-top:6px }
-.skill{ padding:3px 7px; border-radius:4px; background:var(--panel-2);
-  border:1px solid var(--line); font-size:10px; color:var(--text-2) }
+/* カード詳細(モックの構成: 絵柄 → 名前 → 属性 → ABILITY → SKILLS → COMBINATION) */
+.cm-sheet{
+  --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .35);
+  position:relative; width:100%; max-width:320px; max-height:100%; overflow-y:auto;
+  border-radius:16px; background:oklch(0.17 0.02 255); border:2px solid var(--rar);
+  box-shadow:0 24px 60px rgba(0,0,0,.6), 0 0 30px var(--glow);
+}
+.cm-sheet.r-rare { --rar:var(--rar-rare);  --glow:oklch(0.65 0.14 240 / .35) }
+.cm-sheet.r-super{ --rar:var(--rar-super); --glow:oklch(0.72 0.15 300 / .35) }
+.cm-sheet.r-ultra{ --rar:var(--rar-ultra); --glow:oklch(0.78 0.14 85 / .35) }
+.cm-x{
+  position:absolute; top:10px; right:10px; z-index:2; width:30px; height:30px; cursor:pointer;
+  border-radius:50%; background:oklch(0.15 0.02 255 / .85); border:1px solid oklch(0.40 0.02 255);
+  color:var(--text-2); font-size:17px; line-height:1;
+}
+.cm-art{
+  position:relative; aspect-ratio:4/3; padding:14px; display:flex; align-items:flex-end;
+  background:repeating-linear-gradient(135deg,
+    var(--club) 0 8px, oklch(0.20 0.02 255) 8px 16px);
+}
+.cm-rar{ position:absolute; top:12px; left:14px;
+  font:700 11px/1 var(--f-mono); letter-spacing:1px; color:var(--rar); text-shadow:0 1px 3px #000 }
+.cm-ovr{ position:absolute; top:6px; right:46px;
+  font:700 40px/1 var(--f-head); color:#fff; text-shadow:0 2px 6px #000 }
+.cm-b{ padding:16px 18px 20px }
+.cm-name{ margin-bottom:2px; font:700 19px/1.3 var(--f-head); color:oklch(0.96 0.01 90) }
+.cm-sub{ margin-bottom:14px; font-size:11px; color:oklch(0.58 0.02 255) }
+.cm-facts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px }
+.cm-facts > div{ padding:8px 10px; border-radius:8px; background:oklch(0.21 0.02 255) }
+.cm-facts span{ display:block; margin-bottom:2px; font-size:9px; color:oklch(0.55 0.02 255) }
+.cm-facts b{ font:400 13px/1 var(--f-mono); color:oklch(0.92 0.01 90) }
+.cm-k{ margin-bottom:8px; font:400 11px/1 var(--f-head); letter-spacing:1.5px; color:oklch(0.60 0.02 255) }
+.cm-combo{ margin-bottom:16px; font-size:12px; color:var(--accent) }
+.cm-cap{ color:var(--text-mute); font-size:9px; letter-spacing:0 }
+.cm-bio{ margin-bottom:10px; font-size:12px; line-height:1.7; color:oklch(0.75 0.01 90) }
+.cm-own{ font-size:11px; line-height:1.7; color:var(--text-2) }
+.cm-own .own{ color:var(--accent) }
+.bars{ margin-bottom:16px }
+.bar{ display:flex; align-items:center; gap:8px; margin:7px 0 }
+.bar > span{ width:32px; font-size:10px; color:oklch(0.60 0.02 255) }
+.bar .tr{ flex:1; height:6px; border-radius:3px; overflow:hidden; background:oklch(0.28 0.02 255) }
+.bar i{ display:block; height:100%; background:var(--accent) }
+.bar b{ width:22px; text-align:right; font:400 10px/1 var(--f-mono); color:var(--text-2) }
+.skills{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px }
+.skill{ padding:4px 10px; border-radius:12px; background:oklch(0.24 0.03 255);
+  border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
 
 /* ピッチ(編成) */
 .pitch{ position:relative; height:330px; margin-top:12px; border-radius:12px;
