@@ -26,6 +26,7 @@ const SCREENS={
   clubhouse: { title:"CLUB",      tab:"clubhouse", chrome:"full", render:()=>renderClubhouse() },
   schedule:  { title:"FIXTURES",  under:"season",  chrome:"back", render:()=>renderSchedule() },
   standings: { title:"STANDINGS", under:"season",  chrome:"back", render:()=>renderStandings() },
+  gallery:   { title:"GALLERY",   under:"clubhouse", chrome:"back", render:()=>renderGallery() },
   gacha:     { title:"SCOUT",     under:"home",    chrome:"back" },
   secretary: { title:"SECRETARY", under:"home",    chrome:"back" },
   match:     { title:"MATCH",     chrome:"bare" },
@@ -77,7 +78,20 @@ function headUI(){
 }
 
 // ---------- 共通の小部品 ----------
-const rarClass=c=>"r-"+c.rarity.toLowerCase();
+/** カードに付けるクラス: レア度 + ホロ表現(ホロはCSSで載せる → docs/06 §6.13)。 */
+function rarClass(c){
+  const r=RARITY[c.rarity];
+  return "r-"+c.rarity.toLowerCase()+(r.holo?" holo-"+r.holo:"");
+}
+/** ✦粒子。ホロのある段だけ、上位ほど多く散らす(card-eleven の演出に倣う)。 */
+function sparks(c){
+  const h=RARITY[c.rarity].holo;
+  if(!h)return "";
+  const n=h==="sheen"?2:3;
+  let out="";
+  for(let i=1;i<=n;i++)out+='<i class="spark s'+i+'">✦</i>';
+  return out;
+}
 /**
  * 選手カード1枚(→docs/06 §6.12)。デザインモックの構成に準拠:
  *   枠と発光 = レア度 / 絵柄 = クラブカラーの斜めストライプ /
@@ -86,23 +100,36 @@ const rarClass=c=>"r-"+c.rarity.toLowerCase();
  */
 function cardTile(c){
   if(!c)return '<div class="pcard empty">空き</div>';
-  const own=!isLoaned(c);
-  return '<div class="pcard '+rarClass(c)+'" data-card="'+c.id+'">'
-    +'<div class="pc-art" style="--club:'+cardClubColor(c)+'">'
-      +'<span class="pc-rar">'+rarLabel(c)+'</span>'
-      +'<span class="pc-ovr">'+c.ovr+'</span>'
-      +'<span class="pc-ph">PLAYER PHOTO</span>'
-    +'</div>'
-    +'<div class="pc-b">'
-      +'<div class="pc-n">'+(own?'<span class="own">★</span>':'')+esc(shortName(c))+'</div>'
-      +'<div class="pc-m"><span>'+primarySub(c)+(c.subs.length>1?'<i>+'+(c.subs.length-1)+'</i>':'')
-      +'</span><span>'+esc(c.club||"—")+'</span></div>'
-    +'</div></div>';
+  return '<div class="pcard '+rarClass(c)+'" data-card="'+c.id+'"'+cardBgStyle(c)+'>'
+    +cardFace(c)+'</div>';
 }
-/** カードの絵柄に使うクラブカラー。所属クラブ名から決定的に決める。 */
-function cardClubColor(c){
-  const club=CLUBS.find(x=>x.name===c.club);
-  return club?clubColor(club.id):"oklch(0.45 0.03 255)";
+/**
+ * カードの中身。**背景は画像、枠と文字はすべてCSS/HTML**(→docs/06 §6.13)。
+ *   クレスト(左上) … レアリティの2文字略称。正式名称は枠に入らない
+ *   OVR(右上)      … 6能力の合計
+ *   能力欄(右・下ぞろえ) … 6行。20に達した行は金
+ *   名前帯(下)     … 名前 / サブポジション・クラブ
+ */
+function cardFace(c){
+  const own=!isLoaned(c);
+  return '<span class="pc-crest">'+RARITY[c.rarity].abbr+'</span>'
+    +'<span class="pc-ovr">'+c.ovr+'</span>'
+    +'<div class="pc-art"><span class="pc-ph">PLAYER</span></div>'
+    +sparks(c)   // 粒子はカード面全体に散らす(絵の中に閉じ込めない)
+    +'<div class="pc-stats">'+STAT_KEYS.map(k=>
+      '<div'+(c[k]>=STAT_MAX?' class="mx"':'')+'><span>'+STAT_LABEL[k]+'</span>'
+      +'<b>'+c[k]+'</b></div>').join("")+'</div>'
+    +'<div class="pc-name">'
+      +'<b>'+(own?'<i class="own">★</i>':'')+esc(shortName(c))+'</b>'
+      +'<span>'+primarySub(c)+(c.subs.length>1?" +"+(c.subs.length-1):"")
+      +' · '+esc(c.club||"—")+'</span>'
+    +'</div>';
+}
+/** レアリティに対応する背景画像を CSS 変数で渡す(画像が未配置でも地色で成立する)。 */
+function cardBgStyle(c){
+  const key=RARITY[c.rarity].bg;
+  const src=(window.ASSETS&&window.ASSETS.carddesign||{})["card-bg-"+key];
+  return src?' style="--face:url('+src+')"':'';
 }
 const clubName=id=>clubById(id)?clubById(id).name:id;
 
@@ -170,18 +197,48 @@ function wireCardTiles(root){
     el.onclick=()=>openCard(Number(el.dataset.card));
   });
 }
-/** カード詳細(→docs/06 §6.12)。モックの構成: 絵柄 → 名前 → 属性 → ABILITY → SKILLS → COMBINATION。 */
-function openCard(id){
-  const c=cardById(id); if(!c)return;
+// ---------- GALLERY(カード見本) ----------
+// WORLD CLASS / LEGENDS は実在選手の段でパックからは出ないため、
+// 通常のプレーでは見る手段が無い。見本としてここで全段を並べる(→docs/03 §3.13)。
+let _gallery=null;
+function galleryCards(){
+  if(_gallery)return _gallery;
+  const rng=mulberry32(20260801);          // 固定シード = 毎回同じ見本
+  const saveUid=uid; uid=9000000;          // 見本のIDは所持カードとぶつけない
+  _gallery=RAR_KEYS.map(k=>makeCard(rng,rnd(["GK","DF","MF","FW"]),
+    { rarity:k, club:"ノルフィエルFC", nation:"nordia" }));
+  uid=saveUid;
+  return _gallery;
+}
+function renderGallery(){
+  const list=galleryCards();
+  $("galleryNote").innerHTML="各レアリティの見本です（所持カードではありません）。"
+    +"タップで詳細が開きます。";
+  $("galleryGrid").innerHTML=list.map(cardTile).join("");
+  $("galleryGrid").querySelectorAll("[data-card]").forEach((el,i)=>{
+    el.onclick=()=>openCard(list[i]);
+  });
+  $("galleryLegend").innerHTML='<div class="card" style="margin-top:14px">'
+    +'<div class="sect-t">レアリティ</div>'
+    +RAR_KEYS.map(k=>{
+      const r=RARITY[k];
+      return '<div class="kv"><span><b class="gl-abbr r-'+k.toLowerCase()+'">'+r.abbr+'</b> '
+        +r.label+'</span><b>'+(r.w?r.w+"%":"パック対象外")+'</b></div>'
+        +'<div class="lg" style="margin:-2px 0 6px">'+esc(r.note)+'</div>';
+    }).join("")
+    +'<div class="lg">WORLD CLASS と LEGENDS は実在選手をモチーフにする段のため、'
+    +'パックからは出ません（トロフィーや実績など別経路で配ります）。</div></div>';
+}
+
+/** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
+function openCard(x){
+  const c=(x&&typeof x==="object")?x:cardById(x); if(!c)return;
   const nation=countryById(c.nation);
   $("cardModalBody").className="cm-sheet "+rarClass(c);
   $("cardModalBody").innerHTML=
     '<button class="cm-x" id="cardModalClose" aria-label="閉じる">×</button>'
-    +'<div class="cm-art" style="--club:'+cardClubColor(c)+'">'
-      +'<span class="cm-rar">'+rarLabel(c)+'</span>'
-      +'<span class="cm-ovr">'+c.ovr+'</span>'
-      +'<span class="pc-ph">PLAYER PHOTO</span>'
-    +'</div>'
+    // 上半分は一覧と同じカードそのもの(同じ部品を大きく見せる)
+    +'<div class="pcard cm-card '+rarClass(c)+'"'+cardBgStyle(c)+'>'+cardFace(c)+'</div>'
     +'<div class="cm-b">'
       +'<div class="cm-name">'+esc(c.name)+'</div>'
       +'<div class="cm-sub">'+c.pos+' · '+esc(c.club||"—")+' · '+esc(nation?nation.name:c.nation)+'</div>'
@@ -624,6 +681,7 @@ $("btnForm").onclick=()=>{
   S.squad=autoSquad(); save(); renderDeck(); toast("陣形を "+S.form+" に変更");
 };
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
+$("btnGallery").onclick=()=>show("gallery",{push:1});
 $("btnNewCareer").onclick=async()=>{
   if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;
   await newGame(); _pickedClub=null; show("offer");

@@ -48,6 +48,33 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   }
   console.log("選手生成OK 決定的 / OVR整合 / 例:", a[0].name, a[0].pos, a[0].ovr);
 
+  // --- レアリティ(D18) ---
+  const keys = Object.keys(E.RARITY);
+  assert.deepStrictEqual(keys, ["STD", "REG", "SPE", "WC", "LEG"], "5段(監督から見た役割で分かれる)");
+  // 段が上がるほど OVR 帯・スキル数が下がらない(階段になっている)
+  for (let i = 1; i < keys.length; i++) {
+    const lo = E.RARITY[keys[i - 1]], hi = E.RARITY[keys[i]];
+    assert.ok(hi.ovr[0] >= lo.ovr[0] && hi.ovr[1] >= lo.ovr[1], keys[i] + " の OVR 帯が下がらない");
+    assert.ok(hi.skills >= lo.skills, keys[i] + " のスキル数が減らない");
+  }
+  // 実在選手の段はパックから出ない(手で定義するデータ)
+  for (const k of keys) {
+    const r = E.RARITY[k];
+    assert.strictEqual(r.w > 0, !r.real, k + " は " + (r.real ? "実在選手なのでパックから出ない" : "パックから出る"));
+    assert.ok(r.ovr[1] <= E.OVR_MAX, k + " の上限が OVR_MAX を超えない");
+  }
+  // 大量に引いて、出るのは自動生成の段だけ・比率が重みどおりか
+  const rngR = E.mulberry32(3), got = {};
+  const roster = [];
+  for (let i = 0; i < 400; i++) roster.push(E.makeCard(rngR, "MF"));
+  roster.forEach(c => got[c.rarity] = (got[c.rarity] || 0) + 1);
+  for (const k of keys) {
+    if (E.RARITY[k].real) assert.ok(!got[k], k + " はパックから出ていない");
+  }
+  assert.ok(got.STD > got.REG && got.REG > got.SPE, "排出比が STD > REG > SPE の順");
+  roster.forEach(c => assert.strictEqual(c.skills.length, E.RARITY[c.rarity].skills, "スキル数が段の定義どおり"));
+  console.log("レアリティOK", keys.map(k => k + ":" + (got[k] || 0)).join(" / "), "(400枚)");
+
   // --- クラブの格と戦力が相関する ---
   const top = E.clubPower(12345, "garia-1"), bottom = E.clubPower(12345, "nordia-8");
   assert.ok(top > bottom, "上位国の強豪(" + top + ")が下位国の弱小(" + bottom + ")より強い");

@@ -55,14 +55,20 @@ def _join(dirpath, names):
     return "\n\n".join((ROOT / "src" / dirpath / n).read_text(encoding="utf-8").strip() for n in names)
 
 
+# 実行時アセットではないディレクトリ(埋め込むと index.html が肥大化する)
+#   design … デザインモックと参照画像。人が見るためのもの
+#   fonts  … @font-face として別途注入する(_font_block)
+ASSET_SKIP = {"design", "fonts"}
+
+
 def _asset_block():
     """src/assets/<グループ>/<名前>.(png|webp|jpg) を base64 データURI化し
     `window.ASSETS={"<グループ>":{"<名前>":"data:...",...},...};` を生成する。
     ディレクトリ名/ファイル名順で決定的に出力(--check が安定する)。
-    アセットが増えて肥大化してきたら、グループ単位で個別の注入関数へ分割する。"""
+    ASSET_SKIP のディレクトリは対象外(参照用の画像を埋め込まないため)。"""
     groups = []
     if ASSET_DIR.is_dir():
-        for d in sorted(p for p in ASSET_DIR.iterdir() if p.is_dir()):
+        for d in sorted(p for p in ASSET_DIR.iterdir() if p.is_dir() and p.name not in ASSET_SKIP):
             items = []
             for f in sorted(d.iterdir()):
                 if f.suffix.lower() in _MIME:

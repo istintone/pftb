@@ -69,15 +69,33 @@ function subGroup(sub){
   return POS.find(g=>SUBPOS[g].includes(sub))||null;
 }
 
-// --- レアリティ(デザインモックの4段階。色は base.css の --rar-* と対応) ---
-// ovr は6ステータス合計の目安(最大120)。
+// --- レアリティ(D18 → docs/03 §3.13) ---
+// 段は「監督から見た選手の役割」で分かれる。色は base.css の --rar-* と対応。
+//   ovr    6能力合計の目安(最大120)
+//   skills 持てるスキル数
+//   w      通常パックからの排出の重み。0 = パックからは出ない(別経路)
+//   real   実在選手をモチーフにする段(手で定義するデータ。自動生成しない)
+//   abbr   カード左上のクレストに入れる2文字(正式名称は長すぎて入らない)
+//   bg     背景画像のキー。**SPECIALS は REGULAR と同じ背景**を使い、差はCSSの発光で付ける
+//   holo   CSSで載せるホロ表現("sheen" 光沢 / "rainbow" 虹 / "gold" 金 / null なし)
+//          ホロを画像に焼き込むと質が落ちるため、**必ずCSS側で表現する**
 const RARITY={
-  STD:  { label:"STANDARD",   ovr:[54,72],  w:60 },
-  RARE: { label:"RARE",       ovr:[68,86],  w:28 },
-  SUPER:{ label:"SUPER RARE", ovr:[82,98],  w:9  },
-  ULTRA:{ label:"ULTRA RARE", ovr:[94,112], w:3  },
+  STD: { label:"STANDARD",    abbr:"ST", ovr:[54,72],   skills:1, w:62, real:false, bg:"std", holo:null,
+         note:"控え。クラブにはいるがレギュラーではない" },
+  REG: { label:"REGULAR",     abbr:"RG", ovr:[68,86],   skills:2, w:30, real:false, bg:"reg", holo:null,
+         note:"スタメン。クラブのメイン選手" },
+  SPE: { label:"SPECIALS",    abbr:"SP", ovr:[82,98],   skills:3, w:8,  real:false, bg:"reg", holo:"sheen",
+         note:"切り札。REGULAR と同じ地だが光る" },
+  WC:  { label:"WORLD CLASS", abbr:"WC", ovr:[96,110],  skills:3, w:0,  real:true,  bg:"wc",  holo:"rainbow",
+         note:"実在の現役選手。シルバー(Chrome)地に虹ホロ" },
+  LEG: { label:"LEGENDS",     abbr:"LE", ovr:[100,116], skills:4, w:0,  real:true,  bg:"leg", holo:"gold",
+         note:"実在の過去の名選手。黒地に金縁" },
 };
+/** 背景画像の種類。SPECIALS が REGULAR を共有するので5段でも4枚で足りる。 */
+const CARD_BGS=[...new Set(Object.values(RARITY).map(r=>r.bg))];
 const RAR_KEYS=Object.keys(RARITY);
+// パックから出る段(実在選手の段は別経路で入手する)
+const RAR_DROPS=RAR_KEYS.filter(k=>RARITY[k].w>0);
 
 // --- スキル(ポジション別のプール。効果は第4段で実装する) ---
 const SKILLS={

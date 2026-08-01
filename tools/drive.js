@@ -164,12 +164,45 @@ const STEPS = [
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
       if (tab === "cards") {
-        // カード詳細を開いて閉じる
+        // レアリティの見え方(枠・縁線・ホロ)を一望するため、全段を1枚ずつ並べた検証用グリッドに差し替える
+        await ctx.js(`(()=>{
+          const rng=mulberry32(11), out=[];
+          Object.keys(RARITY).forEach(k=>{
+            const c=makeCard(rng,"MF",{rarity:k,club:"ノルフィエルFC"});
+            S.player.coll.push(c); out.push(cardTile(c));
+          });
+          document.getElementById('cardsGrid').innerHTML=out.join('');
+          document.getElementById('cardsCount').textContent='検証: 全レアリティ';
+        })()`);
+        await ctx.wait(300);
+        ctx.log("  レアリティ表示:", await ctx.js(
+          "[...document.querySelectorAll('#cardsGrid .pcard')].map(e=>e.className.replace('pcard ','')).join(' | ')"));
+        await ctx.shot("09c-rarities");
+        // LEGENDS の詳細を開く(縁線とホロが拡大表示でも出るか)
+        await ctx.js("renderCards()");
+        await ctx.wait(200);
+        await ctx.js("openCard(S.player.coll[S.player.coll.length-1].id)");
+        await ctx.wait(300);
+        ctx.log("  詳細のクラス:", await ctx.js("document.getElementById('cardModalBody').className"));
+        await ctx.shot("09d-legend-detail");
+        await ctx.js("closeCard()");
+        await ctx.wait(150);
+        // カード見本(未入手の WORLD CLASS / LEGENDS もここで見られる)
+        await ctx.js("show('gallery',{push:1})");
+        await ctx.wait(350);
+        ctx.log("  見本:", await ctx.js(
+          "[...document.querySelectorAll('#galleryGrid .pc-crest')].map(e=>e.textContent).join(' ')"),
+          "/ 枚数:", await ctx.js("document.querySelectorAll('#galleryGrid .pcard').length"));
+        await ctx.shot("09e-gallery");
+        await ctx.js("goBack()");
+        await ctx.wait(250);
+        // 通常のカードでも詳細が開くこと
         await ctx.js("document.querySelector('#cardsGrid [data-card]').click()");
         await ctx.wait(300);
         ctx.log("  カード詳細:", await ctx.js("document.querySelector('#cardModalBody .cm-name').textContent"),
-          "/ レア:", await ctx.js("document.querySelector('#cardModalBody .cm-rar').textContent"),
-          "/ 能力バー:", await ctx.js("document.querySelectorAll('#cardModalBody .bar').length"));
+          "/ クレスト:", await ctx.js("document.querySelector('#cardModalBody .pc-crest').textContent"),
+          "/ 能力欄:", await ctx.js("document.querySelectorAll('#cardModalBody .pc-stats div').length"),
+          "/ 背景:", await ctx.js("!!document.querySelector('#cardModalBody .cm-card').style.getPropertyValue('--face')"));
         await ctx.shot("09b-card-detail");
         await ctx.js("document.getElementById('cardModalClose').click()");
         await ctx.wait(200);
@@ -282,7 +315,11 @@ const STEPS = [
     reload: () => send("Page.reload"),
     js: async expr => {
       const r = await send("Runtime.evaluate", { expression: expr, awaitPromise: true, returnByValue: true });
-      if (r.exceptionDetails) throw new Error("JS評価に失敗: " + r.exceptionDetails.text);
+      if (r.exceptionDetails) {
+        const d = r.exceptionDetails;
+        const detail = (d.exception && (d.exception.description || d.exception.value)) || d.text;
+        throw new Error("JS評価に失敗: " + detail + "\n  式: " + expr.trim().slice(0, 160));
+      }
       return r.result.value;
     },
     shot: async name => {

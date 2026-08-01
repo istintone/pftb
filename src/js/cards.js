@@ -68,8 +68,9 @@ function calcOvr(pos,st){
 function rollSubs(rng,pos,rarity){
   const own=SUBPOS[pos];
   const subs=[rpick(rng,own)];
-  // レアなほど「複数ポジションをこなす」ことが多い
-  const extra=rarity==="ULTRA"?rri(rng,1,2):rarity==="SUPER"?rri(rng,0,2):rri(rng,0,1);
+  // 上位の段ほど「複数ポジションをこなす」ことが多い
+  const i=RAR_KEYS.indexOf(rarity);
+  const extra=i>=3?rri(rng,1,2):i===2?rri(rng,0,2):rri(rng,0,1);
   for(let i=0;i<extra;i++){
     const pool=(rng()<0.22&&NEIGHBOR_SUBS[pos].length)?NEIGHBOR_SUBS[pos]:own;
     const s=rpick(rng,pool);
@@ -78,10 +79,14 @@ function rollSubs(rng,pos,rarity){
   return subs;
 }
 
-/** レアリティを抽選する(重みは RARITY.w)。opts.min で下限を指定できる。 */
+/**
+ * レアリティを抽選する(重みは RARITY.w)。
+ * 実在選手の段(WORLD CLASS / LEGENDS)は w=0 なので**ここからは出ない**。
+ * 手で定義したデータを別経路で配る(→docs/03 §3.13)。
+ */
 function rollRarity(rng,minKey){
-  const from=minKey?RAR_KEYS.indexOf(minKey):0;
-  const pool=RAR_KEYS.slice(from);
+  const from=minKey?Math.max(0,RAR_DROPS.indexOf(minKey)):0;
+  const pool=RAR_DROPS.slice(from);
   const total=sum(pool.map(k=>RARITY[k].w));
   let x=rng()*total;
   for(const k of pool){ x-=RARITY[k].w; if(x<=0)return k; }
@@ -102,7 +107,7 @@ function makeCard(rng,pos,opts={}){
   const nation=(opts.nation&&rng()<0.7)?opts.nation:rpick(rng,NATIONS);
   const st=statsFor(rng,pos,ovr);
   const pool=SKILLS[pos];
-  const n=rarity==="ULTRA"?3:rarity==="SUPER"?3:rarity==="RARE"?2:1;
+  const n=RARITY[rarity].skills;
   const skills=[];
   while(skills.length<n){ const s=rpick(rng,pool); if(!skills.includes(s))skills.push(s); }
   const subs=rollSubs(rng,pos,rarity);

@@ -29,11 +29,12 @@
   --win:     oklch(0.28 0.07 150);
   --special: oklch(0.42 0.04 300);
 
-  /* ---- レアリティ ---- */
-  --rar-std:   oklch(0.60 0.01 255);
-  --rar-rare:  oklch(0.65 0.14 240);
-  --rar-super: oklch(0.72 0.15 300);
-  --rar-ultra: oklch(0.78 0.14 85);
+  /* ---- レアリティ(D18・WCCF の階段: 白 → 黒 → 黒ホロ → 虹ホロ → 黒金) ---- */
+  --rar-std: oklch(0.62 0.01 90);    /* STANDARD    控え・白いカード */
+  --rar-reg: oklch(0.80 0.01 255);   /* REGULAR     スタメン・黒いカード(銀の縁) */
+  --rar-spe: oklch(0.66 0.15 285);   /* SPECIALS    切り札・黒地のホロ */
+  --rar-wc:  oklch(0.72 0.19 335);   /* WORLD CLASS 実在の現役・虹のホロ(代表色) */
+  --rar-leg: oklch(0.78 0.14 85);    /* LEGENDS     実在の過去・黒金(最高級) */
 
   /* ---- 書体 ---- */
   --f-head: 'Oswald', 'Arial Narrow', sans-serif;      /* 見出し・数値・ボタン */
@@ -359,68 +360,168 @@ body{
 .chip.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
 
 /* =========================================================================
-   選手カード — レア度で枠と発光、絵柄はクラブカラーの斜めストライプ。
-   デザインモック(src/assets/design/P-footBall.html)の構成に準拠。
+   選手カード — 背景は画像、枠と文字はすべて CSS。
+   3層: 背景画像(レアリティ) → 選手 → 文字。→ docs/06 §6.13
+   外周の枠と縁線は**背景画像側**が持つ(CSSでは描かない)。
    ========================================================================= */
 .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px }
 .pcard{
-  --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .35);
-  border-radius:10px; overflow:hidden; cursor:pointer;
-  background:var(--panel); border:1px solid var(--rar); box-shadow:0 0 14px var(--glow);
+  /* --ink  … クレスト・OVR・名前(カードの「顔」になる文字。レアリティの色を出す)
+     --stat … 6能力の文字(常に白か黒。地の明暗で決める)
+     --mx   … 20 に到達した能力だけの色(全段で共通の赤) */
+  --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .30);
+  --ink:oklch(0.95 0.01 90); --stat:oklch(0.95 0.01 90); --mx:oklch(0.62 0.23 27);
+  position:relative; aspect-ratio:360/525; cursor:pointer; overflow:hidden;
+  border-radius:9px; background:var(--face) center/100% 100% no-repeat, oklch(0.19 0.02 255);
+  box-shadow:0 0 12px var(--glow);
+  container-type:inline-size;              /* 枠内の文字をカード幅に追従させる */
 }
-.pcard.r-rare { --rar:var(--rar-rare);  --glow:oklch(0.65 0.14 240 / .35) }
-.pcard.r-super{ --rar:var(--rar-super); --glow:oklch(0.72 0.15 300 / .35) }
-.pcard.r-ultra{ --rar:var(--rar-ultra); --glow:oklch(0.78 0.14 85 / .35) }
+/* 白い地 … 文字は黒 */
+.pcard.r-std{ --ink:oklch(0.24 0.02 255); --stat:oklch(0.24 0.02 255) }
+/* 黒い地 … 文字は白 */
+.pcard.r-reg{ --rar:var(--rar-reg); --glow:oklch(0.80 0.01 255 / .22) }
+.pcard.r-spe{ --rar:var(--rar-spe); --glow:oklch(0.66 0.15 285 / .38) }
+/* 銀の地 … 顔の文字はマゼンタ、能力値は黒 */
+.pcard.r-wc { --rar:var(--rar-wc); --glow:oklch(0.72 0.19 335 / .42);
+              --ink:#c71585; --stat:oklch(0.24 0.02 255) }
+/* 黒金の地 … 顔の文字は金、能力値は白 */
+.pcard.r-leg{ --rar:var(--rar-leg); --glow:oklch(0.78 0.14 85 / .45);
+              --ink:var(--rar-leg) }
 .pcard.empty{
-  display:flex; align-items:center; justify-content:center; cursor:default; box-shadow:none;
-  aspect-ratio:3/4.6; border-style:dashed; border-color:var(--line);
+  display:flex; align-items:center; justify-content:center; cursor:default;
+  box-shadow:none; background:transparent; border:1px dashed var(--line);
   color:var(--text-mute); font-size:10px;
 }
-/* 絵柄。選手画像はまだ無いのでプレースホルダ(ピクセル選手は第3段) */
-.pc-art{
-  position:relative; aspect-ratio:3/4; padding:6px;
-  display:flex; align-items:flex-end;
-  background:repeating-linear-gradient(135deg,
-    var(--club) 0 6px, oklch(0.20 0.02 255) 6px 12px);
-}
-.pc-rar{ position:absolute; top:5px; left:5px; font:600 9px/1 var(--f-mono); color:var(--rar);
-  text-shadow:0 1px 3px #000 }
-.pc-ovr{ position:absolute; top:5px; right:5px;
-  font:700 16px/1 var(--f-head); color:#fff; text-shadow:0 1px 3px #000 }
-.pc-ph{ font:8px/1 var(--f-mono); color:rgba(255,255,255,.7) }
-.pc-b{ padding:6px 7px }
-.pc-n{ font:600 11px/1.4 var(--f-body); color:oklch(0.92 0.01 90);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.pc-n .own{ color:var(--accent) }
-.pc-m{ display:flex; justify-content:space-between; gap:4px; font-size:9px; color:var(--text-dim) }
-.pc-m span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.pc-m i{ margin-left:2px; font-style:normal; color:var(--accent) }
-#cardsCount .own{ color:var(--accent) }
 
-/* カード詳細(モックの構成: 絵柄 → 名前 → 属性 → ABILITY → SKILLS → COMBINATION) */
+/* 左上のクレスト(背景画像の盾の中に置く。正式名称は入らないので2文字)。
+   盾の実測位置は 横 9〜25% / 縦 2〜12%。その上半分に文字を収める。 */
+.pc-crest{
+  position:absolute; left:9%; top:3.2%; width:16%; height:7%;
+  display:flex; align-items:center; justify-content:center;
+  font:700 6.2cqw/1 var(--f-head); letter-spacing:.4px; color:var(--ink); opacity:.85;
+}
+/* 右上の OVR */
+.pc-ovr{
+  position:absolute; right:7%; top:4%; z-index:2;
+  font:700 17cqw/1 var(--f-head); color:var(--ink);
+  text-shadow:0 1px 3px oklch(0 0 0 / .35);
+}
+/* 選手(いまはプレースホルダ。ピクセル選手は第3段) */
+.pc-art{
+  position:absolute; left:8%; top:16%; width:58%; height:56%;
+  display:flex; align-items:flex-end; justify-content:center; isolation:isolate;
+}
+.pc-ph{ font:6cqw/1 var(--f-mono); color:var(--ink); opacity:.28 }
+/* 能力欄(右・下ぞろえ) */
+.pc-stats{
+  position:absolute; right:7%; bottom:24%; width:26%; z-index:2;
+  display:flex; flex-direction:column; gap:.6cqw;
+}
+.pc-stats div{ display:flex; align-items:baseline; justify-content:space-between; gap:2px }
+.pc-stats span{ font:5.4cqw/1.55 var(--f-mono); color:var(--stat); opacity:.62 }
+.pc-stats b{ font:400 6.6cqw/1.55 var(--f-mono); color:var(--stat) }
+.pc-stats .mx span,.pc-stats .mx b{ color:var(--mx); opacity:1 }   /* 上限20だけ赤 */
+/* 名前帯(下) */
+.pc-name{ position:absolute; left:8%; right:8%; bottom:5.5%; z-index:2 }
+.pc-name b{
+  display:block; font:600 7.4cqw/1.35 var(--f-body); color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.pc-name b .own{ font-style:normal; color:var(--ink) }
+.pc-name span{
+  display:block; font:5.2cqw/1.4 var(--f-mono); color:var(--ink); opacity:.6;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* -------------------------------------------------------------------------
+   ホロ表現 — **画像に焼き込まず CSS で載せる**(→docs/06 §6.13)。
+   焼き込むと角度と解像度が固定されて質が落ちるため。
+   card-eleven に倣い「ホロ + キラ流光 + ✦粒子の明滅」の3層で輝かせる。
+     sheen   … 白い光沢（SPECIALS: REGULAR と同じ地だが「光る」）
+     rainbow … 虹（WORLD CLASS: 銀の地に虹が走る）
+     gold    … 金の光沢（LEGENDS: 黒金の高級感）
+   ------------------------------------------------------------------------- */
+.holo-sheen::after,.holo-rainbow::after,.holo-gold::after{
+  content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background-size:260% 260%;
+}
+.holo-sheen::after{
+  background:linear-gradient(115deg, transparent 38%, oklch(0.95 0.02 90 / .40) 48%, transparent 58%);
+  mix-blend-mode:screen; animation:holoSweep 4.5s ease-in-out infinite;
+}
+.holo-rainbow::after{
+  background:linear-gradient(115deg, transparent 20%,
+    oklch(0.70 0.20 20 / .40) 32%, oklch(0.78 0.18 90 / .40) 42%,
+    oklch(0.72 0.18 160 / .40) 52%, oklch(0.68 0.20 250 / .40) 62%,
+    oklch(0.70 0.20 320 / .40) 72%, transparent 84%);
+  mix-blend-mode:color-dodge; animation:holoSweep 5.5s ease-in-out infinite;
+}
+.holo-gold::after{
+  background:linear-gradient(115deg, transparent 40%, oklch(0.82 0.13 85 / .34) 50%, transparent 60%);
+  mix-blend-mode:screen; animation:holoSweep 7s ease-in-out infinite;
+}
+@keyframes holoSweep{
+  0%,100%{ background-position:0% 50% }
+  50%    { background-position:100% 50% }
+}
+
+/* キラ流光 — ホロの上を速く走り抜ける細く鋭い一本の光 */
+.holo-sheen::before,.holo-rainbow::before,.holo-gold::before{
+  content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(105deg, transparent 45%,
+    oklch(0.99 0 0 / .70) 49%, oklch(0.99 0 0 / .70) 51%, transparent 55%);
+  background-size:300% 100%; background-repeat:no-repeat;
+  mix-blend-mode:screen; animation:kira 5.5s ease-in-out infinite;
+}
+.holo-rainbow::before{ animation-duration:4.2s }
+.holo-gold::before{ animation-duration:6.5s }
+@keyframes kira{
+  0%      { background-position:135% 0 }
+  45%,100%{ background-position:-45% 0 }
+}
+
+/* ✦粒子 — 明滅する光の点。上位ほど数が多い */
+.pcard .spark{
+  position:absolute; z-index:3; pointer-events:none; opacity:0;
+  font:8cqw/1 var(--f-body); color:oklch(0.99 0 0);
+  text-shadow:0 0 7px currentColor, 0 0 14px currentColor;
+  animation:sparkle 3.4s ease-in-out infinite;
+}
+.pcard .spark.s1{ left:14%; top:8%;  animation-delay:0s }
+.pcard .spark.s2{ left:54%; top:52%; animation-delay:1.15s; font-size:6cqw }
+.pcard .spark.s3{ left:26%; top:76%; animation-delay:2.3s; font-size:10cqw }
+.holo-rainbow .spark{ color:oklch(0.90 0.12 330) }
+.holo-gold .spark{ color:oklch(0.88 0.13 85) }
+@keyframes sparkle{
+  0%,70%,100%{ opacity:0; transform:scale(.5) rotate(0deg) }
+  80%        { opacity:1; transform:scale(1.2) rotate(25deg) }
+}
+
+/* カード詳細 — 上半分は一覧と同じカード部品をそのまま大きく見せる */
 .cm-sheet{
   --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .35);
   position:relative; width:100%; max-width:320px; max-height:100%; overflow-y:auto;
   border-radius:16px; background:oklch(0.17 0.02 255); border:2px solid var(--rar);
   box-shadow:0 24px 60px rgba(0,0,0,.6), 0 0 30px var(--glow);
 }
-.cm-sheet.r-rare { --rar:var(--rar-rare);  --glow:oklch(0.65 0.14 240 / .35) }
-.cm-sheet.r-super{ --rar:var(--rar-super); --glow:oklch(0.72 0.15 300 / .35) }
-.cm-sheet.r-ultra{ --rar:var(--rar-ultra); --glow:oklch(0.78 0.14 85 / .35) }
+.cm-sheet.r-reg{ --rar:var(--rar-reg); --glow:oklch(0.80 0.01 255 / .26) }
+.cm-sheet.r-spe{ --rar:var(--rar-spe); --glow:oklch(0.66 0.15 285 / .38) }
+.cm-sheet.r-wc { --rar:var(--rar-wc);  --glow:oklch(0.72 0.19 335 / .45) }
+.cm-sheet.r-leg{ --rar:var(--rar-leg); --glow:oklch(0.78 0.14 85 / .48) }
+.cm-card{ margin:14px auto 0; width:76%; border-radius:10px }
+.gl-abbr{
+  display:inline-block; min-width:22px; margin-right:6px; padding:1px 4px; text-align:center;
+  border:1px solid var(--rar); border-radius:4px; color:var(--rar);
+  font:700 10px/1.5 var(--f-head); letter-spacing:.5px;
+}
+.gl-abbr.r-std{ --rar:var(--rar-std) } .gl-abbr.r-reg{ --rar:var(--rar-reg) }
+.gl-abbr.r-spe{ --rar:var(--rar-spe) } .gl-abbr.r-wc{ --rar:var(--rar-wc) }
+.gl-abbr.r-leg{ --rar:var(--rar-leg) }
 .cm-x{
-  position:absolute; top:10px; right:10px; z-index:2; width:30px; height:30px; cursor:pointer;
+  position:absolute; top:10px; right:10px; z-index:4; width:30px; height:30px; cursor:pointer;
   border-radius:50%; background:oklch(0.15 0.02 255 / .85); border:1px solid oklch(0.40 0.02 255);
   color:var(--text-2); font-size:17px; line-height:1;
 }
-.cm-art{
-  position:relative; aspect-ratio:4/3; padding:14px; display:flex; align-items:flex-end;
-  background:repeating-linear-gradient(135deg,
-    var(--club) 0 8px, oklch(0.20 0.02 255) 8px 16px);
-}
-.cm-rar{ position:absolute; top:12px; left:14px;
-  font:700 11px/1 var(--f-mono); letter-spacing:1px; color:var(--rar); text-shadow:0 1px 3px #000 }
-.cm-ovr{ position:absolute; top:6px; right:46px;
-  font:700 40px/1 var(--f-head); color:#fff; text-shadow:0 2px 6px #000 }
 .cm-b{ padding:16px 18px 20px }
 .cm-name{ margin-bottom:2px; font:700 19px/1.3 var(--f-head); color:oklch(0.96 0.01 90) }
 .cm-sub{ margin-bottom:14px; font-size:11px; color:oklch(0.58 0.02 255) }

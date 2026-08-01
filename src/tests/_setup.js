@@ -87,7 +87,7 @@ function setup(opts = {}) {
   const extra = opts.exports ? "," + opts.exports : "";
   code += `\nmodule.exports={getS:()=>S,setS:v=>{S=v;},newGame,loadGame,save,flushSave,hasSave,deleteSave,`
         + `exportSave,importSave,exportSquad,show,goBack,toast,headUI,openContract,SCREENS,SAVE_VER,`
-        + `CLUBS,COUNTRIES,TUNING,RARITY,FORMATIONS,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
+        + `CLUBS,COUNTRIES,TUNING,RARITY,RAR_KEYS,RAR_DROPS,FORMATIONS,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
         + `standings,rankOf,expectedRank,requiredFame,offersFor,startTenure,playMatchday,seasonOver,`
         + `judgeSeason,myFixture,squadCards,autoSquad,availableCards,squadPower,resolveMatch,`
         + `mulberry32,calcOvr,makeCard,STAT_KEYS,STAT_MAX,OVR_MAX,SUBPOS,subGroup,slotFit,primarySub,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
