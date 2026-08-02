@@ -1502,7 +1502,11 @@ const FORMATIONS={
 const DEFAULT_FORM="4-4-2";
 
 // --- 起点のチャンネル(サブポジごとに3種 → docs/07 §7.7) ---
-// **その選手がボールを持ったときに何をするか**。サブポジションで持ち札が変わる。
+// **その選手が攻撃を起こすために何をするか**。サブポジションで持ち札が変わる。
+//
+// ⚠ ここに置くのは**自分から仕掛ける動き**だけ。「クロスに合わせる」「引いて受ける」
+//   のような**受け手のアクションは置かない**(それは連鎖の中で起きること → §7.10)。
+//   前線の選手なら「前線からのプレスで奪う」「裏へ走り出す」「こぼれ球に詰める」が起点にあたる。
 //   stat … 成否を決める能力。**この能力が高いほど選ばれやすく、成功もしやすい**
 //   risk … 成功のしやすさ(**相対値**)。安全な選択ほど高く、一発を狙うほど低い。
 //          絶対の水準は TUNING.atk.originK で一括調整する
@@ -1527,7 +1531,7 @@ const ORIGINS={
   CMF:[{id:"cmThru",  label:"スルーパス",     stat:"tec", risk:0.50, gain:0.55},
        {id:"cmCarry", label:"持ち出し",       stat:"spd", risk:0.62, gain:0.35},
        {id:"cmOpen",  label:"展開",           stat:"pow", risk:0.72, gain:0.22}],
-  OMF:[{id:"omBetween",label:"ライン間で受ける",stat:"tec",risk:0.66, gain:0.38},
+  OMF:[{id:"omTurnUp",label:"前を向いて運ぶ", stat:"tec", risk:0.66, gain:0.38},
        {id:"omTurn",  label:"反転ドリブル",   stat:"spd", risk:0.52, gain:0.50},
        {id:"omMid",   label:"ミドルを狙う",   stat:"atk", risk:0.44, gain:0.62}],
   LMF:[{id:"wmUp",    label:"サイドを上がる", stat:"spd", risk:0.62, gain:0.38},
@@ -1536,12 +1540,12 @@ const ORIGINS={
   RMF:[{id:"wmUp",    label:"サイドを上がる", stat:"spd", risk:0.62, gain:0.38},
        {id:"wmIn",    label:"中へ絞る",       stat:"tec", risk:0.64, gain:0.34},
        {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55}],
-  CF: [{id:"cfPost",  label:"ポストプレー",   stat:"pow", risk:0.62, gain:0.35},
-       {id:"cfDrop",  label:"引いて受ける",   stat:"tec", risk:0.72, gain:0.22},
+  CF: [{id:"cfPress",label:"前線からのプレス",stat:"def",risk:0.52, gain:0.55},
+       {id:"cfTurn",  label:"反転して持ち上がる",stat:"tec",risk:0.66, gain:0.30},
        {id:"cfRun",   label:"裏へ抜ける",     stat:"spd", risk:0.42, gain:0.62}],
-  ST: [{id:"stRun",   label:"裏へ抜ける",     stat:"spd", risk:0.44, gain:0.60},
-       {id:"stMeet",  label:"クロスに合わせる",stat:"pow",risk:0.50, gain:0.52},
-       {id:"stLoose", label:"こぼれ球に詰める",stat:"atk",risk:0.56, gain:0.45}],
+  ST: [{id:"stBehind",label:"DFの背後を取る",stat:"spd", risk:0.44, gain:0.60},
+       {id:"stLoose", label:"こぼれ球に詰める",stat:"atk",risk:0.60, gain:0.38},
+       {id:"stStrike",label:"いきなり撃つ",   stat:"pow", risk:0.40, gain:0.66}],
   LWG:[{id:"wgLine",  label:"縦へ突破",       stat:"spd", risk:0.52, gain:0.50},
        {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46},
        {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.48, gain:0.54}],
