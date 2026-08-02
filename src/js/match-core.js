@@ -216,9 +216,25 @@ function pickOrigin(rng,T,mom){
  * 起点のチャンネルを選ぶ。**その選手のサブポジが持つ3種**から、
  * 得意な能力のものほど選ばれやすい(→docs/07 §7.7)。
  */
-function pickOriginCh(rng,p){
+function pickOriginCh(rng,p,lastCh,stray){
+  const C=TUNING.chain;
   const list=ORIGINS[p.sub]||ORIGINS.CMF;
-  return pickW(rng,list,ch=>eff(p,ch.stat));
+  const away=stray||0;                                       // 自分の枠からの離れ具合(0..1)
+  return pickW(rng,list,ch=>{
+    let w=eff(p,ch.stat);
+    // **持ち上がるほど手放したくなる**(→docs/07 §7.9)。
+    // 枠から離れた選手が延々と運び続けると、陣形が崩れたまま独走する絵になる。
+    // 離れるほど carry の重みを落とし、そのぶん pass に寄せる。
+    if(ch.kind==="carry")w*=Math.max(C.strayFloor,1-away/C.strayFull);
+    else if(ch.kind==="pass")w*=1+away*C.strayPass;
+    if(lastCh&&ch.id===lastCh)w*=C.repeatW;                  // 同じ札の連発を避ける
+    return w;
+  });
+}
+/** 選手の枠(元の立ち位置)から、いまボールがある場所までの離れ具合(0..1)。 */
+function strayOf(p,h,x){
+  const dh=Math.abs(h-heightOf(p)), dx=Math.abs(x-p.x)/100;
+  return Math.sqrt(dh*dh+dx*dx);
 }
 /**
  * 起点に**対応する相手の選手**を選ぶ(→docs/07 §7.8)。
@@ -452,14 +468,18 @@ function stepMatch(M){
   let h=heightOf(carrier), x=carrier.x;
   let assist=null, step=0, lastCh=null;
 
+  let carryRun=0;                                           // 同じ選手が連続で運んだ回数
   while(true){
-    const ch=pickOriginCh(rng,carrier,lastCh);
+    const stray=strayOf(carrier,h,x);
+    const ch=pickOriginCh(rng,carrier,lastCh,stray);
     const marker=matchupDefender(rng,h,x,D);                // 対応する相手(位置が近いほど)
     carrier.stat.inv++; if(marker)marker.stat.inv++;
     const ok=marker?resolveChannel(rng,carrier,marker,ch,D):true;
+    carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
       by:carrier.c.id, sub:carrier.sub, ch:ch.id, label:ch.label, kind:ch.kind,
-      ok, vs:marker?marker.c.id:null,
+      ok, vs:marker?marker.c.id:null, run:carryRun,
+      stray:Math.round(stray*100)/100,
       h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
 
     // **マッチアップの勝敗がそのまま勢いを動かす**(→docs/07 §7.7)
@@ -473,17 +493,23 @@ function stepMatch(M){
     addMom(M,T.side,F.duelWon);
 
     const tg=ballTarget(rng,h,x,ch);
-    // 撃つ: その場で撃つチャンネル / 深く入った / つなぎ上限
-    if(ch.kind==="shot"||step>=C.maxLinks||shotUrge(rng,tg.h,step,carrier)){
-      return shoot(M,rng,push,T,D,carrier,assist,tg,from);
-    }
-    if(ch.kind==="carry"){                                  // 自分が次の起点になる
-      lastCh=ch.id;
+    if(ch.kind==="shot")return shoot(M,rng,push,T,D,carrier,assist,tg,from);
+
+    // **まずボールを誰が収めたかを決める**。撃つかどうかはそのあと。
+    // 順番を逆にすると、スルーパスを出した本人がその球を自分で撃つことになる。
+    let next=carrier, nextAssist=assist, nextLast=null;
+    if(ch.kind==="carry"){
+      nextLast=ch.id;                                       // 自分が次の起点になる
     }else{                                                  // パス系 → 行き先に近い味方へ
       const recv=receiverAt(rng,T,tg,carrier);
       if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from);
-      assist=carrier; carrier=recv; lastCh=null;
+      next=recv; nextAssist=carrier;
     }
+    // 撃つ: 深く入った / つなぎ上限。判断するのは**ボールを収めた選手**
+    if(step>=C.maxLinks||shotUrge(rng,tg.h,step,next))
+      return shoot(M,rng,push,T,D,next,nextAssist,tg,from);
+
+    carrier=next; assist=nextAssist; lastCh=nextLast;
     h=tg.h; x=tg.x; step++;
   }
 }

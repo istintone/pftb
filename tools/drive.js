@@ -175,7 +175,7 @@ const STEPS = [
     await ctx.wait(200);
     await ctx.js(`(()=>{ const H=_M.home,A=_M.away;
       const atk=H.players.find(p=>p.role==='FW'), df=A.players.find(p=>p.role==='DF');
-      cutVs({side:'H',label:'裏へ抜ける',ch:'cfRun'},atk,df,'突破!',true); })()`);
+      cutVs({side:'H',label:'裏抜け',ch:'cfRun'},atk,df,'突破!',true); })()`);
     await ctx.wait(250);
     await ctx.shot("07d-cutin-vs-1");   // 両者が入ってきたところ
     await ctx.wait(600);

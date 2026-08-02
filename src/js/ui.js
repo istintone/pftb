@@ -766,13 +766,39 @@ function mPlayer(M,side,id){
 }
 const mName=p=>p?esc(shortName(p.c)):"選手";
 
-/** 起点・連鎖の1行。チャンネル名がそのまま実況の語になる。 */
+/** ボールのある高さを、実況で使える場所の言葉に直す。 */
+const zoneOf=h=>h<0.30?"自陣":h<0.55?"中盤":h<0.78?"敵陣":"ゴール前";
+/**
+ * 言い回しを**決定的に**選ぶ。イベントの中身から引くので、
+ * 同じ試合を何度再生しても同じ実況になる(→docs/07 §7.1)。
+ */
+const sayOf=(e,arr)=>arr[hashStr(e.by+":"+e.min+":"+(e.step||0))%arr.length];
+
+/**
+ * 起点・連鎖の1行(→docs/06 §6.17)。チャンネル名がそのまま実況の語になる。
+ * **同じ言い回しを繰り返さない**のが要。持ち上がりは連続すると文が積み上がるので、
+ * 何手目かで語を変え、「まだ持っている」ことが読めるようにする。
+ */
 function lineChannel(M,e){
   const p=mPlayer(M,e.side,e.by), d=mPlayer(M,e.side==="H"?"A":"H",e.vs);
-  const who=mName(p)+"（"+e.sub+"）";
-  if(!e.ok)return d?mName(d)+"が"+who+"の"+e.label+"を止めた":who+"の"+e.label+"が通らない";
-  if(e.step)return who+"が"+e.label+"、さらに前へ";
-  return who+"の"+e.label+"から仕掛ける";
+  const nm=mName(p), dn=mName(d), z=zoneOf(e.h), L=e.label;
+  if(!e.ok){
+    if(!d)return nm+"の"+L+"が通らない";
+    if(e.kind==="carry")return sayOf(e,[dn+"が"+nm+"を止めた", dn+"が寄せて奪い返す",
+      nm+"、"+dn+"に前を塞がれた"]);
+    if(e.kind==="shot")  return sayOf(e,[dn+"が詰めて"+nm+"に打たせない", nm+"の"+L+"は潰された"]);
+    return sayOf(e,[dn+"が"+L+"をカット", nm+"の"+L+"は"+dn+"に読まれた",
+      nm+"の"+L+"、"+dn+"に引っかかる"]);
+  }
+  if(!e.step)return sayOf(e,[z+"、"+nm+"（"+e.sub+"）の"+L+"から仕掛ける",
+    nm+"（"+e.sub+"）が"+z+"で持つ、"+L, z+"の"+nm+"（"+e.sub+"）、"+L+"で動き出す"]);
+  if(e.kind==="carry")
+    return e.run>1
+      ? sayOf(e,["なおも"+nm+"、"+z+"まで運ぶ", nm+"はまだ離さない、さらに前へ",
+          nm+"が持ち上がり続ける"])
+      : sayOf(e,[nm+"が"+L+"で持ち出す", nm+"、"+L+"から前を向く"]);
+  if(e.kind==="shot")return nm+"、"+z+"から狙う";
+  return sayOf(e,[nm+"の"+L+"、"+z+"へ", nm+"が"+L+"で繋ぐ", nm+"の"+L+"が通った"]);
 }
 /**
  * 1イベント → 実況の1行。返り値 { text, cls } / 出さないなら null。
