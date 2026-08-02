@@ -261,7 +261,13 @@ function renderGallery(){
 }
 
 // ---------- 枠に入れる選手を選ぶ(→docs/06 §6.15) ----------
-let _slotIx=-1;      // いま編集している枠
+let _slotIx=-1;      // いま編集している枠(0..10=先発 / 11..15=控え)
+
+/** 編成の枠の呼び名。先発は細分ポジション、控えは「控えN」。 */
+function squadSlotLabel(ix){
+  const N=TUNING.squad.starters;
+  return ix<N?FORMATIONS[S.form][ix][0]:"控え"+(ix-N+1);
+}
 
 /**
  * 枠に置いたときの**実効値**(OVR × 適性)と、その見せ方。
@@ -275,16 +281,19 @@ const effClass=(c,sub)=>({ a:"", b:" v-warn", c:" v-bad" })[fitTier(c,sub)];
  * 既に他の枠にいる選手を選ぶと、その枠と**入れ替える**(同じ選手が二重に並ばない)。
  */
 function openSlot(ix){
-  const slots=FORMATIONS[S.form], sub=slots[ix][0];
+  // 11〜15 は控えの枠。枠のポジションを持たないので**適性は掛からない**
+  // (誰の代役にもなりうるため)。並びは素のOVR順(→docs/03 §3.17)。
+  const sub=ix<TUNING.squad.starters?FORMATIONS[S.form][ix][0]:null;
   _slotIx=ix;
   const cur=cardById(S.squad[ix]);
-  const list=availableCards().slice()
-    .sort((a,b)=>slotFit(b,sub)*b.ovr-slotFit(a,sub)*a.ovr);
+  const list=availableCards().slice().sort((a,b)=>
+    sub?slotFit(b,sub)*b.ovr-slotFit(a,sub)*a.ovr:b.ovr-a.ovr);
 
   $("slotModalBody").innerHTML=
     '<button class="close-btn" id="slotClose" aria-label="閉じる">×</button>'
-    +'<h3>'+sub+' の枠</h3>'
-    +'<div class="lg" style="margin-bottom:10px">適性の高い順に並んでいます。'
+    +'<h3>'+(sub?sub+" の枠":squadSlotLabel(ix))+'</h3>'
+    +'<div class="lg" style="margin-bottom:10px">'
+      +(sub?"適性の高い順に並んでいます。":"控えは枠を持たないので OVR 順です。")
       +(cur?'　いまは <b>'+esc(shortName(cur))+'</b>':'　いまは空きです')+'</div>'
     +(cur?'<button class="btn ghost" id="slotClear" style="margin-bottom:10px">'
         +'空きにする</button>':'')
@@ -293,12 +302,13 @@ function openSlot(ix){
         return '<div class="pick'+(c.id===S.squad[ix]?" on":"")+'" data-pick="'+c.id+'">'
           // 左端の「›」だけは**入れ替えずに詳細を開く**。行そのものは入れ替え。
           +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
-          +'<div class="pk-ovr'+effClass(c,sub)+'">'+effOvr(c,sub)+'</div>'
+          +'<div class="pk-ovr'+(sub?effClass(c,sub):"")+'">'
+            +(sub?effOvr(c,sub):c.ovr)+'</div>'
           +'<div class="pk-b"><b>'+(isLoaned(c)?"":'<i class="own">★</i>')
             +esc(c.name)+'</b>'
             +'<span>'+c.subs.join(" / ")+'</span></div>'
           +'<div class="pk-r">'
-            +(at>=0&&at!==ix?'<span class="pk-at">'+slots[at][0]+'</span>':'')+'</div>'
+            +(at>=0&&at!==ix?'<span class="pk-at">'+squadSlotLabel(at)+'</span>':'')+'</div>'
         +'</div>';
       }).join("")+'</div>';
 
@@ -464,17 +474,20 @@ function renderDeck(){
   });
 
 
-  // ベンチ(先発から溢れた控え)。横スクロールで並べる。
-  const bench=cards.slice(TUNING.squad.starters,
-    TUNING.squad.starters+TUNING.squad.bench).filter(Boolean);
-  $("deckBench").innerHTML=bench.length
-    // ベンチは枠に入っていないので掛ける適性が無い。ここだけ素のOVRを出す。
-    ? bench.map(c=>'<div class="bn" data-card="'+c.id+'"'+kitStyle(c)+'>'
-        +'<div class="bn-ovr">'+c.ovr+'</div>'
-        +'<div class="bn-name">'+esc(shortName(c))+'</div>'
-        +'<div class="bn-pos">'+primarySub(c)+'</div></div>').join("")
-    : '<div class="none">控えはいません。カードを増やすとここに並びます。</div>';
-  wireCardTiles($("deckBench"));
+  // 控え(交代要員)。先発と同じく**枠**なので、タップして差し替えられる。
+  // 枠のポジションを持たないので適性は掛からず、素のOVRを出す(→docs/03 §3.17)。
+  $("deckBench").innerHTML=Array.from({length:TUNING.squad.bench},(_,k)=>{
+    const c=cards[TUNING.squad.starters+k];
+    return '<div class="bn'+(c?"":" empty")+'" data-slot="'
+      +(TUNING.squad.starters+k)+'"'+(c?kitStyle(c):"")+'>'
+      +'<div class="bn-ovr">'+(c?c.ovr:"+")
+        +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
+      +'<div class="bn-name">'+(c?esc(shortName(c)):"空き")+'</div>'
+      +'<div class="bn-pos">'+(c?primarySub(c):"控え"+(k+1))+'</div></div>';
+  }).join("");
+  $("deckBench").querySelectorAll(".bn").forEach(el=>{
+    el.onclick=()=>openSlot(Number(el.dataset.slot));
+  });
 
   // 注記は**状態だけ**を出す。読み方の説明はヘルプタブへ寄せる(→docs/06 §6.16)。
   const loaned=start.filter(c=>c&&isLoaned(c)).length;

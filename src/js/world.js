@@ -198,11 +198,16 @@ const isLoaned=card=>!!card&&S.club.loan.some(c=>c.id===card.id);
 const squadCards=()=>(S.squad||[]).map(id=>cardById(id));
 
 /** 枠との適性が高い順に自動編成する。 */
+/**
+ * 自動編成。**先発11 + 控え5 = 16人**を返す(→docs/03 §3.17)。
+ * 先発は枠ごとに 適性×OVR が最大の選手を貪欲に取り、控えは残りの上位5人。
+ * 控えは枠を持たないので適性は掛からない(誰の代役にもなりうるため)。
+ */
 function autoSquad(){
   const slots=FORMATIONS[S.form||DEFAULT_FORM];
   const pool=availableCards().slice();
   const used=new Set();
-  return slots.map(([sub])=>{
+  const xi=slots.map(([sub])=>{
     let best=null,bestScore=-1;
     for(const c of pool){
       if(used.has(c.id))continue;
@@ -212,6 +217,14 @@ function autoSquad(){
     if(best)used.add(best.id);
     return best?best.id:null;
   });
+  return xi.concat(pickBench(pool.filter(c=>!used.has(c.id))));
+}
+/** 控えは素の OVR 順に上位を取る。足りなければ null で埋めて枠数は保つ。 */
+function pickBench(rest){
+  const b=rest.slice().sort((a,c)=>c.ovr-a.ovr)
+    .slice(0,TUNING.squad.bench).map(c=>c.id);
+  while(b.length<TUNING.squad.bench)b.push(null);
+  return b;
 }
 
 /**
@@ -221,9 +234,11 @@ function autoSquad(){
  */
 function refitSquad(form){
   const slots=FORMATIONS[form||S.form||DEFAULT_FORM];
-  const pool=(S.squad||[]).map(id=>cardById(id)).filter(Boolean);
+  const N=TUNING.squad.starters;
+  // 先発の枠だけを並べ直す。**控えはそのまま持ち越す**(入れ替えの対象ではない)。
+  const pool=(S.squad||[]).slice(0,N).map(id=>cardById(id)).filter(Boolean);
   const used=new Set();
-  const out=slots.map(([sub])=>{
+  const xi=slots.map(([sub])=>{
     let best=null,bestScore=-1;
     for(const c of pool){
       if(used.has(c.id))continue;
@@ -233,7 +248,9 @@ function refitSquad(form){
     if(best)used.add(best.id);
     return best?best.id:null;
   });
-  return out;
+  const bench=(S.squad||[]).slice(N,N+TUNING.squad.bench);
+  while(bench.length<TUNING.squad.bench)bench.push(null);
+  return xi.concat(bench);
 }
 
 // --- 会長の評価(→docs/03 §3.9) ---

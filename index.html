@@ -698,7 +698,7 @@ body{
 .pt-slots{ position:absolute; inset:0 }
 .slot{
   position:absolute; transform:translate(-50%,-50%); cursor:pointer;
-  display:flex; flex-direction:column; align-items:center; gap:3px;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
 }
 /* 枠のポジション名 = **その枠への適性**(→docs/03 §3.15)。
    合っているほど濃く出し、合っていないほど沈める。数値は出さない。 */
@@ -724,7 +724,7 @@ body{
 }
 .slot.empty .sl-disc{ background:oklch(0 0 0 / .35); border-style:dashed; color:oklch(1 0 0 / .5) }
 .sl-name{
-  max-width:64px; padding:1px 4px; border-radius:3px;
+  max-width:56px; padding:1px 4px; border-radius:3px;
   background:oklch(0 0 0 / .55); font-size:8px; color:#fff;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
@@ -777,7 +777,9 @@ body{
 .bn-name{ font-size:9px; color:oklch(0.85 0.01 90);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .bn-pos{ font-size:8px; color:oklch(0.55 0.02 255) }
-.bench .none{ padding:14px 0; color:var(--text-mute); font-size:11px }
+.bn-ovr{ position:relative }                     /* ★ を右上に載せるため */
+.bn.empty{ border-style:dashed }
+.bn.empty .bn-ovr{ background:oklch(0 0 0 / .35); color:oklch(1 0 0 / .5) }
 
 /* 順位表・日程 */
 .strow{ display:flex; align-items:center; gap:10px; padding:6px 0; font-size:11px;
@@ -1383,7 +1385,9 @@ const HELP={
       +"<br><b>丸の中</b>は<b>適性を掛けた実効値</b>です（素のOVRではありません）。"
       +"<b>枠線の色</b>がレアリティ、<b>地色</b>がクラブカラー。"
       +"<br>素のOVRは枠をタップした先の一覧と、カードの詳細で確認できます。"
-      +"ベンチは枠に入っていないので素のOVRを出しています。"
+      +"<br><b>BENCH</b> の"+TUNING.squad.bench+"枠は交代要員です。ここも枠なのでタップで差し替えられ、"
+      +"先発の選手を選ぶとその枠と入れ替わります。"
+      +"控えは枠のポジションを持たないため適性が掛からず、<b>素のOVR</b>を出しています。"
       +"<br><br><b>枠適性</b> — その枠に合っているかで、出せる力が変わります。"
       +"<b>数字の色</b>が目減りを表し、<b>枠のポジション名の濃さ</b>も合わせて薄くなります。"
       +'<div class="fit-legend">'
@@ -1466,12 +1470,12 @@ const FORMATIONS={
            ["CMF",62,50],["RMF",84,48],["ST",50,27],["CF",50,13]],
   "4-3-3":[["GK",50,87],["LSB",18,72],["CB",38,73],["CB",62,73],["RSB",82,72],["CMF",30,48],["DMF",50,58],
            ["CMF",70,48],["LWG",18,15],["CF",50,13],["RWG",82,15]],
-  "3-5-2":[["GK",50,87],["CB",26,73],["CB",50,71],["CB",74,73],["LMF",14,48],["CMF",34,50],["DMF",50,58],
-           ["CMF",66,50],["RMF",86,48],["ST",50,27],["CF",50,13]],
+  "3-5-2":[["GK",50,87],["CB",26,73],["CB",50,74],["CB",74,73],["LMF",12,48],["CMF",30,47],["DMF",50,58],
+           ["CMF",70,47],["RMF",88,48],["ST",50,27],["CF",50,13]],
   "5-3-2":[["GK",50,87],["LSB",10,69],["CB",30,73],["CB",50,71],["CB",70,73],["RSB",90,69],["CMF",30,48],
            ["DMF",50,58],["CMF",70,48],["CF",38,18],["CF",62,18]],
-  "4-3-1-2":[["GK",50,87],["LSB",18,72],["CB",38,73],["CB",62,73],["RSB",82,72],["CMF",35,50],["DMF",50,58],
-             ["CMF",65,50],["OMF",50,37],["CF",38,18],["CF",62,18]],
+  "4-3-1-2":[["GK",50,87],["LSB",18,72],["CB",38,73],["CB",62,73],["RSB",82,72],["CMF",28,50],["DMF",50,58],
+             ["CMF",72,50],["OMF",50,37],["CF",38,18],["CF",62,18]],
   "4-2-3-1":[["GK",50,87],["LSB",18,72],["CB",38,73],["CB",62,73],["RSB",82,72],["DMF",38,58],["DMF",62,58],
              ["LWG",18,29],["OMF",50,37],["RWG",82,29],["CF",50,15]],
   "5-4-1":[["GK",50,87],["LSB",10,69],["CB",30,73],["CB",50,71],["CB",70,73],["RSB",90,69],["LMF",16,50],
@@ -1489,7 +1493,7 @@ const FORMATIONS={
   "ゼロトップ":[["GK",50,87],["LSB",18,72],["CB",38,73],["CB",62,73],["RSB",82,72],["CMF",30,49],["DMF",50,59],
            ["CMF",70,49],["LWG",16,18],["OMF",50,29],["RWG",84,18]],
   "4-3-3アシメ":[["GK",50,87],["LSB",18,72],["CB",38,73],["CB",62,73],["RSB",82,72],["DMF",50,58],["LMF",30,45],
-              ["CMF",60,47],["LWG",16,25],["CF",46,14],["RWG",86,15]],
+              ["CMF",66,45],["LWG",16,25],["CF",46,14],["RWG",86,15]],
   "4-2-4":[["GK",50,87],["LSB",16,72],["CB",38,73],["CB",62,73],["RSB",84,72],["CMF",36,52],["CMF",64,52],
            ["LWG",12,22],["RWG",88,22],["ST",40,15],["CF",60,13]],
   "9.5番":[["GK",50,87],["LSB",18,72],["CB",38,73],["CB",62,73],["RSB",82,72],["DMF",36,59],["DMF",64,59],
@@ -2010,11 +2014,16 @@ const isLoaned=card=>!!card&&S.club.loan.some(c=>c.id===card.id);
 const squadCards=()=>(S.squad||[]).map(id=>cardById(id));
 
 /** 枠との適性が高い順に自動編成する。 */
+/**
+ * 自動編成。**先発11 + 控え5 = 16人**を返す(→docs/03 §3.17)。
+ * 先発は枠ごとに 適性×OVR が最大の選手を貪欲に取り、控えは残りの上位5人。
+ * 控えは枠を持たないので適性は掛からない(誰の代役にもなりうるため)。
+ */
 function autoSquad(){
   const slots=FORMATIONS[S.form||DEFAULT_FORM];
   const pool=availableCards().slice();
   const used=new Set();
-  return slots.map(([sub])=>{
+  const xi=slots.map(([sub])=>{
     let best=null,bestScore=-1;
     for(const c of pool){
       if(used.has(c.id))continue;
@@ -2024,6 +2033,14 @@ function autoSquad(){
     if(best)used.add(best.id);
     return best?best.id:null;
   });
+  return xi.concat(pickBench(pool.filter(c=>!used.has(c.id))));
+}
+/** 控えは素の OVR 順に上位を取る。足りなければ null で埋めて枠数は保つ。 */
+function pickBench(rest){
+  const b=rest.slice().sort((a,c)=>c.ovr-a.ovr)
+    .slice(0,TUNING.squad.bench).map(c=>c.id);
+  while(b.length<TUNING.squad.bench)b.push(null);
+  return b;
 }
 
 /**
@@ -2033,9 +2050,11 @@ function autoSquad(){
  */
 function refitSquad(form){
   const slots=FORMATIONS[form||S.form||DEFAULT_FORM];
-  const pool=(S.squad||[]).map(id=>cardById(id)).filter(Boolean);
+  const N=TUNING.squad.starters;
+  // 先発の枠だけを並べ直す。**控えはそのまま持ち越す**(入れ替えの対象ではない)。
+  const pool=(S.squad||[]).slice(0,N).map(id=>cardById(id)).filter(Boolean);
   const used=new Set();
-  const out=slots.map(([sub])=>{
+  const xi=slots.map(([sub])=>{
     let best=null,bestScore=-1;
     for(const c of pool){
       if(used.has(c.id))continue;
@@ -2045,7 +2064,9 @@ function refitSquad(form){
     if(best)used.add(best.id);
     return best?best.id:null;
   });
-  return out;
+  const bench=(S.squad||[]).slice(N,N+TUNING.squad.bench);
+  while(bench.length<TUNING.squad.bench)bench.push(null);
+  return xi.concat(bench);
 }
 
 // --- 会長の評価(→docs/03 §3.9) ---
@@ -2229,7 +2250,7 @@ function resolveMatch(home,away,rng){
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=4;
+const SAVE_VER=5;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -2372,6 +2393,15 @@ function migrate(){
     if(keep.player)S.player=keep.player;
     // 世界とクラブは作り直し。名声は残るので、届く範囲のクラブから選び直せる。
     S.world.seed=(Date.now()^Math.floor(Math.random()*0xffffffff))>>>0;
+  }
+  // v4 → v5: 編成を先発11から**先発11 + 控え5 = 16枠**にした(→docs/03 §3.17)。
+  // 交代を扱うために控えを常設する。既存の編成はそのまま活かし、控えだけ足す。
+  if(S.v<5&&S.club){
+    const N=TUNING.squad.starters;
+    const xi=(S.squad||[]).slice(0,N);
+    while(xi.length<N)xi.push(null);
+    const used=new Set(xi.filter(Boolean));
+    S.squad=xi.concat(pickBench(availableCards().filter(c=>!used.has(c.id))));
   }
   S.v=SAVE_VER;
 }
@@ -2665,7 +2695,13 @@ function renderGallery(){
 }
 
 // ---------- 枠に入れる選手を選ぶ(→docs/06 §6.15) ----------
-let _slotIx=-1;      // いま編集している枠
+let _slotIx=-1;      // いま編集している枠(0..10=先発 / 11..15=控え)
+
+/** 編成の枠の呼び名。先発は細分ポジション、控えは「控えN」。 */
+function squadSlotLabel(ix){
+  const N=TUNING.squad.starters;
+  return ix<N?FORMATIONS[S.form][ix][0]:"控え"+(ix-N+1);
+}
 
 /**
  * 枠に置いたときの**実効値**(OVR × 適性)と、その見せ方。
@@ -2679,16 +2715,19 @@ const effClass=(c,sub)=>({ a:"", b:" v-warn", c:" v-bad" })[fitTier(c,sub)];
  * 既に他の枠にいる選手を選ぶと、その枠と**入れ替える**(同じ選手が二重に並ばない)。
  */
 function openSlot(ix){
-  const slots=FORMATIONS[S.form], sub=slots[ix][0];
+  // 11〜15 は控えの枠。枠のポジションを持たないので**適性は掛からない**
+  // (誰の代役にもなりうるため)。並びは素のOVR順(→docs/03 §3.17)。
+  const sub=ix<TUNING.squad.starters?FORMATIONS[S.form][ix][0]:null;
   _slotIx=ix;
   const cur=cardById(S.squad[ix]);
-  const list=availableCards().slice()
-    .sort((a,b)=>slotFit(b,sub)*b.ovr-slotFit(a,sub)*a.ovr);
+  const list=availableCards().slice().sort((a,b)=>
+    sub?slotFit(b,sub)*b.ovr-slotFit(a,sub)*a.ovr:b.ovr-a.ovr);
 
   $("slotModalBody").innerHTML=
     '<button class="close-btn" id="slotClose" aria-label="閉じる">×</button>'
-    +'<h3>'+sub+' の枠</h3>'
-    +'<div class="lg" style="margin-bottom:10px">適性の高い順に並んでいます。'
+    +'<h3>'+(sub?sub+" の枠":squadSlotLabel(ix))+'</h3>'
+    +'<div class="lg" style="margin-bottom:10px">'
+      +(sub?"適性の高い順に並んでいます。":"控えは枠を持たないので OVR 順です。")
       +(cur?'　いまは <b>'+esc(shortName(cur))+'</b>':'　いまは空きです')+'</div>'
     +(cur?'<button class="btn ghost" id="slotClear" style="margin-bottom:10px">'
         +'空きにする</button>':'')
@@ -2697,12 +2736,13 @@ function openSlot(ix){
         return '<div class="pick'+(c.id===S.squad[ix]?" on":"")+'" data-pick="'+c.id+'">'
           // 左端の「›」だけは**入れ替えずに詳細を開く**。行そのものは入れ替え。
           +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
-          +'<div class="pk-ovr'+effClass(c,sub)+'">'+effOvr(c,sub)+'</div>'
+          +'<div class="pk-ovr'+(sub?effClass(c,sub):"")+'">'
+            +(sub?effOvr(c,sub):c.ovr)+'</div>'
           +'<div class="pk-b"><b>'+(isLoaned(c)?"":'<i class="own">★</i>')
             +esc(c.name)+'</b>'
             +'<span>'+c.subs.join(" / ")+'</span></div>'
           +'<div class="pk-r">'
-            +(at>=0&&at!==ix?'<span class="pk-at">'+slots[at][0]+'</span>':'')+'</div>'
+            +(at>=0&&at!==ix?'<span class="pk-at">'+squadSlotLabel(at)+'</span>':'')+'</div>'
         +'</div>';
       }).join("")+'</div>';
 
@@ -2868,17 +2908,20 @@ function renderDeck(){
   });
 
 
-  // ベンチ(先発から溢れた控え)。横スクロールで並べる。
-  const bench=cards.slice(TUNING.squad.starters,
-    TUNING.squad.starters+TUNING.squad.bench).filter(Boolean);
-  $("deckBench").innerHTML=bench.length
-    // ベンチは枠に入っていないので掛ける適性が無い。ここだけ素のOVRを出す。
-    ? bench.map(c=>'<div class="bn" data-card="'+c.id+'"'+kitStyle(c)+'>'
-        +'<div class="bn-ovr">'+c.ovr+'</div>'
-        +'<div class="bn-name">'+esc(shortName(c))+'</div>'
-        +'<div class="bn-pos">'+primarySub(c)+'</div></div>').join("")
-    : '<div class="none">控えはいません。カードを増やすとここに並びます。</div>';
-  wireCardTiles($("deckBench"));
+  // 控え(交代要員)。先発と同じく**枠**なので、タップして差し替えられる。
+  // 枠のポジションを持たないので適性は掛からず、素のOVRを出す(→docs/03 §3.17)。
+  $("deckBench").innerHTML=Array.from({length:TUNING.squad.bench},(_,k)=>{
+    const c=cards[TUNING.squad.starters+k];
+    return '<div class="bn'+(c?"":" empty")+'" data-slot="'
+      +(TUNING.squad.starters+k)+'"'+(c?kitStyle(c):"")+'>'
+      +'<div class="bn-ovr">'+(c?c.ovr:"+")
+        +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
+      +'<div class="bn-name">'+(c?esc(shortName(c)):"空き")+'</div>'
+      +'<div class="bn-pos">'+(c?primarySub(c):"控え"+(k+1))+'</div></div>';
+  }).join("");
+  $("deckBench").querySelectorAll(".bn").forEach(el=>{
+    el.onclick=()=>openSlot(Number(el.dataset.slot));
+  });
 
   // 注記は**状態だけ**を出す。読み方の説明はヘルプタブへ寄せる(→docs/06 §6.16)。
   const loaned=start.filter(c=>c&&isLoaned(c)).length;

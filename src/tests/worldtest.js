@@ -127,7 +127,20 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
       assert.deepStrictEqual([n.DF, n.MF, n.FW], m.slice(1).map(Number),
         f + " の枠の内訳が呼び名と一致する");
     }
-    console.log("  陣形:", forms.length, "種 / すべて11枠・GK1枠・y は 13〜87");
+    // 枠どうしが重ならないこと。1枠の描画は「ポジション名 + 丸 + 名前帯」で
+    // 幅 最大56px / 高さ 約60px。ピッチ 354x472 に対して 15.8% / 12.7%。
+    // **実測(drive.js)は名前の長さで結果が変わる**ので、座標の側で余裕を保証する。
+    const SLOT_W = 15.8, SLOT_H = 12.7;
+    for (const [f, slots] of forms) {
+      for (let i = 0; i < slots.length; i++) for (let j = i + 1; j < slots.length; j++) {
+        const dx = Math.abs(slots[i][1] - slots[j][1]);
+        const dy = Math.abs(slots[i][2] - slots[j][2]);
+        assert.ok(dx >= SLOT_W || dy >= SLOT_H,
+          f + " の枠が近すぎる: " + slots[i][0] + "(" + slots[i][1] + "," + slots[i][2] + ")×"
+          + slots[j][0] + "(" + slots[j][1] + "," + slots[j][2] + ") dx" + dx + " dy" + dy);
+      }
+    }
+    console.log("  陣形:", forms.length, "種 / 11枠・GK1枠・y は 13〜87・枠が重ならない");
   }
 
   // 配置込みの編成力は、適性を無視した平均を上回らない

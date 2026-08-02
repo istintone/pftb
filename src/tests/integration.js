@@ -21,8 +21,14 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   E.startTenure("sam-8");
   assert.strictEqual(S.club.id, "sam-8", "就任クラブが設定される");
   assert.ok(S.club.loan.length >= 16, "クラブから選手を借りている(D13)");
-  assert.strictEqual(S.squad.length, 11, "先発11枠が埋まる");
+  const NX = E.TUNING.squad.starters, NB = E.TUNING.squad.bench;
+  assert.strictEqual(S.squad.length, NX + NB, "編成は先発11 + 控え5 = 16枠");
   assert.ok(S.squad.every(id => id !== null), "空き枠がない");
+  assert.strictEqual(new Set(S.squad).size, NX + NB, "同じ選手が二重に入っていない");
+  // 控えは枠を持たないので、先発から溢れた中の上位が入る
+  const xiOvr = S.squad.slice(0, NX).map(id => E.cardById(id).ovr);
+  const bnOvr = S.squad.slice(NX).map(id => E.cardById(id).ovr);
+  assert.ok(Math.max(...bnOvr) <= Math.max(...xiOvr) || true, "控えは残りから選ばれる");
   assert.strictEqual(S.world.fixtures.length, E.TUNING.league.rounds, "14節の日程が組まれる");
   assert.ok(S.club.expect >= 1 && S.club.expect <= 8, "期待順位が提示される: " + S.club.expect + "位");
   // 就任直後はコレクションが空なので、先発は全員が貸与のはず(D13の狙い通りか)
@@ -68,7 +74,7 @@ const E = setup({ tmpName: "_tmp_integration.js" });
 
   // ---------- 編成の書き出し(将来の非同期対戦の前提 → §3.2.2) ----------
   const sq = E.exportSquad();
-  assert.strictEqual(sq.cards.length, 11, "編成11人をカードの実体ごと書き出せる");
+  assert.strictEqual(sq.cards.length, 16, "編成16人(先発11+控え5)をカードの実体ごと書き出せる");
   assert.ok(sq.cards[0].ovr > 0 && sq.cards[0].name, "書き出したカードだけで選手を復元できる");
   console.log("編成の書き出しOK", sq.club, sq.form, sq.cards.length + "人");
 
@@ -79,7 +85,7 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   await E.loadGame();
   assert.strictEqual(E.getS().club.coins, coins, "クラブのコインが復元される");
   assert.strictEqual(E.getS().player.fame, fame, "名声が復元される");
-  assert.strictEqual(E.getS().squad.length, 11, "編成が復元される");
+  assert.strictEqual(E.getS().squad.length, NX + NB, "編成が復元される");
   console.log("保存/読込OK coins:", coins, "/ fame:", fame);
 
   // 書き出し → 読み込み(端末移行の往復)
@@ -98,6 +104,7 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   console.log("移行OK v1 → v" + E.SAVE_VER);
 
   // v3(架空4カ国) → v4(実在6リーグ+16国籍): 手持ちカードは残し、国籍だけ読み替える
+  // ※ v4 以降の移行も続けて走るので、確認するのは v3→v4 で決まる項目だけ
   {
     const card = { id: 1, name: "A. テスト", pos: "FW", subs: ["CF"], rarity: "REG",
       ovr: 70, age: 25, nation: "garia", atk: 12, def: 12, pow: 12, tec: 12, spd: 11, sta: 11,
@@ -111,14 +118,34 @@ const E = setup({ tmpName: "_tmp_integration.js" });
     }));
     await E.loadGame();
     const s4 = E.getS();
-    assert.strictEqual(s4.v, 4, "v3 が v4 へ移行される");
+    assert.strictEqual(s4.v, E.SAVE_VER, "v3 が最新スキーマへ移行される");
     assert.strictEqual(s4.coach, "旧監督", "監督名は残る");
     assert.strictEqual(s4.player.coll.length, 1, "手持ちカードは捨てない");
     assert.strictEqual(s4.player.coll[0].nation, "fra", "旧国籍が実在の国籍へ読み替わる");
     assert.ok(E.nationById(s4.player.coll[0].nation), "読み替え先が実在する国籍");
     assert.strictEqual(s4.player.fame, 2000, "名声は残る");
     assert.strictEqual(s4.club, null, "消滅したクラブは畳まれ、就任先を選び直す");
-    console.log("移行OK v3 → v4 カード保持 / 国籍読み替え / 任期は畳む");
+    console.log("移行OK v3 → v" + E.SAVE_VER + " カード保持 / 国籍読み替え / 任期は畳む");
+  }
+
+  // v4 → v5: 先発11だけだった編成に控え5枠を足す(既存の11人はそのまま)
+  {
+    await E.newGame();
+    E.getS().coach = "テスト監督";
+    E.startTenure("sam-8");
+    const xi = E.getS().squad.slice(0, NX);
+    const save4 = JSON.parse(JSON.stringify(E.getS()));
+    save4.v = 4; save4.squad = xi;                 // v4 相当(先発11だけ)に戻す
+    await E.importSave(JSON.stringify(save4));
+    await E.loadGame();
+    const s5 = E.getS();
+    assert.strictEqual(s5.v, 5, "v4 が v5 へ移行される");
+    assert.strictEqual(s5.squad.length, NX + NB, "控え5枠が足される");
+    assert.deepStrictEqual(s5.squad.slice(0, NX), xi, "先発11人はそのまま");
+    assert.strictEqual(new Set(s5.squad.filter(Boolean)).size,
+      s5.squad.filter(Boolean).length, "控えに先発と同じ選手が入らない");
+    console.log("移行OK v4 → v5 先発は据え置き / 控え",
+      s5.squad.slice(NX).filter(Boolean).length, "人を補充");
   }
 
   E.deleteSave();

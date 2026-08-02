@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=4;
+const SAVE_VER=5;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -145,6 +145,15 @@ function migrate(){
     if(keep.player)S.player=keep.player;
     // 世界とクラブは作り直し。名声は残るので、届く範囲のクラブから選び直せる。
     S.world.seed=(Date.now()^Math.floor(Math.random()*0xffffffff))>>>0;
+  }
+  // v4 → v5: 編成を先発11から**先発11 + 控え5 = 16枠**にした(→docs/03 §3.17)。
+  // 交代を扱うために控えを常設する。既存の編成はそのまま活かし、控えだけ足す。
+  if(S.v<5&&S.club){
+    const N=TUNING.squad.starters;
+    const xi=(S.squad||[]).slice(0,N);
+    while(xi.length<N)xi.push(null);
+    const used=new Set(xi.filter(Boolean));
+    S.squad=xi.concat(pickBench(availableCards().filter(c=>!used.has(c.id))));
   }
   S.v=SAVE_VER;
 }

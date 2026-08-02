@@ -173,7 +173,12 @@ const STEPS = [
           + "return Math.round(r.width)+'x'+Math.round(r.height)+' 比'+(r.height/r.width).toFixed(3)})()");
         ctx.log("  ピッチ:", box,
           "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"),
-          "/ ベンチ:", await ctx.js("document.querySelectorAll('#deckBench .bn').length"));
+          "/ 控え:", await ctx.js(
+            "document.querySelectorAll('#deckBench .bn:not(.empty)').length + '/'"
+            + " + document.querySelectorAll('#deckBench .bn').length"),
+          "/ 編成:", await ctx.js("S.squad.filter(Boolean).length + '人'"),
+          "/ 重複なし:", await ctx.js(
+            "(()=>{const a=S.squad.filter(Boolean);return a.length===new Set(a).size})()"));
         if (!box.endsWith("1.333")) throw new Error("ピッチの縦横比が 3:4 ではない: " + box);
         // 丸の数字は**適性を掛けた実効値**。素のOVRだと不一致の選手のほうが大きく見える
         const disc = await ctx.js(`(()=>{
@@ -188,6 +193,17 @@ const STEPS = [
         ctx.log("  丸の数字:", disc.map(d => d.raw + "→" + d.shown).join(" "),
           "/ 実効値になっている:", bad.length === 0);
         if (bad.length) throw new Error("丸の数字が実効値でない: " + JSON.stringify(bad));
+        // 控えの枠もタップで差し替えられる(交代要員を選ぶため)
+        await ctx.js(`(()=>{ const e=document.querySelector('#deckBench .bn');
+          if(!e)throw new Error('控え枠が無い'); e.click(); })()`);
+        await ctx.wait(350);
+        ctx.log("  控えのピッカー:", await ctx.js("document.querySelector('#slotModalBody h3').textContent"),
+          "/ 適性の色分けなし:", await ctx.js(
+            "document.querySelectorAll('#slotModalBody .pk-ovr.v-warn, #slotModalBody .pk-ovr.v-bad').length === 0"));
+        await ctx.shot("10h-bench-picker");
+        await ctx.js("closeSlot()");
+        await ctx.wait(200);
+
         // 陣形はピッカーから選ぶ。16種すべてに「並べ直したときの総合力」が出る
         await ctx.js("document.getElementById('btnForm').click()");
         await ctx.wait(350);
