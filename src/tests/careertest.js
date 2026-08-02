@@ -263,11 +263,12 @@ function runSeason() {
       }
       return ok / n;
     };
+    // 成功率は上限に張り付きやすいので、**失敗率の比**で見る(天井に強い)
     const aHi = dfOrigin(+6), aLo = dfOrigin(-6);
-    assert.ok(aHi > aLo + 0.05, "DFの atk が起点の成否に効く: +6 "
-      + (aHi * 100).toFixed(0) + "% > -6 " + (aLo * 100).toFixed(0) + "%");
-    console.log("DFのatkの効きOK 起点成功 atk+6", (aHi * 100).toFixed(0) + "%",
-      "/ atk-6", (aLo * 100).toFixed(0) + "%");
+    assert.ok((1 - aLo) > (1 - aHi) * 1.5, "DFの atk が起点の成否に効く: 失敗率 atk-6 "
+      + ((1 - aLo) * 100).toFixed(1) + "% > atk+6 " + ((1 - aHi) * 100).toFixed(1) + "% の1.5倍");
+    console.log("DFのatkの効きOK 起点の失敗率 atk+6", ((1 - aHi) * 100).toFixed(1) + "%",
+      "/ atk-6", ((1 - aLo) * 100).toFixed(1) + "%");
   }
 
   // ---------- 連鎖(D28 → docs/07 §7.9) ----------
@@ -373,6 +374,89 @@ function runSeason() {
     const hi = run(mk(+4)), lo = run(mk(-4));
     assert.ok(hi < lo * 0.85, "GKが良いほど失点が減る: +4 " + hi.toFixed(2) + " < -4 " + lo.toFixed(2));
     console.log("GKの効きOK 失点 def+4", hi.toFixed(2), "/ def-4", lo.toFixed(2));
+  }
+
+  // ---------- スタミナ(D30 → docs/07 §7.10) ----------
+  {
+    const side = id => ({ cards: E.bestXI(E.clubRoster(4242, id), "4-4-2"),
+      form: "4-4-2", name: id });
+    const H = side("ger-4"), A = side("ger-4");
+
+    // ① 90分で 100% → 30%台まで落ちる。よく動いた選手ほど早い
+    const all = [], byInv = [];
+    for (let i = 1; i <= 300; i++) {
+      const M = E.finishMatch(E.createMatch(H, A, i));
+      for (const T of [M.home, M.away]) for (const p of T.players) {
+        all.push(p.stam); byInv.push([p.stat.inv, p.stam]);
+      }
+    }
+    all.sort((a, b) => a - b);
+    assert.ok(all[0] <= 0.40, "最も消耗した選手は4割以下まで落ちる: "
+      + (all[0] * 100).toFixed(0) + "%");
+    assert.ok(all[all.length - 1] < 0.95, "誰も無傷では終わらない");
+    assert.ok(all[Math.floor(all.length / 2)] > 0.45, "中央値が落ちすぎない: "
+      + (all[Math.floor(all.length / 2)] * 100).toFixed(0) + "%");
+    // 関与が多いほど消耗している(相関)
+    const hi = byInv.filter(x => x[0] >= 12), lo = byInv.filter(x => x[0] <= 3);
+    const avg = a => a.reduce((s, x) => s + x[1], 0) / a.length;
+    assert.ok(avg(hi) < avg(lo) - 0.10, "よく動いた選手ほど消耗している: 関与12+ "
+      + (avg(hi) * 100).toFixed(0) + "% < 関与3- " + (avg(lo) * 100).toFixed(0) + "%");
+
+    // ② GKも例外ではない
+    const gks = [];
+    for (let i = 1; i <= 100; i++) {
+      const M = E.finishMatch(E.createMatch(H, A, i));
+      for (const T of [M.home, M.away]) gks.push(T.players.find(p => p.role === "GK").stam);
+    }
+    assert.ok(Math.max(...gks) < 1, "GKもスタミナが減る");
+
+    // ③ **交代が意味を持つ**。消耗した選手を枠に合う控えと入れ替えると勝率が上がる
+    const play = (smart, n) => {
+      let w = 0;
+      for (let i = 1; i <= n; i++) {
+        const M = E.createMatch(H, A, i);
+        for (let k = 0; k < 20; k++) E.stepMatch(M);        // 60分まで
+        if (smart) {
+          const used = new Set();
+          const tired = M.home.players.map((p, ix) => ({ ix, p }))
+            .sort((a, b) => a.p.stam - b.p.stam);
+          for (const t of tired) {
+            if (used.size >= 3) break;
+            let best = -1, bi = -1;
+            M.home.bench.forEach((b, k) => {
+              if (used.has(k) || b.used) return;
+              const v = b.c.ovr * E.slotFit(b.c, t.p.sub);
+              if (v > best) { best = v; bi = k; }
+            });
+            if (bi >= 0 && best > t.p.c.ovr * t.p.fit * t.p.stam
+              && E.orderMatch(M, "H", { type: "sub", out: t.ix, in: bi })) used.add(bi);
+          }
+        }
+        E.finishMatch(M);
+        if (M.home.score > M.away.score) w++;
+      }
+      return w / n;
+    };
+    const noSub = play(false, 900), withSub = play(true, 900);
+    assert.ok(withSub > noSub + 0.03, "交代で勝率が上がる: "
+      + (noSub * 100).toFixed(1) + "% → " + (withSub * 100).toFixed(1) + "%");
+    console.log("スタミナOK 終了時 最低", (all[0] * 100).toFixed(0) + "%",
+      "/ 中央", (all[Math.floor(all.length / 2)] * 100).toFixed(0) + "%",
+      "/ 交代の価値 勝率", (noSub * 100).toFixed(1) + "% →", (withSub * 100).toFixed(1) + "%");
+  }
+
+  // ---------- 控えはポジションを揃える(→docs/03 §3.17) ----------
+  {
+    for (const club of E.CLUBS.slice(0, 12)) {
+      const xi = E.bestXI(E.clubRoster(4242, club.id), "4-4-2");
+      const bench = xi.slice(E.TUNING.squad.starters).filter(Boolean);
+      const roles = new Set(bench.map(c => c.pos));
+      // OVR順だけで取ると GK も DF も居ない控えができ、投入すると適性0.50になる
+      assert.ok(roles.has("GK"), club.id + " の控えにGKがいる");
+      assert.ok(roles.size >= 3, club.id + " の控えが3種以上のポジションを覆う: "
+        + [...roles].join(","));
+    }
+    console.log("控えの構成OK 12クラブすべてでGK+3種以上を確保");
   }
 
   // ---------- 監督は任意のタイミングで手を打てる(D25 → docs/07 §7.6) ----------

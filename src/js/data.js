@@ -337,6 +337,14 @@ const TUNING={
   // 任期 = キャリア1周(→docs/03 §3.2.3)。節で通算し、シーズンとは切り離す。
   tenure:{ limit:96, extend:24, hardMax:120, extendRank:3 }, // extendRank位以内で延命
   squad:{ starters:11, bench:5, subMax:3 },   // subMax = 1試合の交代枠
+  // --- スタミナ(→docs/07 §7.10) ---
+  // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
+  // 攻守どちらのスコアにも eff 経由で掛かる(GKも例外ではない)。
+  //   minStam   下限。ここまでしか落ちない
+  //   staReduce sta20 のとき消耗が何割減るか
+  //   lineFree/linePenalty  守備ラインの綻び(平均消耗が不感帯を超えた分だけ守備が落ちる)
+  fatigue:{ perMin:0.0040, perAct:0.0260, staReduce:0.45, minStam:0.30,
+            lineFree:0.20, linePenalty:0.85 },
   // 枠適性(→docs/03 §3.14)。card-eleven を踏襲した3段。
   //   sub  サブポジションが一致 = 本来の力を出せる
   //   main サブは違うがメイン(大分類)が一致 = とりあえず使えるが本来の力は出ない
@@ -354,7 +362,7 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:0.90, origin:1.00, block:1.55, rebound:1.00 },
+  th:{ shot:0.82, origin:1.00, block:1.55, rebound:1.00 },
   // シュートの距離減衰(→docs/07 §7.9)。h=1 がゴール前、0 が自陣ゴール前。
   //   deadZone この高さ以下はほぼ入らない / minRange その下限 / rangePow 減衰の効き
   //   gkDef/gkPow/gkTec  GKのセーブの配合(合計1.0)
@@ -369,7 +377,7 @@ const TUNING={
   // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)。
   // 起点で稼いだ前進(prog)が高いほど届きやすい: toShot × (progLo + prog×progK)
   // originK は起点の攻撃側スコア全体に掛かる係数(ORIGINS の表は相対値のままにする)
-  atk:{ toShot:0.70, homeAdv:1.06, progLo:0.45, progK:1.10, originK:3.00 },
+  atk:{ toShot:0.70, homeAdv:1.06, progLo:0.45, progK:1.10, originK:3.30 },
   // 起点のマッチアップ(→docs/07 §7.8)。座標が近い相手ほど対応しやすい。
   //   sigmaH/sigmaX … 高さ/左右のばらつき(大きいほど遠くの選手も関与する)
   //   atkW/defW     … 攻守スコアの「総合力(atk/def)」の比率。**残りはチャンネルと同じ能力**。

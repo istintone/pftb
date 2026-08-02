@@ -24,7 +24,47 @@ const rr=rng=>TUNING.rng.min+rng()*TUNING.rng.span;
  *   これから足すもの: 疲労 / 状況(終盤・ビハインド) / スキル / 連携
  */
 function eff(p,k){
-  return p.c[k]*p.fit;
+  return p.c[k]*p.fit*p.stam;
+}
+
+// ---------- スタミナ ----------
+/**
+ * スタミナ(1.0=万全 .. minStam)。**攻守どちらのスコアにも eff 経由で掛かる**(→docs/07 §7.10)。
+ * GKも例外ではない。
+ *
+ *   消耗 = 出場時間 × perMin + 関与回数 × perAct
+ * よく動いて活躍した選手ほど早く落ちる。sta が高いほど落ちが緩やか。
+ * **これが交代の意味になる**: 終盤に消耗した選手を、万全の控えと入れ替える。
+ */
+function staminaOf(p,min){
+  const F=TUNING.fatigue;
+  const played=Math.max(0,min-(p.enter||0));
+  const staMul=1-(p.c.sta-1)/(STAT_MAX-1)*F.staReduce;     // sta20 で最も緩やか
+  const drain=(played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul;
+  return clamp(1-drain,F.minStam,1);
+}
+/**
+ * **守備ラインの綻び**(card-eleven から踏襲 → docs/07 §7.10)。
+ * 個々のスタミナとは別に、**DFラインの平均消耗ぶんだけ守備スコアを薄く減じる**。
+ *
+ * これが無いと疲労は攻撃の精度(枠に飛ぶか)だけを一方的に下げ、
+ * **得点が前半に偏る**(実測で前半61%対後半39%)。現実は逆で、
+ * 終盤は疲れた守備が破綻して失点しやすくなる。
+ * 不感帯(lineFree)を超えた消耗だけが響く。
+ */
+function lineMul(D){
+  const F=TUNING.fatigue;
+  const dl=D.players.filter(p=>p.role==="DF");
+  if(!dl.length||!F.linePenalty)return 1;
+  const avg=dl.reduce((s,p)=>s+p.stam,0)/dl.length;
+  const over=Math.max(0,(1-avg)-F.lineFree);
+  return 1-over*F.linePenalty;
+}
+
+/** ティックの頭で全選手のスタミナを確定する(そのティックの間は動かさない)。 */
+function refreshStamina(M,min){
+  for(const T of [M.home,M.away])
+    for(const p of T.players)p.stam=staminaOf(p,min);
 }
 
 /** 出場選手1人。カードに「どの枠か・適性はいくつか・どこに立つか」を添えた形。 */
@@ -45,7 +85,9 @@ function lineup(cards,form){
 /** チームを組む。試合中に変わる値(得点・スタッツ)もここに持たせる。 */
 function buildTeam(cards,form,name,side){
   const { xi, bench }=lineup(cards,form);
-  xi.forEach(p=>{ p.side=side; p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 }; });
+  xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1;
+    p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 }; });
+  bench.forEach(p=>{ p.side=side; p.stam=1; });
   return { players:xi, bench, form, name, side, score:0 };
 }
 
@@ -98,9 +140,9 @@ function nearOf(h){
  * ブロック — **GKの前に守備者が身体を入れる**。シュートの最初の関門。
  * 撃ち抜く側は tec(コースを作る)と atk、止める側は def と pow。
  */
-function resolveBlock(rng,atk,df){
+function resolveBlock(rng,atk,df,D){
   const aSc=(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
-  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*rr(rng);
+  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*rr(rng);
   return dSc>aSc*TUNING.th.block;                          // 守備側が勝てばブロック
 }
 /** 枠に飛ぶか。**技術と距離**で決まる。GKは関与しない。 */
@@ -206,11 +248,11 @@ function matchupDefender(rng,h,x,D){
  *            速さで抜けようとすれば速い守備者が追いつき、
  *            技術で運ぼうとすれば読める守備者が止める
  */
-function resolveChannel(rng,atk,df,ch){
+function resolveChannel(rng,atk,df,ch,D){
   const M=TUNING.matchup;
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
     *ch.risk*TUNING.atk.originK*rr(rng);
-  const dSc=(eff(df,"def")*M.defW+eff(df,ch.stat)*(1-M.defW))*rr(rng);
+  const dSc=(eff(df,"def")*M.defW+eff(df,ch.stat)*(1-M.defW))*lineMul(D)*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }
 
@@ -354,8 +396,9 @@ function applyOrders(M,t){
       const out=T.players[o.out], inc=T.bench[o.in];
       if(!out||!inc||inc.used||M.subs[side]>=TUNING.squad.subMax)continue;
       // 交代: 出る選手の**枠をそのまま引き継ぐ**(位置と適性は枠側の属性なので付け替える)
+      // 入る選手は**万全**で入る(出場時間も関与回数も0から)。これが交代の価値。
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
-        x:out.x, y:out.y, ix:out.ix, side, enter:t.min,
+        x:out.x, y:out.y, ix:out.ix, side, enter:t.min, stam:1,
         stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 } };
       T.players[o.out]=nw; inc.used=true; M.subs[side]++;
       M.events.push({ min:t.min, half:t.half, at:!!t.at, side, type:"sub",
@@ -382,6 +425,7 @@ function stepMatch(M){
       hg:H.score, ag:A.score });
   }
   applyOrders(M,t);                                         // 監督の指示は**ここで**効く
+  refreshStamina(M,t.min);                                  // スタミナはティックの頭で確定する
 
   const push=e=>M.events.push(Object.assign({ min:t.min, half:t.half, at:!!t.at },e));
 
@@ -408,7 +452,7 @@ function stepMatch(M){
     const ch=pickOriginCh(rng,carrier,lastCh);
     const marker=matchupDefender(rng,h,x,D);                // 対応する相手(位置が近いほど)
     carrier.stat.inv++; if(marker)marker.stat.inv++;
-    const ok=marker?resolveChannel(rng,carrier,marker,ch):true;
+    const ok=marker?resolveChannel(rng,carrier,marker,ch,D):true;
     push({ side:T.side, type:step?"link":"origin", step,
       by:carrier.c.id, sub:carrier.sub, ch:ch.id, label:ch.label, kind:ch.kind,
       ok, vs:marker?marker.c.id:null,
@@ -450,7 +494,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth){
 
   // ① ブロック — 打点に近い守備者が身体を入れる
   const blocker=matchupDefender(rng,tg.h,tg.x,D);
-  if(blocker&&resolveBlock(rng,shooter,blocker)){
+  if(blocker&&resolveBlock(rng,shooter,blocker,D)){
     blocker.stat.blocks=(blocker.stat.blocks||0)+1; blocker.stat.inv++;
     addMom(M,D.side,F.block);
     push(Object.assign({ type:"block", vs:blocker.c.id },base));

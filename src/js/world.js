@@ -220,8 +220,7 @@ function bestXI(roster,form){
     if(best)used.add(best.id);
     return best;
   });
-  const rest=roster.filter(c=>!used.has(c.id)).sort((a,b)=>b.ovr-a.ovr);
-  return xi.concat(rest.slice(0,TUNING.squad.bench));
+  return xi.concat(benchOrder(roster.filter(c=>!used.has(c.id))));
 }
 
 /** 使える選手 = 手持ちカード(恒久) + クラブからの貸与(任期中だけ)。 */
@@ -254,10 +253,26 @@ function autoSquad(){
   });
   return xi.concat(pickBench(pool.filter(c=>!used.has(c.id))));
 }
-/** 控えは素の OVR 順に上位を取る。足りなければ null で埋めて枠数は保つ。 */
+/**
+ * 控えの選び方(→docs/03 §3.17)。**ポジションを揃えてから OVR 順**に埋める。
+ * 素のOVR順だけで取ると、GKもDFも居ない控えができあがり、投入したときに
+ * 枠適性0.50の選手が入って**交代が損になる**(実際にそうなった → docs/07 §7.10)。
+ */
+function benchOrder(rest){
+  const pool=rest.slice().sort((a,c)=>c.ovr-a.ovr), out=[], used=new Set();
+  for(const g of POS){                                    // GK/DF/MF/FW を1枚ずつ確保
+    const c=pool.find(x=>!used.has(x.id)&&x.pos===g);
+    if(c){ out.push(c); used.add(c.id); }
+  }
+  for(const c of pool){                                   // 残りはOVR順
+    if(out.length>=TUNING.squad.bench)break;
+    if(!used.has(c.id)){ out.push(c); used.add(c.id); }
+  }
+  return out.slice(0,TUNING.squad.bench);
+}
+/** 控えのIDを並べる。足りなければ null で埋めて枠数は保つ。 */
 function pickBench(rest){
-  const b=rest.slice().sort((a,c)=>c.ovr-a.ovr)
-    .slice(0,TUNING.squad.bench).map(c=>c.id);
+  const b=benchOrder(rest).map(c=>c.id);
   while(b.length<TUNING.squad.bench)b.push(null);
   return b;
 }
