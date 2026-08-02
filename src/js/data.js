@@ -351,7 +351,8 @@ const TUNING={
   //   lineTop/lineBottom  陣形の 13..87 を画面のどこに詰めるか。
   //     **2チームを同じピッチに並べるため**の圧縮。広げたままだと自軍FWが
   //     相手の最終ラインより深く立ち、全陣形が常時オフサイドの絵になる。
-  play:{ lineTop:24.9, lineBottom:93,
+  //   kickTop  再開時(キックオフ/ハーフタイム/得点直後)。**両チームとも自陣に収める**
+  play:{ lineTop:24.9, lineBottom:93, kickTop:53,
          followY:0.38, followX:0.26,
          gkFollow:0.15, dfFollow:0.85, mfFollow:1.00, fwFollow:0.55,
          pushUp:4, dropBack:4, stretch:-0.05, compact:0.09,

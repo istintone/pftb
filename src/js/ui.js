@@ -808,7 +808,7 @@ function matchLine(e,M){
 // 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
 let _M=null;          // 進行中の試合
 let _mTimer=null, _mSpeed=1, _mPaused=false;
-let _mPhase=0, _mLastSide="H", _mBall=[50,50];
+let _mPhase=0, _mLastSide="H", _mBall=[50,50], _mRestart=true;
 let _mCutT=null, _mCutJ=null, _mBallT=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
 
 /**
@@ -823,9 +823,10 @@ let _mCutT=null, _mCutJ=null, _mBallT=null, _mNext=null;  // 揺れの位相 / �
  * 13..87 を lineTop..lineBottom に写して、両ブロックが噛み合うようにする。
  * **ボールも同じ写像を通す**ので、選手とボールがずれない。
  */
-function dispY(y){
+function dispY(y,restart){
   const P=TUNING.play;
-  return P.lineTop+(y-13)*(P.lineBottom-P.lineTop)/74;
+  const top=restart?P.kickTop:P.lineTop;               // 再開時は自陣に収める
+  return top+(y-13)*(P.lineBottom-top)/74;
 }
 /** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
 function toScreen(e,pos){
@@ -834,7 +835,8 @@ function toScreen(e,pos){
   return e.side==="A"?[100-x,100-dy]:[x,dy];
 }
 /** 選手の枠を画面の向きへ直す(アウェイは反転)。縦は詰めて並べる。 */
-const slotXY=(p,side)=>side==="A"?[100-p.x,100-dispY(p.y)]:[p.x,dispY(p.y)];
+const slotXY=(p,side,restart)=>side==="A"
+  ?[100-p.x,100-dispY(p.y,restart)]:[p.x,dispY(p.y,restart)];
 
 /** ピッチに22人を並べる。以後の位置は mLayout が毎イベント計算する。 */
 function mDrawSquads(){
@@ -842,8 +844,9 @@ function mDrawSquads(){
   for(const T of [_M.home,_M.away]){
     const col=clubColor(T.side==="H"?_M.fixture.h:_M.fixture.a);
     T.players.forEach((p,i)=>{
-      const [x,y]=slotXY(p,T.side);
+      const [x,y]=slotXY(p,T.side,true);   // 開始はキックオフ隊形
       html.push('<div class="mp" data-side="'+T.side+'" data-ix="'+i+'"'
+        +' data-rx="'+p.x+'" data-ry="'+p.y+'"'          // 陣形そのままの座標(写像前)
         +' data-x="'+x+'" data-y="'+y+'" data-ph="'+((i*2.4+(T.side==="A"?1.1:0))%6.28).toFixed(2)+'"'
         +' style="left:'+x+'%;top:'+y+'%;background:'+col+'"></div>');
     });
@@ -870,24 +873,29 @@ const followW=r=>r==="GK"?L().gkFollow:r==="DF"?L().dfFollow:r==="MF"?L().mfFoll
  */
 function mLayout(e){
   const P=L();
+  // **再開の局面(キックオフ / ハーフタイム / 得点直後)は、両チームとも自陣にいる**。
+  // 通常の並びのままだと、開始時点で相手陣内に選手が立っていて違和感が出る。
+  if(e.type==="kickoff"||e.type==="halftime"||e.type==="goal"){ _mRestart=true; _mBall=[50,50]; }
+  else if(e.pos)_mRestart=false;
   // 位置を持たないイベント(possession など)では**直前のボール位置を保つ**。
   // 中央に戻すと、攻撃の合間に全員が中央へ吸い寄せられて不自然になる。
-  if(e.pos)_mBall=toScreen(e);
+  if(e.pos&&!_mRestart)_mBall=toScreen(e);
   const [bx,by]=_mBall;
   _mPhase+=P.wanderStep;
   const atkSide=e.side||_mLastSide; if(e.side)_mLastSide=e.side;
 
   for(const T of [_M.home,_M.away]){
     const mine=T.side===atkSide;                       // 攻めている側か
-    const goalY=T.side==="H"?dispY(87):100-dispY(87);  // 自陣ゴールの側(詰めた座標で)
+    const goalY=T.side==="H"?dispY(87,_mRestart):100-dispY(87,_mRestart);  // 自陣ゴールの側
     // ブロックの中心(枠の平均)。ここを基準にボールへ寄せる
-    const ps=T.players.map((p,i)=>({ p, i, xy:slotXY(p,T.side) }));
+    const ps=T.players.map((p,i)=>({ p, i, xy:slotXY(p,T.side,_mRestart) }));
     const cy=ps.reduce((s,o)=>s+o.xy[1],0)/ps.length;
     const cx=ps.reduce((s,o)=>s+o.xy[0],0)/ps.length;
 
     for(const o of ps){
       const el=$("mSlots").querySelector('.mp[data-side="'+T.side+'"][data-ix="'+o.i+'"]');
       if(!el)continue;
+      el.dataset.x=o.xy[0].toFixed(1); el.dataset.y=o.xy[1].toFixed(1);
       let [x,y]=o.xy;
       const r=o.p.role, w=followW(r);
 
@@ -922,6 +930,7 @@ function mLayout(e){
     if(!el)return;
     el.style.left=clamp(bx+ox,4,96)+"%"; el.style.top=clamp(by+oy,8,92)+"%";
   };
+  if(_mRestart)return;                                 // 再開の隊形は崩さない
   if(e.by&&e.pos)at(e.side,e.by,0,0);                  // 持ち手はボールの上
   if(e.vs&&e.pos){                                     // 対応する相手は自陣側から寄せる
     const dSide=e.side==="H"?"A":"H";
@@ -1194,7 +1203,7 @@ function mSkip(){
 /** 試合を始める。ここから先はエンジンが解いたものを再生するだけ。 */
 function startMatch(){
   _M=beginMyMatch();
-  _mBall=[50,50]; _mPhase=0;
+  _mBall=[50,50]; _mPhase=0; _mRestart=true;
   if(!_M){ toast("試合を開始できません"); return; }
   _mSpeed=1; _mPaused=false;
   $("mNameH").textContent=_M.home.name; $("mNameA").textContent=_M.away.name;

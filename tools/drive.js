@@ -157,6 +157,16 @@ const STEPS = [
     ctx.log("  キックオフ演出:", await ctx.js(
       "document.getElementById('mCut').className + ' / ' + "
       + "(document.querySelector('#mCut .cut-hd')||{}).textContent"));
+    // キックオフ時は**両チームとも自陣**にいること
+    ctx.log("  キックオフ隊形:", await ctx.js(`(()=>{
+      const g=s=>[...document.querySelectorAll('#mSlots .mp[data-side="'+s+'"]')].map(e=>+e.dataset.y);
+      const H=g('H'), A=g('A');
+      const hOver=H.filter(y=>y<50).length, aOver=A.filter(y=>y>50).length;
+      if(hOver||aOver)throw new Error('相手陣に立っている: HOME '+hOver+'人 / AWAY '+aOver+'人');
+      return 'HOME y='+Math.min(...H).toFixed(0)+'〜'+Math.max(...H).toFixed(0)
+        +' / AWAY y='+Math.min(...A).toFixed(0)+'〜'+Math.max(...A).toFixed(0)
+        +' (中央線は50%。どちらも越えていない)';
+    })()`));
     await ctx.shot("07a-cutin-kickoff");
     await ctx.wait(9000);
     ctx.log("  カットイン:", await ctx.js("window.__cutN||0"), "回");
