@@ -811,13 +811,30 @@ let _mTimer=null, _mSpeed=1, _mPaused=false;
 let _mPhase=0, _mLastSide="H", _mBall=[50,50];
 let _mCutT=null, _mCutJ=null, _mBallT=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
 
+/**
+ * **陣形の縦を詰めて画面に並べる**(→docs/06 §6.17)。
+ *
+ * 陣形の座標(13=最前線 .. 87=自陣ゴール前)は**ピッチいっぱいに広げた1チーム分**の
+ * 立ち位置。編成画面は1チームしか出さないのでそのままでよいが、
+ * 試合では2チームを同じピッチに並べるため、そのままだと両陣形が重なり、
+ * **自軍FW(13)が相手の最終ライン(100-73=27)より深い位置**に立ってしまう。
+ * = 全16陣形で常時オフサイドの絵になる(実際にそうなった)。
+ *
+ * 13..87 を lineTop..lineBottom に写して、両ブロックが噛み合うようにする。
+ * **ボールも同じ写像を通す**ので、選手とボールがずれない。
+ */
+function dispY(y){
+  const P=TUNING.play;
+  return P.lineTop+(y-13)*(P.lineBottom-P.lineTop)/74;
+}
 /** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
 function toScreen(e,pos){
   const [x,y]=pos||e.pos||[50,50];
-  return e.side==="A"?[100-x,100-y]:[x,y];
+  const dy=dispY(y);
+  return e.side==="A"?[100-x,100-dy]:[x,dy];
 }
-/** 選手の枠を画面の向きへ直す(アウェイは反転)。 */
-const slotXY=(p,side)=>side==="A"?[100-p.x,100-p.y]:[p.x,p.y];
+/** 選手の枠を画面の向きへ直す(アウェイは反転)。縦は詰めて並べる。 */
+const slotXY=(p,side)=>side==="A"?[100-p.x,100-dispY(p.y)]:[p.x,dispY(p.y)];
 
 /** ピッチに22人を並べる。以後の位置は mLayout が毎イベント計算する。 */
 function mDrawSquads(){
@@ -862,7 +879,7 @@ function mLayout(e){
 
   for(const T of [_M.home,_M.away]){
     const mine=T.side===atkSide;                       // 攻めている側か
-    const goalY=T.side==="H"?87:13;                    // 自陣ゴールの側
+    const goalY=T.side==="H"?dispY(87):100-dispY(87);  // 自陣ゴールの側(詰めた座標で)
     // ブロックの中心(枠の平均)。ここを基準にボールへ寄せる
     const ps=T.players.map((p,i)=>({ p, i, xy:slotXY(p,T.side) }));
     const cy=ps.reduce((s,o)=>s+o.xy[1],0)/ps.length;

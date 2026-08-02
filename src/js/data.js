@@ -348,7 +348,11 @@ const TUNING={
   //   wander     全員のゆっくりした揺れ(完全に止めない)
   //   maxDevY/X  **枠から離れられる上限**。無いと全員がボールに吸い寄せられて
   //              陣形が消え、団子になる
-  play:{ followY:0.38, followX:0.26,
+  //   lineTop/lineBottom  陣形の 13..87 を画面のどこに詰めるか。
+  //     **2チームを同じピッチに並べるため**の圧縮。広げたままだと自軍FWが
+  //     相手の最終ラインより深く立ち、全陣形が常時オフサイドの絵になる。
+  play:{ lineTop:24.9, lineBottom:93,
+         followY:0.38, followX:0.26,
          gkFollow:0.15, dfFollow:0.85, mfFollow:1.00, fwFollow:0.55,
          pushUp:4, dropBack:4, stretch:-0.05, compact:0.09,
          maxDevY:13, maxDevX:11,

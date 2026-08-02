@@ -215,7 +215,11 @@ const STEPS = [
       const H=g('H'),A=g('A');
       // GK は全陣形で枠0。HOMEは下(y大)、AWAYは上(y小)に立つはず
       const gk=a=>+a.find(e=>e.dataset.ix==='0').dataset.y;
-      return 'H '+H.length+'人 GK y='+gk(H)+' / A '+A.length+'人 GK y='+gk(A)
+      // **自軍FWが相手の最終ラインより深くない**こと(常時オフサイドの絵にならない)
+      const line=(a,role)=>a.map(e=>+e.dataset.y);
+      const fwH=Math.min(...H.filter(e=>+e.dataset.y<50).map(e=>+e.dataset.y));
+      const dfA=Math.min(...A.map(e=>+e.dataset.y));
+      return 'H '+H.length+'人 GK y='+gk(H).toFixed(0)+' / A '+A.length+'人 GK y='+gk(A).toFixed(0)
         +' / 別の色?'+(H[0].style.background!==A[0].style.background);
     })()`));
     // 選手が枠に張り付かず、かつ陣形が崩壊していないこと(演出の要 → docs/06 §6.18)
@@ -234,6 +238,19 @@ const STEPS = [
       if(moved<es.length*0.7)throw new Error('選手が固まっている: 動いたのは'+moved+'人');
       return moved+'/'+es.length+'人が動いている / ボールに寄った '+far
         +'人 / 最大 '+maxd.toFixed(0)+'%';
+    })()`));
+    // オフサイドの絵にならないこと: 自軍の最前線が相手の最終ラインより手前にいる
+    ctx.log("  ライン:", await ctx.js(`(()=>{
+      const g=s=>[...document.querySelectorAll('#mSlots .mp[data-side="'+s+'"]')]
+        .map(e=>({ix:+e.dataset.ix, y:+e.dataset.y}));
+      const H=g('H'), A=g('A'), form=FORMATIONS[_M.form||S.form];
+      const roleOf=ix=>subGroup(FORMATIONS[_M.home.form][ix][0]);
+      const hFW=Math.min(...H.filter(p=>subGroup(FORMATIONS[_M.home.form][p.ix][0])==='FW').map(p=>p.y));
+      const aDF=Math.max(...A.filter(p=>subGroup(FORMATIONS[_M.away.form][p.ix][0])==='DF').map(p=>p.y));
+      const aDFline=Math.min(...A.filter(p=>subGroup(FORMATIONS[_M.away.form][p.ix][0])==='DF').map(p=>p.y));
+      const ok=hFW>aDFline;
+      if(!ok)throw new Error('自軍FW('+hFW.toFixed(0)+')が相手の最終ライン('+aDFline.toFixed(0)+')より深い');
+      return 'HOME最前線 y='+hFW.toFixed(0)+' > AWAY最終ライン y='+aDFline.toFixed(0)+' (オフサイドの絵にならない)';
     })()`));
     await ctx.shot("07b-match");
     // スキップ → 結果へ
