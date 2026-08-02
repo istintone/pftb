@@ -14,7 +14,7 @@ function runSeason(hand) {
   // ---------- 打ち手を選ばないと試合に進めない ----------
   await E.newGame();
   E.getS().coach = "検証";
-  E.startTenure("nordia-8");
+  E.startTenure("sam-8");
   const node0 = E.getS().career.node;
   assert.strictEqual(E.playMatchday(), null, "打ち手が未選択なら playMatchday は進まない");
   assert.strictEqual(E.getS().career.node, node0, "節も進んでいない");
@@ -38,7 +38,7 @@ function runSeason(hand) {
   E.getS().coach = "検証";
   let clubs = 0;
   for (let i = 0; i < 3; i++) {
-    E.startTenure("nordia-" + (1 + i));
+    E.startTenure("sam-" + (1 + i));
     clubs++;
     runSeason();
     E.getS().world.season++;
@@ -58,7 +58,7 @@ function runSeason(hand) {
   // 96節ちょうどで打ち切らず、進行中のリーグが終わってから判定される。
   await E.newGame();
   E.getS().coach = "検証";
-  E.startTenure("nordia-8");
+  E.startTenure("sam-8");
   E.getS().career.node = E.TUNING.tenure.limit - 3;   // 残り3節の状態にする
   E.getS().club.expect = 8;
   let guard = 0;
@@ -94,7 +94,7 @@ function runSeason(hand) {
   // ---------- 節は「打ち手 → 出場する大会」の順で決まる ----------
   await E.newGame();
   E.getS().coach = "検証";
-  E.startTenure("nordia-8");
+  E.startTenure("sam-8");
   assert.ok(E.compsAvailable().includes("league"), "リーグの日程が残っていれば選べる");
   assert.strictEqual(E.pickComp("cup"), false, "未実装のカップは選べない");
   E.pickHand("train");

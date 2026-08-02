@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=3;
+const SAVE_VER=4;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -125,6 +125,26 @@ function migrate(){
     const coach=S.coach||"";
     S=defaultState();
     S.coach=coach;
+  }
+  // v3 → v4: 架空の4カ国を**実在の6リーグ + 実在の16国籍**に作り替えた
+  // (→docs/03 §3.8 / §3.15)。旧クラブID("nordia-8"等)も旧国籍("garia"等)も存在しない。
+  //
+  //   ・**手持ちカードは残す**。プレイヤーの資産なので捨てない(→§3.2.2)。
+  //     国籍だけ、旧4カ国 → 近い実在国籍へ読み替える。
+  //   ・クラブは消滅するので任期を畳み、就任先の選択からやり直してもらう。
+  //     借りていた選手はもともと退任時に返すものなので、ここで手放しても筋は通る。
+  if(S.v<4){
+    const NAT={ garia:"fra", iberia:"esp", estra:"cro", nordia:"den" };
+    const fix=c=>{ if(c&&NAT[c.nation])c.nation=NAT[c.nation]; return c; };
+    const keep={
+      coach:S.coach||"",
+      player:S.player?{ ...S.player, coll:(S.player.coll||[]).map(fix) }:null,
+    };
+    S=defaultState();
+    S.coach=keep.coach;
+    if(keep.player)S.player=keep.player;
+    // 世界とクラブは作り直し。名声は残るので、届く範囲のクラブから選び直せる。
+    S.world.seed=(Date.now()^Math.floor(Math.random()*0xffffffff))>>>0;
   }
   S.v=SAVE_VER;
 }

@@ -1391,6 +1391,30 @@ function helpFor(id){
   return h==null?null:(typeof h==="function"?h():h);
 }
 
+// --- 国籍(実在の16か国 → docs/03 §3.15) ---
+// **クラブの所属リーグとは別物**。選手はどのリーグのクラブにも他国から集まる。
+// 実在選手カード(WORLD CLASS/LEGENDS)との国籍シナジーを載せる土台でもある。
+const NATIONS=[
+  { id:"eng",  name:"イングランド",      abbr:"ENG" },
+  { id:"esp",  name:"スペイン",        abbr:"ESP" },
+  { id:"ita",  name:"イタリア",        abbr:"ITA" },
+  { id:"fra",  name:"フランス",        abbr:"FRA" },
+  { id:"ger",  name:"ドイツ",         abbr:"GER" },
+  { id:"por",  name:"ポルトガル",       abbr:"POR" },
+  { id:"ned",  name:"オランダ",        abbr:"NED" },
+  { id:"bel",  name:"ベルギー",        abbr:"BEL" },
+  { id:"cro",  name:"クロアチア",       abbr:"CRO" },
+  { id:"den",  name:"デンマーク",       abbr:"DEN" },
+  { id:"pol",  name:"ポーランド",       abbr:"POL" },
+  { id:"bra",  name:"ブラジル",        abbr:"BRA" },
+  { id:"arg",  name:"アルゼンチン",      abbr:"ARG" },
+  { id:"uru",  name:"ウルグアイ",       abbr:"URU" },
+  { id:"sen",  name:"セネガル",        abbr:"SEN" },
+  { id:"nga",  name:"ナイジェリア",      abbr:"NGA" },
+];
+const nationById=id=>NATIONS.find(n=>n.id===id);
+const NATION_IDS=NATIONS.map(n=>n.id);
+
 // --- フォーメーション ---
 // 各枠は [細分ポジション, ピッチ上の位置(%)]。DECK画面の配置と編成の妥当性判定に使う。
 const FORMATIONS={
@@ -1440,37 +1464,42 @@ const TUNING={
 
 // 名前の素材。国ごとに雰囲気を変えるため、姓のプールを国に紐づける。
 const GIVEN=["A.","B.","C.","D.","E.","F.","G.","H.","J.","K.","L.","M.","N.","O.","P.","R.","S.","T.","V.","Y."];
-// 姓は国ごとに48個。1クラブ16人は**この中から重複なしで配る**(makeRoster)ので、
-// 同じクラブに同姓は並ばない。世界全体では 32クラブ×16人=512人がこの4×48を共有するため、
-// 別クラブ同士で同姓が出ることはある(それは自然なのでよしとする)。
+// 姓は**国籍ごと**に20個(計320個)。1クラブ16人は複数の国籍から集まるので、
+// makeRoster が姓が重ならないように配る(同じクラブに同姓が並ぶと見分けが付かない)。
 const FAMILY={
-  nordia:["ハルヴォルセン","ベリストローム","リンドクヴィスト","バッカー","エリクソン","ソルベリ","ノルドヴァル","ハーゲン",
-          "オルセン","ダールベリ","フォシュベリ","ニルソン","ヴィークランド","サンドバリ","ユーハンソン","レンベリ",
-          "アスプルンド","ヘルガソン","ブロム","シェーグレン","オーケルルンド","ヴェスターグレン","ホルムベリ","ラーション",
-          "グスタフソン","スヴェンソン","ダニエルソン","ノルドストレム","リンドホルム","エングストロム","ボリエソン","ハンマル",
-          "シェルベリ","ストランドベリ","オーデガード","ソールハイム","ビョルンスタ","ヴィークネス","ヨハンセン","クリステンセン",
-          "モーテンセン","スコウ","ヴィンター","オルスタ","ランネル","フリーベリ","ヘグルンド","トールヴァルセン"],
-  iberia:["シルヴェイラ","ドゥアルテ","コスタ","アルメイダ","ロブレド","ミランダ","ベルナル","キンタナ",
-          "アギレラ","カルヴァーリョ","フェレイラ","エスコバル","バリオス","ソラーノ","メンドーサ","パチェコ",
-          "ヴィエイラ","サンチェス","ナヴァロ","レイス","オルテガ","カブレラ","サラサール","モンテイロ",
-          "レゼンデ","バティスタ","セルヴァンテス","アランダ","ペレイラ","ヒメネス","カステリャーノス","オソリオ",
-          "ヴァルガス","ロサーノ","デルガード","フエンテス","アルバラード","ノゲイラ","テイシェイラ","マガリャンイス",
-          "ソウザ","ピニェイロ","ブラガンサ","アセベド","サモラ","ベナビデス","エチェバリア","アリアス"],
-  estra: ["コワルスキ","リッチ","オセイ","ノヴァク","ヴァレンタ","マルティネク","ブラホ","シュミット",
-          "ホルヴァート","ヴォイタ","ザヤツ","ペトロフ","ドヴォルザーク","クラウス","バルトシュ","マズル",
-          "ヤンコフ","ステファノフ","ルカーチ","ネメシュ","プロハースカ","チェルニー","セドラーチェク","フサーク",
-          "マレク","ヴラチル","ズィーマ","コナル","ヴィシニェフスキ","ヴォイチェホフスキ","ヤブウォンスキ","ドンブロフスキ",
-          "ザレフスキ","ミハイロフ","ディミトロフ","ゲオルギエフ","イリエフ","サボー","トート","ヴァルガ",
-          "キシュ","ファルカシュ","バログ","オラー","ラドヴァノヴィチ","ミルコヴィチ","ヨヴァノヴィチ","パヴロヴィチ"],
-  garia: ["ヴァントロワ","ヴァンドーレン","ルフェーヴル","モロー","デュラン","ボネ","カロン","ドラクロワ",
-          "ベルナール","フォンテーヌ","ジラール","マルソー","ロシェ","テヴナン","ヴィアル","オービュッソン",
-          "クレマン","ダルモン","ペリエ","ラフォン","メルシエ","ギヨーム","シャルパンティエ","ブリアン",
-          "ヴェルニエ","コランタン","レニエ","ボードワン","フルニエ","ラガルド","ミショー","ドリュオン",
-          "セナール","プリュヴォ","ヴァリエ","ノエル","デュフール","ブランシャール","カリエール","ロンサール",
-          "エスクデ","ジョベール","ティボー","ヴェルディエ","オリオール","ラルシェ","ボーモン","シャステル"],
+  eng:  ["スミス","ジョーンズ","テイラー","ブラウン","ウィルソン","デイヴィス","エヴァンス","トンプソン","ライト","ウォーカー","ホワイト","グリーン","ハリス","クラーク",
+         "ベイカー","モーガン","フォスター","ケリー","ヒューズ","ベネット"],
+  esp:  ["ガルシア","フェルナンデス","ロペス","モラレス","ヒメネス","ナヴァロ","セラーノ","カステーヨ","オルテガ","アギレラ","ロブレド","キンタナ","ベルナル","エスコバル",
+         "バリオス","サモラ","アセベド","ベナビデス","アランダ","サラサール"],
+  ita:  ["ロッシ","ベルナルディ","コロンボ","リッチ","マリーニ","グレコ","ロンバルディ","バルビエリ","カターニア","フェラーラ","モレッティ","ガッリ","サルヴィ","デ・ルーカ",
+         "パガーノ","ヴィターリ","レオーネ","トスカーノ","オルランディ","ベネデッティ"],
+  fra:  ["ルフェーヴル","モロー","デュラン","ボネ","ドラクロワ","フォンテーヌ","ジラール","マルソー","ロシェ","テヴナン","ヴィアル","クレマン","ダルモン","ペリエ","ラフォン",
+         "メルシエ","ギヨーム","ブリアン","フルニエ","ヴェルディエ"],
+  ger:  ["ミュラー","シュミット","ヴェーバー","ワグナー","ベッカー","ホフマン","シェーファー","クラウス","リヒター","ケーラー","ブラント","ノイマン","ツィマーマン","ハートマン",
+         "フランケ","ゼーガー","キルシュ","ラインハルト","シュトルツ","フォークト"],
+  por:  ["シルヴェイラ","ドゥアルテ","コスタ","アルメイダ","カルヴァーリョ","フェレイラ","ヴィエイラ","レイス","モンテイロ","ノゲイラ","テイシェイラ","ピニェイロ","ブラガンサ",
+         "マガリャンイス","レゼンデ","フォンセカ","アゼヴェド","マチャド","サントス","ロウレンソ"],
+  ned:  ["ヤンセン","バッカー","フィッサー","スミット","メイヤー","デ・グラーフ","ダイクストラ","ボス","フルート","ペータース","ホーフマン","ブリンク","クイパー","ヴェルメール",
+         "スホルテン","リンデルス","オーステルハウス","ヴァンダール","コック","ムルダー"],
+  bel:  ["ヘンドリクス","ウィレムス","クレイス","ドゥ・スメット","マールテンス","ヴァンホーヴェ","デクレルク","ヴェルビースト","ヴァンデンベルフ","デヴォス","ヤコブス","セーガース",
+         "ヴァンダム","ラムベール","デュポン","ジルソン","レイナールト","スタッセン","ボダール","ティレマン"],
+  cro:  ["ホルヴァート","マルコヴィチ","ペトロヴィチ","ヨヴァノヴィチ","ラドヴァノヴィチ","ミルコヴィチ","パヴロヴィチ","ヴコヴィチ","トミッチ","バビッチ","クネジェヴィチ","ラキッチ",
+         "ザヤツ","ノヴァク","マティッチ","ボジッチ","グルビッチ","シムニッチ","ユリッチ","ヴィドヴィチ"],
+  den:  ["イェンセン","ニールセン","ハンセン","ペダーセン","アンデルセン","クリステンセン","ラーセン","セーレンセン","ラスムセン","ヨルゲンセン","モーテンセン","オルセン",
+         "トムセン","ポールセン","スコウ","ヴィンター","ホルム","ダール","ビェア","リンド"],
+  pol:  ["コヴァルスキ","ヴィシニェフスキ","ヴォイチェホフスキ","ヤブウォンスキ","ドンブロフスキ","ザレフスキ","カミンスキ","シマンスキ","ヴォズニアク","グラボフスキ","パヴウォフスキ",
+         "ミハラク","ジェリンスキ","ソビエスキ","マズル","バルトシュ","クルパ","ヤシンスキ","レシュチンスキ","ステファンスキ"],
+  bra:  ["オリヴェイラ","ペレイラ","リマ","カルドーゾ","バルボーザ","ロシャ","メンデス","ラモス","モウラ","バチスタ","カブラル","ゴメス","アラウージョ","フレイタス",
+         "タヴァレス","ヴァスコンセロス","シケイラ","ナシメント","ジェズス","コエーリョ"],
+  arg:  ["ゴンサレス","ロドリゲス","マルティネス","ペレス","ソーサ","ロメロ","アコスタ","ベニテス","ドミンゲス","オヘダ","カブレラ","メディナ","レイバ","ヴィラルバ","ソリス",
+         "パラシオス","カンポス","イバラ","ルハン","ザラテ"],
+  uru:  ["バレラ","オリヴェラ","コレア","アリアス","カステージョ","セバージョス","ウルタド","ロサーノ","デルガード","ファリアス","ピリス","レギサモン","オラーサ","ビニャス",
+         "サラビア","カルドナ","ベルトラン","エチェバリア","キロス","マルドナド"],
+  sen:  ["ディウフ","ンドイエ","サール","ファル","シセ","ゲイ","ンディアイエ","ソウ","バ","カマラ","トゥーレ","ダンファ","ゲイエ","ムバイエ","サンゴ","ジャロ","ボー",
+         "セック","タル","ンジャイ"],
+  nga:  ["オコンクウォ","アデバヨ","オビ","エゼ","チュクウ","ンワチュク","オラデレ","アビオラ","イケチュクウ","オグ","バログン","アデクンレ","オニエカ","エメカ","ウチェ",
+         "オルワセユン","アキンヨミ","オセイ","オカフォー","ンナジ"],
 };
-
-const NATIONS=Object.keys(FAMILY);
 
 // 6桁のカードID。生成元(クラブ/パック)に依らず一意になるよう uid を回す。
 let uid=1;
@@ -1553,8 +1582,9 @@ function makeCard(rng,pos,opts={}){
   const rarity=opts.rarity||rollRarity(rng);
   const [lo,hi]=RARITY[rarity].ovr;
   const ovr=clamp(rri(rng,lo,hi)+(opts.ovrBias||0),STAT_KEYS.length,OVR_MAX);
-  // 自国籍が中心だが、3割ほどは外国籍にして顔ぶれに幅を出す
-  const nation=(opts.nation&&rng()<0.7)?opts.nation:rpick(rng,NATIONS);
+  // 国籍は呼び出し側が決める(makeRoster がリーグの構成比から配る)。
+  // 単体で作るときだけ、ここで世界中から1つ引く。
+  const nation=opts.nation||rpick(rng,NATION_IDS);
   const st=statsFor(rng,pos,ovr);
   const pool=SKILLS[pos];
   const n=RARITY[rarity].skills;
@@ -1577,13 +1607,30 @@ function makeCard(rng,pos,opts={}){
 /** プライマリのサブポジション(表示の既定)。 */
 const primarySub=c=>c.subs[0];
 
-/** 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。 */
+/**
+ * 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。
+ *   opts.nations … 国籍の抽選箱(重み付きで展開済みのID配列 → world.js の nationBox)。
+ *                  省略すると世界中から一様に引く。
+ * **姓はロスター全体で重複させない**。同じクラブに同姓が並ぶと編成画面で見分けが付かない。
+ * 国籍が混ざるので姓のプールも混ざる。埋まらなければ他の国籍から借りてでも重複を避ける。
+ */
 function makeRoster(rng,opts={}){
   const plan=["GK","GK","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];
-  // 姓は**重複なしで配る**。同じクラブに同姓が並ぶと編成画面で見分けが付かない
-  // (16人 < 姓48個 なので必ず足りる)。
-  const fam=rshuffle(rng,FAMILY[opts.nation||NATIONS[0]]);
-  return plan.map((pos,i)=>makeCard(rng,pos,{ ...opts, family:fam[i] }));
+  const box=opts.nations&&opts.nations.length?opts.nations:NATION_IDS;
+  const bags={};                                  // 国籍ごとの姓の袋(引いたら減る)
+  const used=new Set();
+  const takeFamily=nat=>{
+    for(const id of [nat,...rshuffle(rng,NATION_IDS)]){   // 尽きたら他国から借りる
+      if(!bags[id])bags[id]=rshuffle(rng,FAMILY[id]);
+      const f=bags[id].find(x=>!used.has(x));
+      if(f){ used.add(f); return f; }
+    }
+    return null;                                  // 320個あるので実際には起きない
+  };
+  return plan.map(pos=>{
+    const nation=rpick(rng,box);
+    return makeCard(rng,pos,{ ...opts, nation, family:takeFamily(nation) });
+  });
 }
 
 /** カードの表示用レア度ラベル。 */
@@ -1642,7 +1689,7 @@ const SIGNATURES=[
   {
     id:"ronaldo", art:"ronaldo", rarity:"WC",
     name:"C. ロナウド", short:"ロナウド",
-    club:"マンチェスター・レッズ", nation:"garia",
+    club:"マンチェスター・レッズ", nation:"por",
     pos:"FW", subs:["RWG","ST"], age:23,
     atk:19, def:6, pow:18, tec:18, spd:20, sta:16,   // OVR = 97
     skills:["ドリブル突破","カットイン","決定力"],
@@ -1674,40 +1721,75 @@ const signatureCards=()=>SIGNATURES.map(makeSignature);
 // クラブの選手はセーブに持たない。world.seed とクラブIDから毎回同じ内容を再生成する
 // (→ data.js の mulberry32)。セーブが軽く、同じキャリアなら何度開いても同じ顔ぶれになる。
 
-// --- 国(格 tier が高いほど上位リーグ。キャリアの階段になる) ---
-const COUNTRIES=[
-  { id:"garia",  name:"ガリア",     en:"GARIA",  abbr:"GAR", tier:4, style:"技巧",   money:1.00 },
-  { id:"iberia", name:"イベリア",   en:"IBERIA", abbr:"IBE", tier:3, style:"攻撃的", money:0.82 },
-  { id:"estra",  name:"エストラ",   en:"ESTRA",  abbr:"EST", tier:2, style:"堅守",   money:0.66 },
-  { id:"nordia", name:"ノルディア", en:"NORDIA", abbr:"NOR", tier:1, style:"走力",   money:0.50 },
+// --- リーグ(実在の6リーグを想定 → docs/03 §3.8) ---
+// tier が高いほど上位リーグで、そのままキャリアの階段になる。
+// **選手の国籍(data.js の NATIONS)とは別物**。リーグは「クラブがどこで戦うか」、
+// 国籍は「選手がどこの出身か」を表す。
+//   home/homeW/near … そのリーグに集まる国籍の構成比(nationBox で抽選箱にする)
+const LEAGUES=[
+  { id:"eng", name:"プレミア",          country:"イングランド",        abbr:"ENG", tier:6, style:"強度",    money:1.00,
+    home:"eng", homeW:30, near:["fra","ned","bel","por"] },
+  { id:"esp", name:"ラ・リーガ",         country:"スペイン",          abbr:"ESP", tier:5, style:"技巧",    money:0.92,
+    home:"esp", homeW:45, near:["por","arg","bra","uru"] },
+  { id:"ita", name:"セリエ",           country:"イタリア",          abbr:"ITA", tier:4, style:"堅守",    money:0.82,
+    home:"ita", homeW:42, near:["arg","bra","fra","cro"] },
+  { id:"ger", name:"ブンデス",          country:"ドイツ",           abbr:"GER", tier:3, style:"組織",    money:0.76,
+    home:"ger", homeW:55, near:["ned","den","bel","pol"] },
+  { id:"fra", name:"リーグアン",         country:"フランス",          abbr:"FRA", tier:2, style:"個",     money:0.66,
+    home:"fra", homeW:45, near:["sen","bel","nga","por"] },
+  { id:"sam", name:"カンピオナート",       country:"南米",            abbr:"SAM", tier:1, style:"創造",    money:0.50,
+    home:"bra", homeW:75, near:["arg","uru","por"] },
 ];
-const countryById=id=>COUNTRIES.find(c=>c.id===id);
+const leagueById=id=>LEAGUES.find(l=>l.id===id);
 
-// --- クラブ(各国8クラブ = 計32)。rank 1 が国内最上位。 ---
+/**
+ * リーグごとの国籍の抽選箱。自国が主体で、近い国が続き、残りは世界中から少しずつ。
+ * プレミアは自国比率が低く(homeW 30)、カンピオナートは高い(75)。
+ */
+function nationBox(league){
+  const box=[];
+  for(let i=0;i<league.homeW;i++)box.push(league.home);
+  league.near.forEach(n=>{ for(let i=0;i<10;i++)box.push(n); });
+  NATION_IDS.forEach(n=>{
+    if(n===league.home||league.near.includes(n))return;
+    for(let i=0;i<3;i++)box.push(n);
+  });
+  return box;
+}
+
+// --- クラブ(各リーグ8クラブ = 計48)。rank 1 がリーグ内最上位。
+// 実在クラブが元ネタと分かる程度に改変した名前を使う(→docs/03 §3.13 の商標方針)。
 const CLUB_NAMES={
-  garia: ["リオーネ・カルチョ","AC ソレンヌ","パラディン・ガリア","オリンピク・ヴェール","FCムーラン","レアル・カロン","US ボネ","スタッド・デュラン"],
-  iberia:["カサブランカ・ユニオン","CFミランダ","アトレティコ・ロブレド","デポルティボ・キンタナ","SDベルナル","CDアルメイダ","ラシン・コスタ","UDドゥアルテ"],
-  estra: ["メリディアン・アスレチック","FKノヴァク","SKヴァレンタ","ディナモ・ブラホ","FCシュミット","MTKマルティネク","スパルタ・コワル","AC リッチ"],
-  nordia:["ノルフィエルFC","ソルヴィク・ユナイテッド","IFベリストローム","ハーゲンBK","FKソルベリ","ノルドヴァルIF","エリクソンFC","BKリンド"],
+  eng:   ["マンチェスター・レッズ","マンチェスター・スカイ","ロンドン・ガナーズ","リヴァプール・コップ","ロンドン・ブルーズ","ノースロンドン・スパーズ","タインサイド・マグパイズ",
+          "バーミンガム・ヴィランズ"],
+  esp:   ["マドリード・ブランコス","カタルーニャ・ブラウグラナ","マドリード・コルチョネロス","セビージャ・ネルビオン","バレンシア・チェ","ビルバオ・レオネス","サンセバスティアン・レアレス",
+          "アンダルシア・ベティコス"],
+  ita:   ["トリノ・ビアンコネーリ","ミラノ・ロッソネーリ","ミラノ・ネラッズーリ","ナポリ・パルテノペイ","ローマ・ジャッロロッシ","ローマ・チェレスティ","フィレンツェ・ヴィオラ",
+          "ベルガモ・オロビチ"],
+  ger:   ["ミュンヘン・ローテン","ドルトムント・シュヴァルツゲルプ","レヴァークーゼン・ヴェルクセルフ","ライプツィヒ・ローテブレン","ゲルゼンキルヒェン・クナッペン","フランクフルト・アドラー",
+          "シュトゥットガルト・ブルステン","ブレーメン・グリューンヴァイス"],
+  fra:   ["パリ・キャピタル","マルセイユ・オリンピアン","リヨン・ゴーヌ","モナコ・ルージュブラン","リール・ドーグ","レンヌ・ルージュノワール","ニース・エーグロン","ナント・カナリ"],
+  sam:   ["リオ・ルブロネグロ","サンパウロ・ヴェルダン","ブエノスアイレス・ボンボネーラ","ブエノスアイレス・ミジョナリオス","サンパウロ・チマォン","サントス・ペイシェ","モンテビデオ・カルボネーロ",
+          "メデジン・ベルデ"],
 };
 const CLUBS=[];
-COUNTRIES.forEach(co=>{
-  CLUB_NAMES[co.id].forEach((name,i)=>{
+LEAGUES.forEach(lg=>{
+  CLUB_NAMES[lg.id].forEach((name,i)=>{
     CLUBS.push({
-      id:co.id+"-"+(i+1), name, country:co.id, rank:i+1,
-      abbr:(co.abbr+(i+1)),
-      // クラブの格(1..10)。国の格とクラブ順位から決める。就任先選びの目安になる。
-      grade:clamp(Math.round(co.tier*2.2+(8-i)*0.55),1,10),
+      id:lg.id+"-"+(i+1), name, league:lg.id, rank:i+1,
+      abbr:(lg.abbr+(i+1)),
+      // クラブの格(1..10)。リーグの格とクラブ順位から決める。就任先選びの目安になる。
+      grade:clamp(Math.round(lg.tier*1.5+(8-i)*0.55),1,10),
     });
   });
 });
 const clubById=id=>CLUBS.find(c=>c.id===id);
-const clubsOf=country=>CLUBS.filter(c=>c.country===country);
+const clubsOf=leagueId=>CLUBS.filter(c=>c.league===leagueId);
 
-/** クラブの戦力水準(生成される選手のOVR補正)。国の格 × クラブ順位。 */
+/** クラブの戦力水準(生成される選手のOVR補正)。リーグの格 × クラブ順位。 */
 function clubBias(club){
-  const co=countryById(club.country);
-  return Math.round((co.tier-2.5)*4 + (4.5-club.rank)*2.2);
+  const lg=leagueById(club.league);
+  return Math.round((lg.tier-3.5)*2.7 + (4.5-club.rank)*2.2);
 }
 
 /** クラブの所属選手を決定的に再生成する(貸与される戦力・CPUの戦力の両方に使う)。 */
@@ -1715,7 +1797,8 @@ function clubRoster(seed,clubId){
   const club=clubById(clubId);
   const rng=mulberry32((seed^hashStr(clubId))>>>0);
   const saveUid=uid; uid=1000000+(hashStr(clubId)%900000);   // クラブ選手のIDは別空間に置く
-  const roster=makeRoster(rng,{ club:club.name, nation:club.country, ovrBias:clubBias(club) });
+  const roster=makeRoster(rng,{ club:club.name, ovrBias:clubBias(club),
+    nations:nationBox(leagueById(club.league)) });
   uid=saveUid;
   return roster;
 }
@@ -1784,7 +1867,7 @@ function applyResult(table,h,a,hg,ag){
  * 「あなたほどの陣容なら勝って当然だ」という圧がかかるようにする。
  */
 function expectedRank(seed,clubId,squadPow){
-  const league=clubsOf(clubById(clubId).country).map(c=>c.id);
+  const league=clubsOf(clubById(clubId).league).map(c=>c.id);
   const powers=league.map(id=>({ id, p:clubPower(seed,id) }));
   const mine=powers.find(p=>p.id===clubId);
   const blended=mine.p*(1-TUNING.expect.squadWeight)+squadPow*TUNING.expect.squadWeight;
@@ -1797,19 +1880,19 @@ function expectedRank(seed,clubId,squadPow){
  *  末尾の -560 は「キャリア開始時点で最下位国の下位4クラブが選べる」ようにするための下駄。
  *  最初から選択肢がないと就任がただの通過儀礼になるため。 */
 function requiredFame(club){
-  const co=countryById(club.country);
-  return Math.max(0,Math.round((co.tier-1)*1200+(8-club.rank)*180-560));
+  const lg=leagueById(club.league);
+  return Math.max(0,Math.round((lg.tier-1)*1200+(8-club.rank)*180-560));
 }
 const offersFor=fame=>CLUBS.filter(c=>requiredFame(c)<=fame);
 
 /** 新しい任期を開始する(就任)。S.club / S.world をこのクラブ用に組み直す。 */
 function startTenure(clubId){
   const seed=S.world.seed;
-  const league=clubsOf(clubById(clubId).country).map(c=>c.id);
+  const league=clubsOf(clubById(clubId).league).map(c=>c.id);
   const rng=mulberry32((seed^hashStr(clubId+":"+S.world.season))>>>0);
   S.club={
     id:clubId,
-    coins:Math.round(3000*countryById(clubById(clubId).country).money),
+    coins:Math.round(3000*leagueById(clubById(clubId).league).money),
     fac:{ training:0, medical:0, stadium:0, scouting:0 },   // 施設(第4段で使う)
     exp:0,                                                   // チーム熟練度(→§3.7)
     eval:TUNING.eval.start,                                  // 会長の評価
@@ -2053,7 +2136,7 @@ function resolveMatch(home,away,rng){
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=3;
+const SAVE_VER=4;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -2176,6 +2259,26 @@ function migrate(){
     const coach=S.coach||"";
     S=defaultState();
     S.coach=coach;
+  }
+  // v3 → v4: 架空の4カ国を**実在の6リーグ + 実在の16国籍**に作り替えた
+  // (→docs/03 §3.8 / §3.15)。旧クラブID("nordia-8"等)も旧国籍("garia"等)も存在しない。
+  //
+  //   ・**手持ちカードは残す**。プレイヤーの資産なので捨てない(→§3.2.2)。
+  //     国籍だけ、旧4カ国 → 近い実在国籍へ読み替える。
+  //   ・クラブは消滅するので任期を畳み、就任先の選択からやり直してもらう。
+  //     借りていた選手はもともと退任時に返すものなので、ここで手放しても筋は通る。
+  if(S.v<4){
+    const NAT={ garia:"fra", iberia:"esp", estra:"cro", nordia:"den" };
+    const fix=c=>{ if(c&&NAT[c.nation])c.nation=NAT[c.nation]; return c; };
+    const keep={
+      coach:S.coach||"",
+      player:S.player?{ ...S.player, coll:(S.player.coll||[]).map(fix) }:null,
+    };
+    S=defaultState();
+    S.coach=keep.coach;
+    if(keep.player)S.player=keep.player;
+    // 世界とクラブは作り直し。名声は残るので、届く範囲のクラブから選び直せる。
+    S.world.seed=(Date.now()^Math.floor(Math.random()*0xffffffff))>>>0;
   }
   S.v=SAVE_VER;
 }
@@ -2402,10 +2505,10 @@ function secretaryLine(){
 }
 function clubNews(){
   const r=rankOf(S.world.table,S.club.id), t=S.world.table[S.club.id];
-  const co=countryById(clubById(S.club.id).country);
+  const lg=leagueById(clubById(S.club.id).league);
   return [
     "今季の目標は<b>"+S.club.expect+"位以内</b>。現在 <b>"+r+"位</b>（"+t.w+"勝"+t.d+"分"+t.l+"敗）",
-    co.name+"リーグは<b>"+co.style+"</b>のチームが多い。",
+    lg.name+"は<b>"+lg.style+"</b>のチームが多い。",
     "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ 会長の評価 "+evalLabel(S.club.eval),
   ];
 }
@@ -2445,7 +2548,7 @@ function galleryCards(){
   _gallery=RAR_KEYS.map(k=>{
     const real=sigs.find(s=>s.rarity===k);
     return real||makeCard(rng,rnd(["GK","DF","MF","FW"]),
-      { rarity:k, club:"ノルフィエルFC", nation:"nordia" });
+      { rarity:k, club:CLUBS[0].name, nation:"esp" });
   });
   uid=saveUid;
   return _gallery;
@@ -2532,7 +2635,7 @@ function setSlot(ix,cardId){
 /** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
 function openCard(x){
   const c=(x&&typeof x==="object")?x:cardById(x); if(!c)return;
-  const nation=countryById(c.nation);
+  const nation=nationById(c.nation);
   $("cardModalBody").className="cm-sheet "+rarClass(c);
   $("cardModalBody").innerHTML=
     '<button class="cm-x" id="cardModalClose" aria-label="閉じる">×</button>'
@@ -2566,7 +2669,7 @@ function openCard(x){
 const closeCard=()=>$("cardModal").classList.remove("on");
 /** PROFILE の紹介文。カードの属性から組み立てる(専用のテキストは持たない)。 */
 function bioOf(c){
-  const n=countryById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
+  const n=nationById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
   const age=c.age<=21?"若手":c.age>=31?"ベテラン":"円熟期";
   const multi=c.subs.length>1?"、"+c.subs.join("と")+"をこなす":"";
   return (n?n.name:c.nation)+"出身の"+c.age+"歳"+multi+"。"
@@ -2631,11 +2734,11 @@ const shortName=c=>c.name.split(" ").slice(-1)[0];
 // card-eleven のキャリア画面にあたる位置づけ。就任から任期満了までを一望し、
 // ここから各大会(リーグ戦/カップ戦)の日程へ降りていく。
 function renderSeason(){
-  const W=S.world, club=clubById(S.club.id), co=countryById(club.country);
+  const W=S.world, club=clubById(S.club.id), lg=leagueById(club.league);
   const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
   $("seasonHead").textContent="SEASON "+W.season+" · 任期スケジュール";
   $("seasonBox").innerHTML='<div class="sect-t">契約</div>'
-    +kv("クラブ",esc(club.name)+"（"+co.name+"・格★"+club.grade+"）")
+    +kv("クラブ",esc(club.name)+"（"+lg.name+"・格★"+club.grade+"）")
     +kv("期待順位",S.club.expect+"位")
     +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
     +kv("会長の評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
@@ -2649,7 +2752,7 @@ function renderSeason(){
   $("seasonComps").innerHTML=
     '<div class="comp-card" data-comp="league">'
       +'<div class="cc-l"><div class="cc-k">LEAGUE</div>'
-      +'<b>'+esc(co.name)+'リーグ</b>'
+      +'<b>'+esc(lg.name)+'</b>'
       +'<div class="lg">'+r+'位 · 勝点'+pts(t)+'（'+played+'/'+W.fixtures.length+'節）</div></div>'
       +'<div class="cc-r">›</div></div>'
     +'<div class="comp-card off" data-comp="cup">'
@@ -2723,8 +2826,8 @@ function renderSchedule(){
   document.querySelectorAll("#scr-schedule .comp").forEach(b=>b.classList.toggle("on",b.dataset.comp===_comp));
   if(_comp==="cup"){ renderCupSchedule(); return; }
 
-  const W=S.world, co=countryById(clubById(S.club.id).country);
-  $("schedHead").textContent=co.en+" LEAGUE · CLUB CHAMPIONSHIP";
+  const W=S.world, lg=leagueById(clubById(S.club.id).league);
+  $("schedHead").textContent=lg.abbr+" "+lg.name.toUpperCase()+" · CLUB CHAMPIONSHIP";
   $("schedList").innerHTML=W.fixtures.map((round,i)=>{
     const m=round.find(x=>x.h===S.club.id||x.a===S.club.id);
     const md=i+1, done=md<W.matchday, next=md===W.matchday;
@@ -2948,10 +3051,10 @@ function renderOffers(){
   $("offerHead").textContent="OFFERS · 名声 "+fmtNum(fame);
   $("offerNote").textContent="名声が届いたクラブから声がかかります。格が高いほど期待も高くなります。";
   $("offerList").innerHTML=list.map(c=>{
-    const co=countryById(c.country);
+    const lg=leagueById(c.league);
     return '<div class="offer" data-club="'+c.id+'">'
       +'<div class="of-l"><b>'+esc(c.name)+'</b>'
-      +'<div class="lg">'+co.name+' ／ 国内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
+      +'<div class="lg">'+lg.name+' ／ 国内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
       +'<div class="of-r num">'+fmtNum(requiredFame(c))+'</div></div>';
   }).join("");
   $("offerList").querySelectorAll("[data-club]").forEach(el=>{
@@ -2979,7 +3082,7 @@ function openContract(){
   const c=_pickedClub?clubById(_pickedClub):null;
   $("ctPickClub").textContent=c?c.name:"クラブを選ぶ";
   $("ctPickClub").classList.toggle("picked",!!c);
-  $("ctLeague").textContent=c?countryById(c.country).name+"リーグ":"—";
+  $("ctLeague").textContent=c?leagueById(c.league).name:"—";
   $("ctGrade").textContent=c?"★"+c.grade+"（国内"+c.rank+"位相当）":"—";
   $("ctNote").textContent=c?c.name+" 監督として登録されます":"クラブを選ぶと契約内容が確定します";
   updateSignature();

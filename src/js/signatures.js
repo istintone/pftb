@@ -14,7 +14,7 @@ const SIGNATURES=[
   {
     id:"ronaldo", art:"ronaldo", rarity:"WC",
     name:"C. ロナウド", short:"ロナウド",
-    club:"マンチェスター・レッズ", nation:"garia",
+    club:"マンチェスター・レッズ", nation:"por",
     pos:"FW", subs:["RWG","ST"], age:23,
     atk:19, def:6, pow:18, tec:18, spd:20, sta:16,   // OVR = 97
     skills:["ドリブル突破","カットイン","決定力"],

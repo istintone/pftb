@@ -224,7 +224,7 @@ const STEPS = [
         await ctx.js(`(()=>{
           const rng=mulberry32(11), out=[];
           Object.keys(RARITY).forEach(k=>{
-            const c=makeCard(rng,"MF",{rarity:k,club:"ノルフィエルFC"});
+            const c=makeCard(rng,"MF",{rarity:k,club:CLUBS[0].name,nation:"eng"});
             S.player.coll.push(c); out.push(cardTile(c));
           });
           document.getElementById('cardsGrid').innerHTML=out.join('');

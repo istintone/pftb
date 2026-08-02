@@ -18,8 +18,8 @@ const E = setup({ tmpName: "_tmp_integration.js" });
 
   // ---------- 就任 ----------
   S.coach = "C. モレッティ";
-  E.startTenure("nordia-8");
-  assert.strictEqual(S.club.id, "nordia-8", "就任クラブが設定される");
+  E.startTenure("sam-8");
+  assert.strictEqual(S.club.id, "sam-8", "就任クラブが設定される");
   assert.ok(S.club.loan.length >= 16, "クラブから選手を借りている(D13)");
   assert.strictEqual(S.squad.length, 11, "先発11枠が埋まる");
   assert.ok(S.squad.every(id => id !== null), "空き枠がない");
@@ -97,6 +97,30 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   assert.ok(E.getS().player && E.getS().world, "新しい入れ物が用意される");
   console.log("移行OK v1 → v" + E.SAVE_VER);
 
+  // v3(架空4カ国) → v4(実在6リーグ+16国籍): 手持ちカードは残し、国籍だけ読み替える
+  {
+    const card = { id: 1, name: "A. テスト", pos: "FW", subs: ["CF"], rarity: "REG",
+      ovr: 70, age: 25, nation: "garia", atk: 12, def: 12, pow: 12, tec: 12, spd: 11, sta: 11,
+      skills: [], club: "旧クラブ" };
+    await E.importSave(JSON.stringify({
+      v: 3, coach: "旧監督", form: "4-4-2",
+      player: { fame: 2000, tickets: 1, coll: [card], tactics: [], trophies: [], history: [] },
+      club: { id: "nordia-8", coins: 999, loan: [], fac: {}, exp: 0, eval: 50, expect: 8 },
+      world: { seed: 1, season: 3, matchday: 5, table: {}, fixtures: [], results: {} },
+      squad: [1], career: { node: 10, limit: 96, log: [], plan: {} },
+    }));
+    await E.loadGame();
+    const s4 = E.getS();
+    assert.strictEqual(s4.v, 4, "v3 が v4 へ移行される");
+    assert.strictEqual(s4.coach, "旧監督", "監督名は残る");
+    assert.strictEqual(s4.player.coll.length, 1, "手持ちカードは捨てない");
+    assert.strictEqual(s4.player.coll[0].nation, "fra", "旧国籍が実在の国籍へ読み替わる");
+    assert.ok(E.nationById(s4.player.coll[0].nation), "読み替え先が実在する国籍");
+    assert.strictEqual(s4.player.fame, 2000, "名声は残る");
+    assert.strictEqual(s4.club, null, "消滅したクラブは畳まれ、就任先を選び直す");
+    console.log("移行OK v3 → v4 カード保持 / 国籍読み替え / 任期は畳む");
+  }
+
   E.deleteSave();
   assert.strictEqual(await E.hasSave(), false, "削除後はセーブが無い");
 
@@ -135,7 +159,7 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   // ---------- 画面切替(描画が例外を投げないこと) ----------
   await E.newGame();
   E.getS().coach = "テスト監督";
-  E.startTenure("nordia-8");
+  E.startTenure("sam-8");
   names.forEach(id => E.show(id));
   E.show("home");
   E.show("standings", { push: 1 });

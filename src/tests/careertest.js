@@ -20,7 +20,7 @@ function runSeason() {
   E.getS().coach = "検証";
   let matched = 0, checked = 0, aboveSeen = 0, belowSeen = 0;
   for (let i = 0; i < 16; i++) {
-    E.startTenure("nordia-" + (1 + (i % 8)));
+    E.startTenure("sam-" + (1 + (i % 8)));
     const r = runSeason();
     const ev = E.getS().club.eval;
     if (r.rank === r.expect) {
@@ -43,11 +43,11 @@ function runSeason() {
   // ---------- 期待を大きく上回れば評価も名声も上がる ----------
   await E.newGame();
   E.getS().coach = "検証";
-  E.startTenure("nordia-8");                 // 弱小クラブ
+  E.startTenure("sam-8");                 // 弱小クラブ
   E.getS().club.expect = 8;                  // 最下位を期待されている状態にする
   const fame0 = E.getS().player.fame, eval0 = E.getS().club.eval;
   runSeason();
-  const rank = E.rankOf(E.getS().world.table, "nordia-8");
+  const rank = E.rankOf(E.getS().world.table, "sam-8");
   if (rank < 8) {
     assert.ok(E.getS().club.eval >= eval0, "期待を上回れば評価は下がらない");
     assert.ok(E.getS().player.fame > fame0, "期待を上回れば名声が増える");
@@ -58,7 +58,7 @@ function runSeason() {
   // ---------- 期待を大きく下回れば解任されうる ----------
   await E.newGame();
   E.getS().coach = "検証";
-  E.startTenure("nordia-8");
+  E.startTenure("sam-8");
   E.getS().club.expect = 1;                  // 優勝を期待されている状態にする(弱小なので届かない)
   const r2 = runSeason();
   assert.ok(E.getS().club.eval < E.TUNING.eval.start, "期待を下回れば評価が落ちる");

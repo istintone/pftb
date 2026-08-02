@@ -177,6 +177,30 @@ function helpFor(id){
   return h==null?null:(typeof h==="function"?h():h);
 }
 
+// --- 国籍(実在の16か国 → docs/03 §3.15) ---
+// **クラブの所属リーグとは別物**。選手はどのリーグのクラブにも他国から集まる。
+// 実在選手カード(WORLD CLASS/LEGENDS)との国籍シナジーを載せる土台でもある。
+const NATIONS=[
+  { id:"eng",  name:"イングランド",      abbr:"ENG" },
+  { id:"esp",  name:"スペイン",        abbr:"ESP" },
+  { id:"ita",  name:"イタリア",        abbr:"ITA" },
+  { id:"fra",  name:"フランス",        abbr:"FRA" },
+  { id:"ger",  name:"ドイツ",         abbr:"GER" },
+  { id:"por",  name:"ポルトガル",       abbr:"POR" },
+  { id:"ned",  name:"オランダ",        abbr:"NED" },
+  { id:"bel",  name:"ベルギー",        abbr:"BEL" },
+  { id:"cro",  name:"クロアチア",       abbr:"CRO" },
+  { id:"den",  name:"デンマーク",       abbr:"DEN" },
+  { id:"pol",  name:"ポーランド",       abbr:"POL" },
+  { id:"bra",  name:"ブラジル",        abbr:"BRA" },
+  { id:"arg",  name:"アルゼンチン",      abbr:"ARG" },
+  { id:"uru",  name:"ウルグアイ",       abbr:"URU" },
+  { id:"sen",  name:"セネガル",        abbr:"SEN" },
+  { id:"nga",  name:"ナイジェリア",      abbr:"NGA" },
+];
+const nationById=id=>NATIONS.find(n=>n.id===id);
+const NATION_IDS=NATIONS.map(n=>n.id);
+
 // --- フォーメーション ---
 // 各枠は [細分ポジション, ピッチ上の位置(%)]。DECK画面の配置と編成の妥当性判定に使う。
 const FORMATIONS={

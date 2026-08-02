@@ -22,9 +22,9 @@ pftb/
 ├── SPEC.md / docs/     ← 仕様(正本)
 └── src/
     ├── js/             ← ゲーム本体の正本JS(結合順は build.py の JS_FILES)
-    │   ├── data.js       定義・ユーティリティ・決定的乱数・レアリティ・バランスダイヤル TUNING
+    │   ├── data.js       定義・ユーティリティ・決定的乱数・レアリティ・国籍・画面の説明・TUNING
     │   ├── cards.js      選手カードの生成(名前/能力/スキル)・編成の強さ・枠適性
-    │   ├── world.js      国/クラブ・日程・順位表・期待順位・就任と任期・節の進行
+    │   ├── world.js      リーグ/クラブ・日程・順位表・期待順位・就任と任期・節の進行
     │   ├── match-core.js 試合の純粋計算(DOM非依存。※現状は暫定リゾルバ)
     │   ├── state.js      セーブ状態 S・save/load/migrate・書き出し/読み込み
     │   ├── ui.js         画面レジストリ SCREENS・show()/goBack()・各画面の描画

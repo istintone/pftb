@@ -194,10 +194,10 @@ function secretaryLine(){
 }
 function clubNews(){
   const r=rankOf(S.world.table,S.club.id), t=S.world.table[S.club.id];
-  const co=countryById(clubById(S.club.id).country);
+  const lg=leagueById(clubById(S.club.id).league);
   return [
     "今季の目標は<b>"+S.club.expect+"位以内</b>。現在 <b>"+r+"位</b>（"+t.w+"勝"+t.d+"分"+t.l+"敗）",
-    co.name+"リーグは<b>"+co.style+"</b>のチームが多い。",
+    lg.name+"は<b>"+lg.style+"</b>のチームが多い。",
     "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ 会長の評価 "+evalLabel(S.club.eval),
   ];
 }
@@ -237,7 +237,7 @@ function galleryCards(){
   _gallery=RAR_KEYS.map(k=>{
     const real=sigs.find(s=>s.rarity===k);
     return real||makeCard(rng,rnd(["GK","DF","MF","FW"]),
-      { rarity:k, club:"ノルフィエルFC", nation:"nordia" });
+      { rarity:k, club:CLUBS[0].name, nation:"esp" });
   });
   uid=saveUid;
   return _gallery;
@@ -324,7 +324,7 @@ function setSlot(ix,cardId){
 /** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
 function openCard(x){
   const c=(x&&typeof x==="object")?x:cardById(x); if(!c)return;
-  const nation=countryById(c.nation);
+  const nation=nationById(c.nation);
   $("cardModalBody").className="cm-sheet "+rarClass(c);
   $("cardModalBody").innerHTML=
     '<button class="cm-x" id="cardModalClose" aria-label="閉じる">×</button>'
@@ -358,7 +358,7 @@ function openCard(x){
 const closeCard=()=>$("cardModal").classList.remove("on");
 /** PROFILE の紹介文。カードの属性から組み立てる(専用のテキストは持たない)。 */
 function bioOf(c){
-  const n=countryById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
+  const n=nationById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
   const age=c.age<=21?"若手":c.age>=31?"ベテラン":"円熟期";
   const multi=c.subs.length>1?"、"+c.subs.join("と")+"をこなす":"";
   return (n?n.name:c.nation)+"出身の"+c.age+"歳"+multi+"。"
@@ -423,11 +423,11 @@ const shortName=c=>c.name.split(" ").slice(-1)[0];
 // card-eleven のキャリア画面にあたる位置づけ。就任から任期満了までを一望し、
 // ここから各大会(リーグ戦/カップ戦)の日程へ降りていく。
 function renderSeason(){
-  const W=S.world, club=clubById(S.club.id), co=countryById(club.country);
+  const W=S.world, club=clubById(S.club.id), lg=leagueById(club.league);
   const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
   $("seasonHead").textContent="SEASON "+W.season+" · 任期スケジュール";
   $("seasonBox").innerHTML='<div class="sect-t">契約</div>'
-    +kv("クラブ",esc(club.name)+"（"+co.name+"・格★"+club.grade+"）")
+    +kv("クラブ",esc(club.name)+"（"+lg.name+"・格★"+club.grade+"）")
     +kv("期待順位",S.club.expect+"位")
     +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
     +kv("会長の評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
@@ -441,7 +441,7 @@ function renderSeason(){
   $("seasonComps").innerHTML=
     '<div class="comp-card" data-comp="league">'
       +'<div class="cc-l"><div class="cc-k">LEAGUE</div>'
-      +'<b>'+esc(co.name)+'リーグ</b>'
+      +'<b>'+esc(lg.name)+'</b>'
       +'<div class="lg">'+r+'位 · 勝点'+pts(t)+'（'+played+'/'+W.fixtures.length+'節）</div></div>'
       +'<div class="cc-r">›</div></div>'
     +'<div class="comp-card off" data-comp="cup">'
@@ -515,8 +515,8 @@ function renderSchedule(){
   document.querySelectorAll("#scr-schedule .comp").forEach(b=>b.classList.toggle("on",b.dataset.comp===_comp));
   if(_comp==="cup"){ renderCupSchedule(); return; }
 
-  const W=S.world, co=countryById(clubById(S.club.id).country);
-  $("schedHead").textContent=co.en+" LEAGUE · CLUB CHAMPIONSHIP";
+  const W=S.world, lg=leagueById(clubById(S.club.id).league);
+  $("schedHead").textContent=lg.abbr+" "+lg.name.toUpperCase()+" · CLUB CHAMPIONSHIP";
   $("schedList").innerHTML=W.fixtures.map((round,i)=>{
     const m=round.find(x=>x.h===S.club.id||x.a===S.club.id);
     const md=i+1, done=md<W.matchday, next=md===W.matchday;
@@ -740,10 +740,10 @@ function renderOffers(){
   $("offerHead").textContent="OFFERS · 名声 "+fmtNum(fame);
   $("offerNote").textContent="名声が届いたクラブから声がかかります。格が高いほど期待も高くなります。";
   $("offerList").innerHTML=list.map(c=>{
-    const co=countryById(c.country);
+    const lg=leagueById(c.league);
     return '<div class="offer" data-club="'+c.id+'">'
       +'<div class="of-l"><b>'+esc(c.name)+'</b>'
-      +'<div class="lg">'+co.name+' ／ 国内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
+      +'<div class="lg">'+lg.name+' ／ 国内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
       +'<div class="of-r num">'+fmtNum(requiredFame(c))+'</div></div>';
   }).join("");
   $("offerList").querySelectorAll("[data-club]").forEach(el=>{
@@ -771,7 +771,7 @@ function openContract(){
   const c=_pickedClub?clubById(_pickedClub):null;
   $("ctPickClub").textContent=c?c.name:"クラブを選ぶ";
   $("ctPickClub").classList.toggle("picked",!!c);
-  $("ctLeague").textContent=c?countryById(c.country).name+"リーグ":"—";
+  $("ctLeague").textContent=c?leagueById(c.league).name:"—";
   $("ctGrade").textContent=c?"★"+c.grade+"（国内"+c.rank+"位相当）":"—";
   $("ctNote").textContent=c?c.name+" 監督として登録されます":"クラブを選ぶと契約内容が確定します";
   updateSignature();

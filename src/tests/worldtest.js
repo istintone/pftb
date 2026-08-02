@@ -5,18 +5,34 @@ const { setup } = require("./_setup");
 const E = setup({ tmpName: "_tmp_worldtest.js" });
 
 (async () => {
-  // --- クラブ構成 ---
-  assert.strictEqual(E.COUNTRIES.length, 4, "国は4つ");
-  assert.strictEqual(E.CLUBS.length, 32, "クラブは 4カ国 × 8 = 32");
-  for (const co of E.COUNTRIES)
-    assert.strictEqual(E.clubsOf(co.id).length, E.TUNING.league.clubs, co.name + "は8クラブ");
-  assert.strictEqual(new Set(E.CLUBS.map(c => c.id)).size, 32, "クラブIDが重複しない");
-  console.log("クラブ構成OK", E.COUNTRIES.length, "カ国 /", E.CLUBS.length, "クラブ");
+  // --- リーグ構成(→docs/03 §3.8) ---
+  assert.strictEqual(E.LEAGUES.length, 6, "リーグは6つ");
+  assert.strictEqual(E.CLUBS.length, 48, "クラブは 6リーグ × 8 = 48");
+  for (const lg of E.LEAGUES)
+    assert.strictEqual(E.clubsOf(lg.id).length, E.TUNING.league.clubs, lg.name + "は8クラブ");
+  assert.deepStrictEqual([...E.LEAGUES].sort((a, b) => a.tier - b.tier).map(l => l.id),
+    ["sam", "fra", "ger", "ita", "esp", "eng"], "リーグの格が階段になっている");
+  assert.strictEqual(new Set(E.CLUBS.map(c => c.name)).size, 48, "クラブ名に重複が無い");
+
+  // --- 国籍(→docs/03 §3.16) ---
+  assert.strictEqual(E.NATIONS.length, 16, "国籍は16");
+  assert.strictEqual(new Set(E.NATION_IDS).size, 16, "国籍IDに重複が無い");
+  for (const lg of E.LEAGUES) {
+    const box = E.nationBox(lg);
+    assert.ok(box.length > 0, lg.name + "の抽選箱が空でない");
+    assert.strictEqual(new Set(box).size, 16, lg.name + "はどの国籍からも選手が来うる");
+    const homeShare = box.filter(n => n === lg.home).length / box.length;
+    assert.ok(homeShare > 0.15 && homeShare < 0.75,
+      lg.name + "の自国比率が極端でない: " + (homeShare * 100).toFixed(0) + "%");
+  }
+  assert.strictEqual(new Set(E.CLUBS.map(c => c.id)).size, 48, "クラブIDが重複しない");
+  console.log("リーグ構成OK", E.LEAGUES.length, "リーグ /", E.CLUBS.length, "クラブ /",
+    E.NATIONS.length, "国籍");
 
   // --- 選手生成の決定性(セーブに持たない前提の要) ---
-  const a = E.clubRoster(12345, "nordia-1");
-  const b = E.clubRoster(12345, "nordia-1");
-  const c = E.clubRoster(99999, "nordia-1");
+  const a = E.clubRoster(12345, "sam-1");
+  const b = E.clubRoster(12345, "sam-1");
+  const c = E.clubRoster(99999, "sam-1");
   assert.deepStrictEqual(a.map(x => x.name + x.ovr), b.map(x => x.name + x.ovr), "同じシードなら同じ選手");
   assert.notDeepStrictEqual(a.map(x => x.name), c.map(x => x.name), "シードが違えば違う選手");
   assert.ok(a.length >= 16, "1クラブ16人以上");
@@ -36,20 +52,29 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     assert.ok(p.skills.length >= 1, "スキルが1つ以上");
     assert.ok(p.age >= 18 && p.age <= 34, "年齢が範囲内");
   }
-  // 姓 — 同じクラブに同姓が並ぶと編成画面で見分けが付かない
+  // 姓 — 同じクラブに同姓が並ぶと編成画面で見分けが付かない。
+  // 国籍が混ざるので、姓は**ロスター全体で**重複させない(国籍ごとではなく)。
   {
-    for (const [country, list] of Object.entries(E.FAMILY)) {
-      assert.ok(list.length >= 40, country + " の姓が40個以上ある: " + list.length);
-      assert.strictEqual(new Set(list).size, list.length, country + " の姓に重複が無い");
+    assert.deepStrictEqual(Object.keys(E.FAMILY).sort(), [...E.NATION_IDS].sort(),
+      "姓のプールは国籍ごとに用意されている");
+    for (const [nat, list] of Object.entries(E.FAMILY)) {
+      assert.ok(list.length >= 20, nat + " の姓が20個以上ある: " + list.length);
+      assert.strictEqual(new Set(list).size, list.length, nat + " の姓に重複が無い");
     }
     let worst = 0;
+    const natSeen = new Set();
     for (const club of E.CLUBS) {
-      const fam = E.clubRoster(12345, club.id).map(c => c.name.split(" ").pop());
+      const roster = E.clubRoster(12345, club.id);
+      const fam = roster.map(c => c.name.split(" ").pop());
       worst = Math.max(worst, fam.length - new Set(fam).size);
+      roster.forEach(c => natSeen.add(c.nation));
+      // 選手の国籍は実在の16か国のいずれか
+      roster.forEach(c => assert.ok(E.nationById(c.nation), "国籍が実在する: " + c.nation));
     }
     assert.strictEqual(worst, 0, "どのクラブにも同姓が並ばない");
+    assert.strictEqual(natSeen.size, 16, "48クラブ全体で16か国すべてに選手がいる");
     console.log("  姓:", Object.values(E.FAMILY).flat().length, "個 /",
-      E.CLUBS.length, "クラブすべてで同姓なし");
+      E.CLUBS.length, "クラブすべてで同姓なし / 出現国籍", natSeen.size);
   }
   const multi = a.filter(p => p.subs.length > 1).length;
   const cross = a.filter(p => p.subs.some(s => E.subGroup(s) !== p.pos)).length;
@@ -140,12 +165,12 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   console.log("レアリティOK", keys.map(k => k + ":" + (got[k] || 0)).join(" / "), "(400枚)");
 
   // --- クラブの格と戦力が相関する ---
-  const top = E.clubPower(12345, "garia-1"), bottom = E.clubPower(12345, "nordia-8");
+  const top = E.clubPower(12345, "eng-1"), bottom = E.clubPower(12345, "sam-8");
   assert.ok(top > bottom, "上位国の強豪(" + top + ")が下位国の弱小(" + bottom + ")より強い");
-  console.log("戦力の階段OK garia-1:", top, "> nordia-8:", bottom);
+  console.log("戦力の階段OK eng-1:", top, "> sam-8:", bottom);
 
   // --- 日程(ホーム&アウェイの総当たり) ---
-  const ids = E.clubsOf("nordia").map(c => c.id);
+  const ids = E.clubsOf("sam").map(c => c.id);
   const fx = E.makeFixtures(ids, E.mulberry32(7));
   assert.strictEqual(fx.length, E.TUNING.league.rounds, "14節");
   const count = {}, pairs = {};
@@ -170,15 +195,27 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   console.log("日程OK", fx.length, "節 / 各クラブ14試合(H7 A7) / 重複なし");
 
   // --- 期待順位は持ち込んだ編成の強さを見る(→docs/03 §3.9) ---
-  const weak = E.expectedRank(12345, "nordia-8", 60);
-  const strong = E.expectedRank(12345, "nordia-8", 95);
+  const weak = E.expectedRank(12345, "sam-8", 60);
+  const strong = E.expectedRank(12345, "sam-8", 95);
   assert.ok(strong < weak, "強い編成を持ち込むと期待順位も上がる(" + weak + "位 → " + strong + "位)");
   console.log("期待順位OK 弱い編成:", weak, "位 / 強い編成:", strong, "位");
 
   // --- 名声のしきい値がキャリアの階段になっている ---
-  assert.strictEqual(E.requiredFame(E.clubById("nordia-8")), 0, "最下位国の弱小は名声0で就任できる");
+  assert.strictEqual(E.requiredFame(E.clubById("sam-8")), 0, "最下位リーグの弱小は名声0で就任できる");
   assert.ok(E.offersFor(0).length >= 3, "名声0でも就任先を選べる(選択肢が複数ある)");
   assert.ok(E.offersFor(0).length < E.CLUBS.length, "名声0では全クラブは開いていない");
+  // 6リーグが名声の階段として順に開くこと(飛び級で上位リーグが先に開かない)
+  {
+    const byTier = [...E.LEAGUES].sort((a, b) => a.tier - b.tier);
+    let prev = -1;
+    for (const lg of byTier) {
+      const min = Math.min(...E.clubsOf(lg.id).map(c => E.requiredFame(c)));
+      assert.ok(min > prev, lg.name + " は下位リーグより後に開く: " + min);
+      prev = min;
+    }
+    console.log("  リーグの解禁:", byTier.map(lg =>
+      lg.name + " " + Math.min(...E.clubsOf(lg.id).map(c => E.requiredFame(c)))).join(" / "));
+  }
   assert.strictEqual(E.offersFor(999999).length, E.CLUBS.length, "名声が十分なら全クラブが開く");
   console.log("名声の階段OK 名声0:", E.offersFor(0).length, "クラブ / 上限:", E.CLUBS.length);
 

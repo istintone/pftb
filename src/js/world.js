@@ -2,40 +2,75 @@
 // クラブの選手はセーブに持たない。world.seed とクラブIDから毎回同じ内容を再生成する
 // (→ data.js の mulberry32)。セーブが軽く、同じキャリアなら何度開いても同じ顔ぶれになる。
 
-// --- 国(格 tier が高いほど上位リーグ。キャリアの階段になる) ---
-const COUNTRIES=[
-  { id:"garia",  name:"ガリア",     en:"GARIA",  abbr:"GAR", tier:4, style:"技巧",   money:1.00 },
-  { id:"iberia", name:"イベリア",   en:"IBERIA", abbr:"IBE", tier:3, style:"攻撃的", money:0.82 },
-  { id:"estra",  name:"エストラ",   en:"ESTRA",  abbr:"EST", tier:2, style:"堅守",   money:0.66 },
-  { id:"nordia", name:"ノルディア", en:"NORDIA", abbr:"NOR", tier:1, style:"走力",   money:0.50 },
+// --- リーグ(実在の6リーグを想定 → docs/03 §3.8) ---
+// tier が高いほど上位リーグで、そのままキャリアの階段になる。
+// **選手の国籍(data.js の NATIONS)とは別物**。リーグは「クラブがどこで戦うか」、
+// 国籍は「選手がどこの出身か」を表す。
+//   home/homeW/near … そのリーグに集まる国籍の構成比(nationBox で抽選箱にする)
+const LEAGUES=[
+  { id:"eng", name:"プレミア",          country:"イングランド",        abbr:"ENG", tier:6, style:"強度",    money:1.00,
+    home:"eng", homeW:30, near:["fra","ned","bel","por"] },
+  { id:"esp", name:"ラ・リーガ",         country:"スペイン",          abbr:"ESP", tier:5, style:"技巧",    money:0.92,
+    home:"esp", homeW:45, near:["por","arg","bra","uru"] },
+  { id:"ita", name:"セリエ",           country:"イタリア",          abbr:"ITA", tier:4, style:"堅守",    money:0.82,
+    home:"ita", homeW:42, near:["arg","bra","fra","cro"] },
+  { id:"ger", name:"ブンデス",          country:"ドイツ",           abbr:"GER", tier:3, style:"組織",    money:0.76,
+    home:"ger", homeW:55, near:["ned","den","bel","pol"] },
+  { id:"fra", name:"リーグアン",         country:"フランス",          abbr:"FRA", tier:2, style:"個",     money:0.66,
+    home:"fra", homeW:45, near:["sen","bel","nga","por"] },
+  { id:"sam", name:"カンピオナート",       country:"南米",            abbr:"SAM", tier:1, style:"創造",    money:0.50,
+    home:"bra", homeW:75, near:["arg","uru","por"] },
 ];
-const countryById=id=>COUNTRIES.find(c=>c.id===id);
+const leagueById=id=>LEAGUES.find(l=>l.id===id);
 
-// --- クラブ(各国8クラブ = 計32)。rank 1 が国内最上位。 ---
+/**
+ * リーグごとの国籍の抽選箱。自国が主体で、近い国が続き、残りは世界中から少しずつ。
+ * プレミアは自国比率が低く(homeW 30)、カンピオナートは高い(75)。
+ */
+function nationBox(league){
+  const box=[];
+  for(let i=0;i<league.homeW;i++)box.push(league.home);
+  league.near.forEach(n=>{ for(let i=0;i<10;i++)box.push(n); });
+  NATION_IDS.forEach(n=>{
+    if(n===league.home||league.near.includes(n))return;
+    for(let i=0;i<3;i++)box.push(n);
+  });
+  return box;
+}
+
+// --- クラブ(各リーグ8クラブ = 計48)。rank 1 がリーグ内最上位。
+// 実在クラブが元ネタと分かる程度に改変した名前を使う(→docs/03 §3.13 の商標方針)。
 const CLUB_NAMES={
-  garia: ["リオーネ・カルチョ","AC ソレンヌ","パラディン・ガリア","オリンピク・ヴェール","FCムーラン","レアル・カロン","US ボネ","スタッド・デュラン"],
-  iberia:["カサブランカ・ユニオン","CFミランダ","アトレティコ・ロブレド","デポルティボ・キンタナ","SDベルナル","CDアルメイダ","ラシン・コスタ","UDドゥアルテ"],
-  estra: ["メリディアン・アスレチック","FKノヴァク","SKヴァレンタ","ディナモ・ブラホ","FCシュミット","MTKマルティネク","スパルタ・コワル","AC リッチ"],
-  nordia:["ノルフィエルFC","ソルヴィク・ユナイテッド","IFベリストローム","ハーゲンBK","FKソルベリ","ノルドヴァルIF","エリクソンFC","BKリンド"],
+  eng:   ["マンチェスター・レッズ","マンチェスター・スカイ","ロンドン・ガナーズ","リヴァプール・コップ","ロンドン・ブルーズ","ノースロンドン・スパーズ","タインサイド・マグパイズ",
+          "バーミンガム・ヴィランズ"],
+  esp:   ["マドリード・ブランコス","カタルーニャ・ブラウグラナ","マドリード・コルチョネロス","セビージャ・ネルビオン","バレンシア・チェ","ビルバオ・レオネス","サンセバスティアン・レアレス",
+          "アンダルシア・ベティコス"],
+  ita:   ["トリノ・ビアンコネーリ","ミラノ・ロッソネーリ","ミラノ・ネラッズーリ","ナポリ・パルテノペイ","ローマ・ジャッロロッシ","ローマ・チェレスティ","フィレンツェ・ヴィオラ",
+          "ベルガモ・オロビチ"],
+  ger:   ["ミュンヘン・ローテン","ドルトムント・シュヴァルツゲルプ","レヴァークーゼン・ヴェルクセルフ","ライプツィヒ・ローテブレン","ゲルゼンキルヒェン・クナッペン","フランクフルト・アドラー",
+          "シュトゥットガルト・ブルステン","ブレーメン・グリューンヴァイス"],
+  fra:   ["パリ・キャピタル","マルセイユ・オリンピアン","リヨン・ゴーヌ","モナコ・ルージュブラン","リール・ドーグ","レンヌ・ルージュノワール","ニース・エーグロン","ナント・カナリ"],
+  sam:   ["リオ・ルブロネグロ","サンパウロ・ヴェルダン","ブエノスアイレス・ボンボネーラ","ブエノスアイレス・ミジョナリオス","サンパウロ・チマォン","サントス・ペイシェ","モンテビデオ・カルボネーロ",
+          "メデジン・ベルデ"],
 };
 const CLUBS=[];
-COUNTRIES.forEach(co=>{
-  CLUB_NAMES[co.id].forEach((name,i)=>{
+LEAGUES.forEach(lg=>{
+  CLUB_NAMES[lg.id].forEach((name,i)=>{
     CLUBS.push({
-      id:co.id+"-"+(i+1), name, country:co.id, rank:i+1,
-      abbr:(co.abbr+(i+1)),
-      // クラブの格(1..10)。国の格とクラブ順位から決める。就任先選びの目安になる。
-      grade:clamp(Math.round(co.tier*2.2+(8-i)*0.55),1,10),
+      id:lg.id+"-"+(i+1), name, league:lg.id, rank:i+1,
+      abbr:(lg.abbr+(i+1)),
+      // クラブの格(1..10)。リーグの格とクラブ順位から決める。就任先選びの目安になる。
+      grade:clamp(Math.round(lg.tier*1.5+(8-i)*0.55),1,10),
     });
   });
 });
 const clubById=id=>CLUBS.find(c=>c.id===id);
-const clubsOf=country=>CLUBS.filter(c=>c.country===country);
+const clubsOf=leagueId=>CLUBS.filter(c=>c.league===leagueId);
 
-/** クラブの戦力水準(生成される選手のOVR補正)。国の格 × クラブ順位。 */
+/** クラブの戦力水準(生成される選手のOVR補正)。リーグの格 × クラブ順位。 */
 function clubBias(club){
-  const co=countryById(club.country);
-  return Math.round((co.tier-2.5)*4 + (4.5-club.rank)*2.2);
+  const lg=leagueById(club.league);
+  return Math.round((lg.tier-3.5)*2.7 + (4.5-club.rank)*2.2);
 }
 
 /** クラブの所属選手を決定的に再生成する(貸与される戦力・CPUの戦力の両方に使う)。 */
@@ -43,7 +78,8 @@ function clubRoster(seed,clubId){
   const club=clubById(clubId);
   const rng=mulberry32((seed^hashStr(clubId))>>>0);
   const saveUid=uid; uid=1000000+(hashStr(clubId)%900000);   // クラブ選手のIDは別空間に置く
-  const roster=makeRoster(rng,{ club:club.name, nation:club.country, ovrBias:clubBias(club) });
+  const roster=makeRoster(rng,{ club:club.name, ovrBias:clubBias(club),
+    nations:nationBox(leagueById(club.league)) });
   uid=saveUid;
   return roster;
 }
@@ -112,7 +148,7 @@ function applyResult(table,h,a,hg,ag){
  * 「あなたほどの陣容なら勝って当然だ」という圧がかかるようにする。
  */
 function expectedRank(seed,clubId,squadPow){
-  const league=clubsOf(clubById(clubId).country).map(c=>c.id);
+  const league=clubsOf(clubById(clubId).league).map(c=>c.id);
   const powers=league.map(id=>({ id, p:clubPower(seed,id) }));
   const mine=powers.find(p=>p.id===clubId);
   const blended=mine.p*(1-TUNING.expect.squadWeight)+squadPow*TUNING.expect.squadWeight;
@@ -125,19 +161,19 @@ function expectedRank(seed,clubId,squadPow){
  *  末尾の -560 は「キャリア開始時点で最下位国の下位4クラブが選べる」ようにするための下駄。
  *  最初から選択肢がないと就任がただの通過儀礼になるため。 */
 function requiredFame(club){
-  const co=countryById(club.country);
-  return Math.max(0,Math.round((co.tier-1)*1200+(8-club.rank)*180-560));
+  const lg=leagueById(club.league);
+  return Math.max(0,Math.round((lg.tier-1)*1200+(8-club.rank)*180-560));
 }
 const offersFor=fame=>CLUBS.filter(c=>requiredFame(c)<=fame);
 
 /** 新しい任期を開始する(就任)。S.club / S.world をこのクラブ用に組み直す。 */
 function startTenure(clubId){
   const seed=S.world.seed;
-  const league=clubsOf(clubById(clubId).country).map(c=>c.id);
+  const league=clubsOf(clubById(clubId).league).map(c=>c.id);
   const rng=mulberry32((seed^hashStr(clubId+":"+S.world.season))>>>0);
   S.club={
     id:clubId,
-    coins:Math.round(3000*countryById(clubById(clubId).country).money),
+    coins:Math.round(3000*leagueById(clubById(clubId).league).money),
     fac:{ training:0, medical:0, stadium:0, scouting:0 },   // 施設(第4段で使う)
     exp:0,                                                   // チーム熟練度(→§3.7)
     eval:TUNING.eval.start,                                  // 会長の評価
