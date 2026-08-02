@@ -219,8 +219,8 @@ function autoSquad(){
  * 陣形を変えるたびに autoSquad で組み直すと、手で作った編成が丸ごと捨てられてしまう。
  * 選手は入れ替えず、適性×OVR が高くなる組み合わせへ貪欲に割り当てるだけにする。
  */
-function refitSquad(){
-  const slots=FORMATIONS[S.form||DEFAULT_FORM];
+function refitSquad(form){
+  const slots=FORMATIONS[form||S.form||DEFAULT_FORM];
   const pool=(S.squad||[]).map(id=>cardById(id)).filter(Boolean);
   const used=new Set();
   const out=slots.map(([sub])=>{

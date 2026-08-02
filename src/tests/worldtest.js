@@ -103,6 +103,33 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     const alien = E.SUBPOS[["GK", "DF", "MF", "FW"].find(g => g !== sample.pos)][0];
     assert.strictEqual(E.slotFit(sample, alien), F.none, "サブもメインも不一致");
   }
+  // --- フォーメーション(→docs/03 §3.17) ---
+  {
+    const forms = Object.entries(E.FORMATIONS);
+    assert.ok(forms.length >= 16, "陣形が16種以上ある: " + forms.length);
+    assert.ok(E.FORMATIONS[E.DEFAULT_FORM], "既定の陣形が存在する");
+    for (const [f, slots] of forms) {
+      assert.strictEqual(slots.length, 11, f + " は11枠");
+      assert.strictEqual(slots.filter(([p]) => p === "GK").length, 1, f + " のGKは1枠");
+      for (const [sub, x, y] of slots) {
+        assert.ok(E.subGroup(sub), f + " の枠 " + sub + " が実在する細分ポジション");
+        assert.ok(x >= 8 && x <= 92, f + " の x が範囲内: " + sub + " " + x);
+        // y は 13〜87。87を超えると名前帯がゴールラインの外へ出る(実測で確認済み)
+        assert.ok(y >= 13 && y <= 87, f + " の y が範囲内: " + sub + " " + y);
+      }
+    }
+    // 呼び名と枠の内訳が一致している("4-3-3" なら DF4/MF3/FW3)
+    for (const [f, slots] of forms) {
+      const m = f.match(/^(\d)-(\d)-(\d)$/);
+      if (!m) continue;
+      const n = { DF: 0, MF: 0, FW: 0 };
+      slots.forEach(([sub]) => { const g = E.subGroup(sub); if (n[g] != null) n[g]++; });
+      assert.deepStrictEqual([n.DF, n.MF, n.FW], m.slice(1).map(Number),
+        f + " の枠の内訳が呼び名と一致する");
+    }
+    console.log("  陣形:", forms.length, "種 / すべて11枠・GK1枠・y は 13〜87");
+  }
+
   // 配置込みの編成力は、適性を無視した平均を上回らない
   {
     const form = Object.keys(E.FORMATIONS)[0], slots = E.FORMATIONS[form];

@@ -748,6 +748,9 @@ body{
 /* 他の枠にいる選手の印。選ぶとその枠と入れ替わる */
 .pk-at{ padding:2px 5px; border-radius:3px; background:oklch(0.30 0.02 255);
   font:8px/1.4 var(--f-mono); color:var(--text-dim) }
+/* いまの11人に最も噛み合う陣形の印 */
+.pk-best{ padding:3px 7px; border-radius:3px; background:var(--accent);
+  font:600 9px/1.4 var(--f-head); letter-spacing:.5px; color:var(--surface) }
 /* ピッカーの中では地が暗いので、適性バッジは自前の背景を持たせて読ませる */
 .pick .sl-pos{ padding:2px 5px; border-radius:3px; background:oklch(0.28 0.07 150) }
 

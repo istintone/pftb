@@ -325,6 +325,63 @@ function setSlot(ix,cardId){
   save(); closeSlot(); renderDeck();
 }
 
+// ---------- 陣形を選ぶ(→docs/06 §6.15) ----------
+/** 枠の内訳(GKを除いた大分類ごとの数)。"4-4-2" のような呼び名の裏付けになる。 */
+function formShape(form){
+  const n={ DF:0, MF:0, FW:0 };
+  FORMATIONS[form].forEach(([sub])=>{ const g=subGroup(sub); if(n[g]!=null)n[g]++; });
+  return n;
+}
+/**
+ * 陣形のピッカー。**いまの11人をその陣形へ並べ直したときの総合力**を各行に出す。
+ * 陣形は好みではなく「手持ちがどの形に噛み合うか」で選ぶものなので、
+ * 選ぶ前に結果が見えないと判断できない。
+ */
+function openForm(){
+  const keys=Object.keys(FORMATIONS);
+  const rows=keys.map(f=>{
+    const ids=refitSquad(f);
+    return { f, pw:squadPowerAt(ids.map(cardById),f),
+      off:FORMATIONS[f].filter(([sub],i)=>{
+        const c=cardById(ids[i]); return c&&fitTier(c,sub)!=="a";
+      }).length };
+  });
+  const best=Math.max(...rows.map(r=>r.pw));
+
+  $("formModalBody").innerHTML=
+    '<button class="close-btn" id="formClose" aria-label="閉じる">×</button>'
+    +'<h3>陣形</h3>'
+    +'<div class="lg" style="margin-bottom:10px">'
+      +'いまの11人をその形に並べ直したときの総合力です。選手は入れ替わりません。</div>'
+    +'<div class="picks">'+rows.map(r=>{
+        const n=formShape(r.f);
+        // **数字に色は付けない**。黄と赤は「枠適性で目減りしている」印として
+        // 使っているので、ここで別の意味に流用すると読み違える(→docs/06 §6.15)。
+        // 最も高い形にだけバッジを出す。
+        return '<div class="pick'+(r.f===S.form?" on":"")+'" data-form="'+esc(r.f)+'">'
+          +'<div class="pk-ovr">'+r.pw+'</div>'
+          +'<div class="pk-b"><b>'+esc(r.f)+(r.f===S.form?'　<i class="own">使用中</i>':'')+'</b>'
+            +'<span>DF '+n.DF+' / MF '+n.MF+' / FW '+n.FW
+            +(r.off?'　枠に合わない '+r.off+'人':'')+'</span></div>'
+          +'<div class="pk-r">'+(r.pw===best?'<span class="pk-best">最適</span>':'')+'</div>'
+        +'</div>';
+      }).join("")+'</div>';
+
+  $("formClose").onclick=closeForm;
+  $("formModalBody").querySelectorAll("[data-form]").forEach(el=>{
+    el.onclick=()=>setForm(el.dataset.form);
+  });
+  $("formModal").classList.add("on");
+}
+const closeForm=()=>$("formModal").classList.remove("on");
+/** 陣形を変える。**選手は入れ替えず**、同じ11人を新しい枠へ並べ直す。 */
+function setForm(f){
+  if(!FORMATIONS[f])return;
+  S.form=f; S.squad=refitSquad();
+  save(); closeForm(); renderDeck();
+  toast("陣形を "+f+" に変更（同じ11人を並べ直しました）");
+}
+
 /** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
 function openCard(x){
   const c=(x&&typeof x==="object")?x:cardById(x); if(!c)return;
@@ -809,16 +866,10 @@ document.querySelectorAll("#scr-schedule .comp").forEach(b=>{
   b.onclick=()=>{ _comp=b.dataset.comp; renderSchedule(); };
 });
 $("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast("自動編成しました"); };
-// 陣形を変えても**選手は入れ替えない**。同じ11人を新しい枠へ並べ直すだけにする
-// (autoSquad だと手で組んだ編成が丸ごと捨てられてしまう)。
-$("btnForm").onclick=()=>{
-  const keys=Object.keys(FORMATIONS);
-  S.form=keys[(keys.indexOf(S.form)+1)%keys.length];
-  S.squad=refitSquad(); save(); renderDeck();
-  toast("陣形を "+S.form+" に変更（同じ11人を並べ直しました）");
-};
+$("btnForm").onclick=openForm;
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
 $("slotModal").onclick=e=>{ if(e.target===$("slotModal"))closeSlot(); };
+$("formModal").onclick=e=>{ if(e.target===$("formModal"))closeForm(); };
 $("helpTab").onclick=e=>{ e.stopPropagation(); helpOpen()?closeHelp():openHelp(); };
 $("helpClose").onclick=e=>{ e.stopPropagation(); closeHelp(); };
 // 外側のどこかを触ったら閉じる(閉じるボタンを探さなくてよいように)

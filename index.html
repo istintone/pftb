@@ -760,6 +760,9 @@ body{
 /* 他の枠にいる選手の印。選ぶとその枠と入れ替わる */
 .pk-at{ padding:2px 5px; border-radius:3px; background:oklch(0.30 0.02 255);
   font:8px/1.4 var(--f-mono); color:var(--text-dim) }
+/* いまの11人に最も噛み合う陣形の印 */
+.pk-best{ padding:3px 7px; border-radius:3px; background:var(--accent);
+  font:600 9px/1.4 var(--f-head); letter-spacing:.5px; color:var(--surface) }
 /* ピッカーの中では地が暗いので、適性バッジは自前の背景を持たせて読ませる */
 .pick .sl-pos{ padding:2px 5px; border-radius:3px; background:oklch(0.28 0.07 150) }
 
@@ -1214,6 +1217,11 @@ body{
     <div class="sheet" id="slotModalBody"></div>
   </div>
 
+  <!-- ===== 陣形を選ぶ(モーダル → docs/06 §6.15) ===== -->
+  <div class="modal" id="formModal">
+    <div class="sheet" id="formModalBody"></div>
+  </div>
+
   <!-- ヘルプ(左端のタブ → docs/06 §6.16)。中身は data.js の HELP。 -->
   <!-- 初期状態は off。起動直後のタイトルは show() を通らないため、
        ここで隠しておかないとタイトルにタブが出てしまう。 -->
@@ -1391,7 +1399,10 @@ const HELP={
       +"サブポジションが一致していれば本来の力が出ます。"
       +"メインだけ合っている選手はとりあえず使えますが力を出し切れず、"
       +"どちらも違う選手はほぼ機能しません。"
-      +"<br>上の総合力は<b>配置込み</b>の値です。適性で目減りした分は「適性ロス」に出ます。";
+      +"<br>上の総合力は<b>配置込み</b>の値です。適性で目減りした分は「適性ロス」に出ます。"
+      +"<br><br><b>陣形</b> — 「陣形変更」で"+Object.keys(FORMATIONS).length+"種から選べます。"
+      +"各行の数字は<b>いまの11人をその形へ並べ直したときの総合力</b>なので、"
+      +"手持ちに噛み合う形を選べます。<b>選手は入れ替わりません</b>。";
   },
   season:()=>"任期"+TUNING.tenure.limit+"節のカレンダーです。上から下へ進みます。"
     +"<br>1つの節は<b>打ち手 → 大会 → 試合</b>の順に決めます。打ち手を選ぶまで試合には進めません。"
@@ -1446,13 +1457,43 @@ const NATIONS=[
 const nationById=id=>NATIONS.find(n=>n.id===id);
 const NATION_IDS=NATIONS.map(n=>n.id);
 
-// --- フォーメーション ---
-// 各枠は [細分ポジション, ピッチ上の位置(%)]。DECK画面の配置と編成の妥当性判定に使う。
+// --- フォーメーション(card-eleven から踏襲 → docs/03 §3.16) ---
+// 各枠は [細分ポジション, ピッチ上の位置(%)]。DECK画面の配置と枠適性の判定に使う。
+// **y は 13〜87 に収める**。87を超えると名前帯がゴールラインの外へ出る
+// (card-eleven とはピッチの縦横比が違うので、座標をそのままは使えない)。
 const FORMATIONS={
-  "4-4-2":[["GK",50,87],["LSB",14,72],["CB",38,76],["CB",62,76],["RSB",86,72],
-           ["LMF",14,48],["CMF",38,52],["CMF",62,52],["RMF",86,48],["CF",38,18],["ST",62,18]],
-  "4-3-3":[["GK",50,87],["LSB",14,72],["CB",38,76],["CB",62,76],["RSB",86,72],
-           ["DMF",50,58],["CMF",26,46],["CMF",74,46],["LWG",14,20],["CF",50,14],["RWG",86,20]],
+  "4-4-2":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["LMF",16,48],["CMF",38,50],
+           ["CMF",62,50],["RMF",84,48],["ST",50,27],["CF",50,13]],
+  "4-3-3":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["CMF",30,48],["DMF",50,58],
+           ["CMF",70,48],["LWG",18,15],["CF",50,13],["RWG",82,15]],
+  "3-5-2":[["GK",50,87],["CB",26,75],["CB",50,73],["CB",74,75],["LMF",14,48],["CMF",34,50],["DMF",50,58],
+           ["CMF",66,50],["RMF",86,48],["ST",50,27],["CF",50,13]],
+  "5-3-2":[["GK",50,87],["LSB",10,71],["CB",30,75],["CB",50,73],["CB",70,75],["RSB",90,71],["CMF",30,48],
+           ["DMF",50,58],["CMF",70,48],["CF",38,18],["CF",62,18]],
+  "4-3-1-2":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["CMF",35,50],["DMF",50,58],
+             ["CMF",65,50],["OMF",50,37],["CF",38,18],["CF",62,18]],
+  "4-2-3-1":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["DMF",38,58],["DMF",62,58],
+             ["LWG",18,29],["OMF",50,37],["RWG",82,29],["CF",50,15]],
+  "5-4-1":[["GK",50,87],["LSB",10,71],["CB",30,75],["CB",50,73],["CB",70,75],["RSB",90,71],["LMF",16,50],
+           ["CMF",38,51],["CMF",62,51],["RMF",84,50],["CF",50,20]],
+  "3-4-3":[["GK",50,87],["CB",26,75],["CB",50,73],["CB",74,75],["LMF",14,50],["CMF",38,53],["CMF",62,53],
+           ["RMF",86,50],["LWG",18,16],["CF",50,13],["RWG",82,16]],
+  "4-1-4-1":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["DMF",50,60],["LMF",16,45],
+             ["CMF",38,43],["CMF",62,43],["RMF",84,45],["CF",50,18]],
+  "4-3-2-1":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["CMF",30,50],["DMF",50,58],
+             ["CMF",70,50],["OMF",38,32],["OMF",62,32],["CF",50,14]],
+  "4-4-2ダイヤ":[["GK",50,87],["LSB",16,74],["CB",38,75],["CB",62,75],["RSB",84,74],["DMF",50,60],["CMF",30,48],
+              ["CMF",70,48],["OMF",50,35],["ST",38,20],["CF",62,16]],
+  "4-2-2-2":[["GK",50,87],["LSB",16,74],["CB",38,75],["CB",62,75],["RSB",84,74],["DMF",36,58],["DMF",64,58],
+             ["OMF",30,36],["OMF",70,36],["ST",38,19],["CF",62,16]],
+  "ゼロトップ":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["CMF",30,49],["DMF",50,59],
+           ["CMF",70,49],["LWG",16,18],["OMF",50,29],["RWG",84,18]],
+  "4-3-3アシメ":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["DMF",50,58],["LMF",30,45],
+              ["CMF",60,47],["LWG",16,25],["CF",46,14],["RWG",86,15]],
+  "4-2-4":[["GK",50,87],["LSB",16,74],["CB",38,75],["CB",62,75],["RSB",84,74],["CMF",36,52],["CMF",64,52],
+           ["LWG",12,22],["RWG",88,22],["ST",40,15],["CF",60,13]],
+  "9.5番":[["GK",50,87],["LSB",18,74],["CB",38,75],["CB",62,75],["RSB",82,74],["DMF",36,59],["DMF",64,59],
+          ["LMF",20,42],["RMF",80,42],["OMF",50,33],["CF",50,20]],
 };
 const DEFAULT_FORM="4-4-2";
 
@@ -1990,8 +2031,8 @@ function autoSquad(){
  * 陣形を変えるたびに autoSquad で組み直すと、手で作った編成が丸ごと捨てられてしまう。
  * 選手は入れ替えず、適性×OVR が高くなる組み合わせへ貪欲に割り当てるだけにする。
  */
-function refitSquad(){
-  const slots=FORMATIONS[S.form||DEFAULT_FORM];
+function refitSquad(form){
+  const slots=FORMATIONS[form||S.form||DEFAULT_FORM];
   const pool=(S.squad||[]).map(id=>cardById(id)).filter(Boolean);
   const used=new Set();
   const out=slots.map(([sub])=>{
@@ -2688,6 +2729,63 @@ function setSlot(ix,cardId){
   save(); closeSlot(); renderDeck();
 }
 
+// ---------- 陣形を選ぶ(→docs/06 §6.15) ----------
+/** 枠の内訳(GKを除いた大分類ごとの数)。"4-4-2" のような呼び名の裏付けになる。 */
+function formShape(form){
+  const n={ DF:0, MF:0, FW:0 };
+  FORMATIONS[form].forEach(([sub])=>{ const g=subGroup(sub); if(n[g]!=null)n[g]++; });
+  return n;
+}
+/**
+ * 陣形のピッカー。**いまの11人をその陣形へ並べ直したときの総合力**を各行に出す。
+ * 陣形は好みではなく「手持ちがどの形に噛み合うか」で選ぶものなので、
+ * 選ぶ前に結果が見えないと判断できない。
+ */
+function openForm(){
+  const keys=Object.keys(FORMATIONS);
+  const rows=keys.map(f=>{
+    const ids=refitSquad(f);
+    return { f, pw:squadPowerAt(ids.map(cardById),f),
+      off:FORMATIONS[f].filter(([sub],i)=>{
+        const c=cardById(ids[i]); return c&&fitTier(c,sub)!=="a";
+      }).length };
+  });
+  const best=Math.max(...rows.map(r=>r.pw));
+
+  $("formModalBody").innerHTML=
+    '<button class="close-btn" id="formClose" aria-label="閉じる">×</button>'
+    +'<h3>陣形</h3>'
+    +'<div class="lg" style="margin-bottom:10px">'
+      +'いまの11人をその形に並べ直したときの総合力です。選手は入れ替わりません。</div>'
+    +'<div class="picks">'+rows.map(r=>{
+        const n=formShape(r.f);
+        // **数字に色は付けない**。黄と赤は「枠適性で目減りしている」印として
+        // 使っているので、ここで別の意味に流用すると読み違える(→docs/06 §6.15)。
+        // 最も高い形にだけバッジを出す。
+        return '<div class="pick'+(r.f===S.form?" on":"")+'" data-form="'+esc(r.f)+'">'
+          +'<div class="pk-ovr">'+r.pw+'</div>'
+          +'<div class="pk-b"><b>'+esc(r.f)+(r.f===S.form?'　<i class="own">使用中</i>':'')+'</b>'
+            +'<span>DF '+n.DF+' / MF '+n.MF+' / FW '+n.FW
+            +(r.off?'　枠に合わない '+r.off+'人':'')+'</span></div>'
+          +'<div class="pk-r">'+(r.pw===best?'<span class="pk-best">最適</span>':'')+'</div>'
+        +'</div>';
+      }).join("")+'</div>';
+
+  $("formClose").onclick=closeForm;
+  $("formModalBody").querySelectorAll("[data-form]").forEach(el=>{
+    el.onclick=()=>setForm(el.dataset.form);
+  });
+  $("formModal").classList.add("on");
+}
+const closeForm=()=>$("formModal").classList.remove("on");
+/** 陣形を変える。**選手は入れ替えず**、同じ11人を新しい枠へ並べ直す。 */
+function setForm(f){
+  if(!FORMATIONS[f])return;
+  S.form=f; S.squad=refitSquad();
+  save(); closeForm(); renderDeck();
+  toast("陣形を "+f+" に変更（同じ11人を並べ直しました）");
+}
+
 /** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
 function openCard(x){
   const c=(x&&typeof x==="object")?x:cardById(x); if(!c)return;
@@ -3172,16 +3270,10 @@ document.querySelectorAll("#scr-schedule .comp").forEach(b=>{
   b.onclick=()=>{ _comp=b.dataset.comp; renderSchedule(); };
 });
 $("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast("自動編成しました"); };
-// 陣形を変えても**選手は入れ替えない**。同じ11人を新しい枠へ並べ直すだけにする
-// (autoSquad だと手で組んだ編成が丸ごと捨てられてしまう)。
-$("btnForm").onclick=()=>{
-  const keys=Object.keys(FORMATIONS);
-  S.form=keys[(keys.indexOf(S.form)+1)%keys.length];
-  S.squad=refitSquad(); save(); renderDeck();
-  toast("陣形を "+S.form+" に変更（同じ11人を並べ直しました）");
-};
+$("btnForm").onclick=openForm;
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
 $("slotModal").onclick=e=>{ if(e.target===$("slotModal"))closeSlot(); };
+$("formModal").onclick=e=>{ if(e.target===$("formModal"))closeForm(); };
 $("helpTab").onclick=e=>{ e.stopPropagation(); helpOpen()?closeHelp():openHelp(); };
 $("helpClose").onclick=e=>{ e.stopPropagation(); closeHelp(); };
 // 外側のどこかを触ったら閉じる(閉じるボタンを探さなくてよいように)

@@ -188,11 +188,45 @@ const STEPS = [
         ctx.log("  丸の数字:", disc.map(d => d.raw + "→" + d.shown).join(" "),
           "/ 実効値になっている:", bad.length === 0);
         if (bad.length) throw new Error("丸の数字が実効値でない: " + JSON.stringify(bad));
-        // 陣形を変えても11人が置き直されること
+        // 陣形はピッカーから選ぶ。16種すべてに「並べ直したときの総合力」が出る
         await ctx.js("document.getElementById('btnForm').click()");
-        await ctx.wait(250);
+        await ctx.wait(350);
+        ctx.log("  陣形ピッカー:", await ctx.js("document.querySelectorAll('#formModalBody [data-form]').length"),
+          "種 / 使用中:", await ctx.js("!!document.querySelector('#formModalBody .pick.on')"));
+        await ctx.shot("10g-form-picker");
+        // 16種すべてを実際に描いて、選手の枠が重なっていないか実測する。
+        // 座標は card-eleven から持ってきたものなので、こちらのピッチで
+        // 破綻しないことは実測でしか確かめられない。
+        await ctx.js("closeForm()");
+        await ctx.wait(150);
+        const overlaps = await ctx.js(`(()=>{
+          const keep=S.form, out=[];
+          for(const f of Object.keys(FORMATIONS)){
+            S.form=f; S.squad=refitSquad(); renderDeck();
+            const els=[...document.querySelectorAll('#deckSlots .slot')]
+              .map(e=>({ p:e.querySelector('.sl-pos').textContent, r:e.getBoundingClientRect() }));
+            for(let i=0;i<els.length;i++)for(let j=i+1;j<els.length;j++){
+              const a=els[i].r,b=els[j].r;
+              const ox=Math.min(a.right,b.right)-Math.max(a.left,b.left);
+              const oy=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);
+              if(ox>2&&oy>2)out.push(f+' '+els[i].p+'×'+els[j].p
+                +' ('+Math.round(ox)+'x'+Math.round(oy)+'px)');
+            }
+          }
+          S.form=keep; S.squad=refitSquad(); renderDeck();
+          return out;
+        })()`);
+        ctx.log("  16種の重なり実測:", overlaps.length ? overlaps.join(" / ") : "なし");
+        if (overlaps.length) throw new Error("枠が重なっている: " + overlaps.join(" / "));
+        await ctx.js("document.getElementById('btnForm').click()");
+        await ctx.wait(300);
+        // 一番下の陣形へ変更(選手は入れ替わらないこと)
+        const xiBefore = await ctx.js("JSON.stringify([...S.squad].sort())");
+        await ctx.js("[...document.querySelectorAll('#formModalBody [data-form]')].pop().click()");
+        await ctx.wait(350);
         ctx.log("  陣形変更 →", await ctx.js("document.getElementById('deckForm').textContent"),
-          "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"));
+          "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"),
+          "/ 同じ11人:", await ctx.js("JSON.stringify([...S.squad].sort())") === xiBefore);
         await ctx.shot("10b-deck-formation");
         // 枠をタップ → ピッカー → 選手を入れ替える
         await ctx.js("document.querySelector('#deckSlots .slot[data-slot=\"9\"]').click()");
