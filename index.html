@@ -633,21 +633,76 @@ body{
 }
 .mp.on{ transform:scale(1.45); box-shadow:0 0 0 2px oklch(1 0 0 / .85) }
 .mp.vs{ transform:scale(1.25); box-shadow:0 0 0 2px var(--fit-bad) }
-/* 見せ場のカットイン。ピッチの上に一瞬だけ重なる */
+/* =========================================================================
+   カットイン(→docs/06 §6.19)
+   **中央を横切る帯**にプレーを大きく見せる。card-eleven の見せ方を踏襲。
+   演出専用で、結果にも events にも一切影響しない。
+   ========================================================================= */
 .mcut{
-  position:absolute; inset:0; z-index:4; pointer-events:none;
-  display:flex; align-items:flex-start; justify-content:center; padding-top:12%;
-  opacity:0; transition:opacity .18s ease;
+  position:absolute; inset:0; z-index:5; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .14s ease;
+  background:oklch(0.06 0.02 255 / .55);
 }
 .mcut.on{ opacity:1 }
-.mcut b{
-  padding:10px 22px; border-radius:8px;
-  background:oklch(0 0 0 / .62); border:1px solid oklch(1 0 0 / .3);
-  font:700 18px/1 var(--f-head); letter-spacing:3px; color:#fff;
-  text-shadow:0 2px 10px oklch(0 0 0 / .9);
+.cut{
+  position:relative; width:100%; padding:14px 0 16px;
+  background:linear-gradient(90deg, transparent, oklch(0.10 0.02 255 / .96) 12%,
+    oklch(0.10 0.02 255 / .96) 88%, transparent);
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  text-align:center; overflow:hidden;
+  animation:cutBand .22s cubic-bezier(.2,.9,.3,1);
 }
-.mcut.goal b{ background:oklch(0.30 0.10 85 / .78); border-color:var(--accent);
-  color:var(--accent-hi); font-size:26px }
+@keyframes cutBand{ from{ transform:scaleY(.1); opacity:0 } to{ transform:scaleY(1); opacity:1 } }
+/* 帯を横切る光 */
+.cut::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(100deg, transparent 40%, oklch(1 0 0 / .22) 50%, transparent 60%);
+  background-size:280% 100%; animation:cutSheen .55s ease-out 1;
+}
+@keyframes cutSheen{ from{ background-position:130% 0 } to{ background-position:-60% 0 } }
+
+.cut-hd{ font:600 10px/1 var(--f-head); letter-spacing:3px; text-transform:uppercase;
+  color:var(--text-dim); margin-bottom:9px }
+.cut-row{ display:flex; align-items:center; justify-content:center; gap:10px }
+.cut-fig{ width:33%; transition:opacity .2s ease, transform .2s ease }
+.cut-fig.L{ animation:cutInL .26s cubic-bezier(.2,.9,.3,1) }
+.cut-fig.R{ animation:cutInR .26s cubic-bezier(.2,.9,.3,1) }
+@keyframes cutInL{ from{ transform:translateX(-60px); opacity:0 } to{ transform:none; opacity:1 } }
+@keyframes cutInR{ from{ transform:translateX( 60px); opacity:0 } to{ transform:none; opacity:1 } }
+.cut-fig.dim{ opacity:.32; filter:grayscale(1) }
+.cut-fig.win .cut-av{ box-shadow:0 0 0 3px var(--accent), 0 0 18px var(--accent) }
+.cut-av{
+  width:46px; height:46px; border-radius:50%; margin:0 auto 6px; overflow:hidden;
+  background:var(--kit, oklch(0.30 0.03 255));
+  display:flex; align-items:center; justify-content:center;
+  font:700 15px/1 var(--f-head); color:#fff; text-shadow:0 1px 3px oklch(0 0 0 / .7);
+}
+.cut-av img{ width:150%; height:150%; object-fit:contain; object-position:bottom;
+  image-rendering:pixelated }
+.cut-fig b{ display:block; font-size:11px; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.cut-fig span{ display:block; font:9px/1.5 var(--f-mono); color:var(--text-dim) }
+.cut-vs{ font:700 17px/1 var(--f-head); letter-spacing:2px; color:var(--text-dim) }
+.cut-arrow{ font:700 20px/1 var(--f-head); color:var(--accent) }
+.cut-word{
+  margin-top:9px; font:700 22px/1 var(--f-head); letter-spacing:3px; color:#fff;
+  text-shadow:0 2px 12px oklch(0 0 0 / .9);
+  animation:cutWord .3s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes cutWord{ from{ transform:scale(.5); opacity:0 } to{ transform:none; opacity:1 } }
+.cut-word.win{ color:var(--accent-hi) }
+.cut-word.stop{ color:oklch(0.72 0.14 250) }
+.cut-word.goal{ font-size:38px; letter-spacing:5px; color:var(--accent-hi) }
+/* ゴールは帯ごと金に染める */
+.cut.goal{ background:linear-gradient(90deg, transparent,
+    oklch(0.26 0.09 85 / .96) 10%, oklch(0.26 0.09 85 / .96) 90%, transparent);
+  border-color:var(--accent) }
+.mcut.shake{ animation:cutShake .4s ease }
+@keyframes cutShake{
+  0%,100%{ transform:none } 20%{ transform:translate(-4px,2px) }
+  45%{ transform:translate(4px,-2px) } 70%{ transform:translate(-2px,-1px) }
+}
 
 /* 実況。新しい行が上に積まれる */
 .mfeed{
@@ -1690,7 +1745,10 @@ const TUNING={
          gkFollow:0.15, dfFollow:0.85, mfFollow:1.00, fwFollow:0.55,
          pushUp:4, dropBack:4, stretch:-0.05, compact:0.09,
          maxDevY:13, maxDevX:11,
-         gkOut:0.06, gkSide:0.22, wander:1.4, wanderStep:0.7 },
+         gkOut:0.06, gkSide:0.22, wander:1.4, wanderStep:0.7,
+         // カットイン(→docs/06 §6.19)。盛り上がる局面は必ず、繋ぎは抽選で出す
+         cutMs:900, goalMs:1500, kickMs:1200, cutMaxSpeed:2,
+         cutPass:0.22, cutStop:0.20, cutMiss:0.25 },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
   // 攻守どちらのスコアにも eff 経由で掛かる(GKも例外ではない)。
@@ -4092,7 +4150,7 @@ function matchLine(e,M){
 // 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
 let _M=null;          // 進行中の試合
 let _mTimer=null, _mSpeed=1, _mPaused=false;
-let _mPhase=0, _mLastSide="H", _mBall=[50,50];  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
+let _mPhase=0, _mLastSide="H", _mBall=[50,50], _mCutT=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
 
 /** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
 function toScreen(e,pos){
@@ -4214,25 +4272,137 @@ function mMoveBall(e){
   const [x,y]=toScreen(e);
   const b=$("mBall"); b.style.left=x+"%"; b.style.top=y+"%";
 }
-/** 見せ場だけカットインを出す。 */
-function mCut(e){
+// ---------- カットイン(→docs/06 §6.19) ----------
+// **中央を横切る帯**にプレーを大きく見せる。card-eleven の見せ方を踏襲。
+// 演出専用で、結果にも events にも一切影響しない。
+
+/** カットインに出す選手の顔。イラストがあれば使い、無ければクラブカラーの丸にOVR。 */
+function cutAvatar(p,side){
+  const src=p.c.art&&(window.ASSETS&&window.ASSETS.players||{})[p.c.art+"_play"];
+  const col=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
+  return '<div class="cut-av" style="--kit:'+col+'">'
+    +(src?'<img src="'+src+'" alt="">':p.c.ovr)+'</div>';
+}
+/** 選手1人ぶんの枠。cls に L/R と win/dim を渡す。 */
+function cutFig(p,side,cls,note){
+  if(!p)return '<div class="cut-fig '+cls+'"></div>';
+  return '<div class="cut-fig '+cls+'">'+cutAvatar(p,side)
+    +'<b>'+esc(shortName(p.c))+'</b><span>'+(note||p.sub||"")+'</span></div>';
+}
+/** 帯を出して、指定ミリ秒で閉じる。返り値=描画を止めておく時間。 */
+function cutShow(html,ms,extra){
+  window.__cutN=(window.__cutN||0)+1;                   // 検証用の素朴なカウンタ
   const c=$("mCut");
-  const word=e.type==="goal"?"GOAL!!":e.type==="save"?"SAVE!":e.type==="block"?"BLOCK!":null;
-  if(!word){ c.classList.remove("on"); return; }
-  c.className="mcut on"+(e.type==="goal"?" goal":"");
-  c.innerHTML="<b>"+word+"</b>";
-  setTimeout(()=>c.classList.remove("on"),e.type==="goal"?1100:520);
+  c.className="mcut on"+(extra||"");
+  c.innerHTML=html;
+  clearTimeout(_mCutT);
+  _mCutT=setTimeout(()=>{ c.classList.remove("on"); },ms);
+  return ms;
+}
+/** マッチアップ。左=自チーム / 右=相手。決着で勝者が光り、敗者が沈む。 */
+function cutVs(e,atk,df,word,atkWon){
+  const ally=(e.side==="H")===(_M.fixture.h===S.club.id);
+  const mine=ally?atk:df, opp=ally?df:atk;
+  const mineSide=ally?e.side:(e.side==="H"?"A":"H");
+  const oppSide=mineSide==="H"?"A":"H";
+  const mineWon=ally?atkWon:!atkWon;
+  return cutShow('<div class="cut">'
+    +'<div class="cut-hd">'+esc(e.label||"MATCH UP")+'</div>'
+    +'<div class="cut-row">'
+      +cutFig(mine,mineSide,"L "+(mineWon?"win":"dim"),statNote(mine,e))
+      +'<div class="cut-vs">VS</div>'
+      +cutFig(opp,oppSide,"R "+(mineWon?"dim":"win"),statNote(opp,e))
+    +'</div>'
+    +'<div class="cut-word '+(mineWon?"win":"stop")+'">'+word+'</div>'
+  +'</div>',TUNING.play.cutMs);
+}
+/** 競り合いで効いた能力を添える(何で勝ったのかが分かるように)。 */
+function statNote(p,e){
+  if(!p)return "";
+  const ch=(ORIGINS[p.sub]||[]).find(c=>c.id===e.ch);
+  const k=ch?ch.stat:"atk";
+  return p.sub+" "+STAT_LABEL[k]+" "+p.c[k];
+}
+/** パス成功。左に出し手、右から受け手がスライドインする。 */
+function cutPass(e,from,to){
+  return cutShow('<div class="cut">'
+    +'<div class="cut-hd">'+esc(e.label||"PASS")+'</div>'
+    +'<div class="cut-row">'
+      +cutFig(from,e.side,"L")
+      +'<div class="cut-arrow">▶</div>'
+      +cutFig(to,e.side,"R win")
+    +'</div>'
+    +'<div class="cut-word win">つながった!</div>'
+  +'</div>',TUNING.play.cutMs);
+}
+/** ゴール。帯ごと金に染めて画面を揺らす。 */
+function cutGoal(e,sc,as){
+  return cutShow('<div class="cut goal">'
+    +'<div class="cut-hd">'+e.hg+' - '+e.ag+'</div>'
+    +'<div class="cut-row">'
+      +cutFig(sc,e.side,"L win","ATK "+sc.c.atk)
+      +(as?'<div class="cut-arrow">◀</div>'+cutFig(as,e.side,"R","アシスト"):"")
+    +'</div>'
+    +'<div class="cut-word goal">GOAL!!</div>'
+  +'</div>',TUNING.play.goalMs," shake");
+}
+/** キックオフ。両クラブを向かい合わせる。 */
+function cutKick(){
+  const f=(name,id,cls)=>'<div class="cut-fig '+cls+'">'
+    +'<div class="cut-av" style="--kit:'+clubColor(id)+'"></div><b>'+esc(name)+'</b></div>';
+  return cutShow('<div class="cut">'
+    +'<div class="cut-hd">KICK OFF</div>'
+    +'<div class="cut-row">'+f(_M.home.name,_M.fixture.h,"L")
+      +'<div class="cut-vs">VS</div>'+f(_M.away.name,_M.fixture.a,"R")+'</div>'
+  +'</div>',TUNING.play.kickMs);
 }
 
-/** 1イベントを画面に反映する。 */
+/**
+ * このイベントでカットインを出すか決め、出したら**止めておく時間**を返す。
+ * 盛り上がる局面(ゴール/シュート/決着)は必ず、ふつうの繋ぎは抽選で出す。
+ * ここは演出なので Math.random でよい(結果に関わらない)。
+ */
+function mCut(e){
+  const P=TUNING.play;
+  if(_mSpeed>=P.cutMaxSpeed)return 0;                  // 倍速中は出さない
+  const T=e.side==="H"?_M.home:_M.away, D=e.side==="H"?_M.away:_M.home;
+  const by=e.by&&mPlayer(_M,e.side,e.by);
+  const vs=e.vs&&mPlayer(_M,e.side==="H"?"A":"H",e.vs);
+  const gk=e.gk&&mPlayer(_M,e.side==="H"?"A":"H",e.gk);
+  switch(e.type){
+    case "kickoff": return cutKick();
+    case "goal":    return cutGoal(e,by,e.assist&&mPlayer(_M,e.side,e.assist));
+    case "save":    return cutVs(e,by,gk,"SAVE!",false);
+    case "block":   return cutVs(e,by,vs,"BLOCK!",false);
+    case "miss":    return Math.random()<P.cutMiss
+                      ? cutShow('<div class="cut"><div class="cut-hd">SHOT</div>'
+                        +'<div class="cut-row">'+cutFig(by,e.side,"L")+'</div>'
+                        +'<div class="cut-word stop">枠を外れた…</div></div>',P.cutMs) : 0;
+    case "origin":
+    case "link":
+      if(!vs)return 0;
+      if(!e.ok)return Math.random()<P.cutStop?cutVs(e,by,vs,"STOP!",false):0;
+      // 通ったときは、パス系なら受け手を出す(次のイベントの持ち手)
+      if(Math.random()>=P.cutPass)return 0;
+      if(e.kind==="pass"){
+        const nx=_mNext&&_mNext.by&&mPlayer(_M,e.side,_mNext.by);
+        if(nx&&nx!==by)return cutPass(e,by,nx);
+      }
+      return cutVs(e,by,vs,"突破!",true);
+    default: return 0;
+  }
+}/** 1イベントを画面に反映する。 */
+/** 1イベントを画面に反映し、**カットインで止める時間**(ms)を返す。 */
 function mApply(e){
   const min=(e.at?e.min+"+":e.min)+"分";
   $("mClock").textContent=min;
   $("mClock").classList.toggle("late",e.min>=80);
   if(e.hg!=null)$("mSc").textContent=e.hg+" - "+e.ag;
-  mFocus(e); mMoveBall(e); mLayout(e); mCut(e);
+  mFocus(e); mMoveBall(e); mLayout(e);
+  const hold=mCut(e);
   const line=matchLine(e,_M);
   if(line)mFeed(min,line.text,line.cls);
+  return hold||0;
 }
 function mFeed(min,text,cls){
   const d=document.createElement("div");
@@ -4252,8 +4422,9 @@ function mTick(){
   const next=()=>{
     if(!_M||_mPaused)return;
     if(i>=evs.length){ _mTimer=setTimeout(mTick,gap); return; }
-    mApply(evs[i++]);
-    _mTimer=setTimeout(next,gap);
+    _mNext=evs[i+1]||null;                              // パスの受け手を先読みする(演出用)
+    const hold=mApply(evs[i++]);
+    _mTimer=setTimeout(next,gap+hold);
   };
   next();
 }
@@ -4267,6 +4438,7 @@ function mFinish(){
 }
 function mSkip(){
   clearTimeout(_mTimer); _mTimer=null;
+  clearTimeout(_mCutT); $("mCut").classList.remove("on");
   finishMatch(_M);
   mFinish();
 }
@@ -4286,8 +4458,10 @@ function startMatch(){
   show("match");
   mDrawSquads();
   $("mBall").style.left="50%"; $("mBall").style.top="50%";
-  mFeed("0分",esc(_M.home.name)+" 対 "+esc(_M.away.name),"info");
-  _mTimer=setTimeout(mTick,700);
+  // キックオフのイベントは createMatch が積んでいるので、ここで自分で見せる
+  // (stepMatch は返さない)。card-eleven と同じく**開始からカットインする**。
+  const hold=mApply(_M.events[0]);
+  _mTimer=setTimeout(mTick,600+hold);
 }
 function doMatchday(){
   const out=playMatchday(_M&&_M.over?_M:null);

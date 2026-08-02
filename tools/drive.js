@@ -152,9 +152,34 @@ const STEPS = [
     await ctx.wait(250);
     ctx.log("打ち手を選んだ後:", await ctx.js("document.getElementById('calGo').disabled"));
     await ctx.js("document.getElementById('calGo').click()");
-    await ctx.wait(600);
-    await ctx.js("document.getElementById('mSpeed').click()");   // ×2 で少し進める
-    await ctx.wait(6000);
+    await ctx.wait(900);
+    // キックオフのカットイン
+    ctx.log("  キックオフ演出:", await ctx.js(
+      "document.getElementById('mCut').className + ' / ' + "
+      + "(document.querySelector('#mCut .cut-hd')||{}).textContent"));
+    await ctx.shot("07a-cutin-kickoff");
+    await ctx.wait(9000);
+    ctx.log("  カットイン:", await ctx.js("window.__cutN||0"), "回");
+    // 各カットインの見た目を確かめる(実戦では出る局面が毎回変わるので直接呼ぶ)
+    await ctx.js("document.getElementById('mPlay').click()");   // 一時停止
+    await ctx.wait(200);
+    await ctx.js(`(()=>{ const H=_M.home,A=_M.away;
+      const atk=H.players.find(p=>p.role==='FW'), df=A.players.find(p=>p.role==='DF');
+      cutVs({side:'H',label:'裏へ抜ける',ch:'cfRun'},atk,df,'突破!',true); })()`);
+    await ctx.wait(300);
+    await ctx.shot("07d-cutin-vs");
+    await ctx.js(`(()=>{ const H=_M.home;
+      const sc=H.players.find(p=>p.role==='FW'), as=H.players.find(p=>p.role==='MF');
+      cutGoal({side:'H',hg:1,ag:0},sc,as); })()`);
+    await ctx.wait(400);
+    await ctx.shot("07e-cutin-goal");
+    await ctx.js(`(()=>{ const H=_M.home;
+      const a=H.players.find(p=>p.role==='MF'), b=H.players.find(p=>p.role==='FW');
+      cutPass({side:'H',label:'スルーパス'},a,b); })()`);
+    await ctx.wait(300);
+    await ctx.shot("07f-cutin-pass");
+    await ctx.js("document.getElementById('mPlay').click()");   // 再開
+    await ctx.wait(300);
     ctx.log("試合画面:", await ctx.screen(),
       "/ スコア:", await ctx.js("document.getElementById('mSc').textContent"),
       "/ 時計:", await ctx.js("document.getElementById('mClock').textContent"),

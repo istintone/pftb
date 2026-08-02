@@ -621,21 +621,76 @@ body{
 }
 .mp.on{ transform:scale(1.45); box-shadow:0 0 0 2px oklch(1 0 0 / .85) }
 .mp.vs{ transform:scale(1.25); box-shadow:0 0 0 2px var(--fit-bad) }
-/* 見せ場のカットイン。ピッチの上に一瞬だけ重なる */
+/* =========================================================================
+   カットイン(→docs/06 §6.19)
+   **中央を横切る帯**にプレーを大きく見せる。card-eleven の見せ方を踏襲。
+   演出専用で、結果にも events にも一切影響しない。
+   ========================================================================= */
 .mcut{
-  position:absolute; inset:0; z-index:4; pointer-events:none;
-  display:flex; align-items:flex-start; justify-content:center; padding-top:12%;
-  opacity:0; transition:opacity .18s ease;
+  position:absolute; inset:0; z-index:5; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .14s ease;
+  background:oklch(0.06 0.02 255 / .55);
 }
 .mcut.on{ opacity:1 }
-.mcut b{
-  padding:10px 22px; border-radius:8px;
-  background:oklch(0 0 0 / .62); border:1px solid oklch(1 0 0 / .3);
-  font:700 18px/1 var(--f-head); letter-spacing:3px; color:#fff;
-  text-shadow:0 2px 10px oklch(0 0 0 / .9);
+.cut{
+  position:relative; width:100%; padding:14px 0 16px;
+  background:linear-gradient(90deg, transparent, oklch(0.10 0.02 255 / .96) 12%,
+    oklch(0.10 0.02 255 / .96) 88%, transparent);
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  text-align:center; overflow:hidden;
+  animation:cutBand .22s cubic-bezier(.2,.9,.3,1);
 }
-.mcut.goal b{ background:oklch(0.30 0.10 85 / .78); border-color:var(--accent);
-  color:var(--accent-hi); font-size:26px }
+@keyframes cutBand{ from{ transform:scaleY(.1); opacity:0 } to{ transform:scaleY(1); opacity:1 } }
+/* 帯を横切る光 */
+.cut::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(100deg, transparent 40%, oklch(1 0 0 / .22) 50%, transparent 60%);
+  background-size:280% 100%; animation:cutSheen .55s ease-out 1;
+}
+@keyframes cutSheen{ from{ background-position:130% 0 } to{ background-position:-60% 0 } }
+
+.cut-hd{ font:600 10px/1 var(--f-head); letter-spacing:3px; text-transform:uppercase;
+  color:var(--text-dim); margin-bottom:9px }
+.cut-row{ display:flex; align-items:center; justify-content:center; gap:10px }
+.cut-fig{ width:33%; transition:opacity .2s ease, transform .2s ease }
+.cut-fig.L{ animation:cutInL .26s cubic-bezier(.2,.9,.3,1) }
+.cut-fig.R{ animation:cutInR .26s cubic-bezier(.2,.9,.3,1) }
+@keyframes cutInL{ from{ transform:translateX(-60px); opacity:0 } to{ transform:none; opacity:1 } }
+@keyframes cutInR{ from{ transform:translateX( 60px); opacity:0 } to{ transform:none; opacity:1 } }
+.cut-fig.dim{ opacity:.32; filter:grayscale(1) }
+.cut-fig.win .cut-av{ box-shadow:0 0 0 3px var(--accent), 0 0 18px var(--accent) }
+.cut-av{
+  width:46px; height:46px; border-radius:50%; margin:0 auto 6px; overflow:hidden;
+  background:var(--kit, oklch(0.30 0.03 255));
+  display:flex; align-items:center; justify-content:center;
+  font:700 15px/1 var(--f-head); color:#fff; text-shadow:0 1px 3px oklch(0 0 0 / .7);
+}
+.cut-av img{ width:150%; height:150%; object-fit:contain; object-position:bottom;
+  image-rendering:pixelated }
+.cut-fig b{ display:block; font-size:11px; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.cut-fig span{ display:block; font:9px/1.5 var(--f-mono); color:var(--text-dim) }
+.cut-vs{ font:700 17px/1 var(--f-head); letter-spacing:2px; color:var(--text-dim) }
+.cut-arrow{ font:700 20px/1 var(--f-head); color:var(--accent) }
+.cut-word{
+  margin-top:9px; font:700 22px/1 var(--f-head); letter-spacing:3px; color:#fff;
+  text-shadow:0 2px 12px oklch(0 0 0 / .9);
+  animation:cutWord .3s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes cutWord{ from{ transform:scale(.5); opacity:0 } to{ transform:none; opacity:1 } }
+.cut-word.win{ color:var(--accent-hi) }
+.cut-word.stop{ color:oklch(0.72 0.14 250) }
+.cut-word.goal{ font-size:38px; letter-spacing:5px; color:var(--accent-hi) }
+/* ゴールは帯ごと金に染める */
+.cut.goal{ background:linear-gradient(90deg, transparent,
+    oklch(0.26 0.09 85 / .96) 10%, oklch(0.26 0.09 85 / .96) 90%, transparent);
+  border-color:var(--accent) }
+.mcut.shake{ animation:cutShake .4s ease }
+@keyframes cutShake{
+  0%,100%{ transform:none } 20%{ transform:translate(-4px,2px) }
+  45%{ transform:translate(4px,-2px) } 70%{ transform:translate(-2px,-1px) }
+}
 
 /* 実況。新しい行が上に積まれる */
 .mfeed{

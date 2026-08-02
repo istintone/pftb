@@ -352,7 +352,10 @@ const TUNING={
          gkFollow:0.15, dfFollow:0.85, mfFollow:1.00, fwFollow:0.55,
          pushUp:4, dropBack:4, stretch:-0.05, compact:0.09,
          maxDevY:13, maxDevX:11,
-         gkOut:0.06, gkSide:0.22, wander:1.4, wanderStep:0.7 },
+         gkOut:0.06, gkSide:0.22, wander:1.4, wanderStep:0.7,
+         // カットイン(→docs/06 §6.19)。盛り上がる局面は必ず、繋ぎは抽選で出す
+         cutMs:900, goalMs:1500, kickMs:1200, cutMaxSpeed:2,
+         cutPass:0.22, cutStop:0.20, cutMiss:0.25 },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
   // 攻守どちらのスコアにも eff 経由で掛かる(GKも例外ではない)。
