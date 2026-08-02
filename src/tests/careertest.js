@@ -168,6 +168,12 @@ function runSeason() {
         assert.ok(c.risk > 0 && c.risk < 1, sub + "/" + c.id + " の risk が 0〜1");
         assert.ok(c.gain >= 0 && c.gain <= 1, sub + "/" + c.id + " の gain が 0〜1");
       }
+      // to は「最低ここまで届く」。持つのは一発で前線へ送る手だけ(→docs/07 §7.9)
+      for (const c of list) if (c.to != null) {
+        assert.ok(c.to > 0.5 && c.to <= 0.95, sub + "/" + c.id + " の to が前線側");
+        assert.strictEqual(c.kind, "pass", sub + "/" + c.id + " の to はパス系だけに付く");
+        assert.ok(c.gain >= 0.5, sub + "/" + c.id + " の to を持つ手は gain も大きい");
+      }
       // risk と gain はトレードオフ: 最も安全な選択が最大の gain を持たない
       const safest = list.reduce((a, b) => b.risk > a.risk ? b : a);
       const biggest = list.reduce((a, b) => b.gain > a.gain ? b : a);
@@ -316,13 +322,14 @@ function runSeason() {
     const side = id => ({ cards: E.bestXI(E.clubRoster(4242, id), "4-4-2"),
       form: "4-4-2", name: id });
     const H = side("ger-4"), A = side("ger-4");
-    const t = {}; let reb = 0, rebOk = 0, second = 0;
+    const t = {}; let reb = 0, rebOk = 0; const depth = {};
     for (let i = 1; i <= 500; i++) {
       const M = E.finishMatch(E.createMatch(H, A, i));
       for (const e of M.events) {
         if (["block", "miss", "save", "goal"].includes(e.type)) t[e.type] = (t[e.type] || 0) + 1;
         if (e.type === "rebound") { reb++; if (e.ok) rebOk++; }
-        if (e.second) second++;
+        if (["block", "miss", "save", "goal"].includes(e.type))
+          depth[e.depth || 0] = (depth[e.depth || 0] || 0) + 1;
         if (e.type === "block") assert.ok(e.vs, "ブロックした選手が記録される");
         if (e.type === "miss") assert.ok(!e.gk, "枠外にGKは関与しない");
         if (e.type === "save" || e.type === "goal") assert.ok(e.gk, "枠内はGKが関与する");
@@ -337,12 +344,20 @@ function runSeason() {
       + (pct("miss") * 100).toFixed(0) + "%");
     assert.ok(pct("goal") > 0.07 && pct("goal") < 0.20, "得点が妥当な割合: "
       + (pct("goal") * 100).toFixed(0) + "%");
-    // こぼれ球は起きるが、**詰め直しは1回まで**(無限ループにならない)
+    // こぼれ球は続いてよいが、**確率で収束する**(回数を決め打ちしない)。
+    // 「こぼれる × 詰め合いに勝つ」で1回あたり十数%なので幾何級数的に減る。
     assert.ok(reb > 0, "こぼれ球が起きる");
-    assert.ok(second > 0 && second <= rebOk, "詰め直しはこぼれを拾えたときだけ");
+    const deep = Object.entries(depth).map(([k, v]) => [Number(k), v]).sort((a, b) => a[0] - b[0]);
+    assert.ok(deep.length > 1, "詰め直しからのシュートが起きる");
+    for (let i = 1; i < deep.length; i++)
+      assert.ok(deep[i][1] < deep[i - 1][1] * 0.5,
+        deep[i][0] + "回目のこぼれは前より大きく減る: " + deep[i][1] + " < " + deep[i - 1][1]);
+    assert.ok(Math.max(...deep.map(d => d[0])) <= E.TUNING.shot.reboundMax,
+      "安全網の上限を超えない");
     console.log("シュートの枝分かれOK",
       ["block", "miss", "save", "goal"].map(k => k + " " + (pct(k) * 100).toFixed(0) + "%").join(" / "),
-      "/ こぼれ球", (reb / 500).toFixed(1) + "回", "拾えた", (rebOk / reb * 100).toFixed(0) + "%");
+      "/ こぼれ球", (reb / 500).toFixed(1) + "回", "拾えた", (rebOk / reb * 100).toFixed(0) + "%",
+      "/ 深さ", deep.map(d => d[0] + ":" + (d[1] / att * 100).toFixed(1) + "%").join(" "));
   }
 
   // ---------- GKの質が結果に出る(→docs/07 §7.9) ----------

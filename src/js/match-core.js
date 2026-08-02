@@ -250,7 +250,10 @@ function ballTarget(rng,h0,x0,ch){
   // 前進は**残りの距離に対する割合**。自陣では大きく進み、敵陣深くでは進みにくい。
   // 足し算にすると2手でゴール前に着いてしまい、連鎖が成立しない(実際にそうなった)。
   const g=ch.gain*(1-h0)*C.gainK*(1+(rng()-0.5)*C.gainJitter);
-  const h=clamp(h0+g,0,1);
+  let h=clamp(h0+g,0,1);
+  // **to を持つチャンネルは「最低ここまで届く」**(ロングフィード/クロス)。
+  // 一発で前線へ送る手が、自陣から出しても割合計算で頭打ちになるのを防ぐ。
+  if(ch.to!=null)h=Math.max(h,clamp(ch.to*(1+(rng()-0.5)*C.toJitter),h0,1));
   const lx=laneTarget(ch,x0);
   const x=clamp(lx+(rng()-0.5)*2*laneSpread(ch),2,98);
   return { h, x };
@@ -438,11 +441,11 @@ function stepMatch(M){
  * **GKに全部が来るわけではない。** 守備者が身体を入れ、技術が足りなければ枠を外れ、
  * 止められてもこぼれれば詰められる。GK以外の守備も結果に効く。
  */
-function shoot(M,rng,push,T,D,shooter,assist,tg,from,second){
+function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth){
   const F=TUNING.mom, gk=pickGK(D);
   const pos=[Math.round(tg.x),yOfH(tg.h)];
-  const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100,
-    second:!!second };
+  const d=depth||0;
+  const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100, depth:d };
   shooter.stat.shots++;
 
   // ① ブロック — 打点に近い守備者が身体を入れる
@@ -475,17 +478,19 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,second){
   addMom(M,T.side,F.shot); addMom(M,D.side,F.save);         // 止めた側にも流れが来る
   push(Object.assign({ type:"save", gk:gk.c.id },base));
 
-  // ④ こぼれ球 — 1回だけ。詰め合いに勝てばゴール前から撃ち直し
-  if(second||rng()>=TUNING.shot.rebound)return M.events.slice(from);
+  // ④ こぼれ球 — **回数は決め打ちしない**。
+  //    「こぼれる(30%) × 詰め合いに勝つ(約40%)」で1回あたり約12%なので、
+  //    幾何級数的に収束する(期待値 +0.14本)。reboundMax は暴走を防ぐ安全網。
+  if(d>=TUNING.shot.reboundMax||rng()>=TUNING.shot.rebound)return M.events.slice(from);
   const chaser=pickShooter(rng,T)||shooter;
   const guard=matchupDefender(rng,1,tg.x,D);
   chaser.stat.inv++; if(guard)guard.stat.inv++;
   const got=guard?resolveRebound(rng,chaser,guard):true;
-  push({ min:base.min, side:T.side, type:"rebound", by:chaser.c.id,
-    vs:guard?guard.c.id:null, ok:got, pos });
+  push({ side:T.side, type:"rebound", by:chaser.c.id,
+    vs:guard?guard.c.id:null, ok:got, depth:d, pos });
   if(!got){ addMom(M,D.side,F.duelLost); return M.events.slice(from); }
   addMom(M,T.side,F.duelWon);
-  return shoot(M,rng,push,T,D,chaser,null,{ h:TUNING.shot.reboundH, x:tg.x },from,true);
+  return shoot(M,rng,push,T,D,chaser,null,{ h:TUNING.shot.reboundH, x:tg.x },from,d+1);
 }
 
 /** 試合終了イベント(1回だけ積む)。 */
