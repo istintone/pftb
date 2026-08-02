@@ -117,6 +117,21 @@ const E = setup({ tmpName: "_tmp_integration.js" });
     if (d.under) assert.ok(tabs.includes(d.under), `"${n}" の under "${d.under}" が実在するタブを指している`);
   console.log("画面レジストリOK", names.length, "画面 / タブ", tabs.length);
 
+  // ---------- ヘルプ(→docs/06 §6.16) ----------
+  // 止めてはいけない画面には置かない。それ以外の画面には必ず用意する。
+  const NOSTOP = ["title", "match", "result", "career"];
+  for (const id of Object.keys(E.HELP))
+    assert.ok(E.SCREENS[id], `HELP の "${id}" が実在する画面を指している`);
+  for (const id of NOSTOP)
+    assert.strictEqual(E.helpFor(id), null, `"${id}" は止めてはいけない画面なので説明を出さない`);
+  const missing = names.filter(id => !NOSTOP.includes(id) && E.helpFor(id) == null);
+  assert.deepStrictEqual(missing, [], "止めてよい画面には説明がある: " + missing.join(","));
+  // 関数で書いた項目も文字列を返すこと(TUNING を参照する項目がある)
+  for (const id of Object.keys(E.HELP))
+    assert.strictEqual(typeof E.helpFor(id), "string", `"${id}" の説明が文字列で取れる`);
+  console.log("ヘルプOK", Object.keys(E.HELP).length, "画面に説明 / 説明なし",
+    NOSTOP.length, "画面");
+
   // ---------- 画面切替(描画が例外を投げないこと) ----------
   await E.newGame();
   E.getS().coach = "テスト監督";

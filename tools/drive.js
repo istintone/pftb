@@ -76,7 +76,9 @@ function rpc(ws) {
 // ---------------------------------------------------------------------------
 const STEPS = [
   ["タイトル", async ctx => {
-    ctx.log("画面:", await ctx.screen());
+    ctx.log("画面:", await ctx.screen(),
+      "/ HELPタブ(出ないはず):", await ctx.js(
+        "getComputedStyle(document.getElementById('helpTab')).display"));
     const fonts = await ctx.js(`(async()=>{await document.fonts.ready;return [...document.fonts].map(f=>f.family+':'+f.status).join(', ')})()`);
     ctx.log("フォント:", fonts);
     await ctx.shot("01-title");
@@ -179,6 +181,17 @@ const STEPS = [
         ctx.log("  陣形変更 →", await ctx.js("document.getElementById('deckForm').textContent"),
           "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"));
         await ctx.shot("10b-deck-formation");
+        // ヘルプ(左端のタブ)。開いて中身が入り、外側タップで閉じること
+        await ctx.js("document.getElementById('helpTab').click()");
+        await ctx.wait(400);
+        ctx.log("  ヘルプ:", await ctx.js("document.getElementById('helpTitle').textContent"),
+          "/ 凡例:", await ctx.js("document.querySelectorAll('#helpBody .fit-chip').length"),
+          "/ 開:", await ctx.js("document.getElementById('helpDrawer').classList.contains('on')"));
+        await ctx.shot("10c-help");
+        await ctx.js("document.getElementById('appBody').click()");
+        await ctx.wait(350);
+        ctx.log("  外側タップで閉じる:",
+          await ctx.js("!document.getElementById('helpDrawer').classList.contains('on')"));
         // 枠適性: ポジション名の濃さで表す。3段が実際に塗り分けられているか
         ctx.log("  適性の段:", await ctx.js(
           "[...document.querySelectorAll('#deckSlots .sl-pos')]"

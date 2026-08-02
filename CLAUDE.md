@@ -29,7 +29,7 @@ headless Chrome を自動操作してスクリーンショットを撮り、**PN
 
 | やること | 触る場所 |
 |---|---|
-| 画面を増やす | `index.html` に `<div id="scr-xxx" class="screen">` → `ui.js` の `SCREENS` に描画関数を登録 |
+| 画面を増やす | `index.html` に `<div id="scr-xxx" class="screen">` → `ui.js` の `SCREENS` に描画関数を登録 → `data.js` の `HELP` に説明を追加(止めてはいけない画面を除く。テストが検査する) |
 | セーブ項目を増やす | `state.js` の `defaultState()`。構造変更なら `SAVE_VER` を上げて `migrate()` を書く |
 | JS/CSSファイルを増やす | `build.py` の `JS_FILES`/`CSS_FILES`(JSは `src/tests/_setup.js` の `JS_FILES` も**両方**更新) |
 | 画像を足す | `src/assets/<グループ>/<名前>.png` に置く → `window.ASSETS["グループ"]["名前"]` で参照 |

@@ -594,6 +594,46 @@ body{
   border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
 
 /* =========================================================================
+   HELP — 枠の左端に隠すタブ(→docs/06 §6.16)
+   説明文を画面本体に置かず、ここへ寄せる。#app が overflow:hidden なので
+   閉じている間はタブごと枠の中に収まり、外へはみ出さない。
+   ========================================================================= */
+#helpTab{
+  position:absolute; left:0; top:56%; transform:translateY(-50%); z-index:48;
+  writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
+  padding:12px 5px; border-radius:0 9px 9px 0;
+  border:1px solid var(--accent-dim); border-left:none;
+  background:linear-gradient(90deg, oklch(0.24 0.04 85), oklch(0.19 0.02 255));
+  color:var(--accent-hi); font:600 10px/1 var(--f-head); letter-spacing:2px;
+  box-shadow:2px 0 12px oklch(0 0 0 / .5);
+}
+#helpTab:active{ background:oklch(0.30 0.05 85) }
+#helpTab.off{ display:none }        /* 止めてはいけない画面では出さない */
+
+#helpDrawer{
+  position:absolute; left:0; top:56%; z-index:70; width:min(86%,320px);
+  transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none; max-height:74%;   /* % は #app の高さ基準(絶対配置なので) */
+}
+#helpDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
+.hd-in{
+  position:relative; max-height:100%; overflow-y:auto; scrollbar-width:none;
+  padding:14px 34px 16px 16px; border-radius:0 12px 12px 0;
+  background:linear-gradient(160deg, var(--panel-2), oklch(0.14 0.02 255));
+  border:1px solid var(--line); border-left:none;
+  box-shadow:6px 0 18px oklch(0 0 0 / .55);
+}
+.hd-t{ font:600 12px/1 var(--f-head); letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--accent); margin-bottom:8px }
+.hd-b{ font-size:11px; line-height:1.85; color:var(--text-2) }
+.hd-b b{ color:var(--text) }
+.hd-x{
+  position:absolute; top:8px; right:8px; width:24px; height:24px; cursor:pointer;
+  border-radius:6px; border:1px solid var(--line); background:var(--panel);
+  color:var(--text-dim); font-size:14px; line-height:1;
+}
+
+/* =========================================================================
    DECK — デザインモックの構成に準拠(→docs/06 §6.15)
    ========================================================================= */
 /* 監督バー(ピッチの上。監督名・陣形・総合力) */
@@ -954,7 +994,6 @@ body{
         <div class="pt-slots" id="deckSlots"></div>
       </div>
 
-      <div class="fit-legend" id="deckFit"></div>
       <div class="row" style="margin-top:12px">
         <button class="btn ghost" id="btnAutoSquad">自動編成</button>
         <button class="btn ghost" id="btnForm">陣形変更</button>
@@ -972,7 +1011,6 @@ body{
       <div class="sect-t" style="margin-top:14px">エントリー中の大会</div>
       <div id="seasonComps"></div>
       <div class="sect-t" style="margin-top:16px">任期の記録</div>
-      <div class="lg" style="margin-bottom:8px">打った手と、その結果。クラブを移っても1本で続きます。</div>
       <div id="seasonCal"></div>
     </div></div>
 
@@ -996,7 +1034,6 @@ body{
     <!-- ---------- GALLERY(カード見本。未入手の段も確認できる) ---------- -->
     <div id="scr-gallery" class="screen"><div class="pad">
       <div class="eyebrow">CARD GALLERY</div>
-      <div class="lg" id="galleryNote" style="margin:6px 0 4px"></div>
       <div class="grid" id="galleryGrid"></div>
       <div id="galleryLegend"></div>
     </div></div>
@@ -1131,6 +1168,18 @@ body{
     <div class="cm-sheet" id="cardModalBody"></div>
   </div>
 
+  <!-- ヘルプ(左端のタブ → docs/06 §6.16)。中身は data.js の HELP。 -->
+  <!-- 初期状態は off。起動直後のタイトルは show() を通らないため、
+       ここで隠しておかないとタイトルにタブが出てしまう。 -->
+  <div id="helpTab" class="off" role="button" tabindex="0" aria-label="この画面の説明">HELP</div>
+  <div id="helpDrawer" aria-hidden="true">
+    <div class="hd-in">
+      <button class="hd-x" id="helpClose" aria-label="閉じる">×</button>
+      <div class="hd-t" id="helpTitle"></div>
+      <div class="hd-b" id="helpBody"></div>
+    </div>
+  </div>
+
   <div id="toast"></div>
 </div>
 <script>
@@ -1241,6 +1290,72 @@ const SKILLS={
   MF:["スルーパス","視野の広さ","キープ力","ボール奪取","ロングシュート","ドリブル","展開力","運動量"],
   FW:["決定力","ポストプレー","オフザボール","ドリブル突破","カットイン","フィニッシュ","スピード","空中戦"],
 };
+
+// --- 画面ごとの説明(HELPタブの中身 → docs/06 §6.16) ---
+// **UIを説明文で埋めないための収納先**。盤面には状態だけを出し、
+// 「なぜそうなるのか」「どう読むのか」は全部ここへ寄せる(card-eleven のヘルプタブに倣う)。
+//
+//   キー   = 画面ID(SCREENS のキー)。**ここに項目がある画面にだけタブが出る**
+//   値     = 文字列、または TUNING 等を参照したい場合は文字列を返す関数
+//
+// 置かない画面: タイトル / 試合 / 結果 / キャリア終了。
+// 試合と演出は**止めてはいけない画面**で、タイトルと結果は説明するものが無い。
+const HELP={
+  offer:"名声で届く範囲のクラブだけが声をかけてきます。"
+    +"格の高いクラブほど期待順位が厳しく、下回ると解任が近づきます。"
+    +"まずは無理のないクラブで実績を作り、名声を上げてから上を目指すのが定石です。",
+  contract:"記入した監督名がそのまま署名になります。"
+    +"契約は1シーズンで、シーズン末に続投か解任かが決まります。"
+    +"任期そのものは96節(最大120節)で、シーズンとは切り離して数えます。",
+  home:"監督が持っているデバイスです。"
+    +"<br><b>秘書</b>は次に何をすればよいかを教えてくれます。"
+    +"<br><b>CLUB NEWS</b>はクラブの今を映します。順位表を開かなくても状況が分かります。"
+    +"<br>試合は SEASON から始めます。ここは進行の操作盤ではありません。",
+  cards:()=>"集めた選手カードの一覧です。"
+    +"<br><b>★</b> が自分のカードで、クラブを移っても連れて行けます。"
+    +"★の無いカードはクラブからの貸与で、退任するとそのクラブに残ります。"
+    +"<br>右上の数字は <b>OVR</b> = 6能力の合計(最大"+OVR_MAX+")です。",
+  deck:()=>{
+    const F=TUNING.fit;
+    return "ピッチをタップして11人を並べます。"
+      +"<br><b>丸の中</b>が OVR、<b>枠線の色</b>がレアリティ、<b>地色</b>がクラブカラーです。"
+      +"<br><br><b>枠適性</b> — 枠のポジション名の濃さが、その枠への適性を表します。"
+      +"合っているほどはっきり読めます。"
+      +'<div class="fit-legend">'
+      +[["a","サブ一致",F.sub],["b","メインのみ",F.main],["c","不一致",F.none]]
+        .map(([t,label,v])=>'<span class="fit-chip"><i class="sl-pos fit-'+t+'">POS</i>'
+          +label+" "+Math.round(v*100)+"%</span>").join("")
+      +"</div>"
+      +"サブポジションが一致していれば本来の力が出ます。"
+      +"メインだけ合っている選手はとりあえず使えますが力を出し切れず、"
+      +"どちらも違う選手はほぼ機能しません。"
+      +"<br>上の総合力は<b>配置込み</b>の値です。適性で目減りした分は「適性ロス」に出ます。";
+  },
+  season:()=>"任期"+TUNING.tenure.limit+"節のカレンダーです。上から下へ進みます。"
+    +"<br>1つの節は<b>打ち手 → 大会 → 試合</b>の順に決めます。打ち手を選ぶまで試合には進めません。"
+    +"<br>下の<b>任期の記録</b>は打った手とその結果です。クラブを移っても1本で続きます。"
+    +"<br>上限に達しても進行中の大会は最後まで戦います。"
+    +"決着した時点で延命(+"+TUNING.tenure.extend+"節)か任期終了かが決まります。",
+  schedule:"参照用の日程表です。ここからは試合を始められません。"
+    +"<br>リーグの日程は節に固定していません。カップ戦が割り込むためで、"
+    +"リーグを選んだ節に次の1試合を消化します。",
+  standings:"リーグの順位表です。"
+    +"<br>会長の期待順位を下回り続けると評価が下がり、解任が近づきます。"
+    +"期待順位はクラブの格と、就任時に持ち込んだ編成の強さから決まります。",
+  clubhouse:"監督個人の資産を置く場所です。名声とトロフィーはクラブを移っても失われません。"
+    +"<br><b>名声</b>が次にどのクラブから声がかかるかを決めます。",
+  gallery:"各レアリティの見本です。<b>所持カードではありません</b>。タップで詳細が開きます。"
+    +"<br>WORLD CLASS と LEGENDS は実在選手をモチーフにする段のためパックからは出ません。"
+    +"トロフィーや実績など別の経路で配ります。",
+  gacha:"コインかチケットを払ってカードを引きます。"
+    +"<br>コインは施設投資とも取り合いになります。今を取るか先を取るかの判断です。",
+  secretary:"秘書からの連絡です。次の一手の案内と、新しく使えるようになった機能を伝えます。",
+};
+/** 画面の説明を取り出す(関数で書かれていれば呼ぶ)。無ければ null。 */
+function helpFor(id){
+  const h=HELP[id];
+  return h==null?null:(typeof h==="function"?h():h);
+}
 
 // --- フォーメーション ---
 // 各枠は [細分ポジション, ピッチ上の位置(%)]。DECK画面の配置と編成の妥当性判定に使う。
@@ -2072,10 +2187,28 @@ function show(id,opts){
   const lit=def.tab||def.under;   // 配下の画面にいる間も親タブは点灯したままにする
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.s===lit));
 
+  // ヘルプは HELP に項目がある画面にだけ出す(→docs/06 §6.16)。
+  // 画面が変わったら必ず閉じる(前の画面の説明が残らないように)。
+  closeHelp();
+  $("helpTab").classList.toggle("off",helpFor(id)==null);
+
   if(def.render)def.render();
   $("appBody").scrollTop=0;
   if(def.after)def.after();      // 描画後の後処理(現在節へスクロール等)
 }
+/** ヘルプの開閉。中身は開くたびに作り直す(TUNINGの値を参照する項目があるため)。 */
+function openHelp(){
+  const html=helpFor(_scr); if(html==null)return;
+  $("helpTitle").textContent=(SCREENS[_scr].title||"HELP")+" — この画面について";
+  $("helpBody").innerHTML=html;
+  $("helpDrawer").classList.add("on");
+  $("helpDrawer").setAttribute("aria-hidden","false");
+}
+function closeHelp(){
+  $("helpDrawer").classList.remove("on");
+  $("helpDrawer").setAttribute("aria-hidden","true");
+}
+const helpOpen=()=>$("helpDrawer").classList.contains("on");
 function goBack(){ show(_back.pop()||"home"); }
 
 let _toastTimer=null;
@@ -2242,9 +2375,8 @@ function galleryCards(){
   return _gallery;
 }
 function renderGallery(){
+  // 説明はヘルプタブへ寄せる(→docs/06 §6.16)。ここには見本そのものだけを置く。
   const list=galleryCards();
-  $("galleryNote").innerHTML="各レアリティの見本です（所持カードではありません）。"
-    +"タップで詳細が開きます。";
   $("galleryGrid").innerHTML=list.map(cardTile).join("");
   $("galleryGrid").querySelectorAll("[data-card]").forEach((el,i)=>{
     el.onclick=()=>openCard(list[i]);
@@ -2257,8 +2389,7 @@ function renderGallery(){
         +r.label+'</span><b>'+(r.w?r.w+"%":"パック対象外")+'</b></div>'
         +'<div class="lg" style="margin:-2px 0 6px">'+esc(r.note)+'</div>';
     }).join("")
-    +'<div class="lg">WORLD CLASS と LEGENDS は実在選手をモチーフにする段のため、'
-    +'パックからは出ません（トロフィーや実績など別経路で配ります）。</div></div>';
+    +'</div>';
 }
 
 /** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
@@ -2336,12 +2467,6 @@ function renderDeck(){
   }).join("");
   wireCardTiles($("deckSlots"));
 
-  // 凡例。ピッチと同じ地色のチップに載せて、盤面の見え方とずれないようにする。
-  const F=TUNING.fit;
-  $("deckFit").innerHTML=[
-    ["a","サブ一致",F.sub],["b","メインのみ",F.main],["c","不一致",F.none],
-  ].map(([t,label,v])=>'<span class="fit-chip"><i class="sl-pos fit-'+t+'">POS</i>'
-    +label+' '+Math.round(v*100)+'%</span>').join("");
 
   // ベンチ(先発から溢れた控え)。横スクロールで並べる。
   const bench=cards.slice(TUNING.squad.starters,
@@ -2354,12 +2479,11 @@ function renderDeck(){
     : '<div class="none">控えはいません。カードを増やすとここに並びます。</div>';
   wireCardTiles($("deckBench"));
 
+  // 注記は**状態だけ**を出す。読み方の説明はヘルプタブへ寄せる(→docs/06 §6.16)。
   const loaned=start.filter(c=>c&&isLoaned(c)).length;
   const off=slots.filter(([sub],i)=>cards[i]&&fitTier(cards[i],sub)!=="a").length;
-  $("deckNote").innerHTML="先発11人のうち <b>"+loaned+"人</b> はクラブからの貸与です"
-    +"（退任するとクラブに残ります）。★ が自分のカードです。"
-    +(off?"<br>枠に合っていない選手が <b>"+off+"人</b> います。"
-         +"ポジション名が薄いほど本来の力が出ません。":"");
+  $("deckNote").innerHTML="クラブからの貸与 <b>"+loaned+"人</b>"
+    +"　／　枠に合っていない選手 <b>"+off+"人</b>";
 }
 const shortName=c=>c.name.split(" ").slice(-1)[0];
 
@@ -2749,6 +2873,14 @@ $("btnForm").onclick=()=>{
   S.squad=autoSquad(); save(); renderDeck(); toast("陣形を "+S.form+" に変更");
 };
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
+$("helpTab").onclick=e=>{ e.stopPropagation(); helpOpen()?closeHelp():openHelp(); };
+$("helpClose").onclick=e=>{ e.stopPropagation(); closeHelp(); };
+// 外側のどこかを触ったら閉じる(閉じるボタンを探さなくてよいように)
+document.addEventListener("click",e=>{
+  if(!helpOpen())return;
+  if(e.target.closest&&(e.target.closest("#helpDrawer")||e.target.closest("#helpTab")))return;
+  closeHelp();
+});
 $("btnGallery").onclick=()=>show("gallery",{push:1});
 $("btnNewCareer").onclick=async()=>{
   if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;

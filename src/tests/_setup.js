@@ -12,7 +12,9 @@ function mkEl() {
   const el = {
     textContent: "", innerHTML: "", value: "", className: "", style: {}, dataset: {},
     appendChild() {}, prepend() {}, remove() {}, click() {},
-    classList: { add() {}, remove() {}, toggle() {} },
+    setAttribute() {}, removeAttribute() {}, getAttribute: () => null,
+    closest: () => null, focus() {}, blur() {},
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
     querySelector: () => mkEl(), querySelectorAll: () => [mkEl(), mkEl()],
   };
   return el;
@@ -86,7 +88,7 @@ function setup(opts = {}) {
   if (opts.transform) code = opts.transform(code);
   const extra = opts.exports ? "," + opts.exports : "";
   code += `\nmodule.exports={getS:()=>S,setS:v=>{S=v;},newGame,loadGame,save,flushSave,hasSave,deleteSave,`
-        + `exportSave,importSave,exportSquad,show,goBack,toast,headUI,openContract,SCREENS,SAVE_VER,`
+        + `exportSave,importSave,exportSquad,show,goBack,toast,headUI,openContract,SCREENS,HELP,helpFor,SAVE_VER,`
         + `CLUBS,COUNTRIES,TUNING,RARITY,RAR_KEYS,RAR_DROPS,FORMATIONS,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
         + `standings,rankOf,expectedRank,requiredFame,offersFor,startTenure,playMatchday,seasonOver,`
         + `judgeSeason,myFixture,squadCards,autoSquad,availableCards,squadPower,resolveMatch,`

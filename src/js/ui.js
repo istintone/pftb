@@ -55,10 +55,28 @@ function show(id,opts){
   const lit=def.tab||def.under;   // 配下の画面にいる間も親タブは点灯したままにする
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.s===lit));
 
+  // ヘルプは HELP に項目がある画面にだけ出す(→docs/06 §6.16)。
+  // 画面が変わったら必ず閉じる(前の画面の説明が残らないように)。
+  closeHelp();
+  $("helpTab").classList.toggle("off",helpFor(id)==null);
+
   if(def.render)def.render();
   $("appBody").scrollTop=0;
   if(def.after)def.after();      // 描画後の後処理(現在節へスクロール等)
 }
+/** ヘルプの開閉。中身は開くたびに作り直す(TUNINGの値を参照する項目があるため)。 */
+function openHelp(){
+  const html=helpFor(_scr); if(html==null)return;
+  $("helpTitle").textContent=(SCREENS[_scr].title||"HELP")+" — この画面について";
+  $("helpBody").innerHTML=html;
+  $("helpDrawer").classList.add("on");
+  $("helpDrawer").setAttribute("aria-hidden","false");
+}
+function closeHelp(){
+  $("helpDrawer").classList.remove("on");
+  $("helpDrawer").setAttribute("aria-hidden","true");
+}
+const helpOpen=()=>$("helpDrawer").classList.contains("on");
 function goBack(){ show(_back.pop()||"home"); }
 
 let _toastTimer=null;
@@ -225,9 +243,8 @@ function galleryCards(){
   return _gallery;
 }
 function renderGallery(){
+  // 説明はヘルプタブへ寄せる(→docs/06 §6.16)。ここには見本そのものだけを置く。
   const list=galleryCards();
-  $("galleryNote").innerHTML="各レアリティの見本です（所持カードではありません）。"
-    +"タップで詳細が開きます。";
   $("galleryGrid").innerHTML=list.map(cardTile).join("");
   $("galleryGrid").querySelectorAll("[data-card]").forEach((el,i)=>{
     el.onclick=()=>openCard(list[i]);
@@ -240,8 +257,7 @@ function renderGallery(){
         +r.label+'</span><b>'+(r.w?r.w+"%":"パック対象外")+'</b></div>'
         +'<div class="lg" style="margin:-2px 0 6px">'+esc(r.note)+'</div>';
     }).join("")
-    +'<div class="lg">WORLD CLASS と LEGENDS は実在選手をモチーフにする段のため、'
-    +'パックからは出ません（トロフィーや実績など別経路で配ります）。</div></div>';
+    +'</div>';
 }
 
 /** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
@@ -319,12 +335,6 @@ function renderDeck(){
   }).join("");
   wireCardTiles($("deckSlots"));
 
-  // 凡例。ピッチと同じ地色のチップに載せて、盤面の見え方とずれないようにする。
-  const F=TUNING.fit;
-  $("deckFit").innerHTML=[
-    ["a","サブ一致",F.sub],["b","メインのみ",F.main],["c","不一致",F.none],
-  ].map(([t,label,v])=>'<span class="fit-chip"><i class="sl-pos fit-'+t+'">POS</i>'
-    +label+' '+Math.round(v*100)+'%</span>').join("");
 
   // ベンチ(先発から溢れた控え)。横スクロールで並べる。
   const bench=cards.slice(TUNING.squad.starters,
@@ -337,12 +347,11 @@ function renderDeck(){
     : '<div class="none">控えはいません。カードを増やすとここに並びます。</div>';
   wireCardTiles($("deckBench"));
 
+  // 注記は**状態だけ**を出す。読み方の説明はヘルプタブへ寄せる(→docs/06 §6.16)。
   const loaned=start.filter(c=>c&&isLoaned(c)).length;
   const off=slots.filter(([sub],i)=>cards[i]&&fitTier(cards[i],sub)!=="a").length;
-  $("deckNote").innerHTML="先発11人のうち <b>"+loaned+"人</b> はクラブからの貸与です"
-    +"（退任するとクラブに残ります）。★ が自分のカードです。"
-    +(off?"<br>枠に合っていない選手が <b>"+off+"人</b> います。"
-         +"ポジション名が薄いほど本来の力が出ません。":"");
+  $("deckNote").innerHTML="クラブからの貸与 <b>"+loaned+"人</b>"
+    +"　／　枠に合っていない選手 <b>"+off+"人</b>";
 }
 const shortName=c=>c.name.split(" ").slice(-1)[0];
 
@@ -732,6 +741,14 @@ $("btnForm").onclick=()=>{
   S.squad=autoSquad(); save(); renderDeck(); toast("陣形を "+S.form+" に変更");
 };
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
+$("helpTab").onclick=e=>{ e.stopPropagation(); helpOpen()?closeHelp():openHelp(); };
+$("helpClose").onclick=e=>{ e.stopPropagation(); closeHelp(); };
+// 外側のどこかを触ったら閉じる(閉じるボタンを探さなくてよいように)
+document.addEventListener("click",e=>{
+  if(!helpOpen())return;
+  if(e.target.closest&&(e.target.closest("#helpDrawer")||e.target.closest("#helpTab")))return;
+  closeHelp();
+});
 $("btnGallery").onclick=()=>show("gallery",{push:1});
 $("btnNewCareer").onclick=async()=>{
   if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;
