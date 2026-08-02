@@ -1755,6 +1755,7 @@ const TUNING={
          // それに読む間を足した長さにする(短いと認知が追いつかない)
          cutMs:1700, goalMs:2600, kickMs:2000, cutMaxSpeed:2,
          cutJudge:620,   // 決着(勝者が光り敗者が沈む)を出すまでの間
+         shotHold:1000,  // 「シュート!」を見せてから結果を出すまでの間
          cutPass:0.22, cutStop:0.20, cutMiss:0.25 },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
@@ -4157,7 +4158,8 @@ function matchLine(e,M){
 // 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
 let _M=null;          // 進行中の試合
 let _mTimer=null, _mSpeed=1, _mPaused=false;
-let _mPhase=0, _mLastSide="H", _mBall=[50,50], _mCutT=null, _mCutJ=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
+let _mPhase=0, _mLastSide="H", _mBall=[50,50];
+let _mCutT=null, _mCutJ=null, _mBallT=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
 
 /** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
 function toScreen(e,pos){
@@ -4279,6 +4281,26 @@ function mMoveBall(e){
   const [x,y]=toScreen(e);
   const b=$("mBall"); b.style.left=x+"%"; b.style.top=y+"%";
 }
+/**
+ * シュートの行方(→docs/06 §6.17)。**打点に置いたあと、実際に飛ばす**。
+ * ゴールならネットの中へ、セーブならGKの手元へ、枠外ならポストの外へ、
+ * ブロックなら弾かれて戻る。これが無いと**ゴールしてもボールがゴールに入らない**。
+ */
+function mBallShot(e,delay){
+  const goalY=e.side==="H"?13:87;                        // 攻めている側が狙うゴール
+  const into=e.side==="H"?-1:1;                          // ゴールの奥へ向かう向き
+  let tx=50, ty=goalY;
+  if(e.type==="goal"){ tx=50+ri(-5,5); ty=goalY+into*2; }
+  else if(e.type==="save"){ tx=50+ri(-4,4); ty=goalY-into*3; }
+  else if(e.type==="miss"){ tx=ri(0,1)?50-ri(11,16):50+ri(11,16); ty=goalY+into*3; }
+  else if(e.type==="block"){ const [bx,by]=toScreen(e);   // 弾かれて戻る
+    tx=bx+ri(-6,6); ty=by-into*5; }
+  clearTimeout(_mBallT);
+  _mBallT=setTimeout(()=>{
+    const b=$("mBall");
+    b.style.left=clamp(tx,2,98)+"%"; b.style.top=clamp(ty,2,98)+"%";
+  },delay);
+}
 // ---------- カットイン(→docs/06 §6.19) ----------
 // **中央を横切る帯**にプレーを大きく見せる。card-eleven の見せ方を踏襲。
 // 演出専用で、結果にも events にも一切影響しない。
@@ -4352,16 +4374,52 @@ function cutPass(e,from,to){
     +'<div class="cut-word win">つながった!</div>'
   +'</div>',TUNING.play.cutMs);
 }
-/** ゴール。帯ごと金に染めて画面を揺らす。 */
-function cutGoal(e,sc,as){
-  return cutShow('<div class="cut goal">'
-    +'<div class="cut-hd">'+e.hg+' - '+e.ag+'</div>'
+/**
+ * シュート。**まず「シュート!」で撃ち手と守り手を見せ、そのあとで結果を出す**
+ * (→docs/06 §6.19)。いきなり結果を出すと、何に対する結果なのか読めない。
+ *   e … goal / save / block / miss
+ */
+function cutShot(e,sc,keeper,word,scored,assist){
+  const P=TUNING.play;
+  const kSide=e.side==="H"?"A":"H";
+  const ms=(e.type==="goal"?P.goalMs:P.cutMs)+P.shotHold;
+  cutShow('<div class="cut">'
+    +'<div class="cut-hd">SHOT</div>'
     +'<div class="cut-row">'
-      +cutFig(sc,e.side,"L win","ATK "+sc.c.atk)
-      +(as?'<div class="cut-arrow">◀</div>'+cutFig(as,e.side,"R","アシスト"):"")
+      +cutFig(sc,e.side,"L","ATK "+sc.c.atk+" / POW "+sc.c.pow)
+      +'<div class="cut-vs">VS</div>'
+      +(keeper?cutFig(keeper,kSide,"R",(keeper.role==="GK"?"GK":keeper.sub)+" DEF "+keeper.c.def)
+        :'<div class="cut-fig R"></div>')
     +'</div>'
-    +'<div class="cut-word goal">GOAL!!</div>'
-  +'</div>',TUNING.play.goalMs," shake");
+    +'<div class="cut-word">シュート!</div>'
+  +'</div>',ms);
+  // 結果はあとから。撃ち手と守り手のどちらが勝ったかを、そのとき初めて見せる
+  clearTimeout(_mCutJ);
+  _mCutJ=setTimeout(()=>{
+    const c=$("mCut"), band=c.querySelector(".cut");
+    if(!band)return;
+    const f=c.querySelectorAll(".cut-fig");
+    if(f.length>=2){
+      f[0].classList.add(scored?"win":"dim");
+      f[1].classList.add(scored?"dim":"win");
+    }
+    const w=c.querySelector(".cut-word");
+    if(w){
+      w.className="cut-word "+(scored?"goal":"stop");
+      w.textContent=word;
+      // 出し直す。**遅延は入れない**(結果はもう待たせたので、すぐ出す)
+      w.style.animation="none"; void w.offsetWidth;
+      w.style.animation="cutWord .42s cubic-bezier(.2,1.4,.4,1)";
+    }
+    if(scored){
+      band.classList.add("goal");
+      c.classList.add("shake");
+      const hd=band.querySelector(".cut-hd");
+      if(hd)hd.textContent=e.hg+" - "+e.ag
+        +(assist?"　アシスト "+esc(shortName(assist.c)):"");
+    }
+  },P.shotHold);
+  return ms;
 }
 /** キックオフ。両クラブを向かい合わせる。 */
 function cutKick(){
@@ -4388,13 +4446,10 @@ function mCut(e){
   const gk=e.gk&&mPlayer(_M,e.side==="H"?"A":"H",e.gk);
   switch(e.type){
     case "kickoff": return cutKick();
-    case "goal":    return cutGoal(e,by,e.assist&&mPlayer(_M,e.side,e.assist));
-    case "save":    return cutVs(e,by,gk,"SAVE!",false);
-    case "block":   return cutVs(e,by,vs,"BLOCK!",false);
-    case "miss":    return Math.random()<P.cutMiss
-                      ? cutShow('<div class="cut"><div class="cut-hd">SHOT</div>'
-                        +'<div class="cut-row">'+cutFig(by,e.side,"L")+'</div>'
-                        +'<div class="cut-word stop">枠を外れた…</div></div>',P.cutMs) : 0;
+    case "goal":    return cutShot(e,by,gk,"GOAL!!",true,e.assist&&mPlayer(_M,e.side,e.assist));
+    case "save":    return cutShot(e,by,gk,"SAVE!",false);
+    case "block":   return cutShot(e,by,vs,"BLOCK!",false);
+    case "miss":    return Math.random()<P.cutMiss?cutShot(e,by,null,"枠を外れた…",false):0;
     case "origin":
     case "link":
       if(!vs)return 0;
@@ -4417,6 +4472,9 @@ function mApply(e){
   if(e.hg!=null)$("mSc").textContent=e.hg+" - "+e.ag;
   mFocus(e); mMoveBall(e); mLayout(e);
   const hold=mCut(e);
+  // シュートは打点に置いてから**実際に飛ばす**。カットインの決着と間を合わせる
+  if(["goal","save","miss","block"].includes(e.type))
+    mBallShot(e,hold?TUNING.play.shotHold:200);
   const line=matchLine(e,_M);
   if(line)mFeed(min,line.text,line.cls);
   return hold||0;
@@ -4455,7 +4513,8 @@ function mFinish(){
 }
 function mSkip(){
   clearTimeout(_mTimer); _mTimer=null;
-  clearTimeout(_mCutT); clearTimeout(_mCutJ); $("mCut").classList.remove("on");
+  clearTimeout(_mCutT); clearTimeout(_mCutJ); clearTimeout(_mBallT);
+  $("mCut").classList.remove("on");
   finishMatch(_M);
   mFinish();
 }

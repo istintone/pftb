@@ -358,6 +358,7 @@ const TUNING={
          // それに読む間を足した長さにする(短いと認知が追いつかない)
          cutMs:1700, goalMs:2600, kickMs:2000, cutMaxSpeed:2,
          cutJudge:620,   // 決着(勝者が光り敗者が沈む)を出すまでの間
+         shotHold:1000,  // 「シュート!」を見せてから結果を出すまでの間
          cutPass:0.22, cutStop:0.20, cutMiss:0.25 },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。

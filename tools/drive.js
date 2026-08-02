@@ -172,9 +172,21 @@ const STEPS = [
     await ctx.shot("07d-cutin-vs-2");   // 勝敗が表れ、決着語が出たところ
     await ctx.js(`(()=>{ const H=_M.home;
       const sc=H.players.find(p=>p.role==='FW'), as=H.players.find(p=>p.role==='MF');
-      cutGoal({side:'H',hg:1,ag:0},sc,as); })()`);
-    await ctx.wait(400);
-    await ctx.shot("07e-cutin-goal");
+      const gk=_M.away.players.find(p=>p.role==='GK');
+      cutShot({side:'H',type:'goal',hg:1,ag:0},sc,gk,'GOAL!!',true,as); })()`);
+    await ctx.wait(300);
+    await ctx.shot("07e-cutin-shot");    // まず「シュート!」
+    await ctx.wait(1250);
+    await ctx.shot("07e-cutin-goal");    // そのあと結果
+    // 実際の試合でゴールしたとき、ボールがゴールへ入ること
+    ctx.log("  ゴール時のボール:", await ctx.js(`(()=>{
+      const e={side:'H',type:'goal',pos:[50,30],hg:1,ag:0};
+      mBallShot(e,0);
+      return new Promise(r=>setTimeout(()=>{
+        const b=document.getElementById('mBall');
+        r('x='+b.style.left+' y='+b.style.top+' (HOMEの攻めるゴールは y≒13%)');
+      },80));
+    })()`));
     await ctx.js(`(()=>{ const H=_M.home;
       const a=H.players.find(p=>p.role==='MF'), b=H.players.find(p=>p.role==='FW');
       cutPass({side:'H',label:'スルーパス'},a,b); })()`);
