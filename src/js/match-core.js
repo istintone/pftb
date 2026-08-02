@@ -45,7 +45,7 @@ function lineup(cards,form){
 /** チームを組む。試合中に変わる値(得点・スタッツ)もここに持たせる。 */
 function buildTeam(cards,form,name,side){
   const { xi, bench }=lineup(cards,form);
-  xi.forEach(p=>{ p.side=side; p.stat={ shots:0, goals:0, inv:0 }; });
+  xi.forEach(p=>{ p.side=side; p.stat={ shots:0, goals:0, assists:0, inv:0 }; });
   return { players:xi, bench, form, name, side, score:0 };
 }
 
@@ -89,9 +89,16 @@ const pickGK=T=>T.players.find(p=>p.role==="GK")||T.players[0];
  * シュート vs GK。**攻撃側スコア > 守備側スコア × 閾値** の形は全判定で共通(→docs/07 §7.4)。
  * 攻守それぞれに独立して rr() が乗るので、実力差があっても番狂わせが起きる。
  */
-function resolveShot(rng,atk,gk){
-  const sSc=(eff(atk,"atk")*0.7+eff(atk,"pow")*0.3)*rr(rng);
-  const gSc=eff(gk,"def")*rr(rng);
+function resolveShot(rng,atk,gk,h){
+  const S=TUNING.shot;
+  // **どこから撃ったかが効く**。遠いほど枠にもGKにも勝てない。
+  // これが無いと、遠目の苦し紛れがゴール前の決定機と同じ確率で入ってしまう。
+  const near=clamp((h-S.deadZone)/(1-S.deadZone),S.minRange,1);
+  const sSc=(eff(atk,"atk")*0.7+eff(atk,"pow")*0.3)*Math.pow(near,S.rangePow)*rr(rng);
+  // **GKは def だけで守らない**。def は上限20に張り付きやすく(96人中52人)、
+  // それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.9)。
+  // 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
+  const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)*rr(rng);
   return sSc>gSc*TUNING.th.shot;
 }
 
@@ -156,9 +163,9 @@ function pickOriginCh(rng,p){
  *   FW起点(h≒0.85)↔ 相手DF(h'≒0.15)  … 最も止められやすい
  * GKは外す(GKの仕事はシュートを止めること)。
  */
-function matchupDefender(rng,p,D){
+function matchupDefender(rng,h,x,D){
   const F=TUNING.matchup;
-  const th=1-heightOf(p), tx=100-p.x;
+  const th=1-h, tx=100-x;
   const cand=D.players.filter(q=>q.role!=="GK");
   return pickW(rng,cand.length?cand:D.players,q=>{
     const dh=(heightOf(q)-th)/F.sigmaH;
@@ -167,18 +174,83 @@ function matchupDefender(rng,p,D){
   });
 }
 /**
- * 起点が成立するか。**攻撃側スコア > 守備側スコア × 閾値**(→docs/07 §7.4)。
+ * チャンネルが成立するか。**攻撃側スコア > 守備側スコア × 閾値**(→docs/07 §7.4)。
+ * 起点でも連鎖の各ステップでも同じ式を使う。
  *   攻撃側 … チャンネルの能力 × risk(選択の安全さ)
  *   守備側 … 対応する選手の def を主軸に、同じ能力を副次で足す。
  *            速さで抜けようとすれば速い守備者が追いつき、
  *            技術で運ぼうとすれば読める守備者が止める
  */
-function resolveOrigin(rng,atk,df,ch){
+function resolveChannel(rng,atk,df,ch){
   const M=TUNING.matchup;
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
     *ch.risk*TUNING.atk.originK*rr(rng);
   const dSc=(eff(df,"def")*M.defW+eff(df,ch.stat)*(1-M.defW))*rr(rng);
   return aSc>dSc*TUNING.th.origin;
+}
+
+// ---------- 連鎖 ----------
+// 起点が成立したら、そこからボールが繋がっていく(→docs/07 §7.9)。
+// **各ステップは起点とまったく同じ仕組み**: ボールを持った選手がサブポジの3枚から
+// チャンネルを選び、座標の近い相手と競る。勝てば次へ、負ければそこで失う。
+//   kind:"carry" … 自分がそのまま持ち上がる(自分が次の起点)
+//   kind:"pass"  … 行き先(高さ×レーン)を抽選し、そこに近い**味方**へ渡る
+//   kind:"shot"  … その場で撃つ(連鎖はここで終わる)
+
+/** ボールの位置(高さ0..1)を、ピッチのy座標に戻す(イベントに載せる用)。 */
+const yOfH=h=>Math.round(87-h*74);
+
+/** チャンネルの lane 規則から、ボールが向かう左右(0..100)を出す。 */
+function laneTarget(ch,x){
+  switch(ch.lane){
+    case "in":     return 50+(x-50)*0.25;         // 中央へ寄る
+    case "out":    return x<50?14:86;             // 近い方のタッチライン際へ
+    case "switch": return 100-x;                  // 逆サイドへ
+    case "box":    return 50;                     // ペナルティエリア中央
+    case "any":    return 50;                     // 散らす(ばらつきで表現)
+    default:       return x;                      // same
+  }
+}
+/** lane 規則ごとの左右のばらつき。any は大きく、box は小さい。 */
+function laneSpread(ch){
+  const C=TUNING.chain;
+  return ch.lane==="any"?C.laneWide:ch.lane==="box"?C.laneTight:C.laneNormal;
+}
+/**
+ * 次にボールが収まる位置を抽選する。高さは gain ぶん前へ、左右は lane 規則へ。
+ * 返り値: { h, x }(h=高さ0..1 / x=左右0..100)
+ */
+function ballTarget(rng,h0,x0,ch){
+  const C=TUNING.chain;
+  // 前進は**残りの距離に対する割合**。自陣では大きく進み、敵陣深くでは進みにくい。
+  // 足し算にすると2手でゴール前に着いてしまい、連鎖が成立しない(実際にそうなった)。
+  const g=ch.gain*(1-h0)*C.gainK*(1+(rng()-0.5)*C.gainJitter);
+  const h=clamp(h0+g,0,1);
+  const lx=laneTarget(ch,x0);
+  const x=clamp(lx+(rng()-0.5)*2*laneSpread(ch),2,98);
+  return { h, x };
+}
+/** 抽選した位置に**近い味方**を選ぶ。自分は外す(パス系なので必ず他の選手へ渡る)。 */
+function receiverAt(rng,T,tg,self){
+  const C=TUNING.chain;
+  const cand=T.players.filter(q=>q!==self&&q.role!=="GK");
+  if(!cand.length)return null;
+  return pickW(rng,cand,q=>{
+    const dh=(heightOf(q)-tg.h)/C.sigmaH;
+    const dx=((q.x-tg.x)/100)/C.sigmaX;
+    return Math.exp(-(dh*dh+dx*dx));
+  });
+}
+/**
+ * 連鎖の途中でシュートに移行するか。
+ * **深く入るほど**(高さの累乗)・**繋ぐほど**・**撃てる選手ほど**撃ちに行く。
+ * 高さを線形にすると自陣寄りからの苦し紛れが半分を占め、
+ * DFの30m弾ばかりになる(実際にそうなった → docs/07 §7.9)。
+ */
+function shotUrge(rng,h,step,p){
+  const C=TUNING.chain;
+  const want=C.shotBase+Math.pow(h,C.shotCurve)*C.shotDepth+step*C.shotStep;
+  return rng()<want*(C.shotAtkLo+eff(p,"atk")/STAT_MAX*(1-C.shotAtkLo));
 }
 
 // ---------- 時計 ----------
@@ -256,7 +328,7 @@ function applyOrders(M,t){
       // 交代: 出る選手の**枠をそのまま引き継ぐ**(位置と適性は枠側の属性なので付け替える)
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
         x:out.x, y:out.y, ix:out.ix, side, enter:t.min,
-        stat:{ shots:0, goals:0, inv:0 } };
+        stat:{ shots:0, goals:0, assists:0, inv:0 } };
       T.players[o.out]=nw; inc.used=true; M.subs[side]++;
       M.events.push({ min:t.min, half:t.half, at:!!t.at, side, type:"sub",
         out:out.c.id, in:inc.c.id, pos:[out.x,out.y] });
@@ -296,44 +368,64 @@ function stepMatch(M){
     mom:Math.round(M.mom*100)/100 });
 
   // ③ 起点 — **モメンタムが高さを決め、高さが選手を決め、サブポジがチャンネルを決める**
-  const origin=pickOrigin(rng,T,mom)||pickAttacker(rng,T);
-  const ch=pickOriginCh(rng,origin);
-  const marker=matchupDefender(rng,origin,D);                // 対応する相手(座標が近いほど)
-  origin.stat.inv++; if(marker)marker.stat.inv++;
-  const ok=marker?resolveOrigin(rng,origin,marker,ch):true;
-  push({ side:T.side, type:"origin", by:origin.c.id, sub:origin.sub,
-    ch:ch.id, label:ch.label, ok, vs:marker?marker.c.id:null,
-    h:Math.round(heightOf(origin)*100)/100, pos:[origin.x,origin.y] });
-  if(!ok){
-    addMom(M,D.side,TUNING.mom.originNg);                   // 起点で失う = 相手に流れ
-    return M.events.slice(from);
-  }
-  addMom(M,T.side,TUNING.mom.originOk);
+  //    以降は連鎖。**各ステップは起点とまったく同じ仕組み**で回す(→docs/07 §7.9)。
+  const C=TUNING.chain, F=TUNING.mom;
+  let carrier=pickOrigin(rng,T,mom)||pickAttacker(rng,T);
+  // **ボールの位置は選手の枠とは別に持つ**。持ち運びで動くのはボールであって、
+  // 枠(FORMATIONS の座標)は動かない。マッチアップも受け手選びもこの位置で引く。
+  let h=heightOf(carrier), x=carrier.x;
+  let assist=null, step=0, lastCh=null;
 
-  // ④ シュートまで届くか(連鎖はこれから。起点で稼いだ前進が高いほど届く)
-  const A_=TUNING.atk;
-  const prog=clamp(heightOf(origin)+ch.gain,0,1);
-  if(rng()>=A_.toShot*(A_.progLo+prog*A_.progK)){
-    push({ side:T.side, type:"build", by:origin.c.id, pos:[origin.x,origin.y] });
-    return M.events.slice(from);
+  while(true){
+    const ch=pickOriginCh(rng,carrier,lastCh);
+    const marker=matchupDefender(rng,h,x,D);                // 対応する相手(位置が近いほど)
+    carrier.stat.inv++; if(marker)marker.stat.inv++;
+    const ok=marker?resolveChannel(rng,carrier,marker,ch):true;
+    push({ side:T.side, type:step?"link":"origin", step,
+      by:carrier.c.id, sub:carrier.sub, ch:ch.id, label:ch.label, kind:ch.kind,
+      ok, vs:marker?marker.c.id:null,
+      h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
+
+    // **マッチアップの勝敗がそのまま勢いを動かす**(→docs/07 §7.7)
+    if(!ok){ addMom(M,D.side,F.duelLost); return M.events.slice(from); }
+    addMom(M,T.side,F.duelWon);
+
+    const tg=ballTarget(rng,h,x,ch);
+    // 撃つ: その場で撃つチャンネル / 深く入った / つなぎ上限
+    if(ch.kind==="shot"||step>=C.maxLinks||shotUrge(rng,tg.h,step,carrier)){
+      return shoot(M,push,T,D,carrier,assist,tg,from);
+    }
+    if(ch.kind==="carry"){                                  // 自分が次の起点になる
+      lastCh=ch.id;
+    }else{                                                  // パス系 → 行き先に近い味方へ
+      const recv=receiverAt(rng,T,tg,carrier);
+      if(!recv)return shoot(M,push,T,D,carrier,assist,tg,from);
+      assist=carrier; carrier=recv; lastCh=null;
+    }
+    h=tg.h; x=tg.x; step++;
   }
-  // ⑤ シュート
-  const shooter=pickShooter(rng,T)||origin;
-  const gk=pickGK(D);
-  shooter.stat.inv++; shooter.stat.shots++;
-  if(resolveShot(rng,shooter,gk)){
+}
+/** シュートまで行ったときの決着。連鎖のどこからでも呼べるように切り出してある。 */
+function shoot(M,push,T,D,shooter,assist,tg,from){
+  const F=TUNING.mom, gk=pickGK(D);
+  const pos=[Math.round(tg.x),yOfH(tg.h)];
+  shooter.stat.shots++; gk.stat.inv++;
+  const srng=mulberry32((M.seed^hashStr("s:"+M.ix+":"+shooter.c.id))>>>0);
+  if(resolveShot(srng,shooter,gk,tg.h)){
     T.score++; shooter.stat.goals++;
-    addMom(M,T.side,TUNING.mom.goal);
-    push({ side:T.side, type:"goal", by:shooter.c.id, gk:gk.c.id, assist:origin.c.id,
-      hg:H.score, ag:A.score, pos:[shooter.x,shooter.y] });
+    if(assist)assist.stat.assists++;
+    addMom(M,T.side,F.goal);
+    push({ side:T.side, type:"goal", by:shooter.c.id, gk:gk.c.id,
+      assist:assist?assist.c.id:null, hg:M.home.score, ag:M.away.score, pos,
+      h:Math.round(tg.h*100)/100 });
   }else{
-    addMom(M,T.side,TUNING.mom.shot);
-    addMom(M,D.side,TUNING.mom.save);                       // 止めた側にも流れが来る
-    push({ side:T.side, type:"save", by:shooter.c.id, gk:gk.c.id,
-      pos:[shooter.x,shooter.y] });
+    addMom(M,T.side,F.shot); addMom(M,D.side,F.save);       // 止めた側にも流れが来る
+    push({ side:T.side, type:"save", by:shooter.c.id, gk:gk.c.id, pos,
+      h:Math.round(tg.h*100)/100 });
   }
   return M.events.slice(from);
 }
+
 /** 試合終了イベント(1回だけ積む)。 */
 function finishTick(M){
   if(M.over)return [];

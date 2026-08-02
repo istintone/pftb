@@ -269,47 +269,53 @@ const DEFAULT_FORM="4-4-2";
 //   risk … 成功のしやすさ(**相対値**)。安全な選択ほど高く、一発を狙うほど低い。
 //          絶対の水準は TUNING.atk.originK で一括調整する
 //   gain … 成功したときに稼ぐ前進(0〜1)。低リスクは小さく、一発は大きい
+//   kind … pass  … ボールが**他の選手**へ渡る
+//          carry … ドリブル/キープ。**自分がそのまま次の起点**になる
+//          shot  … その場でシュートまで行く(連鎖はここで終わる)
+//   lane … ボールが運ばれる左右(→docs/07 §7.9)
+//          same=そのレーン / in=中央へ / out=サイドへ / switch=逆サイド /
+//          box=ペナルティエリア中央 / any=散らす(ばらつきが大きい)
 // risk と gain はトレードオフに置く。安全に繋ぐか、失っても一気に行くかが選手の個性になる。
 const ORIGINS={
-  GK: [{id:"gkLong",  label:"ロングキック",   stat:"pow", risk:0.40, gain:0.55},
-       {id:"gkQuick", label:"速攻のスロー",   stat:"spd", risk:0.66, gain:0.30},
-       {id:"gkShort", label:"短く繋ぐ",       stat:"tec", risk:0.80, gain:0.08}],
-  CB: [{id:"cbCarry", label:"持ち上がり",     stat:"spd", risk:0.62, gain:0.28},
-       {id:"cbVert",  label:"縦パス",         stat:"tec", risk:0.58, gain:0.38},
-       {id:"cbFeed",  label:"ロングフィード", stat:"pow", risk:0.38, gain:0.60}],
-  LSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.60, gain:0.40},
-       {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.32},
-       {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55}],
-  RSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.60, gain:0.40},
-       {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.32},
-       {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55}],
-  DMF:[{id:"dmSpray", label:"散らし",         stat:"tec", risk:0.78, gain:0.15},
-       {id:"dmDrive", label:"持ち出し",       stat:"spd", risk:0.60, gain:0.35},
-       {id:"dmSwitch",label:"サイドチェンジ", stat:"pow", risk:0.52, gain:0.45}],
-  CMF:[{id:"cmThru",  label:"スルーパス",     stat:"tec", risk:0.50, gain:0.55},
-       {id:"cmCarry", label:"持ち出し",       stat:"spd", risk:0.62, gain:0.35},
-       {id:"cmOpen",  label:"展開",           stat:"pow", risk:0.72, gain:0.22}],
-  OMF:[{id:"omTurnUp",label:"前を向いて運ぶ", stat:"tec", risk:0.66, gain:0.38},
-       {id:"omTurn",  label:"反転ドリブル",   stat:"spd", risk:0.52, gain:0.50},
-       {id:"omMid",   label:"ミドルを狙う",   stat:"atk", risk:0.44, gain:0.62}],
-  LMF:[{id:"wmUp",    label:"サイドを上がる", stat:"spd", risk:0.62, gain:0.38},
-       {id:"wmIn",    label:"中へ絞る",       stat:"tec", risk:0.64, gain:0.34},
-       {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55}],
-  RMF:[{id:"wmUp",    label:"サイドを上がる", stat:"spd", risk:0.62, gain:0.38},
-       {id:"wmIn",    label:"中へ絞る",       stat:"tec", risk:0.64, gain:0.34},
-       {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55}],
-  CF: [{id:"cfPress",label:"前線からのプレス",stat:"def",risk:0.52, gain:0.55},
-       {id:"cfTurn",  label:"反転して持ち上がる",stat:"tec",risk:0.66, gain:0.30},
-       {id:"cfRun",   label:"裏へ抜ける",     stat:"spd", risk:0.42, gain:0.62}],
-  ST: [{id:"stBehind",label:"DFの背後を取る",stat:"spd", risk:0.44, gain:0.60},
-       {id:"stLoose", label:"こぼれ球に詰める",stat:"atk",risk:0.60, gain:0.38},
-       {id:"stStrike",label:"いきなり撃つ",   stat:"pow", risk:0.40, gain:0.66}],
-  LWG:[{id:"wgLine",  label:"縦へ突破",       stat:"spd", risk:0.52, gain:0.50},
-       {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46},
-       {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.48, gain:0.54}],
-  RWG:[{id:"wgLine",  label:"縦へ突破",       stat:"spd", risk:0.52, gain:0.50},
-       {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46},
-       {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.48, gain:0.54}],
+  GK: [{id:"gkLong",  label:"ロングキック",   stat:"pow", risk:0.40, gain:0.55, kind:"pass",  lane:"any"},
+       {id:"gkQuick", label:"速攻のスロー",   stat:"spd", risk:0.66, gain:0.30, kind:"pass",  lane:"out"},
+       {id:"gkShort", label:"短く繋ぐ",       stat:"tec", risk:0.80, gain:0.08, kind:"pass",  lane:"same"}],
+  CB: [{id:"cbCarry", label:"持ち上がり",     stat:"spd", risk:0.62, gain:0.28, kind:"carry", lane:"same"},
+       {id:"cbVert",  label:"縦パス",         stat:"tec", risk:0.58, gain:0.38, kind:"pass",  lane:"same"},
+       {id:"cbFeed",  label:"ロングフィード", stat:"pow", risk:0.38, gain:0.60, kind:"pass",  lane:"any"}],
+  LSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.60, gain:0.40, kind:"carry", lane:"out"},
+       {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.32, kind:"carry", lane:"in"},
+       {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55, kind:"pass",  lane:"box"}],
+  RSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.60, gain:0.40, kind:"carry", lane:"out"},
+       {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.32, kind:"carry", lane:"in"},
+       {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55, kind:"pass",  lane:"box"}],
+  DMF:[{id:"dmSpray", label:"散らし",         stat:"tec", risk:0.78, gain:0.15, kind:"pass",  lane:"any"},
+       {id:"dmDrive", label:"持ち出し",       stat:"spd", risk:0.60, gain:0.35, kind:"carry", lane:"same"},
+       {id:"dmSwitch",label:"サイドチェンジ", stat:"pow", risk:0.52, gain:0.45, kind:"pass",  lane:"switch"}],
+  CMF:[{id:"cmThru",  label:"スルーパス",     stat:"tec", risk:0.50, gain:0.55, kind:"pass",  lane:"same"},
+       {id:"cmCarry", label:"持ち出し",       stat:"spd", risk:0.62, gain:0.35, kind:"carry", lane:"same"},
+       {id:"cmOpen",  label:"展開",           stat:"pow", risk:0.72, gain:0.22, kind:"pass",  lane:"out"}],
+  OMF:[{id:"omTurnUp",label:"前を向いて運ぶ", stat:"tec", risk:0.66, gain:0.38, kind:"carry", lane:"same"},
+       {id:"omTurn",  label:"反転ドリブル",   stat:"spd", risk:0.52, gain:0.50, kind:"carry", lane:"in"},
+       {id:"omMid",   label:"ミドルを狙う",   stat:"atk", risk:0.44, gain:0.62, kind:"shot",  lane:"same"}],
+  LMF:[{id:"wmUp",    label:"サイドを上がる", stat:"spd", risk:0.62, gain:0.38, kind:"carry", lane:"out"},
+       {id:"wmIn",    label:"中へ絞る",       stat:"tec", risk:0.64, gain:0.34, kind:"carry", lane:"in"},
+       {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55, kind:"pass",  lane:"box"}],
+  RMF:[{id:"wmUp",    label:"サイドを上がる", stat:"spd", risk:0.62, gain:0.38, kind:"carry", lane:"out"},
+       {id:"wmIn",    label:"中へ絞る",       stat:"tec", risk:0.64, gain:0.34, kind:"carry", lane:"in"},
+       {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55, kind:"pass",  lane:"box"}],
+  CF: [{id:"cfPress",label:"前線からのプレス",stat:"def", risk:0.52, gain:0.55, kind:"carry", lane:"same"},
+       {id:"cfTurn", label:"反転して持ち上がる",stat:"tec",risk:0.66, gain:0.30, kind:"carry", lane:"in"},
+       {id:"cfRun",   label:"裏へ抜ける",     stat:"spd", risk:0.42, gain:0.62, kind:"carry", lane:"same"}],
+  ST: [{id:"stBehind",label:"DFの背後を取る", stat:"spd", risk:0.44, gain:0.60, kind:"carry", lane:"same"},
+       {id:"stLoose", label:"こぼれ球に詰める",stat:"atk",risk:0.60, gain:0.38, kind:"carry", lane:"box"},
+       {id:"stStrike",label:"いきなり撃つ",   stat:"pow", risk:0.40, gain:0.66, kind:"shot",  lane:"same"}],
+  LWG:[{id:"wgLine",  label:"縦へ突破",       stat:"spd", risk:0.52, gain:0.50, kind:"carry", lane:"out"},
+       {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46, kind:"carry", lane:"in"},
+       {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.48, gain:0.54, kind:"pass",  lane:"box"}],
+  RWG:[{id:"wgLine",  label:"縦へ突破",       stat:"spd", risk:0.52, gain:0.50, kind:"carry", lane:"out"},
+       {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46, kind:"carry", lane:"in"},
+       {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.48, gain:0.54, kind:"pass",  lane:"box"}],
 };
 
 // --- 打ち手(各節に1つ選ぶ。→docs/03 §3.2.3) ---
@@ -346,13 +352,18 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:1.20, origin:1.00 },
+  th:{ shot:1.15, origin:1.00 },
+  // シュートの距離減衰(→docs/07 §7.9)。h=1 がゴール前、0 が自陣ゴール前。
+  //   deadZone この高さ以下はほぼ入らない / minRange その下限 / rangePow 減衰の効き
+  //   gkDef/gkPow/gkTec  GKのセーブの配合(合計1.0)
+  shot:{ deadZone:0.25, minRange:0.04, rangePow:1.00,
+         gkDef:0.65, gkPow:0.20, gkTec:0.15 },
   // 各スコアに乗る揺らぎ rr() = min + random×span
   rng:{ min:0.60, span:0.80 },
   // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)。
   // 起点で稼いだ前進(prog)が高いほど届きやすい: toShot × (progLo + prog×progK)
   // originK は起点の攻撃側スコア全体に掛かる係数(ORIGINS の表は相対値のままにする)
-  atk:{ toShot:0.70, homeAdv:1.06, progLo:0.45, progK:1.10, originK:2.60 },
+  atk:{ toShot:0.70, homeAdv:1.06, progLo:0.45, progK:1.10, originK:3.00 },
   // 起点のマッチアップ(→docs/07 §7.8)。座標が近い相手ほど対応しやすい。
   //   sigmaH/sigmaX … 高さ/左右のばらつき(大きいほど遠くの選手も関与する)
   //   atkW/defW     … 攻守スコアの「総合力(atk/def)」の比率。**残りはチャンネルと同じ能力**。
@@ -360,6 +371,17 @@ const TUNING={
   //                   atkW を defW より小さくしているのは、atk の役割差が大きく
   //                   (DF 8.0 対 FW 18.5)、大きくすると起点の勾配が潰れるため。
   matchup:{ sigmaH:0.22, sigmaX:0.30, atkW:0.25, defW:0.75 },
+  // --- 連鎖(→docs/07 §7.9) ---
+  //   maxLinks  1回の攻撃でつなげる上限(これを超えたら撃つ)
+  //   shot*     シュートに移行する率: base + 高さ×depth + つないだ数×step
+  //   sigmaH/X  受け手を選ぶときの高さ/左右のばらつき
+  //   lane*     lane 規則ごとの左右のばらつき
+  //   gainJitter 前進量のゆらぎ(±の割合)
+  chain:{ maxLinks:4, shotBase:0.02, shotDepth:0.85, shotCurve:3.0, shotStep:0.06,
+          shotAtkLo:0.30,   // 撃つ判断に乗る「撃てる選手か」の下限(atk0でこの倍率)
+          sigmaH:0.20, sigmaX:0.26,
+          laneTight:8, laneNormal:16, laneWide:34, gainK:1.00, gainJitter:0.5,
+          repeatW:0.30 },   // 直前と同じチャンネルを選ぶ重み(同じ札の連発を避ける)
   // --- モメンタム(勢い → docs/07 §7.7) ---
   // -1..+1 の1本のゲージ。+ がホーム優勢。**起点の高さ**を決める。
   //   kickK   キックオフ時: (OVR差 / kickK) を初期値にする
@@ -368,7 +390,8 @@ const TUNING={
   //   spread  モメンタムが起点の高さを動かす幅
   //   sigma   高さの選好のばらつき(大きいほどランダム寄り)
   mom:{ kickK:60, kickCap:0.45, decay:0.90, cap:1.0, spread:0.55, sigma:0.18,
-        goal:0.54, shot:0.16, save:0.19, originOk:0.11, originNg:0.21 },
+        // duelWon/duelLost … 連鎖の1マッチアップごとの増減(勢いの主な動力)
+        goal:0.54, shot:0.16, save:0.19, duelWon:0.09, duelLost:0.17 },
   // 暫定リゾルバ(第3段で match-core の本実装に置き換える)
   sim:{ base:1.15, spread:22, homeAdv:0.18, maxGoals:6 },
 };

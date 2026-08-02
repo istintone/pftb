@@ -264,6 +264,68 @@ function runSeason() {
       "/ atk-6", (aLo * 100).toFixed(0) + "%");
   }
 
+  // ---------- 連鎖(D28 → docs/07 §7.9) ----------
+  {
+    const side = id => ({ cards: E.bestXI(E.clubRoster(4242, id), "4-4-2"),
+      form: "4-4-2", name: id });
+    const H = side("ger-4"), A = side("ger-4");
+    const len = {}, kinds = {};
+    let shots = 0, goals = 0, deep = 0, byRole = {};
+    for (let i = 1; i <= 500; i++) {
+      const M = E.finishMatch(E.createMatch(H, A, i));
+      let l = 0, carrier = null;
+      for (const e of M.events) {
+        if (e.type === "origin") { l = 1; carrier = e.by; kinds[e.kind] = (kinds[e.kind] || 0) + 1; continue; }
+        if (e.type === "link") {
+          l++; kinds[e.kind] = (kinds[e.kind] || 0) + 1;
+          // carry は自分が持ち続け、pass は必ず別の選手へ渡る
+          const prev = M.events[M.events.indexOf(e) - 1];
+          if (prev && prev.kind === "carry" && prev.ok) assert.strictEqual(e.by, prev.by,
+            "carry のあとは同じ選手が持つ");
+          if (prev && prev.kind === "pass" && prev.ok) assert.notStrictEqual(e.by, prev.by,
+            "pass のあとは別の選手が持つ");
+          carrier = e.by; continue;
+        }
+        if (e.type === "goal" || e.type === "save") {
+          shots++; if (e.type === "goal") goals++;
+          if (e.h < 0.6) deep++;
+          len[l] = (len[l] || 0) + 1; l = 0;
+          const T = e.side === "H" ? M.home : M.away;
+          const p = T.players.find(x => x.c.id === e.by);
+          if (p) byRole[p.role] = (byRole[p.role] || 0) + 1;
+        }
+      }
+    }
+    const tot = Object.values(len).reduce((a, b) => a + b, 0);
+    const one = (len[1] || 0) / tot;
+    assert.ok(one < 0.6, "1手で終わる攻撃が半分以下: " + (one * 100).toFixed(0) + "%");
+    assert.ok((len[2] || 0) + (len[3] || 0) > tot * 0.3, "2〜3手の連鎖が主流になる");
+    assert.ok(kinds.carry > 0 && kinds.pass > 0 && kinds.shot > 0, "3種の kind が全部出る");
+    // 遠くからの苦し紛れが主流になっていないこと(一度そうなった)
+    assert.ok(deep / shots < 0.1, "遠距離シュートは1割未満: " + (deep / shots * 100).toFixed(0) + "%");
+    assert.ok((byRole.DF || 0) / shots < 0.2, "DFがシュートの主役になっていない: "
+      + ((byRole.DF || 0) / shots * 100).toFixed(0) + "%");
+    console.log("連鎖OK 手数",
+      Object.entries(len).filter(([k]) => k > 0).sort((a, b) => a[0] - b[0])
+        .map(([k, v]) => k + "手" + (v / tot * 100).toFixed(0) + "%").join(" "),
+      "/ 遠距離", (deep / shots * 100).toFixed(0) + "% / 決定率", (goals / shots * 100).toFixed(0) + "%");
+  }
+
+  // ---------- GKの質が結果に出る(→docs/07 §7.9) ----------
+  {
+    const base = E.bestXI(E.clubRoster(4242, "ger-4"), "4-4-2");
+    const mk = d => { const X = JSON.parse(JSON.stringify(base));
+      X.forEach(c => { if (c && c.pos === "GK") c.def = Math.max(1, Math.min(20, c.def + d)); });
+      return X; };
+    const run = X => { let ga = 0;
+      for (let i = 1; i <= 400; i++) ga += E.finishMatch(E.createMatch(
+        { cards: base, form: "4-4-2", name: "H" }, { cards: X, form: "4-4-2", name: "A" }, i)).home.score;
+      return ga / 400; };
+    const hi = run(mk(+4)), lo = run(mk(-4));
+    assert.ok(hi < lo * 0.85, "GKが良いほど失点が減る: +4 " + hi.toFixed(2) + " < -4 " + lo.toFixed(2));
+    console.log("GKの効きOK 失点 def+4", hi.toFixed(2), "/ def-4", lo.toFixed(2));
+  }
+
   // ---------- 監督は任意のタイミングで手を打てる(D25 → docs/07 §7.6) ----------
   {
     const side = id => {
