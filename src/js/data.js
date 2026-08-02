@@ -346,13 +346,17 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:1.20 },
+  th:{ shot:1.20, origin:1.00 },
   // 各スコアに乗る揺らぎ rr() = min + random×span
   rng:{ min:0.60, span:0.80 },
   // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)。
   // 起点で稼いだ前進(prog)が高いほど届きやすい: toShot × (progLo + prog×progK)
-  // originK は ORIGINS の risk 全体に掛かる係数(表は相対値のままにして、ここ1つで調整する)
-  atk:{ toShot:0.75, homeAdv:1.06, progLo:0.45, progK:1.10, originK:1.65 },
+  // originK は起点の攻撃側スコア全体に掛かる係数(ORIGINS の表は相対値のままにする)
+  atk:{ toShot:0.70, homeAdv:1.06, progLo:0.45, progK:1.10, originK:2.60 },
+  // 起点のマッチアップ(→docs/07 §7.8)。座標が近い相手ほど対応しやすい。
+  //   sigmaH/sigmaX … 高さ/左右のばらつき(大きいほど遠くの選手も関与する)
+  //   defW          … 守備側スコアの def の比率(残りはチャンネルと同じ能力)
+  matchup:{ sigmaH:0.22, sigmaX:0.30, defW:0.75 },
   // --- モメンタム(勢い → docs/07 §7.7) ---
   // -1..+1 の1本のゲージ。+ がホーム優勢。**起点の高さ**を決める。
   //   kickK   キックオフ時: (OVR差 / kickK) を初期値にする

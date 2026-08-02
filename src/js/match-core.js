@@ -146,11 +146,38 @@ function pickOriginCh(rng,p){
   return pickW(rng,list,ch=>eff(p,ch.stat));
 }
 /**
- * 起点が成立するか。チャンネルの基本成功率に、その選手の該当能力を掛ける。
- * 能力20で等倍、低いほど落ちる(能力が「選び方」だけでなく「成否」にも効く)。
+ * 起点に**対応する相手の選手**を選ぶ(→docs/07 §7.8)。
+ * 座標が近いほど対応しやすく、遠いほど関与しない。
+ *
+ * 両チームは向かい合っているので、攻撃側の高さ h に対応する守備者は
+ * **自軍フレームで 1-h の高さ**に立っている。左右は 100-x のミラー。
+ *   DF起点(h≒0.2) ↔ 相手FW(h'≒0.8)   … FWのdefは低いのでほぼ止まらない
+ *   MF起点(h≒0.5) ↔ 相手MF(h'≒0.5)   … ここからが本当の勝負
+ *   FW起点(h≒0.85)↔ 相手DF(h'≒0.15)  … 最も止められやすい
+ * GKは外す(GKの仕事はシュートを止めること)。
  */
-function originSuccess(rng,p,ch){
-  return rng()<ch.risk*TUNING.atk.originK*(0.55+eff(p,ch.stat)/STAT_MAX*0.45);
+function matchupDefender(rng,p,D){
+  const F=TUNING.matchup;
+  const th=1-heightOf(p), tx=100-p.x;
+  const cand=D.players.filter(q=>q.role!=="GK");
+  return pickW(rng,cand.length?cand:D.players,q=>{
+    const dh=(heightOf(q)-th)/F.sigmaH;
+    const dx=((q.x-tx)/100)/F.sigmaX;
+    return Math.exp(-(dh*dh+dx*dx));
+  });
+}
+/**
+ * 起点が成立するか。**攻撃側スコア > 守備側スコア × 閾値**(→docs/07 §7.4)。
+ *   攻撃側 … チャンネルの能力 × risk(選択の安全さ)
+ *   守備側 … 対応する選手の def を主軸に、同じ能力を副次で足す。
+ *            速さで抜けようとすれば速い守備者が追いつき、
+ *            技術で運ぼうとすれば読める守備者が止める
+ */
+function resolveOrigin(rng,atk,df,ch){
+  const M=TUNING.matchup;
+  const aSc=eff(atk,ch.stat)*ch.risk*TUNING.atk.originK*rr(rng);
+  const dSc=(eff(df,"def")*M.defW+eff(df,ch.stat)*(1-M.defW))*rr(rng);
+  return aSc>dSc*TUNING.th.origin;
 }
 
 // ---------- 時計 ----------
@@ -270,11 +297,12 @@ function stepMatch(M){
   // ③ 起点 — **モメンタムが高さを決め、高さが選手を決め、サブポジがチャンネルを決める**
   const origin=pickOrigin(rng,T,mom)||pickAttacker(rng,T);
   const ch=pickOriginCh(rng,origin);
-  origin.stat.inv++;
-  const ok=originSuccess(rng,origin,ch);
+  const marker=matchupDefender(rng,origin,D);                // 対応する相手(座標が近いほど)
+  origin.stat.inv++; if(marker)marker.stat.inv++;
+  const ok=marker?resolveOrigin(rng,origin,marker,ch):true;
   push({ side:T.side, type:"origin", by:origin.c.id, sub:origin.sub,
-    ch:ch.id, label:ch.label, ok, h:Math.round(heightOf(origin)*100)/100,
-    pos:[origin.x,origin.y] });
+    ch:ch.id, label:ch.label, ok, vs:marker?marker.c.id:null,
+    h:Math.round(heightOf(origin)*100)/100, pos:[origin.x,origin.y] });
   if(!ok){
     addMom(M,D.side,TUNING.mom.originNg);                   // 起点で失う = 相手に流れ
     return M.events.slice(from);

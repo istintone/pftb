@@ -181,6 +181,66 @@ function runSeason() {
       Object.keys(E.ORIGINS).length * 3, "種 / 陣形の全", subs.size, "サブポジを網羅");
   }
 
+  // ---------- 起点はマッチアップで決まる(D27 → docs/07 §7.8) ----------
+  {
+    const side = id => {
+      const roster = E.clubRoster(4242, id);
+      return { cards: E.bestXI(roster, "4-4-2"), form: "4-4-2", name: id };
+    };
+    const H = side("ger-4"), A = side("ger-4");
+    const by = {}, vs = {};
+    for (let i = 1; i <= 400; i++) {
+      const M = E.finishMatch(E.createMatch(H, A, i));
+      for (const e of M.events) {
+        if (e.type !== "origin") continue;
+        const T = e.side === "H" ? M.home : M.away, D = e.side === "H" ? M.away : M.home;
+        const p = T.players.find(x => x.c.id === e.by);
+        const df = D.players.find(x => x.c.id === e.vs);
+        assert.ok(p, "起点の選手がイベントから引ける");
+        assert.ok(df, "対応した相手がイベントから引ける");
+        assert.notStrictEqual(df.role, "GK", "GKは起点のマッチアップに出ない");
+        by[p.role] = by[p.role] || { n: 0, ok: 0 };
+        by[p.role].n++; if (e.ok) by[p.role].ok++;
+        vs[p.role + ">" + df.role] = (vs[p.role + ">" + df.role] || 0) + 1;
+      }
+    }
+    // 座標のミラーで DF起点↔相手FW / MF起点↔相手MF / FW起点↔相手DF になる
+    const top = r => Object.entries(vs).filter(([k]) => k.startsWith(r + ">"))
+      .sort((a, b) => b[1] - a[1])[0][0].split(">")[1];
+    assert.strictEqual(top("DF"), "FW", "DF起点には相手FWが対応する");
+    assert.strictEqual(top("MF"), "MF", "MF起点には相手MFが対応する");
+    assert.strictEqual(top("FW"), "DF", "FW起点には相手DFが対応する");
+    // FWのdefは低いので、DF起点はほとんど止まらない。逆にFW起点は相手DFに阻まれる
+    const rate = r => by[r].ok / by[r].n;
+    assert.ok(rate("DF") > 0.85, "DF起点はほぼ止まらない: " + (rate("DF") * 100).toFixed(0) + "%");
+    assert.ok(rate("DF") > rate("MF") && rate("MF") > rate("FW"),
+      "前へ行くほど止められやすい: DF " + (rate("DF") * 100).toFixed(0)
+      + "% > MF " + (rate("MF") * 100).toFixed(0) + "% > FW " + (rate("FW") * 100).toFixed(0) + "%");
+    console.log("起点のマッチアップOK DF", (rate("DF") * 100).toFixed(0) + "%",
+      "> MF", (rate("MF") * 100).toFixed(0) + "%", "> FW", (rate("FW") * 100).toFixed(0) + "%");
+  }
+
+  // ---------- 守備能力が試合結果に効く(→docs/07 §7.8) ----------
+  {
+    const base = E.bestXI(E.clubRoster(4242, "ger-4"), "4-4-2");
+    const conceded = d => {
+      const A = JSON.parse(JSON.stringify(base));
+      A.forEach(c => { if (c && c.pos !== "GK") c.def = Math.max(1, Math.min(20, c.def + d)); });
+      let ga = 0;
+      for (let i = 1; i <= 500; i++) {
+        const M = E.finishMatch(E.createMatch(
+          { cards: base, form: "4-4-2", name: "H" }, { cards: A, form: "4-4-2", name: "A" }, i));
+        ga += M.home.score;
+      }
+      return ga / 500;
+    };
+    const hi = conceded(+6), lo = conceded(-6);
+    // ここが等しくなったら、フィールドの def が試合に効いていない(一度そうなっていた)
+    assert.ok(hi < lo * 0.85, "守備が高いほど失点が減る: def+6 " + hi.toFixed(2)
+      + " < def-6 " + lo.toFixed(2));
+    console.log("守備の効きOK 失点 def+6", hi.toFixed(2), "/ def-6", lo.toFixed(2));
+  }
+
   // ---------- 監督は任意のタイミングで手を打てる(D25 → docs/07 §7.6) ----------
   {
     const side = id => {
