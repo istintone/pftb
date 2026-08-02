@@ -65,26 +65,35 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   // ここが緩いと OVR がポジションを完全に食う(0.70 のとき実際に起きた)。
   assert.ok(1 / F.none >= 2, "不一致を OVR で覆すには2倍以上の差が要る");
   {
-    // 名簿にGKがいるのに、自動編成がGK枠へGK以外を置いていないこと
-    let wrongGK = 0, clubs = 0;
+    // 32クラブぶんの自動編成を回して、配置の質を測る。
+    //   ・GKがいる名簿でGK枠にGK以外を置かない
+    //   ・不一致(0.50)の配置がほぼ出ない
+    // main を none に近づけすぎると、高OVRの不一致が「メインのみ」を押しのけて増える。
+    let wrongGK = 0, clubs = 0, slots = 0;
+    const tier = { a: 0, b: 0, c: 0 };
     for (const club of E.CLUBS) {
       const roster = E.clubRoster(12345, club.id);
-      if (!roster.some(c => c.pos === "GK")) continue;
+      const hasGK = roster.some(c => c.pos === "GK");
       const used = new Set();
-      let best = null, bs = -1;
       E.FORMATIONS["4-4-2"].forEach(([sub]) => {   // autoSquad と同じ貪欲法
-        best = null; bs = -1;
+        let best = null, bs = -1;
         for (const c of roster) {
           if (used.has(c.id)) continue;
           const v = E.slotFit(c, sub) * c.ovr;
           if (v > bs) { bs = v; best = c; }
         }
-        if (best) { used.add(best.id); if (sub === "GK" && best.pos !== "GK") wrongGK++; }
+        if (!best) return;
+        used.add(best.id); slots++; tier[E.fitTier(best, sub)]++;
+        if (hasGK && sub === "GK" && best.pos !== "GK") wrongGK++;
       });
       clubs++;
     }
     assert.strictEqual(wrongGK, 0, "GKがいる名簿でGK枠にGK以外を置かない(" + clubs + "クラブ)");
-    console.log("  自動編成: GK枠は全", clubs, "クラブで正しくGK");
+    assert.ok(tier.c / slots < 0.02,
+      "不一致の配置は2%未満: " + tier.c + "/" + slots);
+    console.log("  自動編成:", clubs, "クラブ / 完全一致",
+      (tier.a / slots * 100).toFixed(1) + "% ・メインのみ",
+      (tier.b / slots * 100).toFixed(1) + "% ・不一致", tier.c, "件 / GK枠の誤り", wrongGK);
   }
   console.log("選手生成OK 決定的 / OVR整合 / 例:", a[0].name, a[0].pos, a[0].ovr);
 
