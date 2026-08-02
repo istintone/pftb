@@ -260,6 +260,67 @@ function renderGallery(){
     +'</div>';
 }
 
+// ---------- 枠に入れる選手を選ぶ(→docs/06 §6.15) ----------
+let _slotIx=-1;      // いま編集している枠
+
+/** 適性バッジ。ピッチのポジション名と同じ段(fit-a/b/c)で色を合わせる。 */
+function fitBadge(c,sub){
+  return '<span class="sl-pos fit-'+fitTier(c,sub)+'">'
+    +Math.round(slotFit(c,sub)*100)+'%</span>';
+}
+/**
+ * 枠のピッカー。**適性 × OVR の高い順**に並べる(=そのまま推奨順になる)。
+ * 既に他の枠にいる選手を選ぶと、その枠と**入れ替える**(同じ選手が二重に並ばない)。
+ */
+function openSlot(ix){
+  const slots=FORMATIONS[S.form], sub=slots[ix][0];
+  _slotIx=ix;
+  const cur=cardById(S.squad[ix]);
+  const list=availableCards().slice()
+    .sort((a,b)=>slotFit(b,sub)*b.ovr-slotFit(a,sub)*a.ovr);
+
+  $("slotModalBody").innerHTML=
+    '<button class="close-btn" id="slotClose" aria-label="閉じる">×</button>'
+    +'<h3>'+sub+' の枠</h3>'
+    +'<div class="lg" style="margin-bottom:10px">適性の高い順に並んでいます。'
+      +(cur?'　いまは <b>'+esc(shortName(cur))+'</b>':'　いまは空きです')+'</div>'
+    +(cur?'<div class="row" style="margin-bottom:10px">'
+        +'<button class="btn ghost" id="slotDetail">この選手の詳細</button>'
+        +'<button class="btn ghost" id="slotClear">空きにする</button></div>':'')
+    +'<div class="picks">'+list.map(c=>{
+        const at=S.squad.indexOf(c.id);          // 既に入っている枠(-1 なら控え)
+        return '<div class="pick'+(c.id===S.squad[ix]?" on":"")+'" data-pick="'+c.id+'">'
+          +'<div class="pk-ovr">'+Math.round(c.ovr*slotFit(c,sub))+'</div>'
+          +'<div class="pk-b"><b>'+(isLoaned(c)?"":'<i class="own">★</i>')
+            +esc(shortName(c))+'</b>'
+            +'<span>'+c.subs.join(" / ")+'　OVR '+c.ovr+'</span></div>'
+          +'<div class="pk-r">'+fitBadge(c,sub)
+            +(at>=0&&at!==ix?'<span class="pk-at">'+slots[at][0]+'</span>':'')+'</div>'
+        +'</div>';
+      }).join("")+'</div>';
+
+  $("slotClose").onclick=closeSlot;
+  if(cur){
+    $("slotDetail").onclick=()=>{ closeSlot(); openCard(cur.id); };
+    $("slotClear").onclick=()=>setSlot(ix,null);
+  }
+  $("slotModalBody").querySelectorAll("[data-pick]").forEach(el=>{
+    el.onclick=()=>setSlot(ix,Number(el.dataset.pick));
+  });
+  $("slotModal").classList.add("on");
+}
+const closeSlot=()=>{ $("slotModal").classList.remove("on"); _slotIx=-1; };
+
+/** 枠に選手を入れる。他の枠にいた選手なら**その枠と入れ替える**。 */
+function setSlot(ix,cardId){
+  if(cardId!=null){
+    const at=S.squad.indexOf(cardId);
+    if(at>=0&&at!==ix)S.squad[at]=S.squad[ix];   // 入れ替え(空きが出ない)
+  }
+  S.squad[ix]=cardId;
+  save(); closeSlot(); renderDeck();
+}
+
 /** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
 function openCard(x){
   const c=(x&&typeof x==="object")?x:cardById(x); if(!c)return;
@@ -333,7 +394,10 @@ function renderDeck(){
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
     +'</div>';
   }).join("");
-  wireCardTiles($("deckSlots"));
+  // 枠をタップしたら**その枠に入れる選手を選ぶ**。カード詳細はピッカーの中から開く。
+  $("deckSlots").querySelectorAll(".slot").forEach(el=>{
+    el.onclick=()=>openSlot(Number(el.dataset.slot));
+  });
 
 
   // ベンチ(先発から溢れた控え)。横スクロールで並べる。
@@ -735,12 +799,16 @@ document.querySelectorAll("#scr-schedule .comp").forEach(b=>{
   b.onclick=()=>{ _comp=b.dataset.comp; renderSchedule(); };
 });
 $("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast("自動編成しました"); };
+// 陣形を変えても**選手は入れ替えない**。同じ11人を新しい枠へ並べ直すだけにする
+// (autoSquad だと手で組んだ編成が丸ごと捨てられてしまう)。
 $("btnForm").onclick=()=>{
   const keys=Object.keys(FORMATIONS);
   S.form=keys[(keys.indexOf(S.form)+1)%keys.length];
-  S.squad=autoSquad(); save(); renderDeck(); toast("陣形を "+S.form+" に変更");
+  S.squad=refitSquad(); save(); renderDeck();
+  toast("陣形を "+S.form+" に変更（同じ11人を並べ直しました）");
 };
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
+$("slotModal").onclick=e=>{ if(e.target===$("slotModal"))closeSlot(); };
 $("helpTab").onclick=e=>{ e.stopPropagation(); helpOpen()?closeHelp():openHelp(); };
 $("helpClose").onclick=e=>{ e.stopPropagation(); closeHelp(); };
 // 外側のどこかを触ったら閉じる(閉じるボタンを探さなくてよいように)

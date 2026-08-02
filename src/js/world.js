@@ -178,6 +178,28 @@ function autoSquad(){
   });
 }
 
+/**
+ * **いまの11人のまま**、新しい陣形の枠へ並べ直す(→docs/06 §6.15)。
+ * 陣形を変えるたびに autoSquad で組み直すと、手で作った編成が丸ごと捨てられてしまう。
+ * 選手は入れ替えず、適性×OVR が高くなる組み合わせへ貪欲に割り当てるだけにする。
+ */
+function refitSquad(){
+  const slots=FORMATIONS[S.form||DEFAULT_FORM];
+  const pool=(S.squad||[]).map(id=>cardById(id)).filter(Boolean);
+  const used=new Set();
+  const out=slots.map(([sub])=>{
+    let best=null,bestScore=-1;
+    for(const c of pool){
+      if(used.has(c.id))continue;
+      const score=slotFit(c,sub)*c.ovr;
+      if(score>bestScore){ bestScore=score; best=c; }
+    }
+    if(best)used.add(best.id);
+    return best?best.id:null;
+  });
+  return out;
+}
+
 // --- 会長の評価(→docs/03 §3.9) ---
 /**
  * 評価は**累積しない**。「今の順位が期待に対してどうか」から毎回導出する。

@@ -181,7 +181,28 @@ const STEPS = [
         ctx.log("  陣形変更 →", await ctx.js("document.getElementById('deckForm').textContent"),
           "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"));
         await ctx.shot("10b-deck-formation");
-        // ヘルプ(左端のタブ)。開いて中身が入り、外側タップで閉じること
+        // 枠をタップ → ピッカー → 選手を入れ替える
+        await ctx.js("document.querySelector('#deckSlots .slot[data-slot=\"9\"]').click()");
+        await ctx.wait(350);
+        const before = await ctx.js(
+          "document.querySelector('#deckSlots .slot[data-slot=\"9\"] .sl-name').textContent");
+        ctx.log("  ピッカー:", await ctx.js("document.querySelector('#slotModalBody h3').textContent"),
+          "/ 候補:", await ctx.js("document.querySelectorAll('#slotModalBody [data-pick]').length"),
+          "/ 先頭の適性:", await ctx.js(
+            "document.querySelector('#slotModalBody .pick .sl-pos').textContent"));
+        await ctx.shot("10d-slot-picker");
+        // 先頭(=適性×OVR が最大)を選ぶと、その枠が置き換わる
+        await ctx.js("document.querySelector('#slotModalBody [data-pick]').click()");
+        await ctx.wait(350);
+        const after = await ctx.js(
+          "document.querySelector('#deckSlots .slot[data-slot=\"9\"] .sl-name').textContent");
+        ctx.log("  枠9:", before, "→", after,
+          "/ 重複なし:", await ctx.js(
+            "(()=>{const a=S.squad.filter(x=>x!=null);return a.length===new Set(a).size})()"),
+          "/ 人数:", await ctx.js("S.squad.filter(x=>x!=null).length"));
+        await ctx.shot("10e-slot-assigned");
+
+        // ヘルプ(右端のタブ)。開いて中身が入り、外側タップで閉じること
         await ctx.js("document.getElementById('helpTab').click()");
         await ctx.wait(400);
         ctx.log("  ヘルプ:", await ctx.js("document.getElementById('helpTitle').textContent"),
