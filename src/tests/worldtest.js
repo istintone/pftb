@@ -36,6 +36,21 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     assert.ok(p.skills.length >= 1, "スキルが1つ以上");
     assert.ok(p.age >= 18 && p.age <= 34, "年齢が範囲内");
   }
+  // 姓 — 同じクラブに同姓が並ぶと編成画面で見分けが付かない
+  {
+    for (const [country, list] of Object.entries(E.FAMILY)) {
+      assert.ok(list.length >= 40, country + " の姓が40個以上ある: " + list.length);
+      assert.strictEqual(new Set(list).size, list.length, country + " の姓に重複が無い");
+    }
+    let worst = 0;
+    for (const club of E.CLUBS) {
+      const fam = E.clubRoster(12345, club.id).map(c => c.name.split(" ").pop());
+      worst = Math.max(worst, fam.length - new Set(fam).size);
+    }
+    assert.strictEqual(worst, 0, "どのクラブにも同姓が並ばない");
+    console.log("  姓:", Object.values(E.FAMILY).flat().length, "個 /",
+      E.CLUBS.length, "クラブすべてで同姓なし");
+  }
   const multi = a.filter(p => p.subs.length > 1).length;
   const cross = a.filter(p => p.subs.some(s => E.subGroup(s) !== p.pos)).length;
   console.log("  複数サブ:", multi, "/", a.length, "人 / 大分類をまたぐサブ持ち:", cross, "人");

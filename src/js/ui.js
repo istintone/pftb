@@ -292,7 +292,7 @@ function openSlot(ix){
         return '<div class="pick'+(c.id===S.squad[ix]?" on":"")+'" data-pick="'+c.id+'">'
           +'<div class="pk-ovr">'+Math.round(c.ovr*slotFit(c,sub))+'</div>'
           +'<div class="pk-b"><b>'+(isLoaned(c)?"":'<i class="own">★</i>')
-            +esc(shortName(c))+'</b>'
+            +esc(c.name)+'</b>'
             +'<span>'+c.subs.join(" / ")+'　OVR '+c.ovr+'</span></div>'
           +'<div class="pk-r">'+fitBadge(c,sub)
             +(at>=0&&at!==ix?'<span class="pk-at">'+slots[at][0]+'</span>':'')+'</div>'

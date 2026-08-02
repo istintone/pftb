@@ -37,6 +37,12 @@ function hashStr(s){
 // rng を受け取るヘルパ(Math.random 版と使い分ける)
 const rri=(rng,a,b)=>a+Math.floor(rng()*(b-a+1));
 const rpick=(rng,a)=>a[Math.floor(rng()*a.length)];
+/** 決定的シャッフル(Fisher-Yates)。**重複なしで配りたい**ときに使う。元の配列は壊さない。 */
+function rshuffle(rng,a){
+  const out=a.slice();
+  for(let i=out.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); const t=out[i]; out[i]=out[j]; out[j]=t; }
+  return out;
+}
 
 // --- 能力 ---
 // WCCF に由来し、上限は各20。OVR は6つの**合計**なので最大120になる。
