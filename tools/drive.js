@@ -169,6 +169,23 @@ const STEPS = [
       return 'H '+H.length+'人 GK y='+gk(H)+' / A '+A.length+'人 GK y='+gk(A)
         +' / 別の色?'+(H[0].style.background!==A[0].style.background);
     })()`));
+    // 選手が枠に張り付かず、かつ陣形が崩壊していないこと(演出の要 → docs/06 §6.18)
+    ctx.log("  動き:", await ctx.js(`(()=>{
+      const es=[...document.querySelectorAll('#mSlots .mp')];
+      let moved=0, far=0, maxd=0;
+      for(const e of es){
+        const dx=parseFloat(e.style.left)-(+e.dataset.x);
+        const dy=parseFloat(e.style.top)-(+e.dataset.y);
+        const d=Math.hypot(dx,dy);
+        if(d>1)moved++; if(d>22)far++; maxd=Math.max(maxd,d);
+      }
+      // 大きく離れてよいのは**ボールに関わっている数人だけ**。
+      // 全員が離れたら陣形が崩壊している(演出として失敗)
+      if(far>4)throw new Error('陣形が崩れている: '+far+'人が枠から22%以上離れた');
+      if(moved<es.length*0.7)throw new Error('選手が固まっている: 動いたのは'+moved+'人');
+      return moved+'/'+es.length+'人が動いている / ボールに寄った '+far
+        +'人 / 最大 '+maxd.toFixed(0)+'%';
+    })()`));
     await ctx.shot("07b-match");
     // スキップ → 結果へ
     await ctx.js("document.getElementById('mSkip').click()");

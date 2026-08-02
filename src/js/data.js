@@ -339,6 +339,20 @@ const TUNING={
   squad:{ starters:11, bench:5, subMax:3 },   // subMax = 1試合の交代枠
   // 試合の再生(描画側のみ。**結果には一切影響しない** → docs/07 §7.1)
   ui:{ tickMs:1500, speeds:[1,2,4] },
+  // 選手の動き(**演出専用**。判定にも events にも一切影響しない → docs/06 §6.18)
+  //   followY/X  ブロックがボールへ寄る強さ(縦/横)
+  //   *Follow    ラインごとの寄り方の違い
+  //   pushUp     攻めている側が前へ出る量 / dropBack 守っている側が下がる量
+  //   stretch    攻めている側の広がり(負=広がる) / compact 守っている側の圧縮
+  //   gkOut/Side GKがゴールから出る量 / 左右への追従
+  //   wander     全員のゆっくりした揺れ(完全に止めない)
+  //   maxDevY/X  **枠から離れられる上限**。無いと全員がボールに吸い寄せられて
+  //              陣形が消え、団子になる
+  play:{ followY:0.38, followX:0.26,
+         gkFollow:0.15, dfFollow:0.85, mfFollow:1.00, fwFollow:0.55,
+         pushUp:4, dropBack:4, stretch:-0.05, compact:0.09,
+         maxDevY:13, maxDevX:11,
+         gkOut:0.06, gkSide:0.22, wander:1.4, wanderStep:0.7 },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
   // 攻守どちらのスコアにも eff 経由で掛かる(GKも例外ではない)。

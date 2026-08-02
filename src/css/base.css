@@ -624,18 +624,18 @@ body{
 /* 見せ場のカットイン。ピッチの上に一瞬だけ重なる */
 .mcut{
   position:absolute; inset:0; z-index:4; pointer-events:none;
-  display:flex; align-items:center; justify-content:center;
+  display:flex; align-items:flex-start; justify-content:center; padding-top:12%;
   opacity:0; transition:opacity .18s ease;
 }
 .mcut.on{ opacity:1 }
 .mcut b{
   padding:10px 22px; border-radius:8px;
   background:oklch(0 0 0 / .62); border:1px solid oklch(1 0 0 / .3);
-  font:700 22px/1 var(--f-head); letter-spacing:3px; color:#fff;
+  font:700 18px/1 var(--f-head); letter-spacing:3px; color:#fff;
   text-shadow:0 2px 10px oklch(0 0 0 / .9);
 }
 .mcut.goal b{ background:oklch(0.30 0.10 85 / .78); border-color:var(--accent);
-  color:var(--accent-hi); font-size:30px }
+  color:var(--accent-hi); font-size:26px }
 
 /* 実況。新しい行が上に積まれる */
 .mfeed{

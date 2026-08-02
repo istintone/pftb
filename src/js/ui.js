@@ -808,6 +808,7 @@ function matchLine(e,M){
 // 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
 let _M=null;          // 進行中の試合
 let _mTimer=null, _mSpeed=1, _mPaused=false;
+let _mPhase=0, _mLastSide="H", _mBall=[50,50];  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
 
 /** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
 function toScreen(e,pos){
@@ -817,7 +818,7 @@ function toScreen(e,pos){
 /** 選手の枠を画面の向きへ直す(アウェイは反転)。 */
 const slotXY=(p,side)=>side==="A"?[100-p.x,100-p.y]:[p.x,p.y];
 
-/** ピッチに22人を並べる。**枠に置くだけ**で、以後は微動しかしない。 */
+/** ピッチに22人を並べる。以後の位置は mLayout が毎イベント計算する。 */
 function mDrawSquads(){
   const html=[];
   for(const T of [_M.home,_M.away]){
@@ -825,11 +826,89 @@ function mDrawSquads(){
     T.players.forEach((p,i)=>{
       const [x,y]=slotXY(p,T.side);
       html.push('<div class="mp" data-side="'+T.side+'" data-ix="'+i+'"'
-        +' data-x="'+x+'" data-y="'+y+'"'
+        +' data-x="'+x+'" data-y="'+y+'" data-ph="'+((i*2.4+(T.side==="A"?1.1:0))%6.28).toFixed(2)+'"'
         +' style="left:'+x+'%;top:'+y+'%;background:'+col+'"></div>');
     });
   }
   $("mSlots").innerHTML=html.join("");
+}
+
+// ---------- 選手の動き(**演出専用** → docs/06 §6.18) ----------
+// ここは**見た目だけ**を作る層。エンジンの判定にも events にも一切影響しない。
+// 「点が固定的に見える」のを解くために、実際のサッカーの動きを真似る:
+//   ・ブロックがボールへ寄る(縦も横も)。ラインごとに寄り方が違う
+//   ・守っている側は縦に圧縮し、攻めている側は広がる
+//   ・関与している選手はボールまで実際に動く
+//   ・GKはゴールラインでボールの左右に追従する
+//   ・全員がゆっくり揺れる(完全静止させない)
+
+const L=()=>TUNING.play;
+/** ラインごとの寄り方。DFはラインを保ち、MFが一番ボールを追い、FWは前で待つ。 */
+const followW=r=>r==="GK"?L().gkFollow:r==="DF"?L().dfFollow:r==="MF"?L().mfFollow:L().fwFollow;
+
+/**
+ * 22人の表示位置を決める。**毎イベント呼ぶ**。
+ *   e … いま見せているイベント(側と位置を持つ)
+ */
+function mLayout(e){
+  const P=L();
+  // 位置を持たないイベント(possession など)では**直前のボール位置を保つ**。
+  // 中央に戻すと、攻撃の合間に全員が中央へ吸い寄せられて不自然になる。
+  if(e.pos)_mBall=toScreen(e);
+  const [bx,by]=_mBall;
+  _mPhase+=P.wanderStep;
+  const atkSide=e.side||_mLastSide; if(e.side)_mLastSide=e.side;
+
+  for(const T of [_M.home,_M.away]){
+    const mine=T.side===atkSide;                       // 攻めている側か
+    const goalY=T.side==="H"?87:13;                    // 自陣ゴールの側
+    // ブロックの中心(枠の平均)。ここを基準にボールへ寄せる
+    const ps=T.players.map((p,i)=>({ p, i, xy:slotXY(p,T.side) }));
+    const cy=ps.reduce((s,o)=>s+o.xy[1],0)/ps.length;
+    const cx=ps.reduce((s,o)=>s+o.xy[0],0)/ps.length;
+
+    for(const o of ps){
+      const el=$("mSlots").querySelector('.mp[data-side="'+T.side+'"][data-ix="'+o.i+'"]');
+      if(!el)continue;
+      let [x,y]=o.xy;
+      const r=o.p.role, w=followW(r);
+
+      // ① ブロックがボールへ寄る(縦・横)。ラインごとに寄り方が違う
+      y+=(by-cy)*P.followY*w;
+      x+=(bx-cx)*P.followX*w;
+      // ② 攻めている側は前へ出て広がる / 守っている側は下がって圧縮する
+      const push=(mine?P.pushUp:-P.dropBack)*(goalY===87?-1:1);
+      y+=push*(r==="GK"?0.2:r==="DF"?0.8:1);
+      const comp=mine?P.stretch:P.compact;
+      y+=(cy-y)*comp;
+      // ③ **枠から離れすぎない**。上限を付けないと全員がボールに吸い寄せられ、
+      //    陣形が消えて団子になる(実際にそうなった)
+      x=o.xy[0]+clamp(x-o.xy[0],-P.maxDevX,P.maxDevX);
+      y=o.xy[1]+clamp(y-o.xy[1],-P.maxDevY,P.maxDevY);
+      // ④ ゆっくり揺れる(完全に止めない)
+      const ph=+el.dataset.ph;
+      x+=Math.sin(_mPhase+ph)*P.wander;
+      y+=Math.cos(_mPhase*0.8+ph*1.7)*P.wander*0.7;
+      // ⑤ GKはゴールラインに残り、ボールの左右にだけ追従する
+      if(r==="GK"){ y=goalY+(by-goalY)*P.gkOut; x=50+(bx-50)*P.gkSide; }
+
+      el.style.left=clamp(x,4,96)+"%";
+      el.style.top=clamp(y,8,92)+"%";
+    }
+  }
+  // ⑥ 関与している選手は**ボールまで実際に動く**(ここが「戦略的に見える」核)
+  const at=(side,id,ox,oy)=>{
+    const T=side==="H"?_M.home:_M.away;
+    const ix=T.players.findIndex(p=>p.c.id===id); if(ix<0)return;
+    const el=$("mSlots").querySelector('.mp[data-side="'+side+'"][data-ix="'+ix+'"]');
+    if(!el)return;
+    el.style.left=clamp(bx+ox,4,96)+"%"; el.style.top=clamp(by+oy,8,92)+"%";
+  };
+  if(e.by&&e.pos)at(e.side,e.by,0,0);                  // 持ち手はボールの上
+  if(e.vs&&e.pos){                                     // 対応する相手は自陣側から寄せる
+    const dSide=e.side==="H"?"A":"H";
+    at(dSide,e.vs,ri(-3,3),dSide==="H"?4.5:-4.5);
+  }
 }
 /** 関与している2人だけ強調する。**位置は動かさない**。 */
 function mFocus(e){
@@ -845,15 +924,11 @@ function mFocus(e){
   if(e.vs)mark(e.side==="H"?"A":"H",e.vs,"vs");
   if(e.gk)mark(e.side==="H"?"A":"H",e.gk,"vs");
 }
-/** ボールを動かし、両チームのブロックをボールへ寄せる(選手は枠から離れない)。 */
+/** ボールを動かす。選手の位置は mLayout が持つ。 */
 function mMoveBall(e){
   if(!e.pos)return;
   const [x,y]=toScreen(e);
   const b=$("mBall"); b.style.left=x+"%"; b.style.top=y+"%";
-  $("mSlots").querySelectorAll(".mp").forEach(el=>{
-    const sy=+el.dataset.y, shift=clamp((y-50)*0.16,-9,9);
-    el.style.top=clamp(sy+shift,10,90)+"%";
-  });
 }
 /** 見せ場だけカットインを出す。 */
 function mCut(e){
@@ -871,7 +946,7 @@ function mApply(e){
   $("mClock").textContent=min;
   $("mClock").classList.toggle("late",e.min>=80);
   if(e.hg!=null)$("mSc").textContent=e.hg+" - "+e.ag;
-  mFocus(e); mMoveBall(e); mCut(e);
+  mFocus(e); mMoveBall(e); mLayout(e); mCut(e);
   const line=matchLine(e,_M);
   if(line)mFeed(min,line.text,line.cls);
 }
@@ -914,6 +989,7 @@ function mSkip(){
 /** 試合を始める。ここから先はエンジンが解いたものを再生するだけ。 */
 function startMatch(){
   _M=beginMyMatch();
+  _mBall=[50,50]; _mPhase=0;
   if(!_M){ toast("試合を開始できません"); return; }
   _mSpeed=1; _mPaused=false;
   $("mNameH").textContent=_M.home.name; $("mNameA").textContent=_M.away.name;
