@@ -1597,8 +1597,11 @@ const TUNING={
   atk:{ toShot:0.70, homeAdv:1.06, progLo:0.45, progK:1.10, originK:2.60 },
   // 起点のマッチアップ(→docs/07 §7.8)。座標が近い相手ほど対応しやすい。
   //   sigmaH/sigmaX … 高さ/左右のばらつき(大きいほど遠くの選手も関与する)
-  //   defW          … 守備側スコアの def の比率(残りはチャンネルと同じ能力)
-  matchup:{ sigmaH:0.22, sigmaX:0.30, defW:0.75 },
+  //   atkW/defW     … 攻守スコアの「総合力(atk/def)」の比率。**残りはチャンネルと同じ能力**。
+  //                   両側を同じ形にしてあるので、調整のとき鏡像で読める。
+  //                   atkW を defW より小さくしているのは、atk の役割差が大きく
+  //                   (DF 8.0 対 FW 18.5)、大きくすると起点の勾配が潰れるため。
+  matchup:{ sigmaH:0.22, sigmaX:0.30, atkW:0.25, defW:0.75 },
   // --- モメンタム(勢い → docs/07 §7.7) ---
   // -1..+1 の1本のゲージ。+ がホーム優勢。**起点の高さ**を決める。
   //   kickK   キックオフ時: (OVR差 / kickK) を初期値にする
@@ -2489,7 +2492,8 @@ function matchupDefender(rng,p,D){
  */
 function resolveOrigin(rng,atk,df,ch){
   const M=TUNING.matchup;
-  const aSc=eff(atk,ch.stat)*ch.risk*TUNING.atk.originK*rr(rng);
+  const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
+    *ch.risk*TUNING.atk.originK*rr(rng);
   const dSc=(eff(df,"def")*M.defW+eff(df,ch.stat)*(1-M.defW))*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }

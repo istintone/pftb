@@ -175,7 +175,8 @@ function matchupDefender(rng,p,D){
  */
 function resolveOrigin(rng,atk,df,ch){
   const M=TUNING.matchup;
-  const aSc=eff(atk,ch.stat)*ch.risk*TUNING.atk.originK*rr(rng);
+  const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
+    *ch.risk*TUNING.atk.originK*rr(rng);
   const dSc=(eff(df,"def")*M.defW+eff(df,ch.stat)*(1-M.defW))*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }

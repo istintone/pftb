@@ -239,6 +239,29 @@ function runSeason() {
     assert.ok(hi < lo * 0.85, "守備が高いほど失点が減る: def+6 " + hi.toFixed(2)
       + " < def-6 " + lo.toFixed(2));
     console.log("守備の効きOK 失点 def+6", hi.toFixed(2), "/ def-6", lo.toFixed(2));
+
+    // 攻守を同じ形にしてあるので、DFの atk も起点の成否に効く(→docs/07 §7.8)
+    const dfOrigin = d => {
+      const H = JSON.parse(JSON.stringify(base));
+      H.forEach(c => { if (c && c.pos === "DF") c.atk = Math.max(1, Math.min(20, c.atk + d)); });
+      let ok = 0, n = 0;
+      for (let i = 1; i <= 300; i++) {
+        const M = E.finishMatch(E.createMatch(
+          { cards: H, form: "4-4-2", name: "H" }, { cards: base, form: "4-4-2", name: "A" }, i));
+        for (const e of M.events) {
+          if (e.type !== "origin" || e.side !== "H") continue;
+          const p = M.home.players.find(x => x.c.id === e.by);
+          if (!p || p.role !== "DF") continue;
+          n++; if (e.ok) ok++;
+        }
+      }
+      return ok / n;
+    };
+    const aHi = dfOrigin(+6), aLo = dfOrigin(-6);
+    assert.ok(aHi > aLo + 0.05, "DFの atk が起点の成否に効く: +6 "
+      + (aHi * 100).toFixed(0) + "% > -6 " + (aLo * 100).toFixed(0) + "%");
+    console.log("DFのatkの効きOK 起点成功 atk+6", (aHi * 100).toFixed(0) + "%",
+      "/ atk-6", (aLo * 100).toFixed(0) + "%");
   }
 
   // ---------- 監督は任意のタイミングで手を打てる(D25 → docs/07 §7.6) ----------
