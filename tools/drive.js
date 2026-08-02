@@ -175,6 +175,19 @@ const STEPS = [
           "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"),
           "/ ベンチ:", await ctx.js("document.querySelectorAll('#deckBench .bn').length"));
         if (!box.endsWith("1.333")) throw new Error("ピッチの縦横比が 3:4 ではない: " + box);
+        // 丸の数字は**適性を掛けた実効値**。素のOVRだと不一致の選手のほうが大きく見える
+        const disc = await ctx.js(`(()=>{
+          const slots=FORMATIONS[S.form], cards=squadCards();
+          return slots.map(([sub],i)=>{ const c=cards[i]; if(!c)return null;
+            const shown=+document.querySelector('#deckSlots .slot[data-slot="'+i+'"] .sl-disc').textContent
+              .replace(/[^0-9]/g,'');
+            return { ok: shown===Math.round(c.ovr*slotFit(c,sub)), raw:c.ovr, shown };
+          }).filter(Boolean);
+        })()`);
+        const bad = disc.filter(d => !d.ok);
+        ctx.log("  丸の数字:", disc.map(d => d.raw + "→" + d.shown).join(" "),
+          "/ 実効値になっている:", bad.length === 0);
+        if (bad.length) throw new Error("丸の数字が実効値でない: " + JSON.stringify(bad));
         // 陣形を変えても11人が置き直されること
         await ctx.js("document.getElementById('btnForm').click()");
         await ctx.wait(250);

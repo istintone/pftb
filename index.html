@@ -1352,7 +1352,10 @@ const HELP={
   deck:()=>{
     const F=TUNING.fit;
     return "ピッチをタップして11人を並べます。"
-      +"<br><b>丸の中</b>が OVR、<b>枠線の色</b>がレアリティ、<b>地色</b>がクラブカラーです。"
+      +"<br><b>丸の中</b>は<b>適性を掛けた実効値</b>です（素のOVRではありません）。"
+      +"<b>枠線の色</b>がレアリティ、<b>地色</b>がクラブカラー。"
+      +"<br>素のOVRは枠をタップした先の一覧と、カードの詳細で確認できます。"
+      +"ベンチは枠に入っていないので素のOVRを出しています。"
       +"<br><br><b>枠適性</b> — 枠のポジション名の濃さが、その枠への適性を表します。"
       +"合っているほどはっきり読めます。"
       +'<div class="fit-legend">'
@@ -2724,7 +2727,10 @@ function renderDeck(){
     return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
       +' data-slot="'+i+'"'+(c?' data-card="'+c.id+'"':'')+'>'
       +'<div class="sl-pos'+(c?" fit-"+fitTier(c,sub):"")+'">'+sub+'</div>'
-      +'<div class="sl-disc"'+(c?kitStyle(c):"")+'>'+(c?c.ovr:"+")
+      // 丸の中は**適性を掛けた実効値**。素のOVRを出すと、50%の選手のほうが
+      // 大きく見えて「置き間違いのほうが強い」という逆の読みになる。
+      +'<div class="sl-disc"'+(c?kitStyle(c):"")
+        +'>'+(c?Math.round(c.ovr*slotFit(c,sub)):"+")
         +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
     +'</div>';
@@ -2739,6 +2745,7 @@ function renderDeck(){
   const bench=cards.slice(TUNING.squad.starters,
     TUNING.squad.starters+TUNING.squad.bench).filter(Boolean);
   $("deckBench").innerHTML=bench.length
+    // ベンチは枠に入っていないので掛ける適性が無い。ここだけ素のOVRを出す。
     ? bench.map(c=>'<div class="bn" data-card="'+c.id+'"'+kitStyle(c)+'>'
         +'<div class="bn-ovr">'+c.ovr+'</div>'
         +'<div class="bn-name">'+esc(shortName(c))+'</div>'

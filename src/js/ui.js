@@ -389,7 +389,10 @@ function renderDeck(){
     return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
       +' data-slot="'+i+'"'+(c?' data-card="'+c.id+'"':'')+'>'
       +'<div class="sl-pos'+(c?" fit-"+fitTier(c,sub):"")+'">'+sub+'</div>'
-      +'<div class="sl-disc"'+(c?kitStyle(c):"")+'>'+(c?c.ovr:"+")
+      // 丸の中は**適性を掛けた実効値**。素のOVRを出すと、50%の選手のほうが
+      // 大きく見えて「置き間違いのほうが強い」という逆の読みになる。
+      +'<div class="sl-disc"'+(c?kitStyle(c):"")
+        +'>'+(c?Math.round(c.ovr*slotFit(c,sub)):"+")
         +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
     +'</div>';
@@ -404,6 +407,7 @@ function renderDeck(){
   const bench=cards.slice(TUNING.squad.starters,
     TUNING.squad.starters+TUNING.squad.bench).filter(Boolean);
   $("deckBench").innerHTML=bench.length
+    // ベンチは枠に入っていないので掛ける適性が無い。ここだけ素のOVRを出す。
     ? bench.map(c=>'<div class="bn" data-card="'+c.id+'"'+kitStyle(c)+'>'
         +'<div class="bn-ovr">'+c.ovr+'</div>'
         +'<div class="bn-name">'+esc(shortName(c))+'</div>'
