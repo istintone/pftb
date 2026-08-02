@@ -297,22 +297,34 @@ function kitStyle(c){
 function renderDeck(){
   const slots=FORMATIONS[S.form], cards=squadCards();
   const start=cards.slice(0,TUNING.squad.starters);
-  $("deckPower").textContent=squadPower(start);
+  // 総合力は**配置込み**で出す。この画面で決めるのは「誰をどこに置くか」なので、
+  // 適性を無視した平均を見せても判断材料にならない(→docs/06 §6.15)。
+  const raw=squadPower(start), fit=squadPowerAt(cards,S.form);
+  $("deckPower").textContent=fit;
   $("deckCoach").textContent=S.coach?("監督 "+S.coach):"監督";
-  $("deckForm").textContent="陣形: "+S.form;
+  $("deckForm").textContent="陣形: "+S.form
+    +(fit<raw?"　適性ロス −"+(raw-fit):"");
 
   // ピッチ上の11人。位置は FORMATIONS が持つ % をそのまま使う。
+  // 枠のポジション名の濃さが、そのまま**その枠への適性**を表す。
   $("deckSlots").innerHTML=slots.map(([sub,x,y],i)=>{
     const c=cards[i];
     return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
       +' data-slot="'+i+'"'+(c?' data-card="'+c.id+'"':'')+'>'
-      +'<div class="sl-pos">'+sub+'</div>'
+      +'<div class="sl-pos'+(c?" fit-"+fitTier(c,sub):"")+'">'+sub+'</div>'
       +'<div class="sl-disc"'+(c?kitStyle(c):"")+'>'+(c?c.ovr:"+")
         +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
     +'</div>';
   }).join("");
   wireCardTiles($("deckSlots"));
+
+  // 凡例。ピッチと同じ地色のチップに載せて、盤面の見え方とずれないようにする。
+  const F=TUNING.fit;
+  $("deckFit").innerHTML=[
+    ["a","サブ一致",F.sub],["b","メインのみ",F.main],["c","不一致",F.none],
+  ].map(([t,label,v])=>'<span class="fit-chip"><i class="sl-pos fit-'+t+'">POS</i>'
+    +label+' '+Math.round(v*100)+'%</span>').join("");
 
   // ベンチ(先発から溢れた控え)。横スクロールで並べる。
   const bench=cards.slice(TUNING.squad.starters,
@@ -326,8 +338,11 @@ function renderDeck(){
   wireCardTiles($("deckBench"));
 
   const loaned=start.filter(c=>c&&isLoaned(c)).length;
+  const off=slots.filter(([sub],i)=>cards[i]&&fitTier(cards[i],sub)!=="a").length;
   $("deckNote").innerHTML="先発11人のうち <b>"+loaned+"人</b> はクラブからの貸与です"
-    +"（退任するとクラブに残ります）。★ が自分のカードです。";
+    +"（退任するとクラブに残ります）。★ が自分のカードです。"
+    +(off?"<br>枠に合っていない選手が <b>"+off+"人</b> います。"
+         +"ポジション名が薄いほど本来の力が出ません。":"");
 }
 const shortName=c=>c.name.split(" ").slice(-1)[0];
 

@@ -142,15 +142,31 @@ function squadPower(cards){
 }
 
 /**
- * 枠(サブポジション)に対する適性。
- *   プライマリが一致    = 1.00
- *   他のサブが一致      = 0.95(複数ポジションをこなす選手の価値)
- *   大分類だけ同じ      = 0.85
- *   それ以外            = 0.60
+ * 枠(サブポジション)に対する適性(→docs/03 §3.14)。card-eleven を踏襲した3段。
+ *   サブポジションが一致        = 1.00  本来の力を出せる
+ *   サブは不一致・メインが一致  = 0.85  とりあえず使えるが本来の力は出ない
+ *   サブもメインも不一致        = 0.70  ほぼ機能しない
+ * **プライマリと他のサブは区別しない**。複数のサブを持つこと自体が価値になる。
+ * 係数は TUNING.fit に置く(調整点を1か所に保つ)。
  */
 function slotFit(card,subPos){
   if(!card)return 0;
-  if(card.subs[0]===subPos)return 1;
-  if(card.subs.includes(subPos))return 0.95;
-  return card.pos===subGroup(subPos)?0.85:0.6;
+  const F=TUNING.fit;
+  if(card.subs.includes(subPos))return F.sub;
+  return card.pos===subGroup(subPos)?F.main:F.none;
+}
+/** 適性の段(表示用)。a=サブ一致 / b=メインのみ / c=不一致 → docs/06 §6.15 */
+function fitTier(card,subPos){
+  const f=slotFit(card,subPos), F=TUNING.fit;
+  return f>=F.sub?"a":f>=F.main?"b":"c";
+}
+/**
+ * **配置込みの**編成力。squadPower が OVR の平均なのに対し、
+ * こちらは各枠の適性を掛ける。試合で実際に効くのはこちら(→match-core)。
+ */
+function squadPowerAt(cards,form){
+  const slots=FORMATIONS[form]||[];
+  const a=[];
+  slots.forEach(([sub],i)=>{ const c=cards[i]; if(c)a.push(c.ovr*slotFit(c,sub)); });
+  return a.length?Math.round(sum(a)/a.length):0;
 }

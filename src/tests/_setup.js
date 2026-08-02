@@ -90,7 +90,7 @@ function setup(opts = {}) {
         + `CLUBS,COUNTRIES,TUNING,RARITY,RAR_KEYS,RAR_DROPS,FORMATIONS,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
         + `standings,rankOf,expectedRank,requiredFame,offersFor,startTenure,playMatchday,seasonOver,`
         + `judgeSeason,myFixture,squadCards,autoSquad,availableCards,squadPower,resolveMatch,`
-        + `mulberry32,calcOvr,makeCard,SIGNATURES,signatureCards,STAT_KEYS,STAT_MAX,OVR_MAX,SUBPOS,subGroup,slotFit,primarySub,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
+        + `mulberry32,calcOvr,makeCard,SIGNATURES,signatureCards,STAT_KEYS,STAT_MAX,OVR_MAX,SUBPOS,subGroup,slotFit,fitTier,squadPowerAt,primarySub,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
 
   const tmpPath = path.join(__dirname, opts.tmpName || "_tmp_run.js");
   fs.writeFileSync(tmpPath, code);

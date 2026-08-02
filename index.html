@@ -652,7 +652,20 @@ body{
   position:absolute; transform:translate(-50%,-50%); cursor:pointer;
   display:flex; flex-direction:column; align-items:center; gap:3px;
 }
+/* 枠のポジション名 = **その枠への適性**(→docs/03 §3.15)。
+   合っているほど濃く出し、合っていないほど沈める。数値は出さない。 */
 .sl-pos{ font:8px/1 var(--f-mono); letter-spacing:.5px; color:oklch(1 0 0 / .55) }
+.sl-pos.fit-a{ color:oklch(1 0 0 / .96); font-weight:700;
+  text-shadow:0 0 4px oklch(0 0 0 / .7) }   /* サブ一致 = 本来の力 */
+.sl-pos.fit-b{ color:oklch(1 0 0 / .52) }   /* メインのみ */
+.sl-pos.fit-c{ color:oklch(1 0 0 / .30) }   /* 不一致 */
+
+/* 適性の凡例。ピッチと同じ地色に載せて、盤面での見え方とずらさない。 */
+.fit-legend{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
+.fit-chip{ display:flex; align-items:center; gap:5px;
+  padding:4px 8px; border-radius:5px; background:oklch(0.28 0.07 150);
+  font:9px/1 var(--f-mono); color:oklch(1 0 0 / .62) }
+.fit-chip i{ font-style:normal }
 .sl-disc{
   position:relative; width:34px; height:34px; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
@@ -941,6 +954,7 @@ body{
         <div class="pt-slots" id="deckSlots"></div>
       </div>
 
+      <div class="fit-legend" id="deckFit"></div>
       <div class="row" style="margin-top:12px">
         <button class="btn ghost" id="btnAutoSquad">自動編成</button>
         <button class="btn ghost" id="btnForm">陣形変更</button>
@@ -1255,6 +1269,11 @@ const TUNING={
   // 任期 = キャリア1周(→docs/03 §3.2.3)。節で通算し、シーズンとは切り離す。
   tenure:{ limit:96, extend:24, hardMax:120, extendRank:3 }, // extendRank位以内で延命
   squad:{ starters:11, bench:5 },
+  // 枠適性(→docs/03 §3.14)。card-eleven を踏襲した3段。
+  //   sub  サブポジションが一致 = 本来の力を出せる
+  //   main サブは違うがメイン(大分類)が一致 = とりあえず使えるが本来の力は出ない
+  //   none どちらも不一致 = ほぼ機能しない
+  fit:{ sub:1.00, main:0.85, none:0.70 },
   // 収入(→docs/03 §3.5)。数値は暫定。
   reward:{ win:900, draw:400, lose:120, rankBase:2500, titleBonus:6000 },
   // 会長の評価。期待順位との差(上回るとプラス)で毎節動く。
@@ -1409,17 +1428,33 @@ function squadPower(cards){
 }
 
 /**
- * 枠(サブポジション)に対する適性。
- *   プライマリが一致    = 1.00
- *   他のサブが一致      = 0.95(複数ポジションをこなす選手の価値)
- *   大分類だけ同じ      = 0.85
- *   それ以外            = 0.60
+ * 枠(サブポジション)に対する適性(→docs/03 §3.14)。card-eleven を踏襲した3段。
+ *   サブポジションが一致        = 1.00  本来の力を出せる
+ *   サブは不一致・メインが一致  = 0.85  とりあえず使えるが本来の力は出ない
+ *   サブもメインも不一致        = 0.70  ほぼ機能しない
+ * **プライマリと他のサブは区別しない**。複数のサブを持つこと自体が価値になる。
+ * 係数は TUNING.fit に置く(調整点を1か所に保つ)。
  */
 function slotFit(card,subPos){
   if(!card)return 0;
-  if(card.subs[0]===subPos)return 1;
-  if(card.subs.includes(subPos))return 0.95;
-  return card.pos===subGroup(subPos)?0.85:0.6;
+  const F=TUNING.fit;
+  if(card.subs.includes(subPos))return F.sub;
+  return card.pos===subGroup(subPos)?F.main:F.none;
+}
+/** 適性の段(表示用)。a=サブ一致 / b=メインのみ / c=不一致 → docs/06 §6.15 */
+function fitTier(card,subPos){
+  const f=slotFit(card,subPos), F=TUNING.fit;
+  return f>=F.sub?"a":f>=F.main?"b":"c";
+}
+/**
+ * **配置込みの**編成力。squadPower が OVR の平均なのに対し、
+ * こちらは各枠の適性を掛ける。試合で実際に効くのはこちら(→match-core)。
+ */
+function squadPowerAt(cards,form){
+  const slots=FORMATIONS[form]||[];
+  const a=[];
+  slots.forEach(([sub],i)=>{ const c=cards[i]; if(c)a.push(c.ovr*slotFit(c,sub)); });
+  return a.length?Math.round(sum(a)/a.length):0;
 }
 
 // ================= 実在選手カード(WORLD CLASS / LEGENDS) =================
@@ -2279,22 +2314,34 @@ function kitStyle(c){
 function renderDeck(){
   const slots=FORMATIONS[S.form], cards=squadCards();
   const start=cards.slice(0,TUNING.squad.starters);
-  $("deckPower").textContent=squadPower(start);
+  // 総合力は**配置込み**で出す。この画面で決めるのは「誰をどこに置くか」なので、
+  // 適性を無視した平均を見せても判断材料にならない(→docs/06 §6.15)。
+  const raw=squadPower(start), fit=squadPowerAt(cards,S.form);
+  $("deckPower").textContent=fit;
   $("deckCoach").textContent=S.coach?("監督 "+S.coach):"監督";
-  $("deckForm").textContent="陣形: "+S.form;
+  $("deckForm").textContent="陣形: "+S.form
+    +(fit<raw?"　適性ロス −"+(raw-fit):"");
 
   // ピッチ上の11人。位置は FORMATIONS が持つ % をそのまま使う。
+  // 枠のポジション名の濃さが、そのまま**その枠への適性**を表す。
   $("deckSlots").innerHTML=slots.map(([sub,x,y],i)=>{
     const c=cards[i];
     return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
       +' data-slot="'+i+'"'+(c?' data-card="'+c.id+'"':'')+'>'
-      +'<div class="sl-pos">'+sub+'</div>'
+      +'<div class="sl-pos'+(c?" fit-"+fitTier(c,sub):"")+'">'+sub+'</div>'
       +'<div class="sl-disc"'+(c?kitStyle(c):"")+'>'+(c?c.ovr:"+")
         +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
     +'</div>';
   }).join("");
   wireCardTiles($("deckSlots"));
+
+  // 凡例。ピッチと同じ地色のチップに載せて、盤面の見え方とずれないようにする。
+  const F=TUNING.fit;
+  $("deckFit").innerHTML=[
+    ["a","サブ一致",F.sub],["b","メインのみ",F.main],["c","不一致",F.none],
+  ].map(([t,label,v])=>'<span class="fit-chip"><i class="sl-pos fit-'+t+'">POS</i>'
+    +label+' '+Math.round(v*100)+'%</span>').join("");
 
   // ベンチ(先発から溢れた控え)。横スクロールで並べる。
   const bench=cards.slice(TUNING.squad.starters,
@@ -2308,8 +2355,11 @@ function renderDeck(){
   wireCardTiles($("deckBench"));
 
   const loaned=start.filter(c=>c&&isLoaned(c)).length;
+  const off=slots.filter(([sub],i)=>cards[i]&&fitTier(cards[i],sub)!=="a").length;
   $("deckNote").innerHTML="先発11人のうち <b>"+loaned+"人</b> はクラブからの貸与です"
-    +"（退任するとクラブに残ります）。★ が自分のカードです。";
+    +"（退任するとクラブに残ります）。★ が自分のカードです。"
+    +(off?"<br>枠に合っていない選手が <b>"+off+"人</b> います。"
+         +"ポジション名が薄いほど本来の力が出ません。":"");
 }
 const shortName=c=>c.name.split(" ").slice(-1)[0];
 

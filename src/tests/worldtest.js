@@ -39,12 +39,27 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   const multi = a.filter(p => p.subs.length > 1).length;
   const cross = a.filter(p => p.subs.some(s => E.subGroup(s) !== p.pos)).length;
   console.log("  複数サブ:", multi, "/", a.length, "人 / 大分類をまたぐサブ持ち:", cross, "人");
-  // 枠適性: プライマリ > 他サブ > 同グループ > それ以外
+  // 枠適性(→docs/03 §3.14): サブ一致 > メインのみ > 不一致 の3段
+  const F = E.TUNING.fit;
+  assert.ok(F.sub > F.main && F.main > F.none, "3段が階段になっている");
   const sample = a.find(p => p.subs.length > 1);
   if (sample) {
-    assert.strictEqual(E.slotFit(sample, sample.subs[0]), 1, "プライマリ一致は 1.0");
-    assert.ok(E.slotFit(sample, sample.subs[1]) < 1 && E.slotFit(sample, sample.subs[1]) > 0.85,
-      "他サブ一致はプライマリ未満・同グループ超");
+    // プライマリと他のサブは**区別しない**。どちらも本来の力が出る
+    sample.subs.forEach(sub =>
+      assert.strictEqual(E.slotFit(sample, sub), F.sub, "サブ一致はどれも " + F.sub));
+    // 同じ大分類の、本人が持っていない枠 → メインのみ一致
+    const otherSub = E.SUBPOS[sample.pos].find(s => !sample.subs.includes(s));
+    if (otherSub) assert.strictEqual(E.slotFit(sample, otherSub), F.main, "メインのみ一致");
+    // 大分類ごと違う枠 → 不一致
+    const alien = E.SUBPOS[["GK", "DF", "MF", "FW"].find(g => g !== sample.pos)][0];
+    assert.strictEqual(E.slotFit(sample, alien), F.none, "サブもメインも不一致");
+  }
+  // 配置込みの編成力は、適性を無視した平均を上回らない
+  {
+    const form = Object.keys(E.FORMATIONS)[0], slots = E.FORMATIONS[form];
+    const xi = a.slice(0, slots.length);
+    assert.ok(E.squadPowerAt(xi, form) <= E.squadPower(xi),
+      "配置込みの編成力は OVR 平均を超えない");
   }
   console.log("選手生成OK 決定的 / OVR整合 / 例:", a[0].name, a[0].pos, a[0].ovr);
 

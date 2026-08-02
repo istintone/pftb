@@ -132,6 +132,11 @@ const TUNING={
   // 任期 = キャリア1周(→docs/03 §3.2.3)。節で通算し、シーズンとは切り離す。
   tenure:{ limit:96, extend:24, hardMax:120, extendRank:3 }, // extendRank位以内で延命
   squad:{ starters:11, bench:5 },
+  // 枠適性(→docs/03 §3.14)。card-eleven を踏襲した3段。
+  //   sub  サブポジションが一致 = 本来の力を出せる
+  //   main サブは違うがメイン(大分類)が一致 = とりあえず使えるが本来の力は出ない
+  //   none どちらも不一致 = ほぼ機能しない
+  fit:{ sub:1.00, main:0.85, none:0.70 },
   // 収入(→docs/03 §3.5)。数値は暫定。
   reward:{ win:900, draw:400, lose:120, rankBase:2500, titleBonus:6000 },
   // 会長の評価。期待順位との差(上回るとプラス)で毎節動く。

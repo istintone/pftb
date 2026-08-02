@@ -179,6 +179,11 @@ const STEPS = [
         ctx.log("  陣形変更 →", await ctx.js("document.getElementById('deckForm').textContent"),
           "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"));
         await ctx.shot("10b-deck-formation");
+        // 枠適性: ポジション名の濃さで表す。3段が実際に塗り分けられているか
+        ctx.log("  適性の段:", await ctx.js(
+          "[...document.querySelectorAll('#deckSlots .sl-pos')]"
+          + ".map(e=>(e.className.split('fit-')[1]||'-')).join('')"),
+          "/ 凡例:", await ctx.js("document.querySelectorAll('#deckFit .fit-chip').length"));
       }
       if (tab === "cards") {
         // レアリティの見え方(枠・縁線・ホロ)を一望するため、全段を1枚ずつ並べた検証用グリッドに差し替える
