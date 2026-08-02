@@ -263,9 +263,15 @@ const STEPS = [
       return 'HOME最前線 y='+hFW.toFixed(0)+' > AWAY最終ライン y='+aDFline.toFixed(0)+' (オフサイドの絵にならない)';
     })()`));
     await ctx.shot("07b-match");
-    // スキップ → 結果へ
-    await ctx.js("document.getElementById('mSkip').click()");
-    await ctx.wait(500);
+    // 最後まで再生して終える(スキップではなく**実際に見終わったときと同じ経路**)。
+    // ここで締め忘れると結果画面に試合の中身が渡らないので、over を確かめる。
+    ctx.log("自然終了:", await ctx.js(`(()=>{
+      while(!matchOver(_M))stepMatch(_M);
+      mFinish();
+      if(!_M.over)throw new Error('再生を見終わっても _M.over が立たない(結果画面が空になる)');
+      return '_M.over=true / イベント '+_M.events.length+' 件';
+    })()`));
+    await ctx.wait(300);
     ctx.log("スキップ後:", await ctx.js("document.getElementById('mClock').textContent"),
       await ctx.js("document.getElementById('mSc').textContent"),
       "/ 実況:", await ctx.js("document.querySelectorAll('#mFeed div').length"), "行");

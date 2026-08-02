@@ -1187,6 +1187,9 @@ function mTick(){
 }
 function mFinish(){
   clearTimeout(_mTimer); _mTimer=null;
+  // **必ずここで試合を締める**。再生ループは matchOver で抜けるので stepMatch を
+  // 通らずに終わることがあり、締めないと _M.over が立たず結果画面に中身が渡らない。
+  finishTick(_M);
   $("mSc").textContent=_M.home.score+" - "+_M.away.score;
   $("mClock").textContent="FULL TIME";
   mFeed("90分","<b>試合終了</b>","goal");
@@ -1223,8 +1226,7 @@ function startMatch(){
 }
 function doMatchday(){
   const done=_M&&_M.over?_M:null;
-  const out=playMatchday(done);
-  if(out)out.M=done;                     // 結果画面でスタッツを出すために持ち越す
+  const out=playMatchday(done);          // 試合の中身(out.M)は playMatchday が入れる
   _M=null; _lastResult=out;
   save(); headUI(); show("result");
 }

@@ -409,14 +409,22 @@ function playMatchday(done){
   if(!S.career.hand)return null;                            // 打ち手が未選択なら進めない
   if(!S.career.comp&&!pickComp("league"))return null;       // 大会が未選択なら進めない
   const W=S.world, md=W.matchday, round=(W.fixtures||[])[md-1]||[];
-  const out={ my:null, others:[] };
+  const out={ my:null, others:[], M:null };
 
   round.forEach(m=>{
     const isMine=m.h===S.club.id||m.a===S.club.id;
     const seed=matchSeedOf(m,W.season,md);
-    const { hg, ag }=(isMine&&done)
-      ? { hg:done.home.score, ag:done.away.score }
-      : resolveMatch(matchSide(m.h),matchSide(m.a),seed);
+    let hg,ag;
+    if(isMine){
+      // 自分の試合は**必ず試合状態そのものを残す**。結果画面のスタッツ・採点は
+      // これを数え直して作る(→docs/06 §6.20)。観戦せず自動消化しても中身は同じ。
+      const M=done||finishMatch(createMatch(matchSide(m.h),matchSide(m.a),seed));
+      if(!M.fixture)M.fixture=m;
+      out.M=M; hg=M.home.score; ag=M.away.score;
+    }else{
+      const r=resolveMatch(matchSide(m.h),matchSide(m.a),seed);
+      hg=r.hg; ag=r.ag;
+    }
     applyResult(W.table,m.h,m.a,hg,ag);
     if(isMine){
       const home=m.h===S.club.id, gf=home?hg:ag, ga=home?ag:hg;
