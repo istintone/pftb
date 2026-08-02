@@ -359,6 +359,10 @@ const TUNING={
          cutMs:1700, goalMs:2600, kickMs:2000, cutMaxSpeed:2,
          cutJudge:620,   // 決着(勝者が光り敗者が沈む)を出すまでの間
          shotHold:1000,  // 「シュート!」を見せてから結果を出すまでの間
+         // シュートの着地点。**ピッチの実寸(CSS の .pt-frame / .pt-goal)に合わせる**。
+         // ゴールラインは 2.0%、ゴールの帯は 1.2〜2.2%、ポストの内側は x 43〜57。
+         // ここを player 座標(13〜87)で扱うと、ボールがピッチの中で止まって見える。
+         goalLine:2.0, goalNet:1.6, goalKeep:4.5, goalMouth:5,
          cutPass:0.22, cutStop:0.20, cutMiss:0.25 },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。

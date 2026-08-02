@@ -179,14 +179,24 @@ const STEPS = [
     await ctx.wait(1250);
     await ctx.shot("07e-cutin-goal");    // そのあと結果
     // 実際の試合でゴールしたとき、ボールがゴールへ入ること
-    ctx.log("  ゴール時のボール:", await ctx.js(`(()=>{
-      const e={side:'H',type:'goal',pos:[50,30],hg:1,ag:0};
-      mBallShot(e,0);
-      return new Promise(r=>setTimeout(()=>{
-        const b=document.getElementById('mBall');
-        r('x='+b.style.left+' y='+b.style.top+' (HOMEの攻めるゴールは y≒13%)');
-      },80));
+    // シュートの着地点がゴールライン(2%/98%)に届いているか
+    ctx.log("  シュートの着地:", await ctx.js(`(()=>{
+      const out=[];
+      const run=(side,type)=>new Promise(r=>{
+        mBallShot({side,type,pos:[50,30]},0);
+        setTimeout(()=>{ const b=document.getElementById('mBall');
+          out.push(side+'/'+type+' x='+b.style.left+' y='+b.style.top); r(); },60);
+      });
+      return run('H','goal').then(()=>run('H','save')).then(()=>run('H','miss'))
+        .then(()=>run('A','goal')).then(()=>out.join(' | '));
     })()`));
+    // ゴールした状態で1枚撮る(ボールがネットの中にあること)
+    await ctx.js(`(()=>{ mBallShot({side:'H',type:'goal',pos:[50,30]},0);
+      const H=_M.home, sc=H.players.find(p=>p.role==='FW');
+      const gk=_M.away.players.find(p=>p.role==='GK');
+      cutShot({side:'H',type:'goal',hg:1,ag:0},sc,gk,'GOAL!!',true,null); })()`);
+    await ctx.wait(1400);
+    await ctx.shot("07g-ball-in-net");
     await ctx.js(`(()=>{ const H=_M.home;
       const a=H.players.find(p=>p.role==='MF'), b=H.players.find(p=>p.role==='FW');
       cutPass({side:'H',label:'スルーパス'},a,b); })()`);

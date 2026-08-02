@@ -932,25 +932,31 @@ function mMoveBall(e){
   const b=$("mBall"); b.style.left=x+"%"; b.style.top=y+"%";
 }
 /**
- * シュートの行方(→docs/06 §6.17)。**打点に置いたあと、実際に飛ばす**。
- * ゴールならネットの中へ、セーブならGKの手元へ、枠外ならポストの外へ、
- * ブロックなら弾かれて戻る。これが無いと**ゴールしてもボールがゴールに入らない**。
+ * シュートの行方(→docs/06 §6.17)。**打点に置いたあと、実際にゴールラインまで飛ばす**。
+ *
+ * 行き先はピッチの実寸に合わせる(TUNING.play.goal*)。CSS の `.pt-goal` は
+ * ゴールラインから 1.2〜2.2%、ポストの内側は x 43〜57 にあるので、
+ * そこへ入れないと**ボールがピッチの中で止まって見える**。
  */
 function mBallShot(e,delay){
-  const goalY=e.side==="H"?13:87;                        // 攻めている側が狙うゴール
-  const into=e.side==="H"?-1:1;                          // ゴールの奥へ向かう向き
-  let tx=50, ty=goalY;
-  if(e.type==="goal"){ tx=50+ri(-5,5); ty=goalY+into*2; }
-  else if(e.type==="save"){ tx=50+ri(-4,4); ty=goalY-into*3; }
-  else if(e.type==="miss"){ tx=ri(0,1)?50-ri(11,16):50+ri(11,16); ty=goalY+into*3; }
-  else if(e.type==="block"){ const [bx,by]=toScreen(e);   // 弾かれて戻る
-    tx=bx+ri(-6,6); ty=by-into*5; }
+  const P=TUNING.play, top=e.side==="H";                 // HOMEは上のゴールを攻める
+  const at=v=>top?v:100-v;                               // 上下を入れ替える
+  let tx=50, ty=at(P.goalLine);
+  switch(e.type){
+    case "goal": tx=50+ri(-P.goalMouth,P.goalMouth); ty=at(P.goalNet); break;
+    case "save": tx=50+ri(-P.goalMouth,P.goalMouth); ty=at(P.goalKeep); break;
+    case "miss": tx=50+(ri(0,1)?-1:1)*ri(P.goalMouth+3,P.goalMouth+9);
+                 ty=at(P.goalNet); break;
+    case "block":{ const [bx,by]=toScreen(e);            // 弾かれて手前へ戻る
+                 tx=bx+ri(-6,6); ty=by+(top?5:-5); break; }
+  }
   clearTimeout(_mBallT);
   _mBallT=setTimeout(()=>{
     const b=$("mBall");
-    b.style.left=clamp(tx,2,98)+"%"; b.style.top=clamp(ty,2,98)+"%";
+    b.style.left=clamp(tx,1,99)+"%"; b.style.top=clamp(ty,1,99)+"%";
   },delay);
 }
+
 // ---------- カットイン(→docs/06 §6.19) ----------
 // **中央を横切る帯**にプレーを大きく見せる。card-eleven の見せ方を踏襲。
 // 演出専用で、結果にも events にも一切影響しない。
