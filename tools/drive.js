@@ -204,6 +204,16 @@ const STEPS = [
           "/ 先頭の適性:", await ctx.js(
             "document.querySelector('#slotModalBody .pick .sl-pos').textContent"));
         await ctx.shot("10d-slot-picker");
+        // 左端の「›」は入れ替えず、ピッカーを開いたまま詳細を重ねる
+        const pickedBefore = await ctx.js("JSON.stringify(S.squad)");
+        await ctx.js("document.querySelectorAll('#slotModalBody [data-info]')[1].click()");
+        await ctx.wait(350);
+        ctx.log("  › から詳細:", await ctx.js("document.querySelector('#cardModalBody .cm-name').textContent"),
+          "/ ピッカーは開いたまま:", await ctx.js("document.getElementById('slotModal').classList.contains('on')"),
+          "/ 編成は変わらない:", await ctx.js("JSON.stringify(S.squad)") === pickedBefore);
+        await ctx.shot("10f-pick-detail");
+        await ctx.js("closeCard()");
+        await ctx.wait(250);
         // 先頭(=適性×OVR が最大)を選ぶと、その枠が置き換わる
         await ctx.js("document.querySelector('#slotModalBody [data-pick]').click()");
         await ctx.wait(350);

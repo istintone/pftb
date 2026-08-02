@@ -321,12 +321,15 @@ body{
   background:oklch(0.24 0.02 255); border:1px solid var(--line);
   font-size:11px; color:var(--text); text-align:center;
 }
+/* z-index: 枠のピッカー(50) < カード詳細(52)。
+   ピッカーから詳細を開くとき、ピッカーを閉じずに上へ重ねるため。 */
 .modal{
   display:none; position:absolute; inset:0; z-index:50; padding:18px;
   background:oklch(0.08 0.01 255 / .74);
   align-items:center; justify-content:center;
 }
 .modal.on{ display:flex }
+#cardModal{ z-index:52 }
 .sheet{
   position:relative; width:100%; max-height:82%; overflow-y:auto;
   background:var(--panel); border:1px solid var(--line);
@@ -719,6 +722,13 @@ body{
 }
 .pick.on{ border-color:var(--accent-dim); background:oklch(0.24 0.03 85) }
 .pick:active{ background:oklch(0.26 0.02 255) }
+/* 左端の「›」= 詳細。行タップ(入れ替え)とは別の操作なので見た目も分ける。 */
+.pk-i{
+  flex:0 0 22px; align-self:stretch; cursor:pointer;
+  background:none; border:none; padding:0;
+  color:var(--text-dim); font:16px/1 var(--f-head);
+}
+.pk-i:active{ color:var(--accent) }
 .pk-ovr{ flex:0 0 34px; text-align:center;
   font:700 16px/1 var(--f-head); color:var(--text) }   /* 適性を掛けた実効値 */
 .pk-b{ flex:1; min-width:0 }

@@ -284,12 +284,13 @@ function openSlot(ix){
     +'<h3>'+sub+' の枠</h3>'
     +'<div class="lg" style="margin-bottom:10px">適性の高い順に並んでいます。'
       +(cur?'　いまは <b>'+esc(shortName(cur))+'</b>':'　いまは空きです')+'</div>'
-    +(cur?'<div class="row" style="margin-bottom:10px">'
-        +'<button class="btn ghost" id="slotDetail">この選手の詳細</button>'
-        +'<button class="btn ghost" id="slotClear">空きにする</button></div>':'')
+    +(cur?'<button class="btn ghost" id="slotClear" style="margin-bottom:10px">'
+        +'空きにする</button>':'')
     +'<div class="picks">'+list.map(c=>{
         const at=S.squad.indexOf(c.id);          // 既に入っている枠(-1 なら控え)
         return '<div class="pick'+(c.id===S.squad[ix]?" on":"")+'" data-pick="'+c.id+'">'
+          // 左端の「›」だけは**入れ替えずに詳細を開く**。行そのものは入れ替え。
+          +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
           +'<div class="pk-ovr">'+Math.round(c.ovr*slotFit(c,sub))+'</div>'
           +'<div class="pk-b"><b>'+(isLoaned(c)?"":'<i class="own">★</i>')
             +esc(c.name)+'</b>'
@@ -300,12 +301,13 @@ function openSlot(ix){
       }).join("")+'</div>';
 
   $("slotClose").onclick=closeSlot;
-  if(cur){
-    $("slotDetail").onclick=()=>{ closeSlot(); openCard(cur.id); };
-    $("slotClear").onclick=()=>setSlot(ix,null);
-  }
+  if(cur)$("slotClear").onclick=()=>setSlot(ix,null);
   $("slotModalBody").querySelectorAll("[data-pick]").forEach(el=>{
     el.onclick=()=>setSlot(ix,Number(el.dataset.pick));
+  });
+  // 詳細はピッカーを**開いたまま**上に重ねる(閉じると並びを見失うため)。
+  $("slotModalBody").querySelectorAll("[data-info]").forEach(el=>{
+    el.onclick=e=>{ e.stopPropagation(); openCard(Number(el.dataset.info)); };
   });
   $("slotModal").classList.add("on");
 }
