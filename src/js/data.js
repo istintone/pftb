@@ -287,6 +287,17 @@ const TUNING={
   eval:{ start:50, max:100, perRank:6, floorDismiss:15 },
   // 期待順位: クラブの格と「持ち込んだ編成の強さ」の合成(→docs/03 §3.9)
   expect:{ squadWeight:0.45 },
+  // --- 試合エンジン(→docs/03 §3.19 / docs/07-match-engine.md) ---
+  // 時計。3分刻みで、ハーフごとにアディショナルタイムが付く。
+  match:{ tickMin:3, halfTicks:15, atMax:[2,3] },   // 45分=15ティック / AT 前半0〜2・後半0〜3
+  // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
+  mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
+  // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
+  th:{ shot:1.20 },
+  // 各スコアに乗る揺らぎ rr() = min + random×span
+  rng:{ min:0.60, span:0.80 },
+  // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)
+  atk:{ toShot:0.75, homeAdv:1.06 },
   // 暫定リゾルバ(第3段で match-core の本実装に置き換える)
   sim:{ base:1.15, spread:22, homeAdv:0.18, maxGoals:6 },
 };

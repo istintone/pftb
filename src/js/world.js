@@ -189,6 +189,41 @@ function startTenure(clubId){
   S.player.history.push({ season:S.world.season, clubId, result:"在任" });
 }
 
+/**
+ * 試合エンジンに渡すチーム(→docs/07)。自クラブは編成、他クラブは名簿の並びをそのまま使う。
+ * 他クラブの編成は決定的に再生成されるので、セーブに持たなくても毎回同じ11人になる。
+ */
+function matchSide(clubId){
+  const club=clubById(clubId);
+  if(S.club&&clubId===S.club.id)
+    return { cards:squadCards(), form:S.form, name:club.name };
+  const roster=clubRoster(S.world.seed,clubId);
+  const form=formFor(clubId);
+  return { cards:bestXI(roster,form), form, name:club.name };
+}
+/** クラブの陣形。クラブIDから決定的に選ぶ(クラブごとに一貫した色になる)。 */
+function formFor(clubId){
+  const keys=Object.keys(FORMATIONS);
+  return keys[hashStr(clubId+":form")%keys.length];
+}
+/** 名簿から先発11+控え5を組む。autoSquad と同じ貪欲法(枠ごとに 適性×OVR が最大)。 */
+function bestXI(roster,form){
+  const slots=FORMATIONS[form||DEFAULT_FORM];
+  const used=new Set();
+  const xi=slots.map(([sub])=>{
+    let best=null,bs=-1;
+    for(const c of roster){
+      if(used.has(c.id))continue;
+      const v=slotFit(c,sub)*c.ovr;
+      if(v>bs){ bs=v; best=c; }
+    }
+    if(best)used.add(best.id);
+    return best;
+  });
+  const rest=roster.filter(c=>!used.has(c.id)).sort((a,b)=>b.ovr-a.ovr);
+  return xi.concat(rest.slice(0,TUNING.squad.bench));
+}
+
 /** 使える選手 = 手持ちカード(恒久) + クラブからの貸与(任期中だけ)。 */
 const availableCards=()=>S.player.coll.concat(S.club.loan);
 const cardById=id=>availableCards().find(c=>c.id===id)||null;
@@ -332,16 +367,14 @@ function playMatchday(){
   if(!S.career.hand)return null;                            // 打ち手が未選択なら進めない
   if(!S.career.comp&&!pickComp("league"))return null;       // 大会が未選択なら進めない
   const W=S.world, md=W.matchday, round=(W.fixtures||[])[md-1]||[];
-  const rng=mulberry32((W.seed^hashStr(S.club.id+":"+W.season+":"+md))>>>0);
-  const mine=squadCards().slice(0,TUNING.squad.starters);
-  const myPow=teamStrength(mine,S.form);
   const out={ my:null, others:[] };
 
   round.forEach(m=>{
     const isMine=m.h===S.club.id||m.a===S.club.id;
-    const hp=m.h===S.club.id?myPow:clubPower(W.seed,m.h);
-    const ap=m.a===S.club.id?myPow:clubPower(W.seed,m.a);
-    const { hg, ag }=resolveMatch({strength:hp},{strength:ap},rng);
+    // 試合ごとに独立したたねを使う。**同じ節を何度解いても同じ結果**になり、
+    // 描画するかどうかで結果が変わらない(→docs/07 §7.1)。
+    const seed=(W.seed^hashStr(m.h+"vs"+m.a+":"+W.season+":"+md))>>>0;
+    const { hg, ag }=resolveMatch(matchSide(m.h),matchSide(m.a),seed);
     applyResult(W.table,m.h,m.a,hg,ag);
     if(isMine){
       const home=m.h===S.club.id, gf=home?hg:ag, ga=home?ag:hg;

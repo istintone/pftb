@@ -75,18 +75,43 @@ function runSeason() {
   assert.ok(high > low, "名声が上がると就任できるクラブが増える(" + low + " → " + high + ")");
   console.log("キャリアの階段OK 名声0:", low, "クラブ / 名声5000:", high, "クラブ");
 
-  // ---------- 試合結果の分布が極端でない ----------
-  const rng = E.mulberry32(42);
-  let goals = 0, draws = 0, n = 2000;
-  for (let i = 0; i < n; i++) {
-    const { hg, ag } = E.resolveMatch({ strength: 78 }, { strength: 78 }, rng);
-    goals += hg + ag;
-    if (hg === ag) draws++;
+  // ---------- 試合結果の分布が極端でない(→docs/07 §7.5) ----------
+  // 互角の2チームを2000試合。実在の水準(1試合 約2.7点 / 引き分け 約25%)に近いか。
+  {
+    const side = id => {
+      const roster = E.clubRoster(4242, id);
+      const form = "4-4-2";
+      return { cards: E.bestXI(roster, form), form, name: id };
+    };
+    const h = side("ger-4"), a = side("ger-4");   // 同じ編成同士 = 完全な互角
+    let goals = 0, draws = 0, homeW = 0, n = 2000;
+    for (let i = 0; i < n; i++) {
+      const { hg, ag } = E.resolveMatch(h, a, i + 1);
+      goals += hg + ag;
+      if (hg === ag) draws++; else if (hg > ag) homeW++;
+    }
+    const avg = goals / n, drawPct = draws / n, homePct = homeW / n;
+    assert.ok(avg > 1.5 && avg < 5.0, "1試合の平均得点が現実的な範囲: " + avg.toFixed(2));
+    assert.ok(drawPct > 0.08 && drawPct < 0.45, "引き分けの割合が極端でない: " + (drawPct * 100).toFixed(1) + "%");
+    assert.ok(homePct > drawPct * 0.5, "ホームがある程度勝ち越す: " + (homePct * 100).toFixed(1) + "%");
+    console.log("試合結果の分布OK 平均", avg.toFixed(2), "点 / 引き分け",
+      (drawPct * 100).toFixed(1) + "% / ホーム勝率", (homePct * 100).toFixed(1) + "%");
   }
-  const avg = goals / n, drawPct = draws / n;
-  assert.ok(avg > 1.5 && avg < 5.0, "1試合の平均得点が現実的な範囲: " + avg.toFixed(2));
-  assert.ok(drawPct > 0.08 && drawPct < 0.45, "引き分けの割合が極端でない: " + (drawPct * 100).toFixed(1) + "%");
-  console.log("試合結果の分布OK 平均", avg.toFixed(2), "点 / 引き分け", (drawPct * 100).toFixed(1) + "%");
+
+  // ---------- 同じたねなら必ず同じ試合になる(見せかけを排する前提 → docs/07 §7.1) ----------
+  {
+    const side = id => {
+      const roster = E.clubRoster(4242, id);
+      return { cards: E.bestXI(roster, "4-3-3"), form: "4-3-3", name: id };
+    };
+    const a = E.simulateMatch(side("eng-1"), side("sam-8"), 12345);
+    const b = E.simulateMatch(side("eng-1"), side("sam-8"), 12345);
+    assert.strictEqual(a.hg + "-" + a.ag, b.hg + "-" + b.ag, "同じたね → 同じスコア");
+    assert.strictEqual(JSON.stringify(a.events), JSON.stringify(b.events), "同じたね → 同じイベント列");
+    const c = E.simulateMatch(side("eng-1"), side("sam-8"), 12346);
+    assert.notStrictEqual(JSON.stringify(a.events), JSON.stringify(c.events), "たねが違えば別の試合");
+    console.log("決定性OK", a.hg + "-" + a.ag, "/ イベント", a.events.length, "件");
+  }
 
   process.exit(0);
 })().catch(e => { console.error("FAIL:", e); process.exit(1); });

@@ -594,4 +594,4 @@ WORLD CLASS と LEGENDS は実在選手の段でパックからは出ないた�
 (枠適性の凡例は `TUNING.fit` から作っているので、係数を変えれば説明も追従する)。
 
 
-[← 前: 5. 決定事項ログ](05-decisions-backlog.md) ｜ [↑ 索引](../SPEC.md)
+[← 前: 5. 決定事項ログ](05-decisions-backlog.md) ｜ [↑ 索引](../SPEC.md) ｜ [次: 7. 試合エンジン →](07-match-engine.md)
