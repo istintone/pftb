@@ -95,6 +95,64 @@ function resolveShot(rng,atk,gk){
   return sSc>gSc*TUNING.th.shot;
 }
 
+// ---------- モメンタム(勢い) ----------
+// -1..+1 の**1本のゲージ**。+ がホーム優勢(→docs/07 §7.8)。
+// キックオフ時は両チームのOVR差で傾き、以後は起きたことで上下し、毎ティック中立へ戻る。
+// **モメンタムが決めるのは「起点の高さ」**。押されていれば自陣から、勢いがあれば前から始まる。
+
+/** 攻撃側から見たモメンタム。ホームは M.mom そのまま、アウェイは符号を反転。 */
+const momOf=(M,T)=>T.side==="H"?M.mom:-M.mom;
+/** side に勢いを加える(ホーム基準のゲージに符号を合わせて足す)。 */
+function addMom(M,side,v){
+  const F=TUNING.mom;
+  M.mom=clamp(M.mom+(side==="H"?v:-v),-F.cap,F.cap);
+}
+/** キックオフ時のモメンタム。**強いチームが前から始められる**。 */
+function kickoffMom(H,A){
+  const F=TUNING.mom;
+  const ovr=T=>T.players.reduce((s,p)=>s+p.c.ovr,0)/(T.players.length||1);
+  return clamp((ovr(H)-ovr(A))/F.kickK,-F.kickCap,F.kickCap);
+}
+
+// ---------- 起点 ----------
+/**
+ * 選手の「高さ」。0=自陣ゴール前 / 1=敵陣ゴール前。枠のy座標から出す(→docs/07 §7.9)。
+ * 陣形の座標をそのまま使うので、**陣形を変えると起点の出方も変わる**。
+ */
+const heightOf=p=>clamp((87-p.y)/74,0,1);
+
+/**
+ * 起点の選手を選ぶ。モメンタムで**狙う高さ**が動き、そこに近い選手ほど選ばれやすい。
+ *   押されている(mom<0) → 低い位置 = DF起点
+ *   拮抗(mom≒0)         → 中盤     = MF起点
+ *   勢いがある(mom>0)   → 高い位置 = FW起点
+ * 距離に対してガウス重みを掛けるので、**遠い位置の選手も低確率で選ばれる**(決定は確率的)。
+ * 左右のレーンは当面見ない(監督の指示で操作する段で足す → §7.9)。
+ */
+function pickOrigin(rng,T,mom){
+  const F=TUNING.mom;
+  const target=clamp(0.5+mom*F.spread,0,1);
+  return pickW(rng,T.players,p=>{
+    const d=(heightOf(p)-target)/F.sigma;
+    return Math.exp(-d*d);
+  });
+}
+/**
+ * 起点のチャンネルを選ぶ。**その選手のサブポジが持つ3種**から、
+ * 得意な能力のものほど選ばれやすい(→docs/07 §7.9)。
+ */
+function pickOriginCh(rng,p){
+  const list=ORIGINS[p.sub]||ORIGINS.CMF;
+  return pickW(rng,list,ch=>eff(p,ch.stat));
+}
+/**
+ * 起点が成立するか。チャンネルの基本成功率に、その選手の該当能力を掛ける。
+ * 能力20で等倍、低いほど落ちる(能力が「選び方」だけでなく「成否」にも効く)。
+ */
+function originSuccess(rng,p,ch){
+  return rng()<ch.risk*TUNING.atk.originK*(0.55+eff(p,ch.stat)/STAT_MAX*0.45);
+}
+
 // ---------- 時計 ----------
 /**
  * 90分 + アディショナルタイムを3分刻みで並べたティック表(→docs/07 §7.2)。
@@ -133,9 +191,10 @@ function createMatch(home,away,seed){
     seed:s, home:H, away:A, ix:0,
     clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定
     events:[], orders:{ H:[], A:[] }, subs:{ H:0, A:0 }, over:false,
+    mom:kickoffMom(H,A),                                     // 勢い(-1..+1、+がホーム)
   };
   M.events.push({ min:0, half:1, at:false, side:null, type:"kickoff",
-    home:H.name, away:A.name, ticks:M.clock.length });
+    home:H.name, away:A.name, ticks:M.clock.length, mom:Math.round(M.mom*100)/100 });
   return M;
 }
 const matchOver=M=>M.ix>=M.clock.length;
@@ -198,28 +257,49 @@ function stepMatch(M){
 
   const push=e=>M.events.push(Object.assign({ min:t.min, half:t.half, at:!!t.at },e));
 
+  M.mom*=TUNING.mom.decay;                                  // 勢いは毎ティック中立へ戻る
+
   // ① 支配率 → ② 攻撃権の抽選
   const mh=midPower(H)*TUNING.atk.homeAdv, ma=midPower(A);
   const share=mh/(mh+ma);
   const T=rng()<share?H:A, D=T===H?A:H;
-  push({ side:T.side, type:"possession", share:Math.round(share*100)/100 });
+  const mom=momOf(M,T);
+  push({ side:T.side, type:"possession", share:Math.round(share*100)/100,
+    mom:Math.round(M.mom*100)/100 });
 
-  // ③ 攻撃が形になるか(連鎖はこれから足す。いまは到達率で判定する)
-  const origin=pickAttacker(rng,T);
+  // ③ 起点 — **モメンタムが高さを決め、高さが選手を決め、サブポジがチャンネルを決める**
+  const origin=pickOrigin(rng,T,mom)||pickAttacker(rng,T);
+  const ch=pickOriginCh(rng,origin);
   origin.stat.inv++;
-  if(rng()>=TUNING.atk.toShot){
+  const ok=originSuccess(rng,origin,ch);
+  push({ side:T.side, type:"origin", by:origin.c.id, sub:origin.sub,
+    ch:ch.id, label:ch.label, ok, h:Math.round(heightOf(origin)*100)/100,
+    pos:[origin.x,origin.y] });
+  if(!ok){
+    addMom(M,D.side,TUNING.mom.originNg);                   // 起点で失う = 相手に流れ
+    return M.events.slice(from);
+  }
+  addMom(M,T.side,TUNING.mom.originOk);
+
+  // ④ シュートまで届くか(連鎖はこれから。起点で稼いだ前進が高いほど届く)
+  const A_=TUNING.atk;
+  const prog=clamp(heightOf(origin)+ch.gain,0,1);
+  if(rng()>=A_.toShot*(A_.progLo+prog*A_.progK)){
     push({ side:T.side, type:"build", by:origin.c.id, pos:[origin.x,origin.y] });
     return M.events.slice(from);
   }
-  // ④ シュート
+  // ⑤ シュート
   const shooter=pickShooter(rng,T)||origin;
   const gk=pickGK(D);
   shooter.stat.inv++; shooter.stat.shots++;
   if(resolveShot(rng,shooter,gk)){
     T.score++; shooter.stat.goals++;
-    push({ side:T.side, type:"goal", by:shooter.c.id, gk:gk.c.id,
+    addMom(M,T.side,TUNING.mom.goal);
+    push({ side:T.side, type:"goal", by:shooter.c.id, gk:gk.c.id, assist:origin.c.id,
       hg:H.score, ag:A.score, pos:[shooter.x,shooter.y] });
   }else{
+    addMom(M,T.side,TUNING.mom.shot);
+    addMom(M,D.side,TUNING.mom.save);                       // 止めた側にも流れが来る
     push({ side:T.side, type:"save", by:shooter.c.id, gk:gk.c.id,
       pos:[shooter.x,shooter.y] });
   }

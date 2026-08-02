@@ -92,7 +92,7 @@ function setup(opts = {}) {
         + `CLUBS,LEAGUES,NATIONS,NATION_IDS,FAMILY,GIVEN_BY_NATION,makeName,leagueById,nationById,nationBox,TUNING,RARITY,RAR_KEYS,RAR_DROPS,FORMATIONS,DEFAULT_FORM,refitSquad,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
         + `standings,rankOf,expectedRank,requiredFame,offersFor,startTenure,playMatchday,seasonOver,`
         + `judgeSeason,myFixture,squadCards,autoSquad,availableCards,cardById,squadPower,resolveMatch,simulateMatch,createMatch,stepMatch,finishMatch,orderMatch,matchOver,matchMin,matchClock,bestXI,formFor,matchSide,teamStrength,midPower,`
-        + `mulberry32,calcOvr,makeCard,SIGNATURES,signatureCards,STAT_KEYS,STAT_MAX,OVR_MAX,SUBPOS,subGroup,slotFit,fitTier,squadPowerAt,primarySub,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
+        + `mulberry32,calcOvr,makeCard,SIGNATURES,signatureCards,STAT_KEYS,STAT_MAX,OVR_MAX,SUBPOS,ORIGINS,subGroup,slotFit,fitTier,squadPowerAt,primarySub,pickHand,pickComp,compsAvailable,HANDS,tenureLeft,judgeTenure,checkTenureClosing${extra}};`;
 
   const tmpPath = path.join(__dirname, opts.tmpName || "_tmp_run.js");
   fs.writeFileSync(tmpPath, code);

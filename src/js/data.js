@@ -259,6 +259,55 @@ const FORMATIONS={
 };
 const DEFAULT_FORM="4-4-2";
 
+// --- 起点のチャンネル(サブポジごとに3種 → docs/07 §7.9) ---
+// **その選手がボールを持ったときに何をするか**。サブポジションで持ち札が変わる。
+//   stat … 成否を決める能力。**この能力が高いほど選ばれやすく、成功もしやすい**
+//   risk … 成功のしやすさ(**相対値**)。安全な選択ほど高く、一発を狙うほど低い。
+//          絶対の水準は TUNING.atk.originK で一括調整する
+//   gain … 成功したときに稼ぐ前進(0〜1)。低リスクは小さく、一発は大きい
+// risk と gain はトレードオフに置く。安全に繋ぐか、失っても一気に行くかが選手の個性になる。
+const ORIGINS={
+  GK: [{id:"gkLong",  label:"ロングキック",   stat:"pow", risk:0.40, gain:0.55},
+       {id:"gkQuick", label:"速攻のスロー",   stat:"spd", risk:0.66, gain:0.30},
+       {id:"gkShort", label:"短く繋ぐ",       stat:"tec", risk:0.80, gain:0.08}],
+  CB: [{id:"cbCarry", label:"持ち上がり",     stat:"spd", risk:0.62, gain:0.28},
+       {id:"cbVert",  label:"縦パス",         stat:"tec", risk:0.58, gain:0.38},
+       {id:"cbFeed",  label:"ロングフィード", stat:"pow", risk:0.38, gain:0.60}],
+  LSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.60, gain:0.40},
+       {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.32},
+       {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55}],
+  RSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.60, gain:0.40},
+       {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.32},
+       {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55}],
+  DMF:[{id:"dmSpray", label:"散らし",         stat:"tec", risk:0.78, gain:0.15},
+       {id:"dmDrive", label:"持ち出し",       stat:"spd", risk:0.60, gain:0.35},
+       {id:"dmSwitch",label:"サイドチェンジ", stat:"pow", risk:0.52, gain:0.45}],
+  CMF:[{id:"cmThru",  label:"スルーパス",     stat:"tec", risk:0.50, gain:0.55},
+       {id:"cmCarry", label:"持ち出し",       stat:"spd", risk:0.62, gain:0.35},
+       {id:"cmOpen",  label:"展開",           stat:"pow", risk:0.72, gain:0.22}],
+  OMF:[{id:"omBetween",label:"ライン間で受ける",stat:"tec",risk:0.66, gain:0.38},
+       {id:"omTurn",  label:"反転ドリブル",   stat:"spd", risk:0.52, gain:0.50},
+       {id:"omMid",   label:"ミドルを狙う",   stat:"atk", risk:0.44, gain:0.62}],
+  LMF:[{id:"wmUp",    label:"サイドを上がる", stat:"spd", risk:0.62, gain:0.38},
+       {id:"wmIn",    label:"中へ絞る",       stat:"tec", risk:0.64, gain:0.34},
+       {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55}],
+  RMF:[{id:"wmUp",    label:"サイドを上がる", stat:"spd", risk:0.62, gain:0.38},
+       {id:"wmIn",    label:"中へ絞る",       stat:"tec", risk:0.64, gain:0.34},
+       {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55}],
+  CF: [{id:"cfPost",  label:"ポストプレー",   stat:"pow", risk:0.62, gain:0.35},
+       {id:"cfDrop",  label:"引いて受ける",   stat:"tec", risk:0.72, gain:0.22},
+       {id:"cfRun",   label:"裏へ抜ける",     stat:"spd", risk:0.42, gain:0.62}],
+  ST: [{id:"stRun",   label:"裏へ抜ける",     stat:"spd", risk:0.44, gain:0.60},
+       {id:"stMeet",  label:"クロスに合わせる",stat:"pow",risk:0.50, gain:0.52},
+       {id:"stLoose", label:"こぼれ球に詰める",stat:"atk",risk:0.56, gain:0.45}],
+  LWG:[{id:"wgLine",  label:"縦へ突破",       stat:"spd", risk:0.52, gain:0.50},
+       {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46},
+       {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.48, gain:0.54}],
+  RWG:[{id:"wgLine",  label:"縦へ突破",       stat:"spd", risk:0.52, gain:0.50},
+       {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46},
+       {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.48, gain:0.54}],
+};
+
 // --- 打ち手(各節に1つ選ぶ。→docs/03 §3.2.3) ---
 // WCCF を踏襲した3種。**効果の詳細は D16 で決める**ため、ここでは選択肢の定義だけを持つ。
 // 1手 = 1エントリなので、後から足すのも効果を実装するのもこの表を触ればよい。
@@ -296,8 +345,19 @@ const TUNING={
   th:{ shot:1.20 },
   // 各スコアに乗る揺らぎ rr() = min + random×span
   rng:{ min:0.60, span:0.80 },
-  // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)
-  atk:{ toShot:0.75, homeAdv:1.06 },
+  // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)。
+  // 起点で稼いだ前進(prog)が高いほど届きやすい: toShot × (progLo + prog×progK)
+  // originK は ORIGINS の risk 全体に掛かる係数(表は相対値のままにして、ここ1つで調整する)
+  atk:{ toShot:0.75, homeAdv:1.06, progLo:0.45, progK:1.10, originK:1.65 },
+  // --- モメンタム(勢い → docs/07 §7.8) ---
+  // -1..+1 の1本のゲージ。+ がホーム優勢。**起点の高さ**を決める。
+  //   kickK   キックオフ時: (OVR差 / kickK) を初期値にする
+  //   kickCap その初期値の上限(強豪でも一方的に始まらないように)
+  //   decay   毎ティック中立へ戻る率(流れは移ろう)
+  //   spread  モメンタムが起点の高さを動かす幅
+  //   sigma   高さの選好のばらつき(大きいほどランダム寄り)
+  mom:{ kickK:60, kickCap:0.45, decay:0.90, cap:1.0, spread:0.55, sigma:0.18,
+        goal:0.54, shot:0.16, save:0.19, originOk:0.11, originNg:0.21 },
   // 暫定リゾルバ(第3段で match-core の本実装に置き換える)
   sim:{ base:1.15, spread:22, homeAdv:0.18, maxGoals:6 },
 };

@@ -113,6 +113,74 @@ function runSeason() {
     console.log("決定性OK", a.hg + "-" + a.ag, "/ イベント", a.events.length, "件");
   }
 
+  // ---------- モメンタムが起点の高さを決める(D26 → docs/07 §7.8/§7.9) ----------
+  {
+    const side = id => {
+      const roster = E.clubRoster(4242, id);
+      return { cards: E.bestXI(roster, "4-4-2"), form: "4-4-2", name: id };
+    };
+    // キックオフ: 強いチームが前から始められる
+    const strong = E.createMatch(side("eng-1"), side("sam-8"), 1);
+    const even = E.createMatch(side("ger-4"), side("ger-4"), 1);
+    assert.ok(strong.mom > 0.2, "強豪はキックオフ時点で勢いを持つ: " + strong.mom.toFixed(2));
+    assert.strictEqual(even.mom, 0, "同じ編成どうしは互角で始まる");
+    assert.ok(Math.abs(strong.mom) <= E.TUNING.mom.kickCap, "初期値は上限で抑える");
+
+    // 起点の高さがモメンタムで動く。押されていればDF、勢いがあればFWから始まる
+    const bucket = { lo: {}, mid: {}, hi: {} };
+    const H = side("ger-4"), A = side("ger-4");
+    for (let i = 1; i <= 400; i++) {
+      const M = E.finishMatch(E.createMatch(H, A, i));
+      let mom = 0;
+      for (const e of M.events) {
+        if (e.type === "possession") mom = (e.side === "H" ? 1 : -1) * e.mom;
+        if (e.type !== "origin") continue;
+        const T = e.side === "H" ? M.home : M.away;
+        const p = T.players.find(x => x.c.id === e.by);
+        if (!p) continue;
+        const b = mom < -0.2 ? "lo" : mom > 0.2 ? "hi" : "mid";
+        bucket[b][p.role] = (bucket[b][p.role] || 0) + 1;
+      }
+    }
+    const share = (o, r) => (o[r] || 0) / (Object.values(o).reduce((a, b) => a + b, 0) || 1);
+    assert.ok(share(bucket.lo, "DF") > 0.5, "押されているとDF起点が主体: "
+      + (share(bucket.lo, "DF") * 100).toFixed(0) + "%");
+    assert.ok(share(bucket.mid, "MF") > 0.5, "拮抗するとMF起点が主体: "
+      + (share(bucket.mid, "MF") * 100).toFixed(0) + "%");
+    assert.ok(share(bucket.hi, "FW") > 0.35, "勢いがあるとFW起点が増える: "
+      + (share(bucket.hi, "FW") * 100).toFixed(0) + "%");
+    // 遠い位置も低確率で選ばれる(決定は確率的 = 一意に決まらない)
+    assert.ok(share(bucket.lo, "MF") > 0.02 && share(bucket.hi, "MF") > 0.02,
+      "狙いから外れた位置も低確率で起点になる");
+    console.log("モメンタムOK 押され DF", (share(bucket.lo, "DF") * 100).toFixed(0) + "%",
+      "/ 拮抗 MF", (share(bucket.mid, "MF") * 100).toFixed(0) + "%",
+      "/ 勢い FW", (share(bucket.hi, "FW") * 100).toFixed(0) + "%");
+  }
+
+  // ---------- 起点のチャンネル(→docs/07 §7.9) ----------
+  {
+    // サブポジごとに3種そろっていて、能力キーも成功率も妥当な範囲
+    for (const [sub, list] of Object.entries(E.ORIGINS)) {
+      assert.strictEqual(list.length, 3, sub + " のチャンネルは3種");
+      assert.strictEqual(new Set(list.map(c => c.stat)).size, 3, sub + " の3種は別々の能力で決まる");
+      for (const c of list) {
+        assert.ok(E.STAT_KEYS.includes(c.stat), sub + "/" + c.id + " の stat が実在する能力");
+        assert.ok(c.risk > 0 && c.risk < 1, sub + "/" + c.id + " の risk が 0〜1");
+        assert.ok(c.gain >= 0 && c.gain <= 1, sub + "/" + c.id + " の gain が 0〜1");
+      }
+      // risk と gain はトレードオフ: 最も安全な選択が最大の gain を持たない
+      const safest = list.reduce((a, b) => b.risk > a.risk ? b : a);
+      const biggest = list.reduce((a, b) => b.gain > a.gain ? b : a);
+      assert.notStrictEqual(safest.id, biggest.id, sub + " は安全と一発が両立しない");
+    }
+    // 陣形に出てくるサブポジは全部チャンネルを持っている
+    const subs = new Set();
+    Object.values(E.FORMATIONS).forEach(f => f.forEach(([s]) => subs.add(s)));
+    for (const s of subs) assert.ok(E.ORIGINS[s], s + " のチャンネルがある");
+    console.log("起点チャンネルOK", Object.keys(E.ORIGINS).length, "サブポジ ×3 =",
+      Object.keys(E.ORIGINS).length * 3, "種 / 陣形の全", subs.size, "サブポジを網羅");
+  }
+
   // ---------- 監督は任意のタイミングで手を打てる(D25 → docs/07 §7.6) ----------
   {
     const side = id => {
