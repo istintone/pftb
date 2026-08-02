@@ -275,7 +275,7 @@ const TUNING={
   league:{ clubs:8, rounds:14 },        // 1リーグのクラブ数 / 節数(ホーム&アウェイ・休みなし)
   // 任期 = キャリア1周(→docs/03 §3.2.3)。節で通算し、シーズンとは切り離す。
   tenure:{ limit:96, extend:24, hardMax:120, extendRank:3 }, // extendRank位以内で延命
-  squad:{ starters:11, bench:5 },
+  squad:{ starters:11, bench:5, subMax:3 },   // subMax = 1試合の交代枠
   // 枠適性(→docs/03 §3.14)。card-eleven を踏襲した3段。
   //   sub  サブポジションが一致 = 本来の力を出せる
   //   main サブは違うがメイン(大分類)が一致 = とりあえず使えるが本来の力は出ない

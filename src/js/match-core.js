@@ -114,59 +114,142 @@ function matchClock(rng){
 }
 
 // ---------- 進行 ----------
+// **解く単位は「1ティック(3分)」**(→docs/07 §7.2)。試合まるごとではない。
+// こうすると監督が**任意のタイミングで**手を打てる(D25):
+//   ・描画は「解き終わったティック」しか触らない  → 見せかけは結果に触れない
+//   ・監督の指示は M.orders に積まれ、**次のティックの入力**として効く
+//   ・CPU同士の試合は指示が無いので finishMatch() で一気に解く(今までと同じ)
+//
+// ティックごとに独立したたねを使う(matchSeed ^ hash("t:"+i))。
+// **途中で指示を出しても以降のティックの乱数列はずれない**ので、
+// 「同じ試合・同じ流れで、采配だけが違いを生む」というA/Bが成立する。
+
+/** 試合の状態を作る。ここではまだ1ティックも解かない。 */
+function createMatch(home,away,seed){
+  const s=seed>>>0;
+  const H=buildTeam(home.cards,home.form,home.name,"H");
+  const A=buildTeam(away.cards,away.form,away.name,"A");
+  const M={
+    seed:s, home:H, away:A, ix:0,
+    clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定
+    events:[], orders:{ H:[], A:[] }, subs:{ H:0, A:0 }, over:false,
+  };
+  M.events.push({ min:0, half:1, at:false, side:null, type:"kickoff",
+    home:H.name, away:A.name, ticks:M.clock.length });
+  return M;
+}
+const matchOver=M=>M.ix>=M.clock.length;
+/** いま何分か(表示用)。まだ始まっていなければ0分。 */
+const matchMin=M=>M.ix?M.clock[M.ix-1].min:0;
+
 /**
- * 1試合を最後まで解いて、起きたことを events[] に残す(→docs/07 §7.1)。
+ * 監督の指示を積む。**次のティックの頭で反映される**(→docs/07 §7.6)。
+ * 試合中いつ呼んでもよく、積んだ時点では何も起きない=描画から独立している。
+ *   { type:"sub", out:<出す選手の枠index>, in:<入れる控えのindex> }
+ */
+function orderMatch(M,side,order){
+  if(M.over||!order)return false;
+  if(order.type==="sub"){
+    // **積んだ分も数える**。適用は次のティックなので、済んだ数だけ見ると枠を超えて積めてしまう。
+    const pending=M.orders[side].filter(o=>o.type==="sub").length;
+    if(M.subs[side]+pending>=TUNING.squad.subMax)return false;
+  }
+  M.orders[side].push(order);
+  return true;
+}
+/** 積まれた指示をティックの頭で適用する。適用できたものだけ events に残す。 */
+function applyOrders(M,t){
+  for(const side of ["H","A"]){
+    const T=side==="H"?M.home:M.away;
+    const q=M.orders[side]; M.orders[side]=[];
+    for(const o of q){
+      if(o.type!=="sub")continue;
+      const out=T.players[o.out], inc=T.bench[o.in];
+      if(!out||!inc||inc.used||M.subs[side]>=TUNING.squad.subMax)continue;
+      // 交代: 出る選手の**枠をそのまま引き継ぐ**(位置と適性は枠側の属性なので付け替える)
+      const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
+        x:out.x, y:out.y, ix:out.ix, side, enter:t.min,
+        stat:{ shots:0, goals:0, inv:0 } };
+      T.players[o.out]=nw; inc.used=true; M.subs[side]++;
+      M.events.push({ min:t.min, half:t.half, at:!!t.at, side, type:"sub",
+        out:out.c.id, in:inc.c.id, pos:[out.x,out.y] });
+    }
+  }
+}
+
+/**
+ * 1ティック(3分)だけ解いて、そのティックで起きた events を返す。
+ * 描画はこの返り値を再生する。**返る前に解き終わっている**ので、
+ * 描画がどう動いても結果は変わらない。
+ */
+function stepMatch(M){
+  if(matchOver(M))return finishTick(M);
+  const t=M.clock[M.ix++];
+  const rng=mulberry32((M.seed^hashStr("t:"+M.ix))>>>0);    // ティックごとに独立したたね
+  const from=M.events.length;
+  const H=M.home, A=M.away;
+
+  if(t.half===2&&!M._ht){                                   // ハーフの切れ目
+    M._ht=true;
+    M.events.push({ min:45, half:1, at:false, side:null, type:"halftime",
+      hg:H.score, ag:A.score });
+  }
+  applyOrders(M,t);                                         // 監督の指示は**ここで**効く
+
+  const push=e=>M.events.push(Object.assign({ min:t.min, half:t.half, at:!!t.at },e));
+
+  // ① 支配率 → ② 攻撃権の抽選
+  const mh=midPower(H)*TUNING.atk.homeAdv, ma=midPower(A);
+  const share=mh/(mh+ma);
+  const T=rng()<share?H:A, D=T===H?A:H;
+  push({ side:T.side, type:"possession", share:Math.round(share*100)/100 });
+
+  // ③ 攻撃が形になるか(連鎖はこれから足す。いまは到達率で判定する)
+  const origin=pickAttacker(rng,T);
+  origin.stat.inv++;
+  if(rng()>=TUNING.atk.toShot){
+    push({ side:T.side, type:"build", by:origin.c.id, pos:[origin.x,origin.y] });
+    return M.events.slice(from);
+  }
+  // ④ シュート
+  const shooter=pickShooter(rng,T)||origin;
+  const gk=pickGK(D);
+  shooter.stat.inv++; shooter.stat.shots++;
+  if(resolveShot(rng,shooter,gk)){
+    T.score++; shooter.stat.goals++;
+    push({ side:T.side, type:"goal", by:shooter.c.id, gk:gk.c.id,
+      hg:H.score, ag:A.score, pos:[shooter.x,shooter.y] });
+  }else{
+    push({ side:T.side, type:"save", by:shooter.c.id, gk:gk.c.id,
+      pos:[shooter.x,shooter.y] });
+  }
+  return M.events.slice(from);
+}
+/** 試合終了イベント(1回だけ積む)。 */
+function finishTick(M){
+  if(M.over)return [];
+  M.over=true;
+  const e={ min:90, half:2, at:false, side:null, type:"fulltime",
+    hg:M.home.score, ag:M.away.score };
+  M.events.push(e);
+  return [e];
+}
+/** 残りのティックを一気に解く。スキップ / 自動消化 / CPU同士の試合はこれ。 */
+function finishMatch(M){
+  while(!matchOver(M))stepMatch(M);
+  finishTick(M);
+  return M;
+}
+
+/**
+ * 監督の指示が無い試合を最後まで解く(→docs/07 §7.1)。
  *   home/away : { cards:[16], form, name }
  *   seed      : 決定的乱数のたね。**同じ seed なら必ず同じ試合**になる
  * 返り値: { hg, ag, events, home, away }
- *
- * events の各要素は必ず { min, half, at, side, type } を持つ。
- * 描画はこれを順に再生するだけでよく、**events に無いことは画面でも起きない**。
  */
 function simulateMatch(home,away,seed){
-  const rng=mulberry32(seed>>>0);
-  const H=buildTeam(home.cards,home.form,home.name,"H");
-  const A=buildTeam(away.cards,away.form,away.name,"A");
-  const events=[];
-  const push=(t,e)=>events.push(Object.assign({ min:t.min, half:t.half, at:!!t.at },e));
-
-  push({ min:0, half:1 },{ side:null, type:"kickoff", home:H.name, away:A.name });
-
-  const clock=matchClock(rng);
-  let half=1;
-  for(const t of clock){
-    if(t.half!==half){
-      push({ min:45, half:1 },{ side:null, type:"halftime", hg:H.score, ag:A.score });
-      half=t.half;
-    }
-    // ① 支配率 → ② 攻撃権の抽選
-    const mh=midPower(H)*TUNING.atk.homeAdv, ma=midPower(A);
-    const share=mh/(mh+ma);
-    const T=rng()<share?H:A, D=T===H?A:H;
-    push(t,{ side:T.side, type:"possession", share:Math.round(share*100)/100 });
-
-    // ③ 攻撃が形になるか(連鎖はこれから足す。いまは到達率で判定する)
-    const origin=pickAttacker(rng,T);
-    origin.stat.inv++;
-    if(rng()>=TUNING.atk.toShot){
-      push(t,{ side:T.side, type:"build", by:origin.c.id, pos:[origin.x,origin.y] });
-      continue;
-    }
-    // ④ シュート
-    const shooter=pickShooter(rng,T)||origin;
-    const gk=pickGK(D);
-    shooter.stat.inv++; shooter.stat.shots++;
-    if(resolveShot(rng,shooter,gk)){
-      T.score++; shooter.stat.goals++;
-      push(t,{ side:T.side, type:"goal", by:shooter.c.id, gk:gk.c.id,
-        hg:H.score, ag:A.score, pos:[shooter.x,shooter.y] });
-    }else{
-      push(t,{ side:T.side, type:"save", by:shooter.c.id, gk:gk.c.id,
-        pos:[shooter.x,shooter.y] });
-    }
-  }
-  push({ min:90, half:2 },{ side:null, type:"fulltime", hg:H.score, ag:A.score });
-  return { hg:H.score, ag:A.score, events, home:H, away:A };
+  const M=finishMatch(createMatch(home,away,seed));
+  return { hg:M.home.score, ag:M.away.score, events:M.events, home:M.home, away:M.away };
 }
 
 // ---------- 呼び出し口 ----------

@@ -113,5 +113,48 @@ function runSeason() {
     console.log("決定性OK", a.hg + "-" + a.ag, "/ イベント", a.events.length, "件");
   }
 
+  // ---------- 監督は任意のタイミングで手を打てる(D25 → docs/07 §7.6) ----------
+  {
+    const side = id => {
+      const roster = E.clubRoster(4242, id);
+      return { cards: E.bestXI(roster, "4-4-2"), form: "4-4-2", name: id };
+    };
+    const mk = () => E.createMatch(side("ger-4"), side("ger-5"), 999);
+
+    // ① 1ティックずつ解いても、一気に解いても同じ試合になる
+    const a = mk(); while (!E.matchOver(a)) E.stepMatch(a); E.finishMatch(a);
+    const b = E.finishMatch(mk());
+    assert.strictEqual(JSON.stringify(a.events), JSON.stringify(b.events),
+      "1ティックずつ解いても一気に解いても同じ");
+
+    // ② 途中で交代を入れると、そこから先だけが変わる
+    const c = mk();
+    const HALF = Math.floor(c.clock.length / 2);
+    for (let i = 0; i < HALF; i++) E.stepMatch(c);
+    const before = JSON.stringify(c.events);
+    assert.ok(E.orderMatch(c, "H", { type: "sub", out: 10, in: 0 }), "交代の指示を積める");
+    E.finishMatch(c);
+    assert.ok(JSON.stringify(c.events).startsWith(before.slice(0, -1)),
+      "指示より前のイベントは1つも変わらない");
+    const subs = c.events.filter(e => e.type === "sub");
+    assert.strictEqual(subs.length, 1, "交代が1回だけ記録される");
+    assert.ok(subs[0].min > 0, "交代は指示の次のティックで起きる: " + subs[0].min + "分");
+
+    // ③ 交代枠の上限を超えては積めない
+    const d = mk(); E.stepMatch(d);
+    let ok = 0;
+    for (let i = 0; i < 5; i++) if (E.orderMatch(d, "H", { type: "sub", out: 10 - i, in: i })) ok++;
+    assert.strictEqual(ok, E.TUNING.squad.subMax, "交代枠は " + E.TUNING.squad.subMax + " まで");
+
+    // ④ 指示を出さなければ、途中で止めても結果は変わらない(=描画は結果に触れない)
+    const e = mk();
+    for (let i = 0; i < HALF; i++) E.stepMatch(e);
+    E.finishMatch(e);
+    assert.strictEqual(JSON.stringify(e.events), JSON.stringify(b.events),
+      "止めても指示が無ければ同じ試合");
+    console.log("任期中の指揮OK 交代", subs[0].min + "分 / 枠", E.TUNING.squad.subMax,
+      "/ 止めても結果は不変");
+  }
+
   process.exit(0);
 })().catch(e => { console.error("FAIL:", e); process.exit(1); });
