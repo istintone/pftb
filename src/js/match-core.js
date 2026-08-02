@@ -45,7 +45,7 @@ function lineup(cards,form){
 /** チームを組む。試合中に変わる値(得点・スタッツ)もここに持たせる。 */
 function buildTeam(cards,form,name,side){
   const { xi, bench }=lineup(cards,form);
-  xi.forEach(p=>{ p.side=side; p.stat={ shots:0, goals:0, assists:0, inv:0 }; });
+  xi.forEach(p=>{ p.side=side; p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 }; });
   return { players:xi, bench, form, name, side, score:0 };
 }
 
@@ -89,17 +89,42 @@ const pickGK=T=>T.players.find(p=>p.role==="GK")||T.players[0];
  * シュート vs GK。**攻撃側スコア > 守備側スコア × 閾値** の形は全判定で共通(→docs/07 §7.4)。
  * 攻守それぞれに独立して rr() が乗るので、実力差があっても番狂わせが起きる。
  */
+/** シュート位置の近さ(0..1)。h=1 がゴール前。遠いほどすべてが難しくなる。 */
+function nearOf(h){
+  const S=TUNING.shot;
+  return clamp((h-S.deadZone)/(1-S.deadZone),S.minRange,1);
+}
+/**
+ * ブロック — **GKの前に守備者が身体を入れる**。シュートの最初の関門。
+ * 撃ち抜く側は tec(コースを作る)と atk、止める側は def と pow。
+ */
+function resolveBlock(rng,atk,df){
+  const aSc=(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
+  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*rr(rng);
+  return dSc>aSc*TUNING.th.block;                          // 守備側が勝てばブロック
+}
+/** 枠に飛ぶか。**技術と距離**で決まる。GKは関与しない。 */
+function onTarget(rng,atk,h){
+  const S=TUNING.shot;
+  return rng()<(S.accBase+eff(atk,"tec")/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
+}
+/**
+ * 枠内のシュート vs GK。
+ * **GKは def だけで守らない**。def は上限20に張り付きやすく(96人中52人)、
+ * それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.10)。
+ * 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
+ */
 function resolveShot(rng,atk,gk,h){
   const S=TUNING.shot;
-  // **どこから撃ったかが効く**。遠いほど枠にもGKにも勝てない。
-  // これが無いと、遠目の苦し紛れがゴール前の決定機と同じ確率で入ってしまう。
-  const near=clamp((h-S.deadZone)/(1-S.deadZone),S.minRange,1);
-  const sSc=(eff(atk,"atk")*0.7+eff(atk,"pow")*0.3)*Math.pow(near,S.rangePow)*rr(rng);
-  // **GKは def だけで守らない**。def は上限20に張り付きやすく(96人中52人)、
-  // それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.9)。
-  // 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
+  const sSc=(eff(atk,"atk")*0.7+eff(atk,"pow")*0.3)*Math.pow(nearOf(h),S.rangePow)*rr(rng);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)*rr(rng);
   return sSc>gSc*TUNING.th.shot;
+}
+/** こぼれ球を拾えるか。詰める側は spd と atk、防ぐ側は def と spd。 */
+function resolveRebound(rng,atk,df){
+  const aSc=(eff(atk,"spd")*0.5+eff(atk,"atk")*0.5)*rr(rng);
+  const dSc=(eff(df,"def")*0.5+eff(df,"spd")*0.5)*rr(rng);
+  return aSc>dSc*TUNING.th.rebound;
 }
 
 // ---------- モメンタム(勢い) ----------
@@ -328,7 +353,7 @@ function applyOrders(M,t){
       // 交代: 出る選手の**枠をそのまま引き継ぐ**(位置と適性は枠側の属性なので付け替える)
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
         x:out.x, y:out.y, ix:out.ix, side, enter:t.min,
-        stat:{ shots:0, goals:0, assists:0, inv:0 } };
+        stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 } };
       T.players[o.out]=nw; inc.used=true; M.subs[side]++;
       M.events.push({ min:t.min, half:t.half, at:!!t.at, side, type:"sub",
         out:out.c.id, in:inc.c.id, pos:[out.x,out.y] });
@@ -393,37 +418,74 @@ function stepMatch(M){
     const tg=ballTarget(rng,h,x,ch);
     // 撃つ: その場で撃つチャンネル / 深く入った / つなぎ上限
     if(ch.kind==="shot"||step>=C.maxLinks||shotUrge(rng,tg.h,step,carrier)){
-      return shoot(M,push,T,D,carrier,assist,tg,from);
+      return shoot(M,rng,push,T,D,carrier,assist,tg,from);
     }
     if(ch.kind==="carry"){                                  // 自分が次の起点になる
       lastCh=ch.id;
     }else{                                                  // パス系 → 行き先に近い味方へ
       const recv=receiverAt(rng,T,tg,carrier);
-      if(!recv)return shoot(M,push,T,D,carrier,assist,tg,from);
+      if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from);
       assist=carrier; carrier=recv; lastCh=null;
     }
     h=tg.h; x=tg.x; step++;
   }
 }
-/** シュートまで行ったときの決着。連鎖のどこからでも呼べるように切り出してある。 */
-function shoot(M,push,T,D,shooter,assist,tg,from){
+/**
+ * シュートまで行ったときの決着(→docs/07 §7.9)。連鎖のどこからでも呼べる。
+ *
+ *   ブロック → 枠外 → GK → こぼれ球 → 詰め
+ *
+ * **GKに全部が来るわけではない。** 守備者が身体を入れ、技術が足りなければ枠を外れ、
+ * 止められてもこぼれれば詰められる。GK以外の守備も結果に効く。
+ */
+function shoot(M,rng,push,T,D,shooter,assist,tg,from,second){
   const F=TUNING.mom, gk=pickGK(D);
   const pos=[Math.round(tg.x),yOfH(tg.h)];
-  shooter.stat.shots++; gk.stat.inv++;
-  const srng=mulberry32((M.seed^hashStr("s:"+M.ix+":"+shooter.c.id))>>>0);
-  if(resolveShot(srng,shooter,gk,tg.h)){
+  const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100,
+    second:!!second };
+  shooter.stat.shots++;
+
+  // ① ブロック — 打点に近い守備者が身体を入れる
+  const blocker=matchupDefender(rng,tg.h,tg.x,D);
+  if(blocker&&resolveBlock(rng,shooter,blocker)){
+    blocker.stat.blocks=(blocker.stat.blocks||0)+1; blocker.stat.inv++;
+    addMom(M,D.side,F.block);
+    push(Object.assign({ type:"block", vs:blocker.c.id },base));
+    return M.events.slice(from);
+  }
+  // ② 枠外 — 技術と距離。GKは関与しない
+  if(!onTarget(rng,shooter,tg.h)){
+    addMom(M,D.side,F.miss);
+    push(Object.assign({ type:"miss" },base));
+    return M.events.slice(from);
+  }
+  shooter.stat.sog=(shooter.stat.sog||0)+1;                // 枠内シュート
+  gk.stat.inv++;
+
+  // ③ GK
+  if(resolveShot(rng,shooter,gk,tg.h)){
     T.score++; shooter.stat.goals++;
     if(assist)assist.stat.assists++;
     addMom(M,T.side,F.goal);
-    push({ side:T.side, type:"goal", by:shooter.c.id, gk:gk.c.id,
-      assist:assist?assist.c.id:null, hg:M.home.score, ag:M.away.score, pos,
-      h:Math.round(tg.h*100)/100 });
-  }else{
-    addMom(M,T.side,F.shot); addMom(M,D.side,F.save);       // 止めた側にも流れが来る
-    push({ side:T.side, type:"save", by:shooter.c.id, gk:gk.c.id, pos,
-      h:Math.round(tg.h*100)/100 });
+    push(Object.assign({ type:"goal", gk:gk.c.id, assist:assist?assist.c.id:null,
+      hg:M.home.score, ag:M.away.score },base));
+    return M.events.slice(from);
   }
-  return M.events.slice(from);
+  gk.stat.saves=(gk.stat.saves||0)+1;
+  addMom(M,T.side,F.shot); addMom(M,D.side,F.save);         // 止めた側にも流れが来る
+  push(Object.assign({ type:"save", gk:gk.c.id },base));
+
+  // ④ こぼれ球 — 1回だけ。詰め合いに勝てばゴール前から撃ち直し
+  if(second||rng()>=TUNING.shot.rebound)return M.events.slice(from);
+  const chaser=pickShooter(rng,T)||shooter;
+  const guard=matchupDefender(rng,1,tg.x,D);
+  chaser.stat.inv++; if(guard)guard.stat.inv++;
+  const got=guard?resolveRebound(rng,chaser,guard):true;
+  push({ min:base.min, side:T.side, type:"rebound", by:chaser.c.id,
+    vs:guard?guard.c.id:null, ok:got, pos });
+  if(!got){ addMom(M,D.side,F.duelLost); return M.events.slice(from); }
+  addMom(M,T.side,F.duelWon);
+  return shoot(M,rng,push,T,D,chaser,null,{ h:TUNING.shot.reboundH, x:tg.x },from,true);
 }
 
 /** 試合終了イベント(1回だけ積む)。 */

@@ -286,7 +286,7 @@ function runSeason() {
             "pass のあとは別の選手が持つ");
           carrier = e.by; continue;
         }
-        if (e.type === "goal" || e.type === "save") {
+        if (["goal","save","block","miss"].includes(e.type)) {
           shots++; if (e.type === "goal") goals++;
           if (e.h < 0.6) deep++;
           len[l] = (len[l] || 0) + 1; l = 0;
@@ -309,6 +309,40 @@ function runSeason() {
       Object.entries(len).filter(([k]) => k > 0).sort((a, b) => a[0] - b[0])
         .map(([k, v]) => k + "手" + (v / tot * 100).toFixed(0) + "%").join(" "),
       "/ 遠距離", (deep / shots * 100).toFixed(0) + "% / 決定率", (goals / shots * 100).toFixed(0) + "%");
+  }
+
+  // ---------- シュートの枝分かれ(D29 → docs/07 §7.9) ----------
+  {
+    const side = id => ({ cards: E.bestXI(E.clubRoster(4242, id), "4-4-2"),
+      form: "4-4-2", name: id });
+    const H = side("ger-4"), A = side("ger-4");
+    const t = {}; let reb = 0, rebOk = 0, second = 0;
+    for (let i = 1; i <= 500; i++) {
+      const M = E.finishMatch(E.createMatch(H, A, i));
+      for (const e of M.events) {
+        if (["block", "miss", "save", "goal"].includes(e.type)) t[e.type] = (t[e.type] || 0) + 1;
+        if (e.type === "rebound") { reb++; if (e.ok) rebOk++; }
+        if (e.second) second++;
+        if (e.type === "block") assert.ok(e.vs, "ブロックした選手が記録される");
+        if (e.type === "miss") assert.ok(!e.gk, "枠外にGKは関与しない");
+        if (e.type === "save" || e.type === "goal") assert.ok(e.gk, "枠内はGKが関与する");
+      }
+    }
+    const att = t.block + t.miss + t.save + t.goal;
+    const pct = k => t[k] / att;
+    // 現実のサッカーはおおよそ ブロック3割 / 枠外3割 / 枠内4割(うち3割弱が得点)
+    assert.ok(pct("block") > 0.15 && pct("block") < 0.40, "ブロックが妥当な割合: "
+      + (pct("block") * 100).toFixed(0) + "%");
+    assert.ok(pct("miss") > 0.20 && pct("miss") < 0.45, "枠外が妥当な割合: "
+      + (pct("miss") * 100).toFixed(0) + "%");
+    assert.ok(pct("goal") > 0.07 && pct("goal") < 0.20, "得点が妥当な割合: "
+      + (pct("goal") * 100).toFixed(0) + "%");
+    // こぼれ球は起きるが、**詰め直しは1回まで**(無限ループにならない)
+    assert.ok(reb > 0, "こぼれ球が起きる");
+    assert.ok(second > 0 && second <= rebOk, "詰め直しはこぼれを拾えたときだけ");
+    console.log("シュートの枝分かれOK",
+      ["block", "miss", "save", "goal"].map(k => k + " " + (pct(k) * 100).toFixed(0) + "%").join(" / "),
+      "/ こぼれ球", (reb / 500).toFixed(1) + "回", "拾えた", (rebOk / reb * 100).toFixed(0) + "%");
   }
 
   // ---------- GKの質が結果に出る(→docs/07 §7.9) ----------

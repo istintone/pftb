@@ -352,12 +352,16 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:1.15, origin:1.00 },
+  th:{ shot:0.90, origin:1.00, block:1.55, rebound:1.00 },
   // シュートの距離減衰(→docs/07 §7.9)。h=1 がゴール前、0 が自陣ゴール前。
   //   deadZone この高さ以下はほぼ入らない / minRange その下限 / rangePow 減衰の効き
   //   gkDef/gkPow/gkTec  GKのセーブの配合(合計1.0)
+  //   accBase/accTec/accRange  枠に飛ぶ率 = (accBase + tec/20×accTec) × near^accRange
+  //   rebound                  セーブがこぼれる率(そのあと詰める勝負になる)
   shot:{ deadZone:0.25, minRange:0.04, rangePow:1.00,
-         gkDef:0.65, gkPow:0.20, gkTec:0.15 },
+         gkDef:0.65, gkPow:0.20, gkTec:0.15,
+         accBase:0.30, accTec:0.45, accRange:0.55, rebound:0.30,
+         reboundH:0.95 },   // こぼれ球を詰める位置(ゴール前)
   // 各スコアに乗る揺らぎ rr() = min + random×span
   rng:{ min:0.60, span:0.80 },
   // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)。
@@ -391,7 +395,8 @@ const TUNING={
   //   sigma   高さの選好のばらつき(大きいほどランダム寄り)
   mom:{ kickK:60, kickCap:0.45, decay:0.90, cap:1.0, spread:0.55, sigma:0.18,
         // duelWon/duelLost … 連鎖の1マッチアップごとの増減(勢いの主な動力)
-        goal:0.54, shot:0.16, save:0.19, duelWon:0.09, duelLost:0.17 },
+        goal:0.54, shot:0.16, save:0.19, block:0.14, miss:0.08,
+        duelWon:0.09, duelLost:0.17 },
   // 暫定リゾルバ(第3段で match-core の本実装に置き換える)
   sim:{ base:1.15, spread:22, homeAdv:0.18, maxGoals:6 },
 };
