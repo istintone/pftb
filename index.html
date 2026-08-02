@@ -601,6 +601,70 @@ body{
   border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
 
 /* =========================================================================
+   MATCH — 試合画面(→docs/06 §6.17)
+   ピッチは**編成画面と同じ .pitch**をそのまま使う(線も大きさも共通)。
+   ========================================================================= */
+.mscore{
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:12px; padding:12px 14px; margin-bottom:10px;
+}
+.mteam{ width:76px; text-align:center; font-size:10px; color:var(--text-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.memb{ width:34px; height:34px; border-radius:50%; margin:0 auto 6px;
+  background:var(--kit, oklch(0.55 0.10 85)) }
+.mmid{ text-align:center }
+.mclock{ font:9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-dim); margin-bottom:3px }
+.mclock.late{ color:var(--fit-bad) }
+.msc{ font:700 30px/1 var(--f-head); color:oklch(0.96 0.01 90) }
+
+/* ボールと選手。**選手は枠から大きく動かない**(ブロックがボールへ寄るだけ)。
+   位置はエンジンのイベントが持つので、描画は補間するだけでよい(→docs/07 §7.1)。 */
+.mball{
+  position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px;
+  border-radius:50%; background:#fff; box-shadow:0 0 7px oklch(1 0 0 / .8);
+  transition:left .45s cubic-bezier(.3,.7,.3,1), top .45s cubic-bezier(.3,.7,.3,1);
+  z-index:3;
+}
+.mp{
+  position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+  border:1.5px solid oklch(0 0 0 / .45);
+  transition:left .5s ease, top .5s ease, transform .2s ease, box-shadow .2s ease;
+}
+.mp.on{ transform:scale(1.45); box-shadow:0 0 0 2px oklch(1 0 0 / .85) }
+.mp.vs{ transform:scale(1.25); box-shadow:0 0 0 2px var(--fit-bad) }
+/* 見せ場のカットイン。ピッチの上に一瞬だけ重なる */
+.mcut{
+  position:absolute; inset:0; z-index:4; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .18s ease;
+}
+.mcut.on{ opacity:1 }
+.mcut b{
+  padding:10px 22px; border-radius:8px;
+  background:oklch(0 0 0 / .62); border:1px solid oklch(1 0 0 / .3);
+  font:700 22px/1 var(--f-head); letter-spacing:3px; color:#fff;
+  text-shadow:0 2px 10px oklch(0 0 0 / .9);
+}
+.mcut.goal b{ background:oklch(0.30 0.10 85 / .78); border-color:var(--accent);
+  color:var(--accent-hi); font-size:30px }
+
+/* 実況。新しい行が上に積まれる */
+.mfeed{
+  display:flex; flex-direction:column; gap:7px; overflow-y:auto;
+  scrollbar-width:none; height:116px; margin-top:10px; padding:10px 12px;
+  background:oklch(0.13 0.02 255); border:1px solid var(--line-2); border-radius:10px;
+}
+.mfeed div{ font-size:12px; line-height:1.55; color:oklch(0.82 0.01 90);
+  border-left:2px solid var(--line); padding-left:8px }
+.mfeed .goal{ border-left-color:var(--accent); color:var(--accent-hi); font-weight:600 }
+.mfeed .ally{ border-left-color:oklch(0.62 0.14 250) }
+.mfeed .opp { border-left-color:oklch(0.58 0.16 25) }
+.mfeed .info{ border-left-color:transparent; color:var(--text-dim); font:10px/1.5 var(--f-mono) }
+.mctl{ display:flex; gap:8px; margin-top:10px }
+.mctl .btn{ padding:11px 0; font-size:12px }
+
+/* =========================================================================
    HELP — 枠の左端に隠すタブ(→docs/06 §6.16)
    説明文を画面本体に置かず、ここへ寄せる。#app が overflow:hidden なので
    閉じている間はタブごと枠の中に収まり、外へはみ出さない。
@@ -1103,8 +1167,40 @@ body{
 
     <!-- ---------- MATCH(試合) ---------- -->
     <div id="scr-match" class="screen"><div class="pad">
-      <div class="eyebrow">MATCH</div>
-      <div class="stub"><b>2Dピッチ + 実況</b><span>第3段で実装。今は結果だけ出る</span></div>
+      <!-- スコアボード(デザインモックの構成) -->
+      <div class="mscore">
+        <div class="mteam"><div class="memb" id="mEmbH"></div><div id="mNameH">—</div></div>
+        <div class="mmid">
+          <div class="mclock" id="mClock">0分</div>
+          <div class="msc num" id="mSc">0 - 0</div>
+        </div>
+        <div class="mteam"><div class="memb" id="mEmbA"></div><div id="mNameA">—</div></div>
+      </div>
+
+      <!-- ピッチ。**編成画面と同じ大きさ**(線も同じ CSS を使う → docs/06 §6.15) -->
+      <div class="pitch" id="mPitch">
+        <div class="pt-frame"></div>
+        <div class="pt-half"></div>
+        <div class="pt-circle"></div>
+        <div class="pt-spot"></div>
+        <div class="pt-box away"></div><div class="pt-6yd away"></div><div class="pt-goal away"></div>
+        <div class="pt-box home"></div><div class="pt-6yd home"></div><div class="pt-goal home"></div>
+        <div class="pt-tag away">AWAY</div>
+        <div class="pt-tag home">HOME</div>
+        <div class="pt-slots" id="mSlots"></div>
+        <div class="mball" id="mBall"></div>
+        <div class="mcut" id="mCut"></div>
+      </div>
+
+      <!-- 実況。新しい行が上に積まれる(モックと同じ column-reverse) -->
+      <div class="mfeed" id="mFeed"></div>
+
+      <div class="mctl">
+        <button class="btn ghost" id="mPlay">⏸ 一時停止</button>
+        <button class="btn ghost" id="mSpeed">×1</button>
+        <button class="btn ghost" id="mSkip">スキップ</button>
+      </div>
+      <button class="btn" id="mDone" style="margin-top:8px;display:none">結果をみる</button>
     </div></div>
 
     <!-- ---------- RESULT(結果) ---------- -->
@@ -1579,6 +1675,8 @@ const TUNING={
   // 任期 = キャリア1周(→docs/03 §3.2.3)。節で通算し、シーズンとは切り離す。
   tenure:{ limit:96, extend:24, hardMax:120, extendRank:3 }, // extendRank位以内で延命
   squad:{ starters:11, bench:5, subMax:3 },   // subMax = 1試合の交代枠
+  // 試合の再生(描画側のみ。**結果には一切影響しない** → docs/07 §7.1)
+  ui:{ tickMs:1500, speeds:[1,2,4] },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
   // 攻守どちらのスコアにも eff 経由で掛かる(GKも例外ではない)。
@@ -2314,7 +2412,34 @@ function pickComp(id){
   return true;
 }
 
-function playMatchday(){
+/** 試合ごとのたね。**同じ節を何度解いても同じ結果**になる(→docs/07 §7.1)。 */
+function matchSeedOf(m,season,md){
+  return (S.world.seed^hashStr(m.h+"vs"+m.a+":"+season+":"+md))>>>0;
+}
+/** 今節の自分の試合(組み合わせ)。 */
+function myFixtureOf(){
+  const W=S.world;
+  return ((W.fixtures||[])[W.matchday-1]||[])
+    .find(m=>m.h===S.club.id||m.a===S.club.id)||null;
+}
+/**
+ * 自分の試合の状態を作る。**まだ1ティックも解かない**(→docs/07 §7.6)。
+ * 描画しながら進めるとき用。スキップするなら finishMatch を呼べばよい。
+ */
+function beginMyMatch(){
+  if(!S.career.hand)return null;
+  if(!S.career.comp&&!pickComp("league"))return null;
+  const m=myFixtureOf(); if(!m)return null;
+  const M=createMatch(matchSide(m.h),matchSide(m.a),matchSeedOf(m,S.world.season,S.world.matchday));
+  M.fixture=m;
+  return M;
+}
+
+/**
+ * 節を確定する。自分の試合は done(解き終えた試合状態)があればその結果を使い、
+ * 無ければその場で解く。**どちらでも同じ結果になる**(たねが同じなので)。
+ */
+function playMatchday(done){
   if(!S.career.hand)return null;                            // 打ち手が未選択なら進めない
   if(!S.career.comp&&!pickComp("league"))return null;       // 大会が未選択なら進めない
   const W=S.world, md=W.matchday, round=(W.fixtures||[])[md-1]||[];
@@ -2322,10 +2447,10 @@ function playMatchday(){
 
   round.forEach(m=>{
     const isMine=m.h===S.club.id||m.a===S.club.id;
-    // 試合ごとに独立したたねを使う。**同じ節を何度解いても同じ結果**になり、
-    // 描画するかどうかで結果が変わらない(→docs/07 §7.1)。
-    const seed=(W.seed^hashStr(m.h+"vs"+m.a+":"+W.season+":"+md))>>>0;
-    const { hg, ag }=resolveMatch(matchSide(m.h),matchSide(m.a),seed);
+    const seed=matchSeedOf(m,W.season,md);
+    const { hg, ag }=(isMine&&done)
+      ? { hg:done.home.score, ag:done.away.score }
+      : resolveMatch(matchSide(m.h),matchSide(m.a),seed);
     applyResult(W.table,m.h,m.a,hg,ag);
     if(isMine){
       const home=m.h===S.club.id, gf=home?hg:ag, ga=home?ag:hg;
@@ -3842,7 +3967,7 @@ function wireCurrentRow(){
   if(go)go.onclick=()=>{
     if(!S.career.hand){ toast("打ち手を選んでください"); return; }
     if(!S.career.comp&&!pickComp("league")){ toast("出場する大会を選んでください"); return; }
-    doMatchday();
+    startMatch();
   };
 }
 /** 現在節が画面に入るまでスクロールする(96節あるので必須)。 */
@@ -3900,9 +4025,183 @@ function renderClubhouse(){
 
 // ---------- 試合(第3段までは結果だけ) ----------
 let _lastResult=null;
+// ---------- 実況(→docs/06 §6.17) ----------
+// **イベントを日本語に直すだけ**。ここで結果を作ることは一切しない。
+// 味方=青 / 相手=赤 / ゴール=金 で色分けする(モックの実況欄に準拠)。
+
+/** イベントに出てくる選手を引く。 */
+function mPlayer(M,side,id){
+  const T=side==="H"?M.home:M.away;
+  return T.players.find(p=>p.c.id===id)||T.bench.find(p=>p.c.id===id)||null;
+}
+const mName=p=>p?esc(shortName(p.c)):"選手";
+
+/** 起点・連鎖の1行。チャンネル名がそのまま実況の語になる。 */
+function lineChannel(M,e){
+  const p=mPlayer(M,e.side,e.by), d=mPlayer(M,e.side==="H"?"A":"H",e.vs);
+  const who=mName(p)+"（"+e.sub+"）";
+  if(!e.ok)return d?mName(d)+"が"+who+"の"+e.label+"を止めた":who+"の"+e.label+"が通らない";
+  if(e.step)return who+"が"+e.label+"、さらに前へ";
+  return who+"の"+e.label+"から仕掛ける";
+}
+/**
+ * 1イベント → 実況の1行。返り値 { text, cls } / 出さないなら null。
+ * possession のような内部の刻みは出さない(読み物として意味が無い)。
+ */
+function matchLine(e,M){
+  const ally=e.side&&((e.side==="H")===(M.fixture.h===S.club.id));
+  const side=e.side?(ally?"ally":"opp"):"";
+  const p=e.by?mPlayer(M,e.side,e.by):null;
+  const gk=e.gk?mPlayer(M,e.side==="H"?"A":"H",e.gk):null;
+  const vs=e.vs?mPlayer(M,e.side==="H"?"A":"H",e.vs):null;
+  switch(e.type){
+    case "kickoff":  return { text:"<b>キックオフ</b>", cls:"info" };
+    case "halftime": return { text:"<b>ハーフタイム</b> "+e.hg+" - "+e.ag, cls:"info" };
+    case "fulltime": return null;                    // 終了は mFinish が出す
+    case "origin":
+    case "link":     return { text:lineChannel(M,e), cls:side };
+    case "block":    return { text:mName(p)+"のシュート！"+mName(vs)+"がブロック", cls:side };
+    case "miss":     return { text:mName(p)+"のシュートは枠を外れた", cls:side };
+    case "save":     return { text:"<b>"+mName(p)+"</b>のシュート！"+mName(gk)+"がセーブ", cls:side };
+    case "rebound":  return { text:e.ok?mName(p)+"がこぼれ球に詰める！":"こぼれ球は"+mName(vs)+"がクリア", cls:side };
+    case "goal":     return { text:"⚽ <b>"+mName(p)+" ゴール！</b>"
+                        +(e.assist?"（"+mName(mPlayer(M,e.side,e.assist))+"）":"")
+                        +"　"+e.hg+" - "+e.ag, cls:"goal" };
+    case "sub":      return { text:"🔄 交代 "+mName(mPlayer(M,e.side,e.in))+" ← "
+                        +mName(mPlayer(M,e.side,e.out)), cls:"info" };
+    default:         return null;                    // possession / build は出さない
+  }
+}
+
+// ---------- MATCH(→docs/06 §6.17) ----------
+// **描画はエンジンが解き終えたイベントを再生するだけ**(→docs/07 §7.1)。
+// 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
+let _M=null;          // 進行中の試合
+let _mTimer=null, _mSpeed=1, _mPaused=false;
+
+/** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
+function toScreen(e,pos){
+  const [x,y]=pos||e.pos||[50,50];
+  return e.side==="A"?[100-x,100-y]:[x,y];
+}
+/** 選手の枠を画面の向きへ直す(アウェイは反転)。 */
+const slotXY=(p,side)=>side==="A"?[100-p.x,100-p.y]:[p.x,p.y];
+
+/** ピッチに22人を並べる。**枠に置くだけ**で、以後は微動しかしない。 */
+function mDrawSquads(){
+  const html=[];
+  for(const T of [_M.home,_M.away]){
+    const col=clubColor(T.side==="H"?_M.fixture.h:_M.fixture.a);
+    T.players.forEach((p,i)=>{
+      const [x,y]=slotXY(p,T.side);
+      html.push('<div class="mp" data-side="'+T.side+'" data-ix="'+i+'"'
+        +' data-x="'+x+'" data-y="'+y+'"'
+        +' style="left:'+x+'%;top:'+y+'%;background:'+col+'"></div>');
+    });
+  }
+  $("mSlots").innerHTML=html.join("");
+}
+/** 関与している2人だけ強調する。**位置は動かさない**。 */
+function mFocus(e){
+  $("mSlots").querySelectorAll(".mp").forEach(el=>el.classList.remove("on","vs"));
+  const mark=(side,id,cls)=>{
+    const T=side==="H"?_M.home:_M.away;
+    const ix=T.players.findIndex(p=>p.c.id===id);
+    if(ix<0)return;
+    const el=$("mSlots").querySelector('.mp[data-side="'+side+'"][data-ix="'+ix+'"]');
+    if(el)el.classList.add(cls);
+  };
+  if(e.by)mark(e.side,e.by,"on");
+  if(e.vs)mark(e.side==="H"?"A":"H",e.vs,"vs");
+  if(e.gk)mark(e.side==="H"?"A":"H",e.gk,"vs");
+}
+/** ボールを動かし、両チームのブロックをボールへ寄せる(選手は枠から離れない)。 */
+function mMoveBall(e){
+  if(!e.pos)return;
+  const [x,y]=toScreen(e);
+  const b=$("mBall"); b.style.left=x+"%"; b.style.top=y+"%";
+  $("mSlots").querySelectorAll(".mp").forEach(el=>{
+    const sy=+el.dataset.y, shift=clamp((y-50)*0.16,-9,9);
+    el.style.top=clamp(sy+shift,10,90)+"%";
+  });
+}
+/** 見せ場だけカットインを出す。 */
+function mCut(e){
+  const c=$("mCut");
+  const word=e.type==="goal"?"GOAL!!":e.type==="save"?"SAVE!":e.type==="block"?"BLOCK!":null;
+  if(!word){ c.classList.remove("on"); return; }
+  c.className="mcut on"+(e.type==="goal"?" goal":"");
+  c.innerHTML="<b>"+word+"</b>";
+  setTimeout(()=>c.classList.remove("on"),e.type==="goal"?1100:520);
+}
+
+/** 1イベントを画面に反映する。 */
+function mApply(e){
+  const min=(e.at?e.min+"+":e.min)+"分";
+  $("mClock").textContent=min;
+  $("mClock").classList.toggle("late",e.min>=80);
+  if(e.hg!=null)$("mSc").textContent=e.hg+" - "+e.ag;
+  mFocus(e); mMoveBall(e); mCut(e);
+  const line=matchLine(e,_M);
+  if(line)mFeed(min,line.text,line.cls);
+}
+function mFeed(min,text,cls){
+  const d=document.createElement("div");
+  d.className=cls||"";
+  d.innerHTML='<span style="color:var(--text-dim)">'+min+'</span> '+text;
+  $("mFeed").prepend(d);
+  while($("mFeed").children.length>40)$("mFeed").lastChild.remove();
+}
+
+/** 再生ループ。1ティックぶんのイベントを順に見せて、次のティックを解く。 */
+function mTick(){
+  if(!_M||_mPaused)return;
+  if(matchOver(_M)){ mFinish(); return; }
+  const evs=stepMatch(_M);
+  let i=0;
+  const gap=Math.max(180,Math.round(TUNING.ui.tickMs/_mSpeed/Math.max(1,evs.length)));
+  const next=()=>{
+    if(!_M||_mPaused)return;
+    if(i>=evs.length){ _mTimer=setTimeout(mTick,gap); return; }
+    mApply(evs[i++]);
+    _mTimer=setTimeout(next,gap);
+  };
+  next();
+}
+function mFinish(){
+  clearTimeout(_mTimer); _mTimer=null;
+  $("mSc").textContent=_M.home.score+" - "+_M.away.score;
+  $("mClock").textContent="FULL TIME";
+  mFeed("90分","<b>試合終了</b>","goal");
+  $("mDone").style.display="";
+  $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=true;
+}
+function mSkip(){
+  clearTimeout(_mTimer); _mTimer=null;
+  finishMatch(_M);
+  mFinish();
+}
+/** 試合を始める。ここから先はエンジンが解いたものを再生するだけ。 */
+function startMatch(){
+  _M=beginMyMatch();
+  if(!_M){ toast("試合を開始できません"); return; }
+  _mSpeed=1; _mPaused=false;
+  $("mNameH").textContent=_M.home.name; $("mNameA").textContent=_M.away.name;
+  $("mEmbH").style.setProperty("--kit",clubColor(_M.fixture.h));
+  $("mEmbA").style.setProperty("--kit",clubColor(_M.fixture.a));
+  $("mSc").textContent="0 - 0"; $("mClock").textContent="KICK OFF";
+  $("mFeed").innerHTML=""; $("mDone").style.display="none";
+  $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=false;
+  $("mPlay").textContent="⏸ 一時停止"; $("mSpeed").textContent="×1";
+  show("match");
+  mDrawSquads();
+  $("mBall").style.left="50%"; $("mBall").style.top="50%";
+  mFeed("0分",esc(_M.home.name)+" 対 "+esc(_M.away.name),"info");
+  _mTimer=setTimeout(mTick,700);
+}
 function doMatchday(){
-  const out=playMatchday();
-  _lastResult=out;
+  const out=playMatchday(_M&&_M.over?_M:null);
+  _M=null; _lastResult=out;
   save(); headUI(); show("result");
 }
 function renderResult(){
@@ -4037,6 +4336,18 @@ document.addEventListener("click",e=>{
   closeHelp();
 });
 $("btnGallery").onclick=()=>show("gallery",{push:1});
+$("mPlay").onclick=()=>{
+  _mPaused=!_mPaused;
+  $("mPlay").textContent=_mPaused?"▶ 再生":"⏸ 一時停止";
+  if(!_mPaused)mTick();
+};
+$("mSpeed").onclick=()=>{
+  const sp=TUNING.ui.speeds;
+  _mSpeed=sp[(sp.indexOf(_mSpeed)+1)%sp.length];
+  $("mSpeed").textContent="×"+_mSpeed;
+};
+$("mSkip").onclick=mSkip;
+$("mDone").onclick=doMatchday;
 $("btnNewCareer").onclick=async()=>{
   if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;
   await newGame(); _pickedClub=null; show("offer");

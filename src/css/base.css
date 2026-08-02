@@ -589,6 +589,70 @@ body{
   border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
 
 /* =========================================================================
+   MATCH — 試合画面(→docs/06 §6.17)
+   ピッチは**編成画面と同じ .pitch**をそのまま使う(線も大きさも共通)。
+   ========================================================================= */
+.mscore{
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:12px; padding:12px 14px; margin-bottom:10px;
+}
+.mteam{ width:76px; text-align:center; font-size:10px; color:var(--text-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.memb{ width:34px; height:34px; border-radius:50%; margin:0 auto 6px;
+  background:var(--kit, oklch(0.55 0.10 85)) }
+.mmid{ text-align:center }
+.mclock{ font:9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-dim); margin-bottom:3px }
+.mclock.late{ color:var(--fit-bad) }
+.msc{ font:700 30px/1 var(--f-head); color:oklch(0.96 0.01 90) }
+
+/* ボールと選手。**選手は枠から大きく動かない**(ブロックがボールへ寄るだけ)。
+   位置はエンジンのイベントが持つので、描画は補間するだけでよい(→docs/07 §7.1)。 */
+.mball{
+  position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px;
+  border-radius:50%; background:#fff; box-shadow:0 0 7px oklch(1 0 0 / .8);
+  transition:left .45s cubic-bezier(.3,.7,.3,1), top .45s cubic-bezier(.3,.7,.3,1);
+  z-index:3;
+}
+.mp{
+  position:absolute; width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+  border:1.5px solid oklch(0 0 0 / .45);
+  transition:left .5s ease, top .5s ease, transform .2s ease, box-shadow .2s ease;
+}
+.mp.on{ transform:scale(1.45); box-shadow:0 0 0 2px oklch(1 0 0 / .85) }
+.mp.vs{ transform:scale(1.25); box-shadow:0 0 0 2px var(--fit-bad) }
+/* 見せ場のカットイン。ピッチの上に一瞬だけ重なる */
+.mcut{
+  position:absolute; inset:0; z-index:4; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .18s ease;
+}
+.mcut.on{ opacity:1 }
+.mcut b{
+  padding:10px 22px; border-radius:8px;
+  background:oklch(0 0 0 / .62); border:1px solid oklch(1 0 0 / .3);
+  font:700 22px/1 var(--f-head); letter-spacing:3px; color:#fff;
+  text-shadow:0 2px 10px oklch(0 0 0 / .9);
+}
+.mcut.goal b{ background:oklch(0.30 0.10 85 / .78); border-color:var(--accent);
+  color:var(--accent-hi); font-size:30px }
+
+/* 実況。新しい行が上に積まれる */
+.mfeed{
+  display:flex; flex-direction:column; gap:7px; overflow-y:auto;
+  scrollbar-width:none; height:116px; margin-top:10px; padding:10px 12px;
+  background:oklch(0.13 0.02 255); border:1px solid var(--line-2); border-radius:10px;
+}
+.mfeed div{ font-size:12px; line-height:1.55; color:oklch(0.82 0.01 90);
+  border-left:2px solid var(--line); padding-left:8px }
+.mfeed .goal{ border-left-color:var(--accent); color:var(--accent-hi); font-weight:600 }
+.mfeed .ally{ border-left-color:oklch(0.62 0.14 250) }
+.mfeed .opp { border-left-color:oklch(0.58 0.16 25) }
+.mfeed .info{ border-left-color:transparent; color:var(--text-dim); font:10px/1.5 var(--f-mono) }
+.mctl{ display:flex; gap:8px; margin-top:10px }
+.mctl .btn{ padding:11px 0; font-size:12px }
+
+/* =========================================================================
    HELP — 枠の左端に隠すタブ(→docs/06 §6.16)
    説明文を画面本体に置かず、ここへ寄せる。#app が overflow:hidden なので
    閉じている間はタブごと枠の中に収まり、外へはみ出さない。

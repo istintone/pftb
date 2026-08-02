@@ -697,7 +697,7 @@ function wireCurrentRow(){
   if(go)go.onclick=()=>{
     if(!S.career.hand){ toast("打ち手を選んでください"); return; }
     if(!S.career.comp&&!pickComp("league")){ toast("出場する大会を選んでください"); return; }
-    doMatchday();
+    startMatch();
   };
 }
 /** 現在節が画面に入るまでスクロールする(96節あるので必須)。 */
@@ -755,9 +755,183 @@ function renderClubhouse(){
 
 // ---------- 試合(第3段までは結果だけ) ----------
 let _lastResult=null;
+// ---------- 実況(→docs/06 §6.17) ----------
+// **イベントを日本語に直すだけ**。ここで結果を作ることは一切しない。
+// 味方=青 / 相手=赤 / ゴール=金 で色分けする(モックの実況欄に準拠)。
+
+/** イベントに出てくる選手を引く。 */
+function mPlayer(M,side,id){
+  const T=side==="H"?M.home:M.away;
+  return T.players.find(p=>p.c.id===id)||T.bench.find(p=>p.c.id===id)||null;
+}
+const mName=p=>p?esc(shortName(p.c)):"選手";
+
+/** 起点・連鎖の1行。チャンネル名がそのまま実況の語になる。 */
+function lineChannel(M,e){
+  const p=mPlayer(M,e.side,e.by), d=mPlayer(M,e.side==="H"?"A":"H",e.vs);
+  const who=mName(p)+"（"+e.sub+"）";
+  if(!e.ok)return d?mName(d)+"が"+who+"の"+e.label+"を止めた":who+"の"+e.label+"が通らない";
+  if(e.step)return who+"が"+e.label+"、さらに前へ";
+  return who+"の"+e.label+"から仕掛ける";
+}
+/**
+ * 1イベント → 実況の1行。返り値 { text, cls } / 出さないなら null。
+ * possession のような内部の刻みは出さない(読み物として意味が無い)。
+ */
+function matchLine(e,M){
+  const ally=e.side&&((e.side==="H")===(M.fixture.h===S.club.id));
+  const side=e.side?(ally?"ally":"opp"):"";
+  const p=e.by?mPlayer(M,e.side,e.by):null;
+  const gk=e.gk?mPlayer(M,e.side==="H"?"A":"H",e.gk):null;
+  const vs=e.vs?mPlayer(M,e.side==="H"?"A":"H",e.vs):null;
+  switch(e.type){
+    case "kickoff":  return { text:"<b>キックオフ</b>", cls:"info" };
+    case "halftime": return { text:"<b>ハーフタイム</b> "+e.hg+" - "+e.ag, cls:"info" };
+    case "fulltime": return null;                    // 終了は mFinish が出す
+    case "origin":
+    case "link":     return { text:lineChannel(M,e), cls:side };
+    case "block":    return { text:mName(p)+"のシュート！"+mName(vs)+"がブロック", cls:side };
+    case "miss":     return { text:mName(p)+"のシュートは枠を外れた", cls:side };
+    case "save":     return { text:"<b>"+mName(p)+"</b>のシュート！"+mName(gk)+"がセーブ", cls:side };
+    case "rebound":  return { text:e.ok?mName(p)+"がこぼれ球に詰める！":"こぼれ球は"+mName(vs)+"がクリア", cls:side };
+    case "goal":     return { text:"⚽ <b>"+mName(p)+" ゴール！</b>"
+                        +(e.assist?"（"+mName(mPlayer(M,e.side,e.assist))+"）":"")
+                        +"　"+e.hg+" - "+e.ag, cls:"goal" };
+    case "sub":      return { text:"🔄 交代 "+mName(mPlayer(M,e.side,e.in))+" ← "
+                        +mName(mPlayer(M,e.side,e.out)), cls:"info" };
+    default:         return null;                    // possession / build は出さない
+  }
+}
+
+// ---------- MATCH(→docs/06 §6.17) ----------
+// **描画はエンジンが解き終えたイベントを再生するだけ**(→docs/07 §7.1)。
+// 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
+let _M=null;          // 進行中の試合
+let _mTimer=null, _mSpeed=1, _mPaused=false;
+
+/** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
+function toScreen(e,pos){
+  const [x,y]=pos||e.pos||[50,50];
+  return e.side==="A"?[100-x,100-y]:[x,y];
+}
+/** 選手の枠を画面の向きへ直す(アウェイは反転)。 */
+const slotXY=(p,side)=>side==="A"?[100-p.x,100-p.y]:[p.x,p.y];
+
+/** ピッチに22人を並べる。**枠に置くだけ**で、以後は微動しかしない。 */
+function mDrawSquads(){
+  const html=[];
+  for(const T of [_M.home,_M.away]){
+    const col=clubColor(T.side==="H"?_M.fixture.h:_M.fixture.a);
+    T.players.forEach((p,i)=>{
+      const [x,y]=slotXY(p,T.side);
+      html.push('<div class="mp" data-side="'+T.side+'" data-ix="'+i+'"'
+        +' data-x="'+x+'" data-y="'+y+'"'
+        +' style="left:'+x+'%;top:'+y+'%;background:'+col+'"></div>');
+    });
+  }
+  $("mSlots").innerHTML=html.join("");
+}
+/** 関与している2人だけ強調する。**位置は動かさない**。 */
+function mFocus(e){
+  $("mSlots").querySelectorAll(".mp").forEach(el=>el.classList.remove("on","vs"));
+  const mark=(side,id,cls)=>{
+    const T=side==="H"?_M.home:_M.away;
+    const ix=T.players.findIndex(p=>p.c.id===id);
+    if(ix<0)return;
+    const el=$("mSlots").querySelector('.mp[data-side="'+side+'"][data-ix="'+ix+'"]');
+    if(el)el.classList.add(cls);
+  };
+  if(e.by)mark(e.side,e.by,"on");
+  if(e.vs)mark(e.side==="H"?"A":"H",e.vs,"vs");
+  if(e.gk)mark(e.side==="H"?"A":"H",e.gk,"vs");
+}
+/** ボールを動かし、両チームのブロックをボールへ寄せる(選手は枠から離れない)。 */
+function mMoveBall(e){
+  if(!e.pos)return;
+  const [x,y]=toScreen(e);
+  const b=$("mBall"); b.style.left=x+"%"; b.style.top=y+"%";
+  $("mSlots").querySelectorAll(".mp").forEach(el=>{
+    const sy=+el.dataset.y, shift=clamp((y-50)*0.16,-9,9);
+    el.style.top=clamp(sy+shift,10,90)+"%";
+  });
+}
+/** 見せ場だけカットインを出す。 */
+function mCut(e){
+  const c=$("mCut");
+  const word=e.type==="goal"?"GOAL!!":e.type==="save"?"SAVE!":e.type==="block"?"BLOCK!":null;
+  if(!word){ c.classList.remove("on"); return; }
+  c.className="mcut on"+(e.type==="goal"?" goal":"");
+  c.innerHTML="<b>"+word+"</b>";
+  setTimeout(()=>c.classList.remove("on"),e.type==="goal"?1100:520);
+}
+
+/** 1イベントを画面に反映する。 */
+function mApply(e){
+  const min=(e.at?e.min+"+":e.min)+"分";
+  $("mClock").textContent=min;
+  $("mClock").classList.toggle("late",e.min>=80);
+  if(e.hg!=null)$("mSc").textContent=e.hg+" - "+e.ag;
+  mFocus(e); mMoveBall(e); mCut(e);
+  const line=matchLine(e,_M);
+  if(line)mFeed(min,line.text,line.cls);
+}
+function mFeed(min,text,cls){
+  const d=document.createElement("div");
+  d.className=cls||"";
+  d.innerHTML='<span style="color:var(--text-dim)">'+min+'</span> '+text;
+  $("mFeed").prepend(d);
+  while($("mFeed").children.length>40)$("mFeed").lastChild.remove();
+}
+
+/** 再生ループ。1ティックぶんのイベントを順に見せて、次のティックを解く。 */
+function mTick(){
+  if(!_M||_mPaused)return;
+  if(matchOver(_M)){ mFinish(); return; }
+  const evs=stepMatch(_M);
+  let i=0;
+  const gap=Math.max(180,Math.round(TUNING.ui.tickMs/_mSpeed/Math.max(1,evs.length)));
+  const next=()=>{
+    if(!_M||_mPaused)return;
+    if(i>=evs.length){ _mTimer=setTimeout(mTick,gap); return; }
+    mApply(evs[i++]);
+    _mTimer=setTimeout(next,gap);
+  };
+  next();
+}
+function mFinish(){
+  clearTimeout(_mTimer); _mTimer=null;
+  $("mSc").textContent=_M.home.score+" - "+_M.away.score;
+  $("mClock").textContent="FULL TIME";
+  mFeed("90分","<b>試合終了</b>","goal");
+  $("mDone").style.display="";
+  $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=true;
+}
+function mSkip(){
+  clearTimeout(_mTimer); _mTimer=null;
+  finishMatch(_M);
+  mFinish();
+}
+/** 試合を始める。ここから先はエンジンが解いたものを再生するだけ。 */
+function startMatch(){
+  _M=beginMyMatch();
+  if(!_M){ toast("試合を開始できません"); return; }
+  _mSpeed=1; _mPaused=false;
+  $("mNameH").textContent=_M.home.name; $("mNameA").textContent=_M.away.name;
+  $("mEmbH").style.setProperty("--kit",clubColor(_M.fixture.h));
+  $("mEmbA").style.setProperty("--kit",clubColor(_M.fixture.a));
+  $("mSc").textContent="0 - 0"; $("mClock").textContent="KICK OFF";
+  $("mFeed").innerHTML=""; $("mDone").style.display="none";
+  $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=false;
+  $("mPlay").textContent="⏸ 一時停止"; $("mSpeed").textContent="×1";
+  show("match");
+  mDrawSquads();
+  $("mBall").style.left="50%"; $("mBall").style.top="50%";
+  mFeed("0分",esc(_M.home.name)+" 対 "+esc(_M.away.name),"info");
+  _mTimer=setTimeout(mTick,700);
+}
 function doMatchday(){
-  const out=playMatchday();
-  _lastResult=out;
+  const out=playMatchday(_M&&_M.over?_M:null);
+  _M=null; _lastResult=out;
   save(); headUI(); show("result");
 }
 function renderResult(){
@@ -892,6 +1066,18 @@ document.addEventListener("click",e=>{
   closeHelp();
 });
 $("btnGallery").onclick=()=>show("gallery",{push:1});
+$("mPlay").onclick=()=>{
+  _mPaused=!_mPaused;
+  $("mPlay").textContent=_mPaused?"▶ 再生":"⏸ 一時停止";
+  if(!_mPaused)mTick();
+};
+$("mSpeed").onclick=()=>{
+  const sp=TUNING.ui.speeds;
+  _mSpeed=sp[(sp.indexOf(_mSpeed)+1)%sp.length];
+  $("mSpeed").textContent="×"+_mSpeed;
+};
+$("mSkip").onclick=mSkip;
+$("mDone").onclick=doMatchday;
 $("btnNewCareer").onclick=async()=>{
   if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;
   await newGame(); _pickedClub=null; show("offer");

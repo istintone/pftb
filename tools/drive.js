@@ -146,13 +146,39 @@ const STEPS = [
     await ctx.js("document.getElementById('hdBack').click()");
     await ctx.wait(300);
 
-    // 試合は SEASON の任期カレンダーから始める
+    // 試合は SEASON の任期カレンダーから始める(試合画面 → 再生 → 結果)
     ctx.log("開始ボタン(打ち手なし):", await ctx.js("document.getElementById('calGo').disabled"));
     await ctx.js(`document.querySelector('#seasonCal .hand[data-hand="train"]').click()`);
     await ctx.wait(250);
     ctx.log("打ち手を選んだ後:", await ctx.js("document.getElementById('calGo').disabled"));
     await ctx.js("document.getElementById('calGo').click()");
+    await ctx.wait(600);
+    await ctx.js("document.getElementById('mSpeed').click()");   // ×2 で少し進める
+    await ctx.wait(6000);
+    ctx.log("試合画面:", await ctx.screen(),
+      "/ スコア:", await ctx.js("document.getElementById('mSc').textContent"),
+      "/ 時計:", await ctx.js("document.getElementById('mClock').textContent"),
+      "/ 選手:", await ctx.js("document.querySelectorAll('#mSlots .mp').length"),
+      "/ 実況:", await ctx.js("document.querySelectorAll('#mFeed div').length"));
+    // 両チームの色と向きが合っているか(HOMEは下、AWAYは上)
+    ctx.log("  配色/向き:", await ctx.js(`(()=>{
+      const g=s=>[...document.querySelectorAll('#mSlots .mp[data-side="'+s+'"]')];
+      const H=g('H'),A=g('A');
+      // GK は全陣形で枠0。HOMEは下(y大)、AWAYは上(y小)に立つはず
+      const gk=a=>+a.find(e=>e.dataset.ix==='0').dataset.y;
+      return 'H '+H.length+'人 GK y='+gk(H)+' / A '+A.length+'人 GK y='+gk(A)
+        +' / 別の色?'+(H[0].style.background!==A[0].style.background);
+    })()`));
+    await ctx.shot("07b-match");
+    // スキップ → 結果へ
+    await ctx.js("document.getElementById('mSkip').click()");
     await ctx.wait(500);
+    ctx.log("スキップ後:", await ctx.js("document.getElementById('mClock').textContent"),
+      await ctx.js("document.getElementById('mSc').textContent"),
+      "/ 実況:", await ctx.js("document.querySelectorAll('#mFeed div').length"), "行");
+    await ctx.shot("07c-match-end");
+    await ctx.js("document.getElementById('mDone').click()");
+    await ctx.wait(400);
     ctx.log("試合結果:", await ctx.screen(),
       await ctx.js("document.getElementById('resultHead').textContent"),
       await ctx.js("document.querySelector('#resultBody .sc').textContent"));
@@ -417,6 +443,11 @@ const STEPS = [
       await ctx.js("document.querySelector('#seasonCal .hand').click()");
       await ctx.wait(60);
       await ctx.js("document.getElementById('calGo').click()");
+      await ctx.wait(150);
+      // 試合画面を経由するので、スキップして結果まで進める
+      await ctx.js("document.getElementById('mSkip').click()");
+      await ctx.wait(120);
+      await ctx.js("document.getElementById('mDone').click()");
       await ctx.wait(120);
       await ctx.js("document.getElementById('btnResultOk').click()");
       await ctx.wait(120);

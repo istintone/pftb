@@ -378,7 +378,34 @@ function pickComp(id){
   return true;
 }
 
-function playMatchday(){
+/** 試合ごとのたね。**同じ節を何度解いても同じ結果**になる(→docs/07 §7.1)。 */
+function matchSeedOf(m,season,md){
+  return (S.world.seed^hashStr(m.h+"vs"+m.a+":"+season+":"+md))>>>0;
+}
+/** 今節の自分の試合(組み合わせ)。 */
+function myFixtureOf(){
+  const W=S.world;
+  return ((W.fixtures||[])[W.matchday-1]||[])
+    .find(m=>m.h===S.club.id||m.a===S.club.id)||null;
+}
+/**
+ * 自分の試合の状態を作る。**まだ1ティックも解かない**(→docs/07 §7.6)。
+ * 描画しながら進めるとき用。スキップするなら finishMatch を呼べばよい。
+ */
+function beginMyMatch(){
+  if(!S.career.hand)return null;
+  if(!S.career.comp&&!pickComp("league"))return null;
+  const m=myFixtureOf(); if(!m)return null;
+  const M=createMatch(matchSide(m.h),matchSide(m.a),matchSeedOf(m,S.world.season,S.world.matchday));
+  M.fixture=m;
+  return M;
+}
+
+/**
+ * 節を確定する。自分の試合は done(解き終えた試合状態)があればその結果を使い、
+ * 無ければその場で解く。**どちらでも同じ結果になる**(たねが同じなので)。
+ */
+function playMatchday(done){
   if(!S.career.hand)return null;                            // 打ち手が未選択なら進めない
   if(!S.career.comp&&!pickComp("league"))return null;       // 大会が未選択なら進めない
   const W=S.world, md=W.matchday, round=(W.fixtures||[])[md-1]||[];
@@ -386,10 +413,10 @@ function playMatchday(){
 
   round.forEach(m=>{
     const isMine=m.h===S.club.id||m.a===S.club.id;
-    // 試合ごとに独立したたねを使う。**同じ節を何度解いても同じ結果**になり、
-    // 描画するかどうかで結果が変わらない(→docs/07 §7.1)。
-    const seed=(W.seed^hashStr(m.h+"vs"+m.a+":"+W.season+":"+md))>>>0;
-    const { hg, ag }=resolveMatch(matchSide(m.h),matchSide(m.a),seed);
+    const seed=matchSeedOf(m,W.season,md);
+    const { hg, ag }=(isMine&&done)
+      ? { hg:done.home.score, ag:done.away.score }
+      : resolveMatch(matchSide(m.h),matchSide(m.a),seed);
     applyResult(W.table,m.h,m.a,hg,ag);
     if(isMine){
       const home=m.h===S.club.id, gf=home?hg:ag, ga=home?ag:hg;

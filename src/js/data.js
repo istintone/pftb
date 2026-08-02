@@ -337,6 +337,8 @@ const TUNING={
   // 任期 = キャリア1周(→docs/03 §3.2.3)。節で通算し、シーズンとは切り離す。
   tenure:{ limit:96, extend:24, hardMax:120, extendRank:3 }, // extendRank位以内で延命
   squad:{ starters:11, bench:5, subMax:3 },   // subMax = 1試合の交代枠
+  // 試合の再生(描画側のみ。**結果には一切影響しない** → docs/07 §7.1)
+  ui:{ tickMs:1500, speeds:[1,2,4] },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
   // 攻守どちらのスコアにも eff 経由で掛かる(GKも例外ではない)。
