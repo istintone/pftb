@@ -581,19 +581,94 @@ body{
 .skill{ padding:4px 10px; border-radius:12px; background:oklch(0.24 0.03 255);
   border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
 
-/* ピッチ(編成) */
-.pitch{ position:relative; height:330px; margin-top:12px; border-radius:12px;
-  background:linear-gradient(180deg, oklch(0.20 0.03 160), oklch(0.16 0.02 160));
-  border:1px solid var(--line); overflow:hidden }
-.pitch::before{ content:""; position:absolute; left:8%; right:8%; top:50%; height:1px;
-  background:oklch(0.40 0.02 160) }
-.slot{ position:absolute; transform:translate(-50%,-50%); width:62px; text-align:center;
-  padding:5px 2px; border-radius:8px; cursor:pointer;
-  background:oklch(0.17 0.02 255 / .88); border:1px solid var(--line) }
-.sl-pos{ font:9px/1 var(--f-mono); color:var(--text-dim) }
-.sl-ovr{ font:600 14px/1.2 var(--f-head); color:var(--text) }
-.sl-name{ font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-2) }
-.sl-own{ position:absolute; top:-5px; right:-4px; font-size:10px; color:var(--accent) }
+/* =========================================================================
+   DECK — デザインモックの構成に準拠(→docs/06 §6.15)
+   ========================================================================= */
+/* 監督バー(ピッチの上。監督名・陣形・総合力) */
+.mgr-bar{
+  display:flex; align-items:center; gap:10px; margin-bottom:14px;
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:10px; padding:10px 12px;
+}
+.mgr-av{
+  width:36px; height:36px; border-radius:6px; flex-shrink:0;
+  background:oklch(0.30 0.03 255); display:flex; align-items:center; justify-content:center;
+  font:8px/1 var(--f-mono); color:var(--text-dim);
+}
+.mgr-b{ flex:1; min-width:0 }
+.mgr-name{ font-size:12px; font-weight:600; color:oklch(0.92 0.01 90);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.mgr-sub{ font-size:10px; color:oklch(0.55 0.02 255) }
+.mgr-pw{ font:700 20px/1 var(--f-head); color:var(--accent) }
+
+/* ピッチ — **aspect-ratio:3/4 で形を決める**。高さを px で固定すると
+   端末幅が変わったときに縦横比が崩れ、ピッチが歪む(実際に起きた)。
+   線の寸法は cqw(ピッチ幅基準)なので、幅が変わっても比率のまま拡縮する。 */
+.pitch{
+  position:relative; aspect-ratio:3/4; border-radius:12px; overflow:hidden;
+  border:1px solid var(--line); container-type:inline-size;
+  background:repeating-linear-gradient(0deg,
+    oklch(0.28 0.07 150) 0, oklch(0.28 0.07 150) 10.8cqw,
+    oklch(0.25 0.06 150) 10.8cqw, oklch(0.25 0.06 150) 21.6cqw);
+}
+/* 白線。すべて同じ濃さ(白30%)で、ゴールラインだけ濃くする */
+.pitch [class^="pt-"]{ position:absolute; border-color:oklch(1 0 0 / .30) }
+.pt-frame{ inset:2.7cqw; border:1px solid }
+.pt-half{ left:2.7cqw; right:2.7cqw; top:50%; height:1px; background:oklch(1 0 0 / .30) }
+.pt-circle{ top:50%; left:50%; width:29.7cqw; height:29.7cqw; border:1px solid;
+  border-radius:50%; transform:translate(-50%,-50%) }
+.pt-spot{ top:50%; left:50%; width:1.6cqw; height:1.6cqw; border-radius:50%;
+  background:oklch(1 0 0 / .40); transform:translate(-50%,-50%) }
+/* ペナルティエリア / ゴールエリア / ゴール(上下対称。ゴールライン側の辺は描かない) */
+.pt-box,.pt-6yd{ left:50%; border:1px solid; transform:translateX(-50%) }
+.pt-box{ width:40.5cqw; height:17.8cqw }
+.pt-6yd{ width:20.0cqw; height:7.6cqw }
+.pt-goal{ left:50%; width:14.0cqw; height:1.35cqw;
+  background:oklch(1 0 0 / .55); transform:translateX(-50%) }
+.pt-box.away,.pt-6yd.away{ top:2.7cqw; border-top:none }
+.pt-box.home,.pt-6yd.home{ bottom:2.7cqw; border-bottom:none }
+.pt-goal.away{ top:1.6cqw }
+.pt-goal.home{ bottom:1.6cqw }
+/* 陣地のラベル。自陣(HOME)だけゴールドにして向きが一目で分かるようにする */
+.pt-tag{ left:3.8cqw; font:8px/1 var(--f-mono); letter-spacing:1px }
+.pt-tag.away{ top:3.8cqw; color:oklch(1 0 0 / .50) }
+.pt-tag.home{ bottom:3.8cqw; color:var(--accent-hi) }
+
+/* 選手 — 丸に OVR、その下に名前。枠線の色がレアリティ、地色がクラブカラー。 */
+.pt-slots{ position:absolute; inset:0 }
+.slot{
+  position:absolute; transform:translate(-50%,-50%); cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+}
+.sl-pos{ font:8px/1 var(--f-mono); letter-spacing:.5px; color:oklch(1 0 0 / .55) }
+.sl-disc{
+  position:relative; width:34px; height:34px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--kit, oklch(0.30 0.03 255)); border:2px solid var(--rar, var(--line));
+  font:700 11px/1 var(--f-head); color:#fff; box-shadow:0 2px 6px oklch(0 0 0 / .5);
+  text-shadow:0 1px 2px oklch(0 0 0 / .6);
+}
+.slot.empty .sl-disc{ background:oklch(0 0 0 / .35); border-style:dashed; color:oklch(1 0 0 / .5) }
+.sl-name{
+  max-width:64px; padding:1px 4px; border-radius:3px;
+  background:oklch(0 0 0 / .55); font-size:8px; color:#fff;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sl-own{ position:absolute; top:-6px; right:-5px; font-size:10px; color:var(--accent);
+  text-shadow:0 0 3px oklch(0 0 0 / .8) }
+
+/* ベンチ(横スクロール) */
+.bench{ display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; margin-top:8px }
+.bn{ flex-shrink:0; width:76px; padding:6px; text-align:center; cursor:pointer;
+  border-radius:8px; background:var(--panel); border:1px solid var(--rar, var(--line)) }
+.bn-ovr{ width:100%; aspect-ratio:1; border-radius:6px; margin-bottom:4px;
+  background:var(--kit, oklch(0.30 0.03 255));
+  display:flex; align-items:center; justify-content:center;
+  font:700 14px/1 var(--f-head); color:#fff; text-shadow:0 1px 2px oklch(0 0 0 / .6) }
+.bn-name{ font-size:9px; color:oklch(0.85 0.01 90);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.bn-pos{ font-size:8px; color:oklch(0.55 0.02 255) }
+.bench .none{ padding:14px 0; color:var(--text-mute); font-size:11px }
 
 /* 順位表・日程 */
 .strow{ display:flex; align-items:center; gap:10px; padding:6px 0; font-size:11px;

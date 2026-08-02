@@ -289,21 +289,43 @@ function bioOf(c){
 }
 
 // ---------- DECK(編成) ----------
+/** 選手の地色と枠色。地 = クラブカラー / 枠 = レアリティ(→docs/06 §6.15)。 */
+function kitStyle(c){
+  return ' style="--kit:'+clubColor(S.club?S.club.id:"")+';--rar:var(--rar-'
+    +c.rarity.toLowerCase()+')"';
+}
 function renderDeck(){
   const slots=FORMATIONS[S.form], cards=squadCards();
-  $("deckPower").textContent=squadPower(cards.slice(0,TUNING.squad.starters));
-  $("deckForm").textContent=S.form;
-  $("deckPitch").innerHTML=slots.map(([sub,x,y],i)=>{
+  const start=cards.slice(0,TUNING.squad.starters);
+  $("deckPower").textContent=squadPower(start);
+  $("deckCoach").textContent=S.coach?("監督 "+S.coach):"監督";
+  $("deckForm").textContent="陣形: "+S.form;
+
+  // ピッチ上の11人。位置は FORMATIONS が持つ % をそのまま使う。
+  $("deckSlots").innerHTML=slots.map(([sub,x,y],i)=>{
     const c=cards[i];
-    return '<div class="slot" style="left:'+x+'%;top:'+y+'%" data-slot="'+i+'"'
-      +(c?' data-card="'+c.id+'"':'')+'>'
+    return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
+      +' data-slot="'+i+'"'+(c?' data-card="'+c.id+'"':'')+'>'
       +'<div class="sl-pos">'+sub+'</div>'
-      +'<div class="sl-ovr num">'+(c?c.ovr:"—")+'</div>'
+      +'<div class="sl-disc"'+(c?kitStyle(c):"")+'>'+(c?c.ovr:"+")
+        +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
-      +(c&&!isLoaned(c)?'<div class="sl-own">★</div>':'')+'</div>';
+    +'</div>';
   }).join("");
-  wireCardTiles($("deckPitch"));
-  const loaned=cards.filter(c=>c&&isLoaned(c)).length;
+  wireCardTiles($("deckSlots"));
+
+  // ベンチ(先発から溢れた控え)。横スクロールで並べる。
+  const bench=cards.slice(TUNING.squad.starters,
+    TUNING.squad.starters+TUNING.squad.bench).filter(Boolean);
+  $("deckBench").innerHTML=bench.length
+    ? bench.map(c=>'<div class="bn" data-card="'+c.id+'"'+kitStyle(c)+'>'
+        +'<div class="bn-ovr">'+c.ovr+'</div>'
+        +'<div class="bn-name">'+esc(shortName(c))+'</div>'
+        +'<div class="bn-pos">'+primarySub(c)+'</div></div>').join("")
+    : '<div class="none">控えはいません。カードを増やすとここに並びます。</div>';
+  wireCardTiles($("deckBench"));
+
+  const loaned=start.filter(c=>c&&isLoaned(c)).length;
   $("deckNote").innerHTML="先発11人のうち <b>"+loaned+"人</b> はクラブからの貸与です"
     +"（退任するとクラブに残ります）。★ が自分のカードです。";
 }

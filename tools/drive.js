@@ -164,6 +164,22 @@ const STEPS = [
       await ctx.wait(250);
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
+      if (tab === "deck") {
+        // ピッチは aspect-ratio:3/4 で形が決まる。px 固定に戻ると歪むのでここで押さえる
+        const box = await ctx.js(
+          "(()=>{const r=document.getElementById('deckPitch').getBoundingClientRect();"
+          + "return Math.round(r.width)+'x'+Math.round(r.height)+' 比'+(r.height/r.width).toFixed(3)})()");
+        ctx.log("  ピッチ:", box,
+          "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"),
+          "/ ベンチ:", await ctx.js("document.querySelectorAll('#deckBench .bn').length"));
+        if (!box.endsWith("1.333")) throw new Error("ピッチの縦横比が 3:4 ではない: " + box);
+        // 陣形を変えても11人が置き直されること
+        await ctx.js("document.getElementById('btnForm').click()");
+        await ctx.wait(250);
+        ctx.log("  陣形変更 →", await ctx.js("document.getElementById('deckForm').textContent"),
+          "/ 選手:", await ctx.js("document.querySelectorAll('#deckSlots .slot').length"));
+        await ctx.shot("10b-deck-formation");
+      }
       if (tab === "cards") {
         // レアリティの見え方(枠・縁線・ホロ)を一望するため、全段を1枚ずつ並べた検証用グリッドに差し替える
         await ctx.js(`(()=>{
