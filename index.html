@@ -635,6 +635,8 @@ body{
 .mp.vs{ transform:scale(1.25); box-shadow:0 0 0 2px var(--fit-bad) }
 /* =========================================================================
    カットイン(→docs/06 §6.19)
+   **順に見せる**: 帯が開く → 両者が入る → 勝敗が表れる → 決着語。
+   同時に動かすと速すぎて何が起きたか読めない(実際にそうなった)。
    **中央を横切る帯**にプレーを大きく見せる。card-eleven の見せ方を踏襲。
    演出専用で、結果にも events にも一切影響しない。
    ========================================================================= */
@@ -651,27 +653,29 @@ body{
     oklch(0.10 0.02 255 / .96) 88%, transparent);
   border-top:1px solid var(--line); border-bottom:1px solid var(--line);
   text-align:center; overflow:hidden;
-  animation:cutBand .22s cubic-bezier(.2,.9,.3,1);
+  animation:cutBand .34s cubic-bezier(.2,.9,.3,1);
 }
 @keyframes cutBand{ from{ transform:scaleY(.1); opacity:0 } to{ transform:scaleY(1); opacity:1 } }
 /* 帯を横切る光 */
 .cut::after{
   content:""; position:absolute; inset:0; pointer-events:none;
   background:linear-gradient(100deg, transparent 40%, oklch(1 0 0 / .22) 50%, transparent 60%);
-  background-size:280% 100%; animation:cutSheen .55s ease-out 1;
+  background-size:280% 100%; animation:cutSheen .85s ease-out .1s 1 backwards;
 }
 @keyframes cutSheen{ from{ background-position:130% 0 } to{ background-position:-60% 0 } }
 
 .cut-hd{ font:600 10px/1 var(--f-head); letter-spacing:3px; text-transform:uppercase;
   color:var(--text-dim); margin-bottom:9px }
 .cut-row{ display:flex; align-items:center; justify-content:center; gap:10px }
-.cut-fig{ width:33%; transition:opacity .2s ease, transform .2s ease }
-.cut-fig.L{ animation:cutInL .26s cubic-bezier(.2,.9,.3,1) }
-.cut-fig.R{ animation:cutInR .26s cubic-bezier(.2,.9,.3,1) }
+.cut-fig{ width:33%; transition:opacity .3s ease, filter .3s ease, transform .3s ease }
+.cut-fig.L{ animation:cutInL .40s cubic-bezier(.2,.9,.3,1) .18s backwards }
+.cut-fig.R{ animation:cutInR .40s cubic-bezier(.2,.9,.3,1) .18s backwards }
 @keyframes cutInL{ from{ transform:translateX(-60px); opacity:0 } to{ transform:none; opacity:1 } }
 @keyframes cutInR{ from{ transform:translateX( 60px); opacity:0 } to{ transform:none; opacity:1 } }
 .cut-fig.dim{ opacity:.32; filter:grayscale(1) }
+.cut-av{ transition:box-shadow .3s ease }
 .cut-fig.win .cut-av{ box-shadow:0 0 0 3px var(--accent), 0 0 18px var(--accent) }
+.cut-fig.win{ transform:scale(1.06) }
 .cut-av{
   width:46px; height:46px; border-radius:50%; margin:0 auto 6px; overflow:hidden;
   background:var(--kit, oklch(0.30 0.03 255));
@@ -688,7 +692,7 @@ body{
 .cut-word{
   margin-top:9px; font:700 22px/1 var(--f-head); letter-spacing:3px; color:#fff;
   text-shadow:0 2px 12px oklch(0 0 0 / .9);
-  animation:cutWord .3s cubic-bezier(.2,1.4,.4,1);
+  animation:cutWord .42s cubic-bezier(.2,1.4,.4,1) .62s backwards;
 }
 @keyframes cutWord{ from{ transform:scale(.5); opacity:0 } to{ transform:none; opacity:1 } }
 .cut-word.win{ color:var(--accent-hi) }
@@ -1747,7 +1751,10 @@ const TUNING={
          maxDevY:13, maxDevX:11,
          gkOut:0.06, gkSide:0.22, wander:1.4, wanderStep:0.7,
          // カットイン(→docs/06 §6.19)。盛り上がる局面は必ず、繋ぎは抽選で出す
-         cutMs:900, goalMs:1500, kickMs:1200, cutMaxSpeed:2,
+         // 表示時間。演出は「帯→両者→決着語」で約1.0秒かかるので、
+         // それに読む間を足した長さにする(短いと認知が追いつかない)
+         cutMs:1700, goalMs:2600, kickMs:2000, cutMaxSpeed:2,
+         cutJudge:620,   // 決着(勝者が光り敗者が沈む)を出すまでの間
          cutPass:0.22, cutStop:0.20, cutMiss:0.25 },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
@@ -4150,7 +4157,7 @@ function matchLine(e,M){
 // 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
 let _M=null;          // 進行中の試合
 let _mTimer=null, _mSpeed=1, _mPaused=false;
-let _mPhase=0, _mLastSide="H", _mBall=[50,50], _mCutT=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
+let _mPhase=0, _mLastSide="H", _mBall=[50,50], _mCutT=null, _mCutJ=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
 
 /** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
 function toScreen(e,pos){
@@ -4306,15 +4313,25 @@ function cutVs(e,atk,df,word,atkWon){
   const mineSide=ally?e.side:(e.side==="H"?"A":"H");
   const oppSide=mineSide==="H"?"A":"H";
   const mineWon=ally?atkWon:!atkWon;
-  return cutShow('<div class="cut">'
+  // **勝敗は最初から見せない。** 両者が出そろってから決着させる
+  // (同時に出すと速すぎて何が起きたか読めない → docs/06 §6.19)。
+  const ms=cutShow('<div class="cut">'
     +'<div class="cut-hd">'+esc(e.label||"MATCH UP")+'</div>'
     +'<div class="cut-row">'
-      +cutFig(mine,mineSide,"L "+(mineWon?"win":"dim"),statNote(mine,e))
+      +cutFig(mine,mineSide,"L",statNote(mine,e))
       +'<div class="cut-vs">VS</div>'
-      +cutFig(opp,oppSide,"R "+(mineWon?"dim":"win"),statNote(opp,e))
+      +cutFig(opp,oppSide,"R",statNote(opp,e))
     +'</div>'
     +'<div class="cut-word '+(mineWon?"win":"stop")+'">'+word+'</div>'
   +'</div>',TUNING.play.cutMs);
+  clearTimeout(_mCutJ);
+  _mCutJ=setTimeout(()=>{
+    const f=$("mCut").querySelectorAll(".cut-fig");   // [左, 右](間のVSは .cut-fig ではない)
+    if(f.length<2)return;
+    f[0].classList.add(mineWon?"win":"dim");
+    f[1].classList.add(mineWon?"dim":"win");
+  },TUNING.play.cutJudge);
+  return ms;
 }
 /** 競り合いで効いた能力を添える(何で勝ったのかが分かるように)。 */
 function statNote(p,e){
@@ -4438,7 +4455,7 @@ function mFinish(){
 }
 function mSkip(){
   clearTimeout(_mTimer); _mTimer=null;
-  clearTimeout(_mCutT); $("mCut").classList.remove("on");
+  clearTimeout(_mCutT); clearTimeout(_mCutJ); $("mCut").classList.remove("on");
   finishMatch(_M);
   mFinish();
 }

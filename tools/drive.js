@@ -166,8 +166,10 @@ const STEPS = [
     await ctx.js(`(()=>{ const H=_M.home,A=_M.away;
       const atk=H.players.find(p=>p.role==='FW'), df=A.players.find(p=>p.role==='DF');
       cutVs({side:'H',label:'裏へ抜ける',ch:'cfRun'},atk,df,'突破!',true); })()`);
-    await ctx.wait(300);
-    await ctx.shot("07d-cutin-vs");
+    await ctx.wait(250);
+    await ctx.shot("07d-cutin-vs-1");   // 両者が入ってきたところ
+    await ctx.wait(600);
+    await ctx.shot("07d-cutin-vs-2");   // 勝敗が表れ、決着語が出たところ
     await ctx.js(`(()=>{ const H=_M.home;
       const sc=H.players.find(p=>p.role==='FW'), as=H.players.find(p=>p.role==='MF');
       cutGoal({side:'H',hg:1,ag:0},sc,as); })()`);

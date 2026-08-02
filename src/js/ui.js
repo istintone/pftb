@@ -808,7 +808,7 @@ function matchLine(e,M){
 // 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
 let _M=null;          // 進行中の試合
 let _mTimer=null, _mSpeed=1, _mPaused=false;
-let _mPhase=0, _mLastSide="H", _mBall=[50,50], _mCutT=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
+let _mPhase=0, _mLastSide="H", _mBall=[50,50], _mCutT=null, _mCutJ=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
 
 /** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
 function toScreen(e,pos){
@@ -964,15 +964,25 @@ function cutVs(e,atk,df,word,atkWon){
   const mineSide=ally?e.side:(e.side==="H"?"A":"H");
   const oppSide=mineSide==="H"?"A":"H";
   const mineWon=ally?atkWon:!atkWon;
-  return cutShow('<div class="cut">'
+  // **勝敗は最初から見せない。** 両者が出そろってから決着させる
+  // (同時に出すと速すぎて何が起きたか読めない → docs/06 §6.19)。
+  const ms=cutShow('<div class="cut">'
     +'<div class="cut-hd">'+esc(e.label||"MATCH UP")+'</div>'
     +'<div class="cut-row">'
-      +cutFig(mine,mineSide,"L "+(mineWon?"win":"dim"),statNote(mine,e))
+      +cutFig(mine,mineSide,"L",statNote(mine,e))
       +'<div class="cut-vs">VS</div>'
-      +cutFig(opp,oppSide,"R "+(mineWon?"dim":"win"),statNote(opp,e))
+      +cutFig(opp,oppSide,"R",statNote(opp,e))
     +'</div>'
     +'<div class="cut-word '+(mineWon?"win":"stop")+'">'+word+'</div>'
   +'</div>',TUNING.play.cutMs);
+  clearTimeout(_mCutJ);
+  _mCutJ=setTimeout(()=>{
+    const f=$("mCut").querySelectorAll(".cut-fig");   // [左, 右](間のVSは .cut-fig ではない)
+    if(f.length<2)return;
+    f[0].classList.add(mineWon?"win":"dim");
+    f[1].classList.add(mineWon?"dim":"win");
+  },TUNING.play.cutJudge);
+  return ms;
 }
 /** 競り合いで効いた能力を添える(何で勝ったのかが分かるように)。 */
 function statNote(p,e){
@@ -1096,7 +1106,7 @@ function mFinish(){
 }
 function mSkip(){
   clearTimeout(_mTimer); _mTimer=null;
-  clearTimeout(_mCutT); $("mCut").classList.remove("on");
+  clearTimeout(_mCutT); clearTimeout(_mCutJ); $("mCut").classList.remove("on");
   finishMatch(_M);
   mFinish();
 }

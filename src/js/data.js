@@ -354,7 +354,10 @@ const TUNING={
          maxDevY:13, maxDevX:11,
          gkOut:0.06, gkSide:0.22, wander:1.4, wanderStep:0.7,
          // カットイン(→docs/06 §6.19)。盛り上がる局面は必ず、繋ぎは抽選で出す
-         cutMs:900, goalMs:1500, kickMs:1200, cutMaxSpeed:2,
+         // 表示時間。演出は「帯→両者→決着語」で約1.0秒かかるので、
+         // それに読む間を足した長さにする(短いと認知が追いつかない)
+         cutMs:1700, goalMs:2600, kickMs:2000, cutMaxSpeed:2,
+         cutJudge:620,   // 決着(勝者が光り敗者が沈む)を出すまでの間
          cutPass:0.22, cutStop:0.20, cutMiss:0.25 },
   // --- スタミナ(→docs/07 §7.10) ---
   // 消耗 = 出場時間 × perMin + 関与回数 × perAct。sta が高いほど緩やか。
