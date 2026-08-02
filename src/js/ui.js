@@ -1222,28 +1222,77 @@ function startMatch(){
   _mTimer=setTimeout(mTick,600+hold);
 }
 function doMatchday(){
-  const out=playMatchday(_M&&_M.over?_M:null);
+  const done=_M&&_M.over?_M:null;
+  const out=playMatchday(done);
+  if(out)out.M=done;                     // 結果画面でスタッツを出すために持ち越す
   _M=null; _lastResult=out;
   save(); headUI(); show("result");
 }
+/**
+ * 試合結果(→docs/06 §6.20)。モックの構成に準拠:
+ *   スコア → 勝敗 → MOM のカード → チームスタッツ → 選手採点 → 報酬 → 他会場
+ * **集計はすべてエンジン側(matchStats / matchRatings)**。ここは並べるだけ。
+ */
 function renderResult(){
   const o=_lastResult; if(!o||!o.my){ show("home"); return; }
-  const m=o.my;
-  $("resultHead").textContent=m.win?"WIN":m.draw?"DRAW":"LOSE";
-  $("resultBody").innerHTML=
-    '<div class="score"><b>'+esc(clubName(S.club.id))+'</b>'
-    +'<span class="num sc">'+m.gf+' - '+m.ga+'</span>'
-    +'<b>'+esc(clubName(m.opp))+'</b></div>'
-    +'<div class="lg" style="margin:10px 0">'+(m.home?"HOME":"AWAY")+'</div>'
-    +kv("コイン",'+'+fmtNum(m.win?TUNING.reward.win:m.draw?TUNING.reward.draw:TUNING.reward.lose))
-    +kv("チーム熟練度",'+'+(m.win?350:m.draw?220:150))
-    +kv("現在順位",rankOf(S.world.table,S.club.id)+"位")
-    +'<div class="sect-t" style="margin-top:14px">他会場</div>'
-    +o.others.map(x=>'<div class="fx"><span class="nm">'+esc(clubName(x.h))+'</span>'
-      +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
-      +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("");
+  const m=o.my, M=o.M;
+  $("resultHead").textContent="FULL TIME";
+  $("rsScore").innerHTML='<b>'+esc(clubName(S.club.id))+'</b>'
+    +'<span class="num">'+m.gf+' - '+m.ga+'</span>'
+    +'<b>'+esc(clubName(m.opp))+'</b>';
+  $("rsVerdict").textContent=m.win?"勝利":m.draw?"引き分け":"敗戦";
+  $("rsReward").innerHTML='<span>+'+fmtNum(m.win?TUNING.reward.win:m.draw?TUNING.reward.draw:TUNING.reward.lose)
+    +' コイン</span><span>+'+(m.win?350:m.draw?220:150)+' EXP</span>';
+  $("rsOthers").innerHTML=o.others.map(x=>'<div class="fx"><span class="nm">'+esc(clubName(x.h))+'</span>'
+    +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
+    +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("")||'<div class="lg">なし</div>';
   $("btnResultOk").onclick=()=>show("home");
+  $("btnResultNext").onclick=()=>show("season");
+
+  // 試合の中身が無い(古いセーブ等)ときはスコアだけで成立させる
+  if(!M){ $("rsMom").innerHTML=""; $("rsBars").innerHTML=""; $("rsList").innerHTML=""; return; }
+  const mySide=M.fixture.h===S.club.id?"H":"A", opSide=mySide==="H"?"A":"H";
+  const st=matchStats(M);
+
+  // MOM は両チームから1人。カードそのものを見せる
+  const mom=manOfTheMatch(M);
+  $("rsMom").innerHTML=mom?cardTile(mom.p.c):"";
+  $("rsMom").querySelectorAll("[data-card]").forEach(el=>{ el.onclick=()=>openCard(mom.p.c); });
+
+  // チームスタッツ(左=自チーム)
+  const rows=[
+    ["支配率", st[mySide].possPct, st[opSide].possPct, "%"],
+    ["シュート", st[mySide].shots, st[opSide].shots, ""],
+    ["枠内", st[mySide].sog, st[opSide].sog, ""],
+    ["ブロック", st[mySide].blocks, st[opSide].blocks, ""],
+    ["パス成功率", passPct(st[mySide]), passPct(st[opSide]), "%"],
+  ];
+  $("rsBars").innerHTML=rows.map(([lb,a,b,u])=>{
+    const t=a+b||1;
+    return '<div class="rs-bar"><div><span>'+a+u+'</span><span>'+lb+'</span><span>'+b+u+'</span></div>'
+      +'<div class="rs-tr"><i style="width:'+(a/t*100)+'%"></i>'
+      +'<i style="width:'+(b/t*100)+'%"></i></div></div>';
+  }).join("");
+
+  // 選手採点(自チーム。評価の高い順)
+  const list=matchRatings(M,mySide);
+  $("rsList").innerHTML=list.map(x=>{
+    const p=x.p, s2=p.stat;
+    const g=(s2.goals?"⚽"+s2.goals+" ":"")+(s2.assists?"A"+s2.assists:"");
+    return '<div class="rs-p'+(x.min<90?" out":"")+'" data-card="'+p.c.id+'"'+kitStyle(p.c)+'>'
+      +'<div class="rs-pos">'+(p.sub||p.role)+'</div>'
+      +'<div class="rs-nm"><b>'+esc(shortName(p.c))+'</b><span>'+g+'</span></div>'
+      +'<div class="v">'+s2.shots+'</div>'
+      +'<div class="v">'+(s2.pass?Math.round(s2.passOk/s2.pass*100)+"%":"—")+'</div>'
+      +'<div class="v dim">'+x.min+"'"+'</div>'
+      +'<div class="rs-rt '+(x.rating>=7?"hi":x.rating<5?"lo":"")+'">'+x.rating.toFixed(1)+'</div>'
+    +'</div>';
+  }).join("");
+  $("rsList").querySelectorAll("[data-card]").forEach((el,i)=>{
+    el.onclick=()=>openCard(list[i].p.c);
+  });
 }
+const passPct=t=>t.pass?Math.round(t.passOk/t.pass*100):0;
 
 /** シーズン終了 → 審判 → 続投 or 解任 → 次の就任先へ。
  *  任期が上限に達していれば、ここで延命 or キャリア終了も決まる(→§3.2.3)。 */

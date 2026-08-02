@@ -589,6 +589,58 @@ body{
   border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
 
 /* =========================================================================
+   RESULT — 試合結果(→docs/06 §6.20)。モックの構成に準拠。
+   ========================================================================= */
+.rs{ text-align:center }
+/* クラブ名は長いので、スコアだけ折り返さずに中央へ固定する */
+.rs-sc{ display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px }
+.rs-sc b{ flex:1; min-width:0; font:600 12px/1.35 var(--f-head); color:var(--text-2) }
+.rs-sc b:first-child{ text-align:right }
+.rs-sc b:last-child{ text-align:left }
+.rs-sc span{ flex:0 0 auto; font:700 17px/1 var(--f-head); color:var(--text) }
+.rs-verdict{ font:700 22px/1 var(--f-head); color:oklch(0.96 0.01 90); margin:6px 0 20px }
+/* MOM はカードそのものを見せる */
+.rs-mom{ width:150px; margin:0 auto 8px }
+.rs-mom .pcard{ box-shadow:0 0 30px oklch(0.60 0.14 85 / .5) }
+.rs-momlb{ font:600 11px/1 var(--f-head); letter-spacing:2px; color:var(--text-dim);
+  margin-bottom:22px }
+/* チームスタッツのバー(左=自チーム / 右=相手) */
+.rs-bars{ display:flex; flex-direction:column; gap:11px; margin-bottom:22px; text-align:left }
+.rs-bar > div:first-child{ display:flex; justify-content:space-between;
+  font:10px/1 var(--f-mono); color:var(--text-dim); margin-bottom:4px }
+.rs-tr{ display:flex; height:6px; border-radius:3px; overflow:hidden;
+  background:oklch(0.25 0.02 255) }
+.rs-tr i{ display:block; height:100% }
+.rs-tr i:first-child{ background:var(--accent) }
+.rs-tr i:last-child{ background:oklch(0.40 0.02 255) }
+/* 選手採点 */
+.rs-k{ text-align:left; margin-bottom:10px }
+.rs-hd{ display:flex; align-items:center; gap:8px; padding:0 10px 6px;
+  font:8px/1 var(--f-mono); color:var(--text-mute) }
+.rs-hd .nm{ flex:1; text-align:left }
+.rs-hd span{ width:26px; text-align:center }
+.rs-hd .rt{ width:28px; text-align:right }
+.rs-list{ display:flex; flex-direction:column; gap:6px; margin-bottom:22px }
+.rs-p{ display:flex; align-items:center; gap:8px; padding:9px 10px; text-align:left;
+  background:var(--panel); border:1px solid var(--line); border-radius:9px; cursor:pointer }
+.rs-p.out{ opacity:.62 }
+.rs-pos{ width:24px; height:24px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--kit, oklch(0.30 0.03 255)); border:1.5px solid var(--rar, var(--line));
+  font:7px/1 var(--f-mono); color:#fff }
+.rs-nm{ flex:1; min-width:0 }
+.rs-nm b{ display:block; font-size:11px; font-weight:600; color:oklch(0.92 0.01 90);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.rs-nm span{ display:block; font:8px/1.5 var(--f-mono); color:var(--accent) }
+.rs-p > .v{ width:26px; text-align:center; font:10px/1 var(--f-mono); color:oklch(0.75 0.01 90) }
+.rs-p > .v.dim{ color:var(--text-dim) }
+.rs-rt{ width:28px; text-align:right; font:700 14px/1 var(--f-head) }
+.rs-rt.hi{ color:var(--accent-hi) }
+.rs-rt.lo{ color:var(--fit-bad) }
+.rs-rw{ display:flex; justify-content:center; gap:14px; margin-bottom:20px;
+  font-size:11px; color:oklch(0.75 0.13 85) }
+
+/* =========================================================================
    MATCH — 試合画面(→docs/06 §6.17)
    ピッチは**編成画面と同じ .pitch**をそのまま使う(線も大きさも共通)。
    ========================================================================= */

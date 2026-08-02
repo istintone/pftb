@@ -601,6 +601,58 @@ body{
   border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
 
 /* =========================================================================
+   RESULT — 試合結果(→docs/06 §6.20)。モックの構成に準拠。
+   ========================================================================= */
+.rs{ text-align:center }
+/* クラブ名は長いので、スコアだけ折り返さずに中央へ固定する */
+.rs-sc{ display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px }
+.rs-sc b{ flex:1; min-width:0; font:600 12px/1.35 var(--f-head); color:var(--text-2) }
+.rs-sc b:first-child{ text-align:right }
+.rs-sc b:last-child{ text-align:left }
+.rs-sc span{ flex:0 0 auto; font:700 17px/1 var(--f-head); color:var(--text) }
+.rs-verdict{ font:700 22px/1 var(--f-head); color:oklch(0.96 0.01 90); margin:6px 0 20px }
+/* MOM はカードそのものを見せる */
+.rs-mom{ width:150px; margin:0 auto 8px }
+.rs-mom .pcard{ box-shadow:0 0 30px oklch(0.60 0.14 85 / .5) }
+.rs-momlb{ font:600 11px/1 var(--f-head); letter-spacing:2px; color:var(--text-dim);
+  margin-bottom:22px }
+/* チームスタッツのバー(左=自チーム / 右=相手) */
+.rs-bars{ display:flex; flex-direction:column; gap:11px; margin-bottom:22px; text-align:left }
+.rs-bar > div:first-child{ display:flex; justify-content:space-between;
+  font:10px/1 var(--f-mono); color:var(--text-dim); margin-bottom:4px }
+.rs-tr{ display:flex; height:6px; border-radius:3px; overflow:hidden;
+  background:oklch(0.25 0.02 255) }
+.rs-tr i{ display:block; height:100% }
+.rs-tr i:first-child{ background:var(--accent) }
+.rs-tr i:last-child{ background:oklch(0.40 0.02 255) }
+/* 選手採点 */
+.rs-k{ text-align:left; margin-bottom:10px }
+.rs-hd{ display:flex; align-items:center; gap:8px; padding:0 10px 6px;
+  font:8px/1 var(--f-mono); color:var(--text-mute) }
+.rs-hd .nm{ flex:1; text-align:left }
+.rs-hd span{ width:26px; text-align:center }
+.rs-hd .rt{ width:28px; text-align:right }
+.rs-list{ display:flex; flex-direction:column; gap:6px; margin-bottom:22px }
+.rs-p{ display:flex; align-items:center; gap:8px; padding:9px 10px; text-align:left;
+  background:var(--panel); border:1px solid var(--line); border-radius:9px; cursor:pointer }
+.rs-p.out{ opacity:.62 }
+.rs-pos{ width:24px; height:24px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--kit, oklch(0.30 0.03 255)); border:1.5px solid var(--rar, var(--line));
+  font:7px/1 var(--f-mono); color:#fff }
+.rs-nm{ flex:1; min-width:0 }
+.rs-nm b{ display:block; font-size:11px; font-weight:600; color:oklch(0.92 0.01 90);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.rs-nm span{ display:block; font:8px/1.5 var(--f-mono); color:var(--accent) }
+.rs-p > .v{ width:26px; text-align:center; font:10px/1 var(--f-mono); color:oklch(0.75 0.01 90) }
+.rs-p > .v.dim{ color:var(--text-dim) }
+.rs-rt{ width:28px; text-align:right; font:700 14px/1 var(--f-head) }
+.rs-rt.hi{ color:var(--accent-hi) }
+.rs-rt.lo{ color:var(--fit-bad) }
+.rs-rw{ display:flex; justify-content:center; gap:14px; margin-bottom:20px;
+  font-size:11px; color:oklch(0.75 0.13 85) }
+
+/* =========================================================================
    MATCH — 試合画面(→docs/06 §6.17)
    ピッチは**編成画面と同じ .pitch**をそのまま使う(線も大きさも共通)。
    ========================================================================= */
@@ -1263,10 +1315,31 @@ body{
     </div></div>
 
     <!-- ---------- RESULT(結果) ---------- -->
-    <div id="scr-result" class="screen"><div class="pad">
+    <div id="scr-result" class="screen"><div class="pad rs">
       <div class="eyebrow" id="resultHead">FULL TIME</div>
-      <div id="resultBody"></div>
-      <button class="btn" id="btnResultOk" style="margin-top:14px">ホームへ</button>
+      <div class="rs-sc" id="rsScore">—</div>
+      <div class="rs-verdict" id="rsVerdict">—</div>
+
+      <!-- MAN OF THE MATCH -->
+      <div class="rs-mom" id="rsMom"></div>
+      <div class="rs-momlb">MAN OF THE MATCH</div>
+
+      <!-- チームスタッツ(左=自チーム / 右=相手) -->
+      <div class="rs-bars" id="rsBars"></div>
+
+      <!-- 選手採点 -->
+      <div class="sect-t rs-k">PLAYER RATINGS</div>
+      <div class="rs-hd"><span class="nm">PLAYER</span><span>SH</span><span>PAS</span>
+        <span>MIN</span><span class="rt">RTG</span></div>
+      <div class="rs-list" id="rsList"></div>
+
+      <div class="rs-rw" id="rsReward"></div>
+      <div class="sect-t rs-k">他会場</div>
+      <div id="rsOthers"></div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn ghost" id="btnResultOk">ホームへ</button>
+        <button class="btn" id="btnResultNext">次の予定へ</button>
+      </div>
     </div></div>
 
     <!-- ---------- CAREER END(任期満了 = キャリア1周の終わり) ---------- -->
@@ -2670,7 +2743,8 @@ function lineup(cards,form){
 function buildTeam(cards,form,name,side){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1;
-    p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 }; });
+    p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
+      pass:0, passOk:0, duelW:0, duelL:0 }; });
   bench.forEach(p=>{ p.side=side; p.stam=1; });
   return { players:xi, bench, form, name, side, score:0 };
 }
@@ -2983,7 +3057,10 @@ function applyOrders(M,t){
       // 入る選手は**万全**で入る(出場時間も関与回数も0から)。これが交代の価値。
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
         x:out.x, y:out.y, ix:out.ix, side, enter:t.min, stam:1,
-        stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 } };
+        stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
+          pass:0, passOk:0, duelW:0, duelL:0 } };
+      out.exit=t.min;                                      // 出場時間の算出に使う
+      (T.subOut||(T.subOut=[])).push(out);                 // 採点に残す
       T.players[o.out]=nw; inc.used=true; M.subs[side]++;
       M.events.push({ min:t.min, half:t.half, at:!!t.at, side, type:"sub",
         out:out.c.id, in:inc.c.id, pos:[out.x,out.y] });
@@ -3043,7 +3120,13 @@ function stepMatch(M){
       h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
 
     // **マッチアップの勝敗がそのまま勢いを動かす**(→docs/07 §7.7)
-    if(!ok){ addMom(M,D.side,F.duelLost); return M.events.slice(from); }
+    if(ch.kind==="pass")carrier.stat.pass++;              // パスの試行(採点に使う)
+    if(!ok){
+      carrier.stat.duelL++; if(marker)marker.stat.duelW++;
+      addMom(M,D.side,F.duelLost); return M.events.slice(from);
+    }
+    carrier.stat.duelW++; if(marker)marker.stat.duelL++;
+    if(ch.kind==="pass")carrier.stat.passOk++;
     addMom(M,T.side,F.duelWon);
 
     const tg=ballTarget(rng,h,x,ch);
@@ -3146,6 +3229,87 @@ function finishMatch(M){
 function simulateMatch(home,away,seed){
   const M=finishMatch(createMatch(home,away,seed));
   return { hg:M.home.score, ag:M.away.score, events:M.events, home:M.home, away:M.away };
+}
+
+// ---------- 試合後の集計(→docs/06 §6.20) ----------
+// **勝敗には一切影響しない採点レイヤー**。関与度を主軸に、決定的な出来事で加減する。
+// card-eleven の考え方を踏襲(→docs/07 §7.12)。
+
+/** 出場時間(分)。交代で退いていればそこまで。 */
+function minutesOf(p,full){
+  return clamp((p.exit!=null?p.exit:full)-(p.enter||0),0,full);
+}
+/**
+ * 選手の採点(3.0〜10.0)。
+ *   ・関与回数(inv)を土台にして、出番の少ない選手が高くならないようにする
+ *   ・ゴール/アシスト/デュエル/ブロック/セーブで加減する
+ *   ・GKは関与が構造的に少ないので専用の尺度にする
+ *   ・守備陣は無失点/失点のチーム文脈を反映する
+ */
+function matchRating(p,conceded){
+  const s=p.stat||{};
+  if(p.role==="GK"){
+    let g=5.5+(s.saves||0)*0.35;
+    g+=conceded===0?0.7:-Math.min(1.2,conceded*0.30);
+    return clamp(Math.round(g*10)/10,3.0,10);
+  }
+  let r=4.0+2.05*Math.log10(1+(s.inv||0));
+  r+=(s.goals||0)*0.9+(s.assists||0)*0.55
+    +(s.duelW||0)*0.10-(s.duelL||0)*0.10
+    +(s.blocks||0)*0.16
+    -((s.shots||0)-(s.goals||0))*0.06;
+  if(p.role==="DF")r+=conceded===0?0.5:-Math.min(0.8,conceded*0.18);
+  return clamp(Math.round(r*10)/10,3.0,10);
+}
+/** チーム単位の集計。イベントを数えるだけなので、描画してもしなくても同じ。 */
+function matchStats(M){
+  const z=()=>({ poss:0, shots:0, sog:0, goals:0, blocks:0, miss:0, pass:0, passOk:0 });
+  const out={ H:z(), A:z() };
+  for(const e of M.events){
+    const t=out[e.side]; if(!t)continue;
+    switch(e.type){
+      case "possession": t.poss++; break;
+      case "goal":  t.shots++; t.sog++; t.goals++; break;
+      case "save":  t.shots++; t.sog++; break;
+      case "miss":  t.shots++; t.miss++; break;
+      case "block": t.shots++; out[e.side==="H"?"A":"H"].blocks++; break;
+    }
+  }
+  for(const side of ["H","A"]){
+    const T=side==="H"?M.home:M.away;
+    // 交代で退いた選手のパスも足す(集計から消えると成功率が実態とずれる)
+    for(const p of T.players.concat(T.subOut||[])){
+      out[side].pass+=p.stat.pass||0; out[side].passOk+=p.stat.passOk||0;
+    }
+  }
+  const tp=out.H.poss+out.A.poss||1;
+  out.H.possPct=Math.round(out.H.poss/tp*100);
+  out.A.possPct=100-out.H.possPct;
+  return out;
+}
+/**
+ * 出場した全選手を採点つきで返す(交代で退いた選手も含む)。
+ * 返り値は評価の高い順。MOM はこの先頭。
+ */
+function matchRatings(M,side){
+  const T=side==="H"?M.home:M.away;
+  const conceded=side==="H"?M.away.score:M.home.score;
+  const full=TUNING.match.halfTicks*TUNING.match.tickMin*2;
+  const seen=new Set(), out=[];
+  const add=p=>{
+    if(!p||seen.has(p.c.id))return;
+    seen.add(p.c.id);
+    out.push({ p, side, min:minutesOf(p,full), rating:matchRating(p,conceded) });
+  };
+  T.players.forEach(add);
+  T.bench.forEach(p=>{ if(p.used)add(p); });              // 途中出場も
+  T.subOut&&T.subOut.forEach(add);                        // 途中で退いた選手
+  return out.sort((a,b)=>b.rating-a.rating);
+}
+/** MOM。両チームから最も評価の高い1人。 */
+function manOfTheMatch(M){
+  const all=matchRatings(M,"H").concat(matchRatings(M,"A"));
+  return all.sort((a,b)=>b.rating-a.rating)[0]||null;
 }
 
 // ---------- 呼び出し口 ----------
@@ -4581,28 +4745,77 @@ function startMatch(){
   _mTimer=setTimeout(mTick,600+hold);
 }
 function doMatchday(){
-  const out=playMatchday(_M&&_M.over?_M:null);
+  const done=_M&&_M.over?_M:null;
+  const out=playMatchday(done);
+  if(out)out.M=done;                     // 結果画面でスタッツを出すために持ち越す
   _M=null; _lastResult=out;
   save(); headUI(); show("result");
 }
+/**
+ * 試合結果(→docs/06 §6.20)。モックの構成に準拠:
+ *   スコア → 勝敗 → MOM のカード → チームスタッツ → 選手採点 → 報酬 → 他会場
+ * **集計はすべてエンジン側(matchStats / matchRatings)**。ここは並べるだけ。
+ */
 function renderResult(){
   const o=_lastResult; if(!o||!o.my){ show("home"); return; }
-  const m=o.my;
-  $("resultHead").textContent=m.win?"WIN":m.draw?"DRAW":"LOSE";
-  $("resultBody").innerHTML=
-    '<div class="score"><b>'+esc(clubName(S.club.id))+'</b>'
-    +'<span class="num sc">'+m.gf+' - '+m.ga+'</span>'
-    +'<b>'+esc(clubName(m.opp))+'</b></div>'
-    +'<div class="lg" style="margin:10px 0">'+(m.home?"HOME":"AWAY")+'</div>'
-    +kv("コイン",'+'+fmtNum(m.win?TUNING.reward.win:m.draw?TUNING.reward.draw:TUNING.reward.lose))
-    +kv("チーム熟練度",'+'+(m.win?350:m.draw?220:150))
-    +kv("現在順位",rankOf(S.world.table,S.club.id)+"位")
-    +'<div class="sect-t" style="margin-top:14px">他会場</div>'
-    +o.others.map(x=>'<div class="fx"><span class="nm">'+esc(clubName(x.h))+'</span>'
-      +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
-      +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("");
+  const m=o.my, M=o.M;
+  $("resultHead").textContent="FULL TIME";
+  $("rsScore").innerHTML='<b>'+esc(clubName(S.club.id))+'</b>'
+    +'<span class="num">'+m.gf+' - '+m.ga+'</span>'
+    +'<b>'+esc(clubName(m.opp))+'</b>';
+  $("rsVerdict").textContent=m.win?"勝利":m.draw?"引き分け":"敗戦";
+  $("rsReward").innerHTML='<span>+'+fmtNum(m.win?TUNING.reward.win:m.draw?TUNING.reward.draw:TUNING.reward.lose)
+    +' コイン</span><span>+'+(m.win?350:m.draw?220:150)+' EXP</span>';
+  $("rsOthers").innerHTML=o.others.map(x=>'<div class="fx"><span class="nm">'+esc(clubName(x.h))+'</span>'
+    +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
+    +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("")||'<div class="lg">なし</div>';
   $("btnResultOk").onclick=()=>show("home");
+  $("btnResultNext").onclick=()=>show("season");
+
+  // 試合の中身が無い(古いセーブ等)ときはスコアだけで成立させる
+  if(!M){ $("rsMom").innerHTML=""; $("rsBars").innerHTML=""; $("rsList").innerHTML=""; return; }
+  const mySide=M.fixture.h===S.club.id?"H":"A", opSide=mySide==="H"?"A":"H";
+  const st=matchStats(M);
+
+  // MOM は両チームから1人。カードそのものを見せる
+  const mom=manOfTheMatch(M);
+  $("rsMom").innerHTML=mom?cardTile(mom.p.c):"";
+  $("rsMom").querySelectorAll("[data-card]").forEach(el=>{ el.onclick=()=>openCard(mom.p.c); });
+
+  // チームスタッツ(左=自チーム)
+  const rows=[
+    ["支配率", st[mySide].possPct, st[opSide].possPct, "%"],
+    ["シュート", st[mySide].shots, st[opSide].shots, ""],
+    ["枠内", st[mySide].sog, st[opSide].sog, ""],
+    ["ブロック", st[mySide].blocks, st[opSide].blocks, ""],
+    ["パス成功率", passPct(st[mySide]), passPct(st[opSide]), "%"],
+  ];
+  $("rsBars").innerHTML=rows.map(([lb,a,b,u])=>{
+    const t=a+b||1;
+    return '<div class="rs-bar"><div><span>'+a+u+'</span><span>'+lb+'</span><span>'+b+u+'</span></div>'
+      +'<div class="rs-tr"><i style="width:'+(a/t*100)+'%"></i>'
+      +'<i style="width:'+(b/t*100)+'%"></i></div></div>';
+  }).join("");
+
+  // 選手採点(自チーム。評価の高い順)
+  const list=matchRatings(M,mySide);
+  $("rsList").innerHTML=list.map(x=>{
+    const p=x.p, s2=p.stat;
+    const g=(s2.goals?"⚽"+s2.goals+" ":"")+(s2.assists?"A"+s2.assists:"");
+    return '<div class="rs-p'+(x.min<90?" out":"")+'" data-card="'+p.c.id+'"'+kitStyle(p.c)+'>'
+      +'<div class="rs-pos">'+(p.sub||p.role)+'</div>'
+      +'<div class="rs-nm"><b>'+esc(shortName(p.c))+'</b><span>'+g+'</span></div>'
+      +'<div class="v">'+s2.shots+'</div>'
+      +'<div class="v">'+(s2.pass?Math.round(s2.passOk/s2.pass*100)+"%":"—")+'</div>'
+      +'<div class="v dim">'+x.min+"'"+'</div>'
+      +'<div class="rs-rt '+(x.rating>=7?"hi":x.rating<5?"lo":"")+'">'+x.rating.toFixed(1)+'</div>'
+    +'</div>';
+  }).join("");
+  $("rsList").querySelectorAll("[data-card]").forEach((el,i)=>{
+    el.onclick=()=>openCard(list[i].p.c);
+  });
 }
+const passPct=t=>t.pass?Math.round(t.passOk/t.pass*100):0;
 
 /** シーズン終了 → 審判 → 続投 or 解任 → 次の就任先へ。
  *  任期が上限に達していれば、ここで延命 or キャリア終了も決まる(→§3.2.3)。 */

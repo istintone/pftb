@@ -86,7 +86,8 @@ function lineup(cards,form){
 function buildTeam(cards,form,name,side){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1;
-    p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 }; });
+    p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
+      pass:0, passOk:0, duelW:0, duelL:0 }; });
   bench.forEach(p=>{ p.side=side; p.stam=1; });
   return { players:xi, bench, form, name, side, score:0 };
 }
@@ -399,7 +400,10 @@ function applyOrders(M,t){
       // 入る選手は**万全**で入る(出場時間も関与回数も0から)。これが交代の価値。
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
         x:out.x, y:out.y, ix:out.ix, side, enter:t.min, stam:1,
-        stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0 } };
+        stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
+          pass:0, passOk:0, duelW:0, duelL:0 } };
+      out.exit=t.min;                                      // 出場時間の算出に使う
+      (T.subOut||(T.subOut=[])).push(out);                 // 採点に残す
       T.players[o.out]=nw; inc.used=true; M.subs[side]++;
       M.events.push({ min:t.min, half:t.half, at:!!t.at, side, type:"sub",
         out:out.c.id, in:inc.c.id, pos:[out.x,out.y] });
@@ -459,7 +463,13 @@ function stepMatch(M){
       h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
 
     // **マッチアップの勝敗がそのまま勢いを動かす**(→docs/07 §7.7)
-    if(!ok){ addMom(M,D.side,F.duelLost); return M.events.slice(from); }
+    if(ch.kind==="pass")carrier.stat.pass++;              // パスの試行(採点に使う)
+    if(!ok){
+      carrier.stat.duelL++; if(marker)marker.stat.duelW++;
+      addMom(M,D.side,F.duelLost); return M.events.slice(from);
+    }
+    carrier.stat.duelW++; if(marker)marker.stat.duelL++;
+    if(ch.kind==="pass")carrier.stat.passOk++;
     addMom(M,T.side,F.duelWon);
 
     const tg=ballTarget(rng,h,x,ch);
@@ -562,6 +572,87 @@ function finishMatch(M){
 function simulateMatch(home,away,seed){
   const M=finishMatch(createMatch(home,away,seed));
   return { hg:M.home.score, ag:M.away.score, events:M.events, home:M.home, away:M.away };
+}
+
+// ---------- 試合後の集計(→docs/06 §6.20) ----------
+// **勝敗には一切影響しない採点レイヤー**。関与度を主軸に、決定的な出来事で加減する。
+// card-eleven の考え方を踏襲(→docs/07 §7.12)。
+
+/** 出場時間(分)。交代で退いていればそこまで。 */
+function minutesOf(p,full){
+  return clamp((p.exit!=null?p.exit:full)-(p.enter||0),0,full);
+}
+/**
+ * 選手の採点(3.0〜10.0)。
+ *   ・関与回数(inv)を土台にして、出番の少ない選手が高くならないようにする
+ *   ・ゴール/アシスト/デュエル/ブロック/セーブで加減する
+ *   ・GKは関与が構造的に少ないので専用の尺度にする
+ *   ・守備陣は無失点/失点のチーム文脈を反映する
+ */
+function matchRating(p,conceded){
+  const s=p.stat||{};
+  if(p.role==="GK"){
+    let g=5.5+(s.saves||0)*0.35;
+    g+=conceded===0?0.7:-Math.min(1.2,conceded*0.30);
+    return clamp(Math.round(g*10)/10,3.0,10);
+  }
+  let r=4.0+2.05*Math.log10(1+(s.inv||0));
+  r+=(s.goals||0)*0.9+(s.assists||0)*0.55
+    +(s.duelW||0)*0.10-(s.duelL||0)*0.10
+    +(s.blocks||0)*0.16
+    -((s.shots||0)-(s.goals||0))*0.06;
+  if(p.role==="DF")r+=conceded===0?0.5:-Math.min(0.8,conceded*0.18);
+  return clamp(Math.round(r*10)/10,3.0,10);
+}
+/** チーム単位の集計。イベントを数えるだけなので、描画してもしなくても同じ。 */
+function matchStats(M){
+  const z=()=>({ poss:0, shots:0, sog:0, goals:0, blocks:0, miss:0, pass:0, passOk:0 });
+  const out={ H:z(), A:z() };
+  for(const e of M.events){
+    const t=out[e.side]; if(!t)continue;
+    switch(e.type){
+      case "possession": t.poss++; break;
+      case "goal":  t.shots++; t.sog++; t.goals++; break;
+      case "save":  t.shots++; t.sog++; break;
+      case "miss":  t.shots++; t.miss++; break;
+      case "block": t.shots++; out[e.side==="H"?"A":"H"].blocks++; break;
+    }
+  }
+  for(const side of ["H","A"]){
+    const T=side==="H"?M.home:M.away;
+    // 交代で退いた選手のパスも足す(集計から消えると成功率が実態とずれる)
+    for(const p of T.players.concat(T.subOut||[])){
+      out[side].pass+=p.stat.pass||0; out[side].passOk+=p.stat.passOk||0;
+    }
+  }
+  const tp=out.H.poss+out.A.poss||1;
+  out.H.possPct=Math.round(out.H.poss/tp*100);
+  out.A.possPct=100-out.H.possPct;
+  return out;
+}
+/**
+ * 出場した全選手を採点つきで返す(交代で退いた選手も含む)。
+ * 返り値は評価の高い順。MOM はこの先頭。
+ */
+function matchRatings(M,side){
+  const T=side==="H"?M.home:M.away;
+  const conceded=side==="H"?M.away.score:M.home.score;
+  const full=TUNING.match.halfTicks*TUNING.match.tickMin*2;
+  const seen=new Set(), out=[];
+  const add=p=>{
+    if(!p||seen.has(p.c.id))return;
+    seen.add(p.c.id);
+    out.push({ p, side, min:minutesOf(p,full), rating:matchRating(p,conceded) });
+  };
+  T.players.forEach(add);
+  T.bench.forEach(p=>{ if(p.used)add(p); });              // 途中出場も
+  T.subOut&&T.subOut.forEach(add);                        // 途中で退いた選手
+  return out.sort((a,b)=>b.rating-a.rating);
+}
+/** MOM。両チームから最も評価の高い1人。 */
+function manOfTheMatch(M){
+  const all=matchRatings(M,"H").concat(matchRatings(M,"A"));
+  return all.sort((a,b)=>b.rating-a.rating)[0]||null;
 }
 
 // ---------- 呼び出し口 ----------

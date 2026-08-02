@@ -272,9 +272,16 @@ const STEPS = [
     await ctx.shot("07c-match-end");
     await ctx.js("document.getElementById('mDone').click()");
     await ctx.wait(400);
+    ctx.log("結果画面:", await ctx.screen(),
+      "/ MOM:", await ctx.js("(document.querySelector('#rsMom .pc-name b')||{}).textContent"),
+      "/ スタッツ:", await ctx.js("document.querySelectorAll('#rsBars .rs-bar').length"), "項目",
+      "/ 採点:", await ctx.js("document.querySelectorAll('#rsList .rs-p').length"), "人",
+      "/ 最高評価:", await ctx.js("(document.querySelector('#rsList .rs-rt')||{}).textContent"));
+    await ctx.shot("08b-result-stats");
     ctx.log("試合結果:", await ctx.screen(),
       await ctx.js("document.getElementById('resultHead').textContent"),
-      await ctx.js("document.querySelector('#resultBody .sc').textContent"));
+      await ctx.js("document.getElementById('rsVerdict').textContent"),
+      await ctx.js("document.getElementById('rsScore').textContent"));
     await ctx.shot("08-result");
     await ctx.js("document.getElementById('btnResultOk').click()");
     await ctx.wait(300);
