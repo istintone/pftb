@@ -61,6 +61,31 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     assert.ok(E.squadPowerAt(xi, form) <= E.squadPower(xi),
       "配置込みの編成力は OVR 平均を超えない");
   }
+  // 係数が実際に効いているか。不一致(0.50)は OVR で覆すのに2倍の差が要る。
+  // ここが緩いと OVR がポジションを完全に食う(0.70 のとき実際に起きた)。
+  assert.ok(1 / F.none >= 2, "不一致を OVR で覆すには2倍以上の差が要る");
+  {
+    // 名簿にGKがいるのに、自動編成がGK枠へGK以外を置いていないこと
+    let wrongGK = 0, clubs = 0;
+    for (const club of E.CLUBS) {
+      const roster = E.clubRoster(12345, club.id);
+      if (!roster.some(c => c.pos === "GK")) continue;
+      const used = new Set();
+      let best = null, bs = -1;
+      E.FORMATIONS["4-4-2"].forEach(([sub]) => {   // autoSquad と同じ貪欲法
+        best = null; bs = -1;
+        for (const c of roster) {
+          if (used.has(c.id)) continue;
+          const v = E.slotFit(c, sub) * c.ovr;
+          if (v > bs) { bs = v; best = c; }
+        }
+        if (best) { used.add(best.id); if (sub === "GK" && best.pos !== "GK") wrongGK++; }
+      });
+      clubs++;
+    }
+    assert.strictEqual(wrongGK, 0, "GKがいる名簿でGK枠にGK以外を置かない(" + clubs + "クラブ)");
+    console.log("  自動編成: GK枠は全", clubs, "クラブで正しくGK");
+  }
   console.log("選手生成OK 決定的 / OVR整合 / 例:", a[0].name, a[0].pos, a[0].ovr);
 
   // --- レアリティ(D18) ---
