@@ -201,8 +201,14 @@ const STEPS = [
           "document.querySelector('#deckSlots .slot[data-slot=\"9\"] .sl-name').textContent");
         ctx.log("  ピッカー:", await ctx.js("document.querySelector('#slotModalBody h3').textContent"),
           "/ 候補:", await ctx.js("document.querySelectorAll('#slotModalBody [data-pick]').length"),
-          "/ 先頭の適性:", await ctx.js(
-            "document.querySelector('#slotModalBody .pick .sl-pos').textContent"));
+          "/ 先頭:", await ctx.js(
+            "document.querySelector('#slotModalBody .pk-ovr').textContent"),
+          "/ 目減りの色分け:", await ctx.js(
+            "[...document.querySelectorAll('#slotModalBody .pk-ovr')]"
+            + ".map(e=>e.className.includes('v-bad')?'赤':e.className.includes('v-warn')?'黄':'素')"
+            + ".slice(0,8).join('')"),
+          "/ 適性バッジが消えている:", await ctx.js(
+            "document.querySelectorAll('#slotModalBody .pick .sl-pos').length === 0"));
         await ctx.shot("10d-slot-picker");
         // 左端の「›」は入れ替えず、ピッカーを開いたまま詳細を重ねる
         const pickedBefore = await ctx.js("JSON.stringify(S.squad)");

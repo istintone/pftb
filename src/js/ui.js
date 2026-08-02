@@ -263,11 +263,13 @@ function renderGallery(){
 // ---------- 枠に入れる選手を選ぶ(→docs/06 §6.15) ----------
 let _slotIx=-1;      // いま編集している枠
 
-/** 適性バッジ。ピッチのポジション名と同じ段(fit-a/b/c)で色を合わせる。 */
-function fitBadge(c,sub){
-  return '<span class="sl-pos fit-'+fitTier(c,sub)+'">'
-    +Math.round(slotFit(c,sub)*100)+'%</span>';
-}
+/**
+ * 枠に置いたときの**実効値**(OVR × 適性)と、その見せ方。
+ * 目減りしている段だけ色を付け、**数字そのもので損失が分かる**ようにする
+ * (→docs/06 §6.15)。100% = 素のまま / 75% = 黄 / 50% = 赤。
+ */
+const effOvr=(c,sub)=>Math.round(c.ovr*slotFit(c,sub));
+const effClass=(c,sub)=>({ a:"", b:" v-warn", c:" v-bad" })[fitTier(c,sub)];
 /**
  * 枠のピッカー。**適性 × OVR の高い順**に並べる(=そのまま推奨順になる)。
  * 既に他の枠にいる選手を選ぶと、その枠と**入れ替える**(同じ選手が二重に並ばない)。
@@ -291,11 +293,11 @@ function openSlot(ix){
         return '<div class="pick'+(c.id===S.squad[ix]?" on":"")+'" data-pick="'+c.id+'">'
           // 左端の「›」だけは**入れ替えずに詳細を開く**。行そのものは入れ替え。
           +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
-          +'<div class="pk-ovr">'+Math.round(c.ovr*slotFit(c,sub))+'</div>'
+          +'<div class="pk-ovr'+effClass(c,sub)+'">'+effOvr(c,sub)+'</div>'
           +'<div class="pk-b"><b>'+(isLoaned(c)?"":'<i class="own">★</i>')
             +esc(c.name)+'</b>'
-            +'<span>'+c.subs.join(" / ")+'　OVR '+c.ovr+'</span></div>'
-          +'<div class="pk-r">'+fitBadge(c,sub)
+            +'<span>'+c.subs.join(" / ")+'</span></div>'
+          +'<div class="pk-r">'
             +(at>=0&&at!==ix?'<span class="pk-at">'+slots[at][0]+'</span>':'')+'</div>'
         +'</div>';
       }).join("")+'</div>';
@@ -393,8 +395,8 @@ function renderDeck(){
       +'<div class="sl-pos'+(c?" fit-"+fitTier(c,sub):"")+'">'+sub+'</div>'
       // 丸の中は**適性を掛けた実効値**。素のOVRを出すと、50%の選手のほうが
       // 大きく見えて「置き間違いのほうが強い」という逆の読みになる。
-      +'<div class="sl-disc"'+(c?kitStyle(c):"")
-        +'>'+(c?Math.round(c.ovr*slotFit(c,sub)):"+")
+      +'<div class="sl-disc'+(c?effClass(c,sub):"")+'"'+(c?kitStyle(c):"")
+        +'>'+(c?effOvr(c,sub):"+")
         +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
     +'</div>';

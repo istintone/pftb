@@ -46,6 +46,10 @@
   --app-w: 402px;    /* 端末枠の幅 */
   --app-h: 874px;    /* 端末枠の最小高 */
   --tab-h: 62px;
+
+  /* ---- 実効値の色(枠適性で目減りしている段 → docs/06 §6.15) ---- */
+  --fit-warn: oklch(0.86 0.16 92);   /* メインのみ(0.75) 黄 */
+  --fit-bad:  oklch(0.72 0.20 27);   /* 不一致(0.50)     赤 */
 }
 
 *{ box-sizing:border-box }
@@ -698,6 +702,7 @@ body{
   padding:4px 8px; border-radius:5px; background:oklch(0.28 0.07 150);
   font:9px/1 var(--f-mono); color:oklch(1 0 0 / .62) }
 .fit-chip i{ font-style:normal }
+.fit-chip .pk-ovr{ flex:none; font:700 12px/1 var(--f-head); color:#fff }
 .sl-disc{
   position:relative; width:34px; height:34px; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
@@ -729,6 +734,9 @@ body{
   color:var(--text-dim); font:16px/1 var(--f-head);
 }
 .pk-i:active{ color:var(--accent) }
+/* 実効値。適性で目減りしている段だけ色を付け、数字そのもので損失を示す。 */
+.pk-ovr.v-warn,.sl-disc.v-warn{ color:var(--fit-warn) }
+.pk-ovr.v-bad, .sl-disc.v-bad { color:var(--fit-bad) }
 .pk-ovr{ flex:0 0 34px; text-align:center;
   font:700 16px/1 var(--f-head); color:var(--text) }   /* 適性を掛けた実効値 */
 .pk-b{ flex:1; min-width:0 }
