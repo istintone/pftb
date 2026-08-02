@@ -15,12 +15,13 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   assert.strictEqual(new Set(E.CLUBS.map(c => c.name)).size, 48, "クラブ名に重複が無い");
 
   // --- 国籍(→docs/03 §3.16) ---
-  assert.strictEqual(E.NATIONS.length, 16, "国籍は16");
-  assert.strictEqual(new Set(E.NATION_IDS).size, 16, "国籍IDに重複が無い");
+  assert.strictEqual(E.NATIONS.length, 17, "国籍は17(実在16か国 + 日本)");
+  assert.strictEqual(new Set(E.NATION_IDS).size, E.NATIONS.length, "国籍IDに重複が無い");
   for (const lg of E.LEAGUES) {
     const box = E.nationBox(lg);
     assert.ok(box.length > 0, lg.name + "の抽選箱が空でない");
-    assert.strictEqual(new Set(box).size, 16, lg.name + "はどの国籍からも選手が来うる");
+    assert.strictEqual(new Set(box).size, E.NATIONS.length,
+      lg.name + "はどの国籍からも選手が来うる");
     const homeShare = box.filter(n => n === lg.home).length / box.length;
     assert.ok(homeShare > 0.15 && homeShare < 0.75,
       lg.name + "の自国比率が極端でない: " + (homeShare * 100).toFixed(0) + "%");
@@ -69,10 +70,18 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
       worst = Math.max(worst, fam.length - new Set(fam).size);
       roster.forEach(c => natSeen.add(c.nation));
       // 選手の国籍は実在の16か国のいずれか
-      roster.forEach(c => assert.ok(E.nationById(c.nation), "国籍が実在する: " + c.nation));
+      roster.forEach(c => {
+        assert.ok(E.nationById(c.nation), "国籍が実在する: " + c.nation);
+        // 表示名の並び順は国籍が決める。姓は sur に持つので、末尾が姓とは限らない
+        const nat = E.nationById(c.nation);
+        assert.ok(c.sur, "姓を別に持っている: " + c.name);
+        assert.strictEqual(nat.order === "east" ? c.name.split(" ")[0] : c.name.split(" ").pop(),
+          c.sur, nat.name + "の並び順が正しい: " + c.name);
+      });
     }
     assert.strictEqual(worst, 0, "どのクラブにも同姓が並ばない");
-    assert.strictEqual(natSeen.size, 16, "48クラブ全体で16か国すべてに選手がいる");
+    assert.strictEqual(natSeen.size, E.NATIONS.length,
+      "48クラブ全体ですべての国籍に選手がいる");
     console.log("  姓:", Object.values(E.FAMILY).flat().length, "個 /",
       E.CLUBS.length, "クラブすべてで同姓なし / 出現国籍", natSeen.size);
   }

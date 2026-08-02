@@ -417,7 +417,9 @@ function renderDeck(){
   $("deckNote").innerHTML="クラブからの貸与 <b>"+loaned+"人</b>"
     +"　／　枠に合っていない選手 <b>"+off+"人</b>";
 }
-const shortName=c=>c.name.split(" ").slice(-1)[0];
+// 一覧やピッチに出す短い名前 = **姓**。表示名の並び順は国籍で変わる(日本は姓が先)ので、
+// 分割して末尾を取る方法は使えない。sur を持たない古いカードだけ従来どおり分割する。
+const shortName=c=>c.sur||c.name.split(" ").slice(-1)[0];
 
 // ---------- SEASON(任期スケジュール = クラブ進行の起点) ----------
 // card-eleven のキャリア画面にあたる位置づけ。就任から任期満了までを一望し、

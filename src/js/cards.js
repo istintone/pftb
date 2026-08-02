@@ -4,7 +4,24 @@
 // → docs/03-game-design.md §3.2.2(二層) / §3.4(D13 貸与)
 
 // 名前の素材。国ごとに雰囲気を変えるため、姓のプールを国に紐づける。
+// 名は既定でイニシャル1文字。日本のように形式が違う国籍は GIVEN_BY_NATION に持つ。
 const GIVEN=["A.","B.","C.","D.","E.","F.","G.","H.","J.","K.","L.","M.","N.","O.","P.","R.","S.","T.","V.","Y."];
+const GIVEN_BY_NATION={
+  jpn:["拓海","翔太","健太","亮介","直樹","大輔","悠斗","涼太","隼人","圭",
+       "諒","匠","陸斗","響","遥斗","蓮","湊","颯太","奏多","律"],
+};
+/**
+ * 表示名を組み立てる。並び順は国籍が持つ(→data.js の NATIONS.order)。
+ *   west(既定) … "A. スミス"   名 → 姓
+ *   east       … "秋山 拓海"   姓 → 名
+ * 姓は別途 card.sur に持たせる。**並び順が変わると末尾が姓とは限らない**ので、
+ * 表示名を分割して姓を取り出すやり方は使えない(→ui.js の shortName)。
+ */
+function makeName(rng,nation,family){
+  const given=rpick(rng,GIVEN_BY_NATION[nation]||GIVEN);
+  const nat=nationById(nation);
+  return (nat&&nat.order==="east")?(family+" "+given):(given+" "+family);
+}
 // 姓は**国籍ごと**に20個(計320個)。1クラブ16人は複数の国籍から集まるので、
 // makeRoster が姓が重ならないように配る(同じクラブに同姓が並ぶと見分けが付かない)。
 const FAMILY={
@@ -40,6 +57,8 @@ const FAMILY={
          "セック","タル","ンジャイ"],
   nga:  ["オコンクウォ","アデバヨ","オビ","エゼ","チュクウ","ンワチュク","オラデレ","アビオラ","イケチュクウ","オグ","バログン","アデクンレ","オニエカ","エメカ","ウチェ",
          "オルワセユン","アキンヨミ","オセイ","オカフォー","ンナジ"],
+  jpn:  ["秋山","石垣","上原","大津","加賀美","桐谷","剣崎","小早川","志賀","立花",
+         "鶴見","長瀬","成瀬","早瀬","深沢","藤堂","三上","望月","柳原","若槻"],
 };
 
 // 6桁のカードID。生成元(クラブ/パック)に依らず一意になるよう uid を回す。
@@ -132,10 +151,12 @@ function makeCard(rng,pos,opts={}){
   const skills=[];
   while(skills.length<n){ const s=rpick(rng,pool); if(!skills.includes(s))skills.push(s); }
   const subs=rollSubs(rng,pos,rarity);
+  const sur=opts.family||rpick(rng,FAMILY[nation]);
   return {
     id:nextCardId(),
-    // 姓は opts.family があればそれを使う(makeRoster が重複なしで配る)
-    name:rpick(rng,GIVEN)+" "+(opts.family||rpick(rng,FAMILY[nation])),
+    // 姓は makeRoster が重複なしで配る。並び順は国籍で変わる(日本は姓が先)
+    name:makeName(rng,nation,sur),
+    sur,                          // 姓。表示名から切り出せないので別に持つ
     pos,                          // メイン(大分類)
     subs,                         // サブ(複数)。subs[0] がプライマリ
     rarity, ovr:calcOvr(pos,st),

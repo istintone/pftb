@@ -197,6 +197,9 @@ const NATIONS=[
   { id:"uru",  name:"ウルグアイ",       abbr:"URU" },
   { id:"sen",  name:"セネガル",        abbr:"SEN" },
   { id:"nga",  name:"ナイジェリア",      abbr:"NGA" },
+  // order:"east" = 姓→名の並び。省略時は "west"(名→姓)。
+  // 名の形式も国籍ごとに変わる(西欧はイニシャル1文字、日本は漢字の名)。
+  { id:"jpn",  name:"日本",           abbr:"JPN", order:"east" },
 ];
 const nationById=id=>NATIONS.find(n=>n.id===id);
 const NATION_IDS=NATIONS.map(n=>n.id);

@@ -15,7 +15,7 @@ const LEAGUES=[
   { id:"ita", name:"セリエ",           country:"イタリア",          abbr:"ITA", tier:4, style:"堅守",    money:0.82,
     home:"ita", homeW:42, near:["arg","bra","fra","cro"] },
   { id:"ger", name:"ブンデス",          country:"ドイツ",           abbr:"GER", tier:3, style:"組織",    money:0.76,
-    home:"ger", homeW:55, near:["ned","den","bel","pol"] },
+    home:"ger", homeW:55, near:["ned","den","bel","pol","jpn"] },
   { id:"fra", name:"リーグアン",         country:"フランス",          abbr:"FRA", tier:2, style:"個",     money:0.66,
     home:"fra", homeW:45, near:["sen","bel","nga","por"] },
   { id:"sam", name:"カンピオナート",       country:"南米",            abbr:"SAM", tier:1, style:"創造",    money:0.50,
