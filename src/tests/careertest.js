@@ -94,6 +94,25 @@ function runSeason() {
     assert.ok(avg > 1.5 && avg < 5.0, "1試合の平均得点が現実的な範囲: " + avg.toFixed(2));
     assert.ok(drawPct > 0.08 && drawPct < 0.45, "引き分けの割合が極端でない: " + (drawPct * 100).toFixed(1) + "%");
     assert.ok(homePct > drawPct * 0.5, "ホームがある程度勝ち越す: " + (homePct * 100).toFixed(1) + "%");
+    // 上は「同じ編成同士・4-4-2」の値。実際のリーグは陣形がばらけるので、
+    // **リーグ全体の水準**も併せて見張る(こちらが遊ぶときに見える数字)。
+    // **6リーグすべて**を見る。1リーグだけだと陣形の偏りで倍近くぶれる(→docs/07 §7.13)
+    let lg = 0, lgN = 0, lgD = 0;
+    const mk = cid => ({ cards: E.bestXI(E.clubRoster(4242, cid), E.formFor(cid)),
+      form: E.formFor(cid), name: cid });
+    for (const id of E.LEAGUES.map(l => l.id)) {
+      const sides = E.clubsOf(id).map(c => mk(c.id));      // 編成は1回だけ作る
+      for (let i = 0; i < sides.length; i++) for (let j = 0; j < sides.length; j++) {
+        if (i === j) continue;
+        const r = E.resolveMatch(sides[i], sides[j], (i * 97 + j * 13) >>> 0);
+        lg += r.hg + r.ag; lgN++; if (r.hg === r.ag) lgD++;
+      }
+    }
+    const lgAvg = lg / lgN, lgDraw = lgD / lgN;
+    assert.ok(lgAvg > 2.0 && lgAvg < 4.0, "リーグ全体の平均得点が現実的: " + lgAvg.toFixed(2));
+    assert.ok(lgDraw > 0.15 && lgDraw < 0.40, "リーグ全体の引き分けが現実的: " + (lgDraw * 100).toFixed(1) + "%");
+    console.log("リーグ全体OK 平均", lgAvg.toFixed(2), "点 / 引き分け", (lgDraw * 100).toFixed(1) + "%",
+      "(" + lgN + "試合・実際の陣形)");
     console.log("試合結果の分布OK 平均", avg.toFixed(2), "点 / 引き分け",
       (drawPct * 100).toFixed(1) + "% / ホーム勝率", (homePct * 100).toFixed(1) + "%");
   }
@@ -185,6 +204,51 @@ function runSeason() {
     for (const s of subs) assert.ok(E.ORIGINS[s], s + " のチャンネルがある");
     console.log("起点チャンネルOK", Object.keys(E.ORIGINS).length, "サブポジ ×3 =",
       Object.keys(E.ORIGINS).length * 3, "種 / 陣形の全", subs.size, "サブポジを網羅");
+  }
+
+  // ---------- 終点チャンネル(D34 → docs/07 §7.13) ----------
+  {
+    const subs = new Set();
+    Object.values(E.FORMATIONS).forEach(f => f.forEach(([s2]) => subs.add(s2)));
+    for (const s2 of subs) assert.ok(E.FINISHES[s2], s2 + " の終点チャンネルがある");
+    for (const [sub, list] of Object.entries(E.FINISHES)) {
+      assert.strictEqual(list.length, 3, sub + " の終点チャンネルは3種");
+      assert.strictEqual(new Set(list.map(c => c.stat)).size, 3,
+        sub + " の3種は別々の能力で競う");
+      for (const c of list) {
+        assert.ok(E.STAT_KEYS.includes(c.stat), sub + "/" + c.id + " の stat が能力キー");
+        assert.ok(c.k > 0.5 && c.k < 1.5, sub + "/" + c.id + " の k が常識的な範囲");
+        assert.ok(c.acc > 0.5 && c.acc < 1.5, sub + "/" + c.id + " の acc が常識的な範囲");
+        if (c.minH != null) assert.ok(c.minH > 0.5 && c.minH < 1,
+          sub + "/" + c.id + " の minH は前線側");
+      }
+      // 威力と精度はトレードオフ: 最も強く振る手が最も正確ではない
+      const hardest = list.reduce((a, b) => b.k > a.k ? b : a);
+      const truest = list.reduce((a, b) => b.acc > a.acc ? b : a);
+      assert.notStrictEqual(hardest.id, truest.id, sub + " は威力と精度が両立しない");
+    }
+    // minH は「近くまで入らないと選べない」。遠くからは必ず除かれる
+    const rng = E.mulberry32(7);
+    const st = { c: { atk: 15, pow: 15, tec: 15, spd: 15, def: 5, sta: 15 },
+      sub: "ST", role: "FW", fit: 1, stam: 1 };
+    const far = new Set(), near = new Set();
+    for (let i = 0; i < 300; i++) far.add(E.pickFinish(rng, st, 0.40).id);
+    for (let i = 0; i < 300; i++) near.add(E.pickFinish(rng, st, 0.95).id);
+    for (const f of E.FINISHES.ST) if (f.minH != null)
+      assert.ok(!far.has(f.id), f.id + " は遠くからは選べない");
+    assert.ok(near.size > far.size, "近いほど選べる手が増える: " + far.size + " → " + near.size);
+
+    // 撃ち方がイベントに残り、実況と演出から引ける
+    const side = id => ({ cards: E.bestXI(E.clubRoster(4242, id), E.formFor(id)),
+      form: E.formFor(id), name: id });
+    const M = E.simulateMatch(side("eng-1"), side("sam-8"), 6120);
+    const shots = M.events.filter(e => ["goal", "save", "miss", "block"].includes(e.type));
+    assert.ok(shots.every(e => e.flabel), "すべてのシュートに撃ち方が載っている");
+    const kinds = new Set(shots.map(e => e.fin));
+    assert.ok(kinds.size >= 5, "1試合で複数の撃ち方が出る: " + kinds.size + " 種");
+    console.log("終点チャンネルOK", Object.keys(E.FINISHES).length, "サブポジ ×3 =",
+      Object.keys(E.FINISHES).length * 3, "種 / 1試合で", kinds.size, "種 / 遠→近で選択肢",
+      far.size + "→" + near.size);
   }
 
   // ---------- 守備チャンネル(D33 → docs/07 §7.12) ----------

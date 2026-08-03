@@ -828,6 +828,8 @@ let _lastResult=null;
 const mPlayer=(M,side,id)=>playerOf(M,side,id);
 const mName=p=>p?esc(shortName(p.c)):"選手";
 
+/** シュートの呼び方。終点チャンネルの名前がそのまま実況の語になる(→docs/07 §7.13)。 */
+const shotWord=e=>e.flabel||"シュート";
 /** ボールのある高さを、実況で使える場所の言葉に直す。 */
 const zoneOf=h=>h<0.30?"自陣":h<0.55?"中盤":h<0.78?"敵陣":"ゴール前";
 /**
@@ -907,11 +909,13 @@ function matchLine(e,M){
     case "setpiece": return { text:lineSet(M,e,p), cls:side };
     case "aerial":   return { text:e.ok?mName(p)+"が競り勝った！":mName(vs)+"が競り勝ってクリア",
                         cls:side };
-    case "block":    return { text:mName(p)+"のシュート！"+mName(vs)+"がブロック", cls:side };
-    case "miss":     return { text:mName(p)+"のシュートは枠を外れた", cls:side };
-    case "save":     return { text:"<b>"+mName(p)+"</b>のシュート！"+mName(gk)+"がセーブ", cls:side };
+    // **どう撃ったか**を出す(→docs/07 §7.13)。「シュート」だけだと
+    // ヘディングもミドルもGKとの一対一も同じ文になり、局面が読めない
+    case "block":    return { text:mName(p)+"の"+shotWord(e)+"！"+mName(vs)+"がブロック", cls:side };
+    case "miss":     return { text:mName(p)+"の"+shotWord(e)+"は枠を外れた", cls:side };
+    case "save":     return { text:"<b>"+mName(p)+"</b>の"+shotWord(e)+"！"+mName(gk)+"がセーブ", cls:side };
     case "rebound":  return { text:e.ok?mName(p)+"がこぼれ球に詰める！":"こぼれ球は"+mName(vs)+"がクリア", cls:side };
-    case "goal":     return { text:"⚽ <b>"+mName(p)+" ゴール！</b>"
+    case "goal":     return { text:"⚽ <b>"+mName(p)+" "+shotWord(e)+"でゴール！</b>"
                         +(e.assist?"（"+mName(mPlayer(M,e.side,e.assist))+"）":"")
                         +"　"+e.hg+" - "+e.ag, cls:"goal" };
     case "sub":      return { text:"🔄 交代 "+mName(mPlayer(M,e.side,e.in))+" ← "
@@ -1188,7 +1192,7 @@ function cutShot(e,sc,keeper,word,scored,assist){
   const kSide=e.side==="H"?"A":"H";
   const ms=(e.type==="goal"?P.goalMs:P.cutMs)+P.shotHold;
   cutShow('<div class="cut">'
-    +'<div class="cut-hd">SHOT</div>'
+    +'<div class="cut-hd">'+esc(e.flabel||"SHOT")+'</div>'
     +'<div class="cut-row">'
       +cutFig(sc,e.side,"L","ATK "+sc.c.atk+" / POW "+sc.c.pow)
       +'<div class="cut-vs">VS</div>'

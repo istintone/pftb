@@ -189,10 +189,16 @@ const STEPS = [
     await ctx.shot("07d-cutin-vs-1");   // 両者が入ってきたところ
     await ctx.wait(600);
     await ctx.shot("07d-cutin-vs-2");   // 勝敗が表れ、決着語が出たところ
-    await ctx.js(`(()=>{ const H=_M.home;
+    ctx.log("  シュートの見出し:", await ctx.js(`(()=>{ const H=_M.home;
       const sc=H.players.find(p=>p.role==='FW'), as=H.players.find(p=>p.role==='MF');
       const gk=_M.away.players.find(p=>p.role==='GK');
-      cutShot({side:'H',type:'goal',hg:1,ag:0},sc,gk,'GOAL!!',true,as); })()`);
+      // 終点チャンネルの名前が見出しになる(→docs/07 §7.15)
+      const fin=(FINISHES[sc.sub]||FINISHES.CMF)[0];
+      cutShot({side:'H',type:'goal',hg:1,ag:0,fin:fin.id,flabel:fin.label},sc,gk,'GOAL!!',true,as);
+      const hd=document.querySelector('#mCut .cut-hd').textContent;
+      if(hd!==fin.label)throw new Error('シュートの見出しが終点チャンネル名でない: '+hd);
+      return hd;
+    })()`));
     await ctx.wait(300);
     await ctx.shot("07e-cutin-shot");    // まず「シュート!」
     await ctx.wait(1250);

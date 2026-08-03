@@ -155,15 +155,39 @@ function nearOf(h){
  * ブロック — **GKの前に守備者が身体を入れる**。シュートの最初の関門。
  * 撃ち抜く側は tec(コースを作る)と atk、止める側は def と pow。
  */
-function resolveBlock(rng,atk,df,D){
+function resolveBlock(rng,atk,df,D,fin){
   const aSc=(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
   const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*rr(rng);
-  return dSc>aSc*TUNING.th.block;                          // 守備側が勝てばブロック
+  // blk が大きい手ほど当たらない(コースを狙う / GKと一対一 など)
+  return dSc>aSc*TUNING.th.block*(fin&&fin.blk||1);
+}
+// ---------- 終点チャンネル(→docs/07 §7.13) ----------
+// **どう撃つか**を1枚のチャンネルにまとめる。起点・守備とまったく同じ構造で、
+// 選ばれた札が「威力・枠に飛ぶ率・ブロックのされにくさ」を全部決める。
+// これが無かった頃はシュートが1種類しかなく、ヘディングもミドルも同じ計算だった。
+
+/**
+ * 終点チャンネルを選ぶ。**その選手が得意な手ほど選ばれやすい**。
+ * minH を持つ手(ヘディング・流し込み)は、近くまで入っていないと選べない。
+ */
+function pickFinish(rng,p,h){
+  const all=FINISHES[p.sub]||FINISHES[p.role==="GK"?"GK":"CMF"]||FINISHES.CMF;
+  const list=all.filter(f=>f.minH==null||h>=f.minH);
+  return pickW(rng,list.length?list:all,f=>eff(p,f.stat));
+}
+/** 攻撃側のシュートスコア。**atk が幹、チャンネルの能力が枝**(起点と同じ形)。 */
+function finishScore(atk,fin){
+  const w=fin.w!=null?fin.w:TUNING.shot.finStat;
+  return eff(atk,"atk")*(1-w)+eff(atk,fin.stat)*w;
 }
 /** 枠に飛ぶか。**技術と距離**で決まる。GKは関与しない。 */
-function onTarget(rng,atk,h){
+function onTarget(rng,atk,h,fin){
   const S=TUNING.shot;
-  return rng()<(S.accBase+eff(atk,"tec")/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
+  if(fin&&fin.fixAcc!=null)return rng()<fin.fixAcc;          // PK/ヘディングは位置が決まっている
+  if(fin&&fin.tecAcc)                                        // 直接FKは距離より技術
+    return rng()<S.fkAccBase*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
+  const acc=fin?fin.acc||1:1;
+  return rng()<acc*(S.accBase+eff(atk,"tec")/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
 }
 /**
  * 枠内のシュート vs GK。
@@ -171,24 +195,11 @@ function onTarget(rng,atk,h){
  * それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.10)。
  * 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
  */
-function resolveShot(rng,atk,gk,h,sp){
-  const S=TUNING.shot, SP=TUNING.sp;
-  // セットプレーは**止まったボールを蹴る / 完全にフリーで頭に当てる**ので威力が上がる
-  const k=sp==="pk"?SP.pkK:sp==="fk"?SP.fkK:1;
-  const base=sp==="hdr"?(eff(atk,"pow")*0.6+eff(atk,"atk")*0.4)
-            :sp==="fk" ?(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)
-                       :(eff(atk,"atk")*0.7+eff(atk,"pow")*0.3);
-  const sSc=base*Math.pow(nearOf(h),S.rangePow)*k*rr(rng);
+function resolveShot(rng,atk,gk,h,fin){
+  const S=TUNING.shot;
+  const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)*rr(rng);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)*rr(rng);
   return sSc>gSc*TUNING.th.shot;
-}
-/** 枠に飛ぶか。セットプレーは種類ごとに固有の精度を持つ(距離の効き方が違う)。 */
-function onTargetSp(rng,atk,h,sp){
-  const SP=TUNING.sp;
-  if(sp==="pk") return rng()<SP.pkAcc;
-  if(sp==="hdr")return rng()<SP.hdrAcc;
-  if(sp==="fk") return rng()<SP.fkAcc*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
-  return onTarget(rng,atk,h);
 }
 // ---------- セットプレー(→docs/07 §7.11) ----------
 // **ファウルは守備側が競り合いに勝った瞬間にしか起きない。** 独立した抽選にすると
@@ -706,14 +717,16 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
   const F=TUNING.mom, SP=TUNING.sp, gk=pickGK(D);
   const pos=[Math.round(tg.x),yOfH(tg.h)];
   const d=depth||0, A=att||{ sp:0 };
+  // **どう撃つか**をここで1回だけ引く。以降の3段はすべてこの札を見る(→docs/07 §7.13)
+  const fin=sp?SET_FINISH[sp]:pickFinish(rng,shooter,tg.h);
   const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100, depth:d,
-    sp:sp||null };
+    sp:sp||null, fin:fin.id, flabel:fin.label };
   shooter.stat.shots++;
   const more=A.sp<SP.maxSp;                                  // まだセットプレーを重ねてよいか
 
   // ① ブロック — 打点に近い守備者が身体を入れる(PKは壁もブロックも無い)
-  const blocker=sp==="pk"?null:matchupDefender(rng,tg.h,tg.x,D);
-  if(blocker&&resolveBlock(rng,shooter,blocker,D)){
+  const blocker=fin.noBlk?null:matchupDefender(rng,tg.h,tg.x,D);
+  if(blocker&&resolveBlock(rng,shooter,blocker,D,fin)){
     blocker.stat.blocks=(blocker.stat.blocks||0)+1; blocker.stat.inv++;
     addMom(M,D.side,F.block);
     push(Object.assign({ type:"block", vs:blocker.c.id },base));
@@ -726,7 +739,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
     return M.events.slice(from);
   }
   // ② 枠外 — 技術と距離。GKは関与しない。セットプレーは種類ごとに精度が決まっている
-  if(!onTargetSp(rng,shooter,tg.h,sp)){
+  if(!onTarget(rng,shooter,tg.h,fin)){
     addMom(M,D.side,F.miss);
     push(Object.assign({ type:"miss" },base));
     return M.events.slice(from);
@@ -735,7 +748,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
   gk.stat.inv++;
 
   // ③ GK
-  if(resolveShot(rng,shooter,gk,tg.h,sp)){
+  if(resolveShot(rng,shooter,gk,tg.h,fin)){
     T.score++; shooter.stat.goals++;
     if(assist)assist.stat.assists++;
     addMom(M,T.side,F.goal);

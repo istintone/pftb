@@ -372,6 +372,65 @@ const COUNTERS={
        {id:"wgHook", label:"引っ掛け",     stat:"pow", k:0.94, foul:0.50}],
 };
 
+// --- 終点のチャンネル(サブポジごとに3種 → docs/07 §7.13) ---
+// **どう撃つか**。起点・守備と同じ構造で、サブポジションごとに持ち札が変わる。
+// これが無かった頃はシュートが1種類しかなく、「ヘディングで押し込む」も
+// 「GKと一対一」も「30mのミドル」も、まったく同じ計算になっていた。
+//   stat … atk と混ぜる能力。**この能力が高いほど選ばれやすく、決まりやすい**
+//   k    … シュートの威力(GKとの勝負に掛かる)
+//   acc  … 枠に飛ぶ率の倍率。振り抜くほど外れやすい
+//   blk  … ブロックのされにくさ。**大きいほど当たらない**(コースを狙う手ほど大きい)
+//   minH … この高さより手前では選べない(ヘディングや流し込みは近くでしか撃てない)
+const FINISHES={
+  GK: [{id:"gkLob",  label:"ロングシュート", stat:"pow", k:0.85, acc:0.70, blk:1.20},
+       {id:"gkPlace",label:"コース狙い",   stat:"tec", k:0.86, acc:1.08, blk:1.00},
+       {id:"gkRush", label:"走り込み",     stat:"spd", k:0.95, acc:0.92, blk:0.95}],
+  CB: [{id:"cbHead", label:"ヘディング",   stat:"pow", k:1.06, acc:0.90, blk:1.15, minH:0.82},
+       {id:"cbLoose",label:"こぼれ球の一撃", stat:"spd", k:0.95, acc:0.95, blk:0.90},
+       {id:"cbLong", label:"強引な一撃", stat:"tec", k:0.90, acc:0.80, blk:1.10}],
+  LSB:[{id:"sbRun",  label:"走り込みの合わせ",stat:"spd",k:1.00, acc:1.00, blk:0.95, minH:0.78},
+       {id:"sbFar",  label:"ファーへの流し込み",stat:"tec", k:0.95, acc:1.10, blk:1.05},
+       {id:"sbHit",  label:"強引な一撃", stat:"pow", k:1.02, acc:0.82, blk:1.05}],
+  RSB:[{id:"sbRun",  label:"走り込みの合わせ",stat:"spd",k:1.00, acc:1.00, blk:0.95, minH:0.78},
+       {id:"sbFar",  label:"ファーへの流し込み",stat:"tec", k:0.95, acc:1.10, blk:1.05},
+       {id:"sbHit",  label:"強引な一撃", stat:"pow", k:1.02, acc:0.82, blk:1.05}],
+  DMF:[{id:"dmMid",  label:"ミドルシュート", stat:"pow", k:1.05, acc:0.80, blk:1.15},
+       {id:"dmPlace",label:"コース狙い",   stat:"tec", k:0.95, acc:1.08, blk:1.00},
+       {id:"dmLoose",label:"こぼれ球狙い", stat:"spd", k:0.95, acc:1.00, blk:0.90}],
+  CMF:[{id:"cmMid",  label:"ミドルシュート", stat:"pow", k:1.05, acc:0.82, blk:1.15},
+       {id:"cmSlot", label:"流し込み",       stat:"tec", k:0.96, acc:1.12, blk:1.00, minH:0.72},
+       {id:"cmRun",  label:"走り込み", stat:"spd", k:1.00, acc:0.98, blk:0.92}],
+  OMF:[{id:"omKnuck",label:"無回転ミドル",   stat:"pow", k:1.10, acc:0.78, blk:1.20},
+       {id:"omPlace",label:"コース狙い",   stat:"tec", k:1.00, acc:1.10, blk:1.00},
+       {id:"omDrib", label:"ドリブルシュート",stat:"spd",k:1.00, acc:0.95, blk:0.88}],
+  LMF:[{id:"wmCurl", label:"巻いたシュート",     stat:"tec", k:1.02, acc:1.06, blk:1.05},
+       {id:"wmNear", label:"ニアへの一撃", stat:"pow", k:1.08, acc:0.85, blk:1.00},
+       {id:"wmDive", label:"飛び込みヘッド",stat:"spd",k:1.00,acc:1.00, blk:0.92, minH:0.80}],
+  RMF:[{id:"wmCurl", label:"巻いたシュート",     stat:"tec", k:1.02, acc:1.06, blk:1.05},
+       {id:"wmNear", label:"ニアへの一撃", stat:"pow", k:1.08, acc:0.85, blk:1.00},
+       {id:"wmDive", label:"飛び込みヘッド",stat:"spd",k:1.00,acc:1.00, blk:0.92, minH:0.80}],
+  CF: [{id:"cfTurn", label:"反転シュート",   stat:"tec", k:1.05, acc:1.02, blk:1.00},
+       {id:"cfPush", label:"押し込み",       stat:"pow", k:1.12, acc:1.05, blk:0.85, minH:0.84},
+       {id:"cfThru", label:"裏からの流し込み",stat:"spd",k:1.04,acc:1.08, blk:1.05, minH:0.74}],
+  ST: [{id:"stOne",  label:"ワンタッチシュート",stat:"tec",k:1.06, acc:1.04, blk:0.95, minH:0.78},
+       {id:"stHit",  label:"叩きつけ",       stat:"pow", k:1.14, acc:0.92, blk:1.00},
+       {id:"stSolo", label:"GKとの一対一",   stat:"spd", k:1.10, acc:1.06, blk:1.25, minH:0.80}],
+  LWG:[{id:"wgCurl", label:"カットインシュート",stat:"tec",k:1.06, acc:1.04, blk:1.08},
+       {id:"wgNear", label:"ニア狙い",     stat:"pow", k:1.08, acc:0.88, blk:1.00},
+       {id:"wgSpeed",label:"振り切りシュート", stat:"spd", k:1.02, acc:0.98, blk:0.90}],
+  RWG:[{id:"wgCurl", label:"カットインシュート",stat:"tec",k:1.06, acc:1.04, blk:1.08},
+       {id:"wgNear", label:"ニア狙い",     stat:"pow", k:1.08, acc:0.88, blk:1.00},
+       {id:"wgSpeed",label:"振り切りシュート", stat:"spd", k:1.02, acc:0.98, blk:0.90}],
+};
+// セットプレーの終点(→§7.11)。位置も状況も決まっているので、抽選せず固定で引く。
+//   fixAcc … 枠に飛ぶ率そのもの(通常の技術×距離の式を使わない)
+//   noBlk  … 壁もブロックも無い
+const SET_FINISH={
+  pk: {id:"pk", label:"ペナルティキック", stat:"tec", w:0.70, k:1.62, fixAcc:0.86, noBlk:true},
+  fk: {id:"fk", label:"直接フリーキック", stat:"tec", w:0.50, k:1.15, acc:1.00, blk:1.00, tecAcc:true},
+  hdr:{id:"hdr",label:"ヘディング",       stat:"pow", w:0.40, k:1.00, fixAcc:0.50, blk:1.00},
+};
+
 // --- 打ち手(各節に1つ選ぶ。→docs/03 §3.2.3) ---
 // WCCF を踏襲した3種。**効果の詳細は D16 で決める**ため、ここでは選択肢の定義だけを持つ。
 // 1手 = 1エントリなので、後から足すのも効果を実装するのもこの表を触ればよい。
@@ -456,9 +515,9 @@ const TUNING={
   //   maxSp              … 1回の攻撃で連鎖できるセットプレーの上限(CK→CK の暴走止め)
   //   fkH                … この高さ未満のファウルは蹴らない(カードだけ引いて攻撃終了)
   sp:{ foulK:1.00, foulBlock:0.055, boxH:0.92, fkH:0.50,
-       pkH:0.97, pkAcc:0.86, pkK:1.62,
-       fkDirectH:0.62, fkDirect:0.55, fkK:1.15, fkAcc:0.62,
-       crossH:0.93, aerialPow:0.65, aerialK:0.85, hdrAcc:0.50,
+       pkH:0.97,
+       fkDirectH:0.62, fkDirect:0.55,
+       crossH:0.93, aerialPow:0.65, aerialK:0.85,
        ckOnBlock:0.34, ckOnSave:0.28, maxSp:2,
        yellow:0.50, pkYellow:0.60, red:0.006, pkRed:0.025,
        bookedShy:3.0, minPlayers:8 },
@@ -469,6 +528,7 @@ const TUNING={
   //   rebound                  セーブがこぼれる率(そのあと詰める勝負になる)
   shot:{ deadZone:0.25, minRange:0.04, rangePow:1.00,
          gkDef:0.65, gkPow:0.20, gkTec:0.15,
+         finStat:0.35, fkAccBase:0.62,
          accBase:0.30, accTec:0.45, accRange:0.55, rebound:0.30,
          reboundH:0.95, reboundMax:4 },  // 詰める位置(ゴール前) / 連続の上限(安全網)
   // 各スコアに乗る揺らぎ rr() = min + random×span

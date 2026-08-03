@@ -1860,6 +1860,65 @@ const COUNTERS={
        {id:"wgHook", label:"引っ掛け",     stat:"pow", k:0.94, foul:0.50}],
 };
 
+// --- 終点のチャンネル(サブポジごとに3種 → docs/07 §7.13) ---
+// **どう撃つか**。起点・守備と同じ構造で、サブポジションごとに持ち札が変わる。
+// これが無かった頃はシュートが1種類しかなく、「ヘディングで押し込む」も
+// 「GKと一対一」も「30mのミドル」も、まったく同じ計算になっていた。
+//   stat … atk と混ぜる能力。**この能力が高いほど選ばれやすく、決まりやすい**
+//   k    … シュートの威力(GKとの勝負に掛かる)
+//   acc  … 枠に飛ぶ率の倍率。振り抜くほど外れやすい
+//   blk  … ブロックのされにくさ。**大きいほど当たらない**(コースを狙う手ほど大きい)
+//   minH … この高さより手前では選べない(ヘディングや流し込みは近くでしか撃てない)
+const FINISHES={
+  GK: [{id:"gkLob",  label:"ロングシュート", stat:"pow", k:0.85, acc:0.70, blk:1.20},
+       {id:"gkPlace",label:"コース狙い",   stat:"tec", k:0.86, acc:1.08, blk:1.00},
+       {id:"gkRush", label:"走り込み",     stat:"spd", k:0.95, acc:0.92, blk:0.95}],
+  CB: [{id:"cbHead", label:"ヘディング",   stat:"pow", k:1.06, acc:0.90, blk:1.15, minH:0.82},
+       {id:"cbLoose",label:"こぼれ球の一撃", stat:"spd", k:0.95, acc:0.95, blk:0.90},
+       {id:"cbLong", label:"強引な一撃", stat:"tec", k:0.90, acc:0.80, blk:1.10}],
+  LSB:[{id:"sbRun",  label:"走り込みの合わせ",stat:"spd",k:1.00, acc:1.00, blk:0.95, minH:0.78},
+       {id:"sbFar",  label:"ファーへの流し込み",stat:"tec", k:0.95, acc:1.10, blk:1.05},
+       {id:"sbHit",  label:"強引な一撃", stat:"pow", k:1.02, acc:0.82, blk:1.05}],
+  RSB:[{id:"sbRun",  label:"走り込みの合わせ",stat:"spd",k:1.00, acc:1.00, blk:0.95, minH:0.78},
+       {id:"sbFar",  label:"ファーへの流し込み",stat:"tec", k:0.95, acc:1.10, blk:1.05},
+       {id:"sbHit",  label:"強引な一撃", stat:"pow", k:1.02, acc:0.82, blk:1.05}],
+  DMF:[{id:"dmMid",  label:"ミドルシュート", stat:"pow", k:1.05, acc:0.80, blk:1.15},
+       {id:"dmPlace",label:"コース狙い",   stat:"tec", k:0.95, acc:1.08, blk:1.00},
+       {id:"dmLoose",label:"こぼれ球狙い", stat:"spd", k:0.95, acc:1.00, blk:0.90}],
+  CMF:[{id:"cmMid",  label:"ミドルシュート", stat:"pow", k:1.05, acc:0.82, blk:1.15},
+       {id:"cmSlot", label:"流し込み",       stat:"tec", k:0.96, acc:1.12, blk:1.00, minH:0.72},
+       {id:"cmRun",  label:"走り込み", stat:"spd", k:1.00, acc:0.98, blk:0.92}],
+  OMF:[{id:"omKnuck",label:"無回転ミドル",   stat:"pow", k:1.10, acc:0.78, blk:1.20},
+       {id:"omPlace",label:"コース狙い",   stat:"tec", k:1.00, acc:1.10, blk:1.00},
+       {id:"omDrib", label:"ドリブルシュート",stat:"spd",k:1.00, acc:0.95, blk:0.88}],
+  LMF:[{id:"wmCurl", label:"巻いたシュート",     stat:"tec", k:1.02, acc:1.06, blk:1.05},
+       {id:"wmNear", label:"ニアへの一撃", stat:"pow", k:1.08, acc:0.85, blk:1.00},
+       {id:"wmDive", label:"飛び込みヘッド",stat:"spd",k:1.00,acc:1.00, blk:0.92, minH:0.80}],
+  RMF:[{id:"wmCurl", label:"巻いたシュート",     stat:"tec", k:1.02, acc:1.06, blk:1.05},
+       {id:"wmNear", label:"ニアへの一撃", stat:"pow", k:1.08, acc:0.85, blk:1.00},
+       {id:"wmDive", label:"飛び込みヘッド",stat:"spd",k:1.00,acc:1.00, blk:0.92, minH:0.80}],
+  CF: [{id:"cfTurn", label:"反転シュート",   stat:"tec", k:1.05, acc:1.02, blk:1.00},
+       {id:"cfPush", label:"押し込み",       stat:"pow", k:1.12, acc:1.05, blk:0.85, minH:0.84},
+       {id:"cfThru", label:"裏からの流し込み",stat:"spd",k:1.04,acc:1.08, blk:1.05, minH:0.74}],
+  ST: [{id:"stOne",  label:"ワンタッチシュート",stat:"tec",k:1.06, acc:1.04, blk:0.95, minH:0.78},
+       {id:"stHit",  label:"叩きつけ",       stat:"pow", k:1.14, acc:0.92, blk:1.00},
+       {id:"stSolo", label:"GKとの一対一",   stat:"spd", k:1.10, acc:1.06, blk:1.25, minH:0.80}],
+  LWG:[{id:"wgCurl", label:"カットインシュート",stat:"tec",k:1.06, acc:1.04, blk:1.08},
+       {id:"wgNear", label:"ニア狙い",     stat:"pow", k:1.08, acc:0.88, blk:1.00},
+       {id:"wgSpeed",label:"振り切りシュート", stat:"spd", k:1.02, acc:0.98, blk:0.90}],
+  RWG:[{id:"wgCurl", label:"カットインシュート",stat:"tec",k:1.06, acc:1.04, blk:1.08},
+       {id:"wgNear", label:"ニア狙い",     stat:"pow", k:1.08, acc:0.88, blk:1.00},
+       {id:"wgSpeed",label:"振り切りシュート", stat:"spd", k:1.02, acc:0.98, blk:0.90}],
+};
+// セットプレーの終点(→§7.11)。位置も状況も決まっているので、抽選せず固定で引く。
+//   fixAcc … 枠に飛ぶ率そのもの(通常の技術×距離の式を使わない)
+//   noBlk  … 壁もブロックも無い
+const SET_FINISH={
+  pk: {id:"pk", label:"ペナルティキック", stat:"tec", w:0.70, k:1.62, fixAcc:0.86, noBlk:true},
+  fk: {id:"fk", label:"直接フリーキック", stat:"tec", w:0.50, k:1.15, acc:1.00, blk:1.00, tecAcc:true},
+  hdr:{id:"hdr",label:"ヘディング",       stat:"pow", w:0.40, k:1.00, fixAcc:0.50, blk:1.00},
+};
+
 // --- 打ち手(各節に1つ選ぶ。→docs/03 §3.2.3) ---
 // WCCF を踏襲した3種。**効果の詳細は D16 で決める**ため、ここでは選択肢の定義だけを持つ。
 // 1手 = 1エントリなので、後から足すのも効果を実装するのもこの表を触ればよい。
@@ -1944,9 +2003,9 @@ const TUNING={
   //   maxSp              … 1回の攻撃で連鎖できるセットプレーの上限(CK→CK の暴走止め)
   //   fkH                … この高さ未満のファウルは蹴らない(カードだけ引いて攻撃終了)
   sp:{ foulK:1.00, foulBlock:0.055, boxH:0.92, fkH:0.50,
-       pkH:0.97, pkAcc:0.86, pkK:1.62,
-       fkDirectH:0.62, fkDirect:0.55, fkK:1.15, fkAcc:0.62,
-       crossH:0.93, aerialPow:0.65, aerialK:0.85, hdrAcc:0.50,
+       pkH:0.97,
+       fkDirectH:0.62, fkDirect:0.55,
+       crossH:0.93, aerialPow:0.65, aerialK:0.85,
        ckOnBlock:0.34, ckOnSave:0.28, maxSp:2,
        yellow:0.50, pkYellow:0.60, red:0.006, pkRed:0.025,
        bookedShy:3.0, minPlayers:8 },
@@ -1957,6 +2016,7 @@ const TUNING={
   //   rebound                  セーブがこぼれる率(そのあと詰める勝負になる)
   shot:{ deadZone:0.25, minRange:0.04, rangePow:1.00,
          gkDef:0.65, gkPow:0.20, gkTec:0.15,
+         finStat:0.35, fkAccBase:0.62,
          accBase:0.30, accTec:0.45, accRange:0.55, rebound:0.30,
          reboundH:0.95, reboundMax:4 },  // 詰める位置(ゴール前) / 連続の上限(安全網)
   // 各スコアに乗る揺らぎ rr() = min + random×span
@@ -2906,15 +2966,39 @@ function nearOf(h){
  * ブロック — **GKの前に守備者が身体を入れる**。シュートの最初の関門。
  * 撃ち抜く側は tec(コースを作る)と atk、止める側は def と pow。
  */
-function resolveBlock(rng,atk,df,D){
+function resolveBlock(rng,atk,df,D,fin){
   const aSc=(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
   const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*rr(rng);
-  return dSc>aSc*TUNING.th.block;                          // 守備側が勝てばブロック
+  // blk が大きい手ほど当たらない(コースを狙う / GKと一対一 など)
+  return dSc>aSc*TUNING.th.block*(fin&&fin.blk||1);
+}
+// ---------- 終点チャンネル(→docs/07 §7.13) ----------
+// **どう撃つか**を1枚のチャンネルにまとめる。起点・守備とまったく同じ構造で、
+// 選ばれた札が「威力・枠に飛ぶ率・ブロックのされにくさ」を全部決める。
+// これが無かった頃はシュートが1種類しかなく、ヘディングもミドルも同じ計算だった。
+
+/**
+ * 終点チャンネルを選ぶ。**その選手が得意な手ほど選ばれやすい**。
+ * minH を持つ手(ヘディング・流し込み)は、近くまで入っていないと選べない。
+ */
+function pickFinish(rng,p,h){
+  const all=FINISHES[p.sub]||FINISHES[p.role==="GK"?"GK":"CMF"]||FINISHES.CMF;
+  const list=all.filter(f=>f.minH==null||h>=f.minH);
+  return pickW(rng,list.length?list:all,f=>eff(p,f.stat));
+}
+/** 攻撃側のシュートスコア。**atk が幹、チャンネルの能力が枝**(起点と同じ形)。 */
+function finishScore(atk,fin){
+  const w=fin.w!=null?fin.w:TUNING.shot.finStat;
+  return eff(atk,"atk")*(1-w)+eff(atk,fin.stat)*w;
 }
 /** 枠に飛ぶか。**技術と距離**で決まる。GKは関与しない。 */
-function onTarget(rng,atk,h){
+function onTarget(rng,atk,h,fin){
   const S=TUNING.shot;
-  return rng()<(S.accBase+eff(atk,"tec")/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
+  if(fin&&fin.fixAcc!=null)return rng()<fin.fixAcc;          // PK/ヘディングは位置が決まっている
+  if(fin&&fin.tecAcc)                                        // 直接FKは距離より技術
+    return rng()<S.fkAccBase*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
+  const acc=fin?fin.acc||1:1;
+  return rng()<acc*(S.accBase+eff(atk,"tec")/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
 }
 /**
  * 枠内のシュート vs GK。
@@ -2922,24 +3006,11 @@ function onTarget(rng,atk,h){
  * それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.10)。
  * 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
  */
-function resolveShot(rng,atk,gk,h,sp){
-  const S=TUNING.shot, SP=TUNING.sp;
-  // セットプレーは**止まったボールを蹴る / 完全にフリーで頭に当てる**ので威力が上がる
-  const k=sp==="pk"?SP.pkK:sp==="fk"?SP.fkK:1;
-  const base=sp==="hdr"?(eff(atk,"pow")*0.6+eff(atk,"atk")*0.4)
-            :sp==="fk" ?(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)
-                       :(eff(atk,"atk")*0.7+eff(atk,"pow")*0.3);
-  const sSc=base*Math.pow(nearOf(h),S.rangePow)*k*rr(rng);
+function resolveShot(rng,atk,gk,h,fin){
+  const S=TUNING.shot;
+  const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)*rr(rng);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)*rr(rng);
   return sSc>gSc*TUNING.th.shot;
-}
-/** 枠に飛ぶか。セットプレーは種類ごとに固有の精度を持つ(距離の効き方が違う)。 */
-function onTargetSp(rng,atk,h,sp){
-  const SP=TUNING.sp;
-  if(sp==="pk") return rng()<SP.pkAcc;
-  if(sp==="hdr")return rng()<SP.hdrAcc;
-  if(sp==="fk") return rng()<SP.fkAcc*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
-  return onTarget(rng,atk,h);
 }
 // ---------- セットプレー(→docs/07 §7.11) ----------
 // **ファウルは守備側が競り合いに勝った瞬間にしか起きない。** 独立した抽選にすると
@@ -3457,14 +3528,16 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
   const F=TUNING.mom, SP=TUNING.sp, gk=pickGK(D);
   const pos=[Math.round(tg.x),yOfH(tg.h)];
   const d=depth||0, A=att||{ sp:0 };
+  // **どう撃つか**をここで1回だけ引く。以降の3段はすべてこの札を見る(→docs/07 §7.13)
+  const fin=sp?SET_FINISH[sp]:pickFinish(rng,shooter,tg.h);
   const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100, depth:d,
-    sp:sp||null };
+    sp:sp||null, fin:fin.id, flabel:fin.label };
   shooter.stat.shots++;
   const more=A.sp<SP.maxSp;                                  // まだセットプレーを重ねてよいか
 
   // ① ブロック — 打点に近い守備者が身体を入れる(PKは壁もブロックも無い)
-  const blocker=sp==="pk"?null:matchupDefender(rng,tg.h,tg.x,D);
-  if(blocker&&resolveBlock(rng,shooter,blocker,D)){
+  const blocker=fin.noBlk?null:matchupDefender(rng,tg.h,tg.x,D);
+  if(blocker&&resolveBlock(rng,shooter,blocker,D,fin)){
     blocker.stat.blocks=(blocker.stat.blocks||0)+1; blocker.stat.inv++;
     addMom(M,D.side,F.block);
     push(Object.assign({ type:"block", vs:blocker.c.id },base));
@@ -3477,7 +3550,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
     return M.events.slice(from);
   }
   // ② 枠外 — 技術と距離。GKは関与しない。セットプレーは種類ごとに精度が決まっている
-  if(!onTargetSp(rng,shooter,tg.h,sp)){
+  if(!onTarget(rng,shooter,tg.h,fin)){
     addMom(M,D.side,F.miss);
     push(Object.assign({ type:"miss" },base));
     return M.events.slice(from);
@@ -3486,7 +3559,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
   gk.stat.inv++;
 
   // ③ GK
-  if(resolveShot(rng,shooter,gk,tg.h,sp)){
+  if(resolveShot(rng,shooter,gk,tg.h,fin)){
     T.score++; shooter.stat.goals++;
     if(assist)assist.stat.assists++;
     addMom(M,T.side,F.goal);
@@ -4667,6 +4740,8 @@ let _lastResult=null;
 const mPlayer=(M,side,id)=>playerOf(M,side,id);
 const mName=p=>p?esc(shortName(p.c)):"選手";
 
+/** シュートの呼び方。終点チャンネルの名前がそのまま実況の語になる(→docs/07 §7.13)。 */
+const shotWord=e=>e.flabel||"シュート";
 /** ボールのある高さを、実況で使える場所の言葉に直す。 */
 const zoneOf=h=>h<0.30?"自陣":h<0.55?"中盤":h<0.78?"敵陣":"ゴール前";
 /**
@@ -4746,11 +4821,13 @@ function matchLine(e,M){
     case "setpiece": return { text:lineSet(M,e,p), cls:side };
     case "aerial":   return { text:e.ok?mName(p)+"が競り勝った！":mName(vs)+"が競り勝ってクリア",
                         cls:side };
-    case "block":    return { text:mName(p)+"のシュート！"+mName(vs)+"がブロック", cls:side };
-    case "miss":     return { text:mName(p)+"のシュートは枠を外れた", cls:side };
-    case "save":     return { text:"<b>"+mName(p)+"</b>のシュート！"+mName(gk)+"がセーブ", cls:side };
+    // **どう撃ったか**を出す(→docs/07 §7.13)。「シュート」だけだと
+    // ヘディングもミドルもGKとの一対一も同じ文になり、局面が読めない
+    case "block":    return { text:mName(p)+"の"+shotWord(e)+"！"+mName(vs)+"がブロック", cls:side };
+    case "miss":     return { text:mName(p)+"の"+shotWord(e)+"は枠を外れた", cls:side };
+    case "save":     return { text:"<b>"+mName(p)+"</b>の"+shotWord(e)+"！"+mName(gk)+"がセーブ", cls:side };
     case "rebound":  return { text:e.ok?mName(p)+"がこぼれ球に詰める！":"こぼれ球は"+mName(vs)+"がクリア", cls:side };
-    case "goal":     return { text:"⚽ <b>"+mName(p)+" ゴール！</b>"
+    case "goal":     return { text:"⚽ <b>"+mName(p)+" "+shotWord(e)+"でゴール！</b>"
                         +(e.assist?"（"+mName(mPlayer(M,e.side,e.assist))+"）":"")
                         +"　"+e.hg+" - "+e.ag, cls:"goal" };
     case "sub":      return { text:"🔄 交代 "+mName(mPlayer(M,e.side,e.in))+" ← "
@@ -5027,7 +5104,7 @@ function cutShot(e,sc,keeper,word,scored,assist){
   const kSide=e.side==="H"?"A":"H";
   const ms=(e.type==="goal"?P.goalMs:P.cutMs)+P.shotHold;
   cutShow('<div class="cut">'
-    +'<div class="cut-hd">SHOT</div>'
+    +'<div class="cut-hd">'+esc(e.flabel||"SHOT")+'</div>'
     +'<div class="cut-row">'
       +cutFig(sc,e.side,"L","ATK "+sc.c.atk+" / POW "+sc.c.pow)
       +'<div class="cut-vs">VS</div>'
