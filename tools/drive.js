@@ -180,8 +180,9 @@ const STEPS = [
       cutVs({side:'H',label:'裏抜け',ch:'cfRun',vs:df.c.id,dch:dch.id,dlabel:dch.label},
         atk,df,'突破!',true);
       const n=[...document.querySelectorAll('#mCut .cut-fig span')].map(x=>x.textContent);
-      if(!n[1]||n[1].indexOf(dch.label)<0)
-        throw new Error('守備側のカットインに守備チャンネルが出ていない: '+n[1]);
+      // 左右は「自分のチームが左」なので、守備側がどちらに出るかは試合しだい
+      if(!n.some(t=>t.indexOf(dch.label)>=0))
+        throw new Error('守備側のカットインに守備チャンネルが出ていない: '+n.join(' | '));
       return n.join(' | ');
     })()`));
     await ctx.wait(250);
