@@ -1002,10 +1002,17 @@ function mDrawSquads(){
     const col=clubColor(T.side==="H"?_M.fixture.h:_M.fixture.a);
     T.players.forEach((p,i)=>{
       const [x,y]=slotXY(p,T.side,true);   // 開始はキックオフ隊形
+      // **点ではなく全身を出す**(→docs/06 §6.17)。絵にはクラブカラーが無いので、
+      // 足元の影をチームカラーにして、どちらのチームかを影で見分ける。
+      const art=artKeyOf(p.c);
+      const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_stand"];
       html.push('<div class="mp" data-side="'+T.side+'" data-ix="'+i+'"'
         +' data-rx="'+p.x+'" data-ry="'+p.y+'"'          // 陣形そのままの座標(写像前)
         +' data-x="'+x+'" data-y="'+y+'" data-ph="'+((i*2.4+(T.side==="A"?1.1:0))%6.28).toFixed(2)+'"'
-        +' style="left:'+x+'%;top:'+y+'%;background:'+col+'"></div>');
+        +' style="left:'+x+'%;top:'+y+'%;--kit:'+col+'">'
+        +'<i class="mp-sh"></i>'
+        +(src?'<img src="'+src+'" alt="">':'<i class="mp-dot"></i>')
+      +'</div>');
     });
   }
   $("mSlots").innerHTML=html.join("");
@@ -1260,8 +1267,9 @@ function cutShot(e,sc,keeper,word,scored,assist){
       band.classList.add("goal");
       c.classList.add("shake");
       const hd=band.querySelector(".cut-hd");
-      if(hd)hd.textContent=e.hg+" - "+e.ag
-        +(assist?"　アシスト "+esc(shortName(assist.c)):"");
+      // スコアの並びは盤面と揃える(左=自分 → docs/06 §6.17)
+      if(hd)hd.textContent=mScore(e.hg,e.ag)
+        +(assist?"　アシスト "+shortName(assist.c):"");
     }
   },P.shotHold);
   return ms;

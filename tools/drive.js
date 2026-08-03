@@ -277,6 +277,11 @@ const STEPS = [
         const d=Math.hypot(dx,dy);
         if(d>1)moved++; if(d>22)far++; maxd=Math.max(maxd,d);
       }
+      // 点ではなく全身。**足元の影はチームカラー**で、両チームで色が違うこと
+      const sh=s2=>getComputedStyle(document.querySelector(
+        '#mSlots .mp[data-side="'+s2+'"] .mp-sh')).backgroundColor;
+      if(!document.querySelector('#mSlots .mp img'))throw new Error('選手が全身で出ていない');
+      if(sh('H')===sh('A'))throw new Error('両チームの影が同じ色: '+sh('H'));
       // 大きく離れてよいのは**ボールに関わっている数人だけ**。
       // 全員が離れたら陣形が崩壊している(演出として失敗)
       if(far>4)throw new Error('陣形が崩れている: '+far+'人が枠から22%以上離れた');
