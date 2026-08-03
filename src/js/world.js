@@ -184,6 +184,10 @@ function startTenure(clubId){
   S.world.fixtures=makeFixtures(league,rng);
   S.world.results={};
   S.world.matchday=1;
+  // **就任時の陣形も名簿に合わせる**(→docs/07 §7.14)。CPUが名簿に合う陣形を選ぶのに
+  // 自分だけ既定の 4-4-2 のままだと、枠適性のロスを一方的に背負って始めることになる。
+  // もちろん DECK でいつでも変えられる。
+  S.form=bestFormFor(availableCards());
   S.squad=autoSquad();
   S.club.expect=expectedRank(seed,clubId,squadPower(squadCards().slice(0,TUNING.squad.starters)));
   S.player.history.push({ season:S.world.season, clubId, result:"在任" });
@@ -202,9 +206,33 @@ function matchSide(clubId){
   return { cards:bestXI(roster,form), form, name:club.name };
 }
 /** クラブの陣形。クラブIDから決定的に選ぶ(クラブごとに一貫した色になる)。 */
+// 陣形は名簿から決まる = 世界のたねが変わらない限り不変。毎回引き直すと重いので覚えておく。
+const _formCache={};
 function formFor(clubId){
+  const key=S.world.seed+":"+clubId;                      // たねが変われば別の世界
+  if(_formCache[key])return _formCache[key];
+  const roster=clubRoster(S.world.seed,clubId);
   const keys=Object.keys(FORMATIONS);
-  return keys[hashStr(clubId+":form")%keys.length];
+  // **手持ちに合う陣形を選ぶ**(→docs/07 §7.14)。IDから機械的に決めていた頃は、
+  // 名簿と噛み合わない陣形を引いたクラブが枠適性のロスを抱えたまま1シーズン戦い、
+  // 得点が実測で8倍ひらいた(4-4-2 1.68点 / 4-3-2-1 0.20点)。
+  // 適性後の総合力で選ぶだけで、クラブの顔ぶれが陣形に表れるようにもなる。
+  let best=keys[0], bs=-1;
+  for(const k of keys){
+    const v=squadPowerAt(bestXI(roster,k),k)
+      +(hashStr(clubId+":"+k)%100)/1000;                  // 同点は決定的にばらす
+    if(v>bs){ bs=v; best=k; }
+  }
+  return (_formCache[key]=best);
+}
+/** 名簿にいちばん合う陣形。CPU も自クラブもこれで選ぶ(→docs/07 §7.14)。 */
+function bestFormFor(roster){
+  let best=DEFAULT_FORM, bs=-1;
+  for(const k of Object.keys(FORMATIONS)){
+    const v=squadPowerAt(bestXI(roster,k),k);
+    if(v>bs){ bs=v; best=k; }
+  }
+  return best;
 }
 /** 名簿から先発11+控え5を組む。autoSquad と同じ貪欲法(枠ごとに 適性×OVR が最大)。 */
 function bestXI(roster,form){

@@ -1993,7 +1993,7 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:0.95, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
+  th:{ shot:0.88, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
   // セットプレー(→docs/07 §7.11)。**守備側が競り合いに勝った瞬間だけ**ファウルが起きる。
   //   foulK              … 守備チャンネルが持つ反則率に一括で掛ける倍率(→§7.12)
   //   foulBlock          … ブロックのあとのファウル率
@@ -2031,7 +2031,10 @@ const TUNING={
   //                   両側を同じ形にしてあるので、調整のとき鏡像で読める。
   //                   atkW を defW より小さくしているのは、atk の役割差が大きく
   //                   (DF 8.0 対 FW 18.5)、大きくすると起点の勾配が潰れるため。
-  matchup:{ sigmaH:0.22, sigmaX:0.30, atkW:0.25, defW:0.75 },
+  //   cov*  … 守備の厚み(→§7.14)。ボール周辺の守備者数で守備スコアを底上げする。
+  //           covBase を超えた**支援の人数**だけが効く(マーカー本人は勘定に入れない)
+  matchup:{ sigmaH:0.22, sigmaX:0.30, atkW:0.25, defW:0.75,
+            covH:0.26, covX:0.34, covBase:1.00, covK:0.085 },
   // --- 連鎖(→docs/07 §7.9) ---
   //   maxLinks  1回の攻撃でつなげる上限(これを超えたら撃つ)
   //   shot*     シュートに移行する率: base + 高さ×depth + つないだ数×step
@@ -2040,7 +2043,7 @@ const TUNING={
   //   gainJitter 前進量のゆらぎ(±の割合)
   chain:{ maxLinks:4, shotBase:0.02, shotDepth:0.85, shotCurve:3.0, shotStep:0.06,
           shotAtkLo:0.30,   // 撃つ判断に乗る「撃てる選手か」の下限(atk0でこの倍率)
-          sigmaH:0.20, sigmaX:0.26,
+          sigmaH:0.20, sigmaX:0.26, recvAtk:1.60,
           laneTight:8, laneNormal:16, laneWide:34, gainK:1.00, gainJitter:0.5, toJitter:0.12,
           repeatW:0.30,     // 直前と同じチャンネルを選ぶ重み(同じ札の連発を避ける)
           strayFull:0.45, strayFloor:0.15, strayPass:1.20 },  // 枠から離れるほど carry を諦めて渡す
@@ -2526,6 +2529,10 @@ function startTenure(clubId){
   S.world.fixtures=makeFixtures(league,rng);
   S.world.results={};
   S.world.matchday=1;
+  // **就任時の陣形も名簿に合わせる**(→docs/07 §7.14)。CPUが名簿に合う陣形を選ぶのに
+  // 自分だけ既定の 4-4-2 のままだと、枠適性のロスを一方的に背負って始めることになる。
+  // もちろん DECK でいつでも変えられる。
+  S.form=bestFormFor(availableCards());
   S.squad=autoSquad();
   S.club.expect=expectedRank(seed,clubId,squadPower(squadCards().slice(0,TUNING.squad.starters)));
   S.player.history.push({ season:S.world.season, clubId, result:"在任" });
@@ -2544,9 +2551,33 @@ function matchSide(clubId){
   return { cards:bestXI(roster,form), form, name:club.name };
 }
 /** クラブの陣形。クラブIDから決定的に選ぶ(クラブごとに一貫した色になる)。 */
+// 陣形は名簿から決まる = 世界のたねが変わらない限り不変。毎回引き直すと重いので覚えておく。
+const _formCache={};
 function formFor(clubId){
+  const key=S.world.seed+":"+clubId;                      // たねが変われば別の世界
+  if(_formCache[key])return _formCache[key];
+  const roster=clubRoster(S.world.seed,clubId);
   const keys=Object.keys(FORMATIONS);
-  return keys[hashStr(clubId+":form")%keys.length];
+  // **手持ちに合う陣形を選ぶ**(→docs/07 §7.14)。IDから機械的に決めていた頃は、
+  // 名簿と噛み合わない陣形を引いたクラブが枠適性のロスを抱えたまま1シーズン戦い、
+  // 得点が実測で8倍ひらいた(4-4-2 1.68点 / 4-3-2-1 0.20点)。
+  // 適性後の総合力で選ぶだけで、クラブの顔ぶれが陣形に表れるようにもなる。
+  let best=keys[0], bs=-1;
+  for(const k of keys){
+    const v=squadPowerAt(bestXI(roster,k),k)
+      +(hashStr(clubId+":"+k)%100)/1000;                  // 同点は決定的にばらす
+    if(v>bs){ bs=v; best=k; }
+  }
+  return (_formCache[key]=best);
+}
+/** 名簿にいちばん合う陣形。CPU も自クラブもこれで選ぶ(→docs/07 §7.14)。 */
+function bestFormFor(roster){
+  let best=DEFAULT_FORM, bs=-1;
+  for(const k of Object.keys(FORMATIONS)){
+    const v=squadPowerAt(bestXI(roster,k),k);
+    if(v>bs){ bs=v; best=k; }
+  }
+  return best;
 }
 /** 名簿から先発11+控え5を組む。autoSquad と同じ貪欲法(枠ごとに 適性×OVR が最大)。 */
 function bestXI(roster,form){
@@ -2966,9 +2997,10 @@ function nearOf(h){
  * ブロック — **GKの前に守備者が身体を入れる**。シュートの最初の関門。
  * 撃ち抜く側は tec(コースを作る)と atk、止める側は def と pow。
  */
-function resolveBlock(rng,atk,df,D,fin){
+function resolveBlock(rng,atk,df,D,fin,h,x){
   const aSc=(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
-  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*rr(rng);
+  // 人数を割いていればコースも消える(→§7.14)
+  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*coverOf(D,h,x)*rr(rng);
   // blk が大きい手ほど当たらない(コースを狙う / GKと一対一 など)
   return dSc>aSc*TUNING.th.block*(fin&&fin.blk||1);
 }
@@ -3237,6 +3269,24 @@ function matchupDefender(rng,h,x,D){
   });
 }
 /**
+ * **守備の厚み**(→docs/07 §7.14)。ボールの周りに守備側が何人いるかで守備が底上げされる。
+ *
+ * これが無いと「一番近い1人」しか守備に関与せず、**後ろに何人置いても失点が変わらない**。
+ * 実測で 5-3-2 の失点(1.95)が 4-4-2(1.75)より多いという逆転まで起きていた。
+ * マーカー本人ぶん(covBase)を引いた**支援の人数**だけが効く。
+ */
+function coverOf(D,h,x){
+  const C=TUNING.matchup;
+  const th=1-h, tx=100-x;
+  let n=0;
+  for(const q of D.players){
+    if(q.role==="GK")continue;
+    const dh=(heightOf(q)-th)/C.covH, dx=((q.x-tx)/100)/C.covX;
+    n+=Math.exp(-(dh*dh+dx*dx))*q.stam;                     // 消耗した選手は寄せきれない
+  }
+  return 1+Math.max(0,n-C.covBase)*C.covK;
+}
+/**
  * 守備のチャンネルを選ぶ(→docs/07 §7.12)。攻撃側とまったく同じ形で、
  * **その選手が得意な手ほど選ばれやすい**。
  * これが無いと守備側は「相手が選んだ能力に付き合うだけの数字」になり、
@@ -3258,12 +3308,12 @@ function pickCounterCh(rng,p){
  *   守備側 … def を主軸に、**自分が選んだ守備チャンネルの能力**を副次で足す。
  *            思い切った手ほど強い(k)が、そのぶん反則になりやすい(foul)。
  */
-function resolveChannel(rng,atk,df,ch,dch,D){
+function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX){
   const M=TUNING.matchup;
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
     *ch.risk*TUNING.atk.originK*rr(rng);
   const dSc=(eff(df,"def")*M.defW+eff(df,dch.stat)*(1-M.defW))
-    *dch.k*lineMul(D)*rr(rng);
+    *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }
 
@@ -3311,7 +3361,14 @@ function ballTarget(rng,h0,x0,ch){
   const x=clamp(lx+(rng()-0.5)*2*laneSpread(ch),2,98);
   return { h, x };
 }
-/** 抽選した位置に**近い味方**を選ぶ。自分は外す(パス系なので必ず他の選手へ渡る)。 */
+/**
+ * 抽選した位置に**近い味方**を選ぶ。自分は外す(パス系なので必ず他の選手へ渡る)。
+ *
+ * **前へ行くほど「誰に預けるか」が効く**(→docs/07 §7.14)。近さだけで決めると、
+ * 1トップの陣形ではボックス内で中盤の選手にボールが渡り、そのまま撃ってしまう。
+ * 実測で枠内率が 33%→17%、決定率が 15%→2% まで落ちていた。
+ * 深い位置ほど決定力の重みを乗せて、**点を取れる選手を探す**ようにする。
+ */
 function receiverAt(rng,T,tg,self){
   const C=TUNING.chain;
   const cand=T.players.filter(q=>q!==self&&q.role!=="GK");
@@ -3319,7 +3376,8 @@ function receiverAt(rng,T,tg,self){
   return pickW(rng,cand,q=>{
     const dh=(heightOf(q)-tg.h)/C.sigmaH;
     const dx=((q.x-tg.x)/100)/C.sigmaX;
-    return Math.exp(-(dh*dh+dx*dx));
+    const seek=1+eff(q,"atk")/STAT_MAX*C.recvAtk*clamp(tg.h,0,1);
+    return Math.exp(-(dh*dh+dx*dx))*seek;
   });
 }
 /**
@@ -3472,7 +3530,7 @@ function stepMatch(M){
     // **守備側も自分の手を選ぶ**(→docs/07 §7.12)。選んだ手が強さと反則率の両方を決める
     const dch=marker?pickCounterCh(rng,marker):null;
     carrier.stat.inv++; if(marker)marker.stat.inv++;
-    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D):true;
+    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x):true;
     carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
       by:carrier.c.id, sub:carrier.sub, ch:ch.id, label:ch.label, kind:ch.kind,
@@ -3537,7 +3595,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
 
   // ① ブロック — 打点に近い守備者が身体を入れる(PKは壁もブロックも無い)
   const blocker=fin.noBlk?null:matchupDefender(rng,tg.h,tg.x,D);
-  if(blocker&&resolveBlock(rng,shooter,blocker,D,fin)){
+  if(blocker&&resolveBlock(rng,shooter,blocker,D,fin,tg.h,tg.x)){
     blocker.stat.blocks=(blocker.stat.blocks||0)+1; blocker.stat.inv++;
     addMom(M,D.side,F.block);
     push(Object.assign({ type:"block", vs:blocker.c.id },base));

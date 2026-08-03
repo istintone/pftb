@@ -505,7 +505,7 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:0.95, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
+  th:{ shot:0.88, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
   // セットプレー(→docs/07 §7.11)。**守備側が競り合いに勝った瞬間だけ**ファウルが起きる。
   //   foulK              … 守備チャンネルが持つ反則率に一括で掛ける倍率(→§7.12)
   //   foulBlock          … ブロックのあとのファウル率
@@ -543,7 +543,10 @@ const TUNING={
   //                   両側を同じ形にしてあるので、調整のとき鏡像で読める。
   //                   atkW を defW より小さくしているのは、atk の役割差が大きく
   //                   (DF 8.0 対 FW 18.5)、大きくすると起点の勾配が潰れるため。
-  matchup:{ sigmaH:0.22, sigmaX:0.30, atkW:0.25, defW:0.75 },
+  //   cov*  … 守備の厚み(→§7.14)。ボール周辺の守備者数で守備スコアを底上げする。
+  //           covBase を超えた**支援の人数**だけが効く(マーカー本人は勘定に入れない)
+  matchup:{ sigmaH:0.22, sigmaX:0.30, atkW:0.25, defW:0.75,
+            covH:0.26, covX:0.34, covBase:1.00, covK:0.085 },
   // --- 連鎖(→docs/07 §7.9) ---
   //   maxLinks  1回の攻撃でつなげる上限(これを超えたら撃つ)
   //   shot*     シュートに移行する率: base + 高さ×depth + つないだ数×step
@@ -552,7 +555,7 @@ const TUNING={
   //   gainJitter 前進量のゆらぎ(±の割合)
   chain:{ maxLinks:4, shotBase:0.02, shotDepth:0.85, shotCurve:3.0, shotStep:0.06,
           shotAtkLo:0.30,   // 撃つ判断に乗る「撃てる選手か」の下限(atk0でこの倍率)
-          sigmaH:0.20, sigmaX:0.26,
+          sigmaH:0.20, sigmaX:0.26, recvAtk:1.60,
           laneTight:8, laneNormal:16, laneWide:34, gainK:1.00, gainJitter:0.5, toJitter:0.12,
           repeatW:0.30,     // 直前と同じチャンネルを選ぶ重み(同じ札の連発を避ける)
           strayFull:0.45, strayFloor:0.15, strayPass:1.20 },  // 枠から離れるほど carry を諦めて渡す

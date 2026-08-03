@@ -206,6 +206,62 @@ function runSeason() {
       Object.keys(E.ORIGINS).length * 3, "種 / 陣形の全", subs.size, "サブポジを網羅");
   }
 
+  // ---------- 陣形の攻守バランス(D35 → docs/07 §7.14) ----------
+  {
+    // **枠適性を完全に揃えて形だけを比べる。** 実クラブの名簿を使うと
+    // 「その名簿に合う陣形かどうか」が支配して、形の良し悪しが見えない。
+    const fitted = form => E.FORMATIONS[form].map(([sub]) => {
+      const c = E.makeCard(E.mulberry32(999), E.subGroup(sub), { rarity: "REG" });
+      c.subs = [sub]; c.pos = E.subGroup(sub);
+      E.STAT_KEYS.forEach(k => { c[k] = 13; });
+      c.ovr = E.STAT_KEYS.reduce((a, k) => a + c[k], 0);
+      return c;
+    });
+    const ref = { cards: fitted("4-4-2"), form: "4-4-2", name: "ref" };
+    const play = form => {
+      const me = { cards: fitted(form), form, name: form };
+      let gf = 0, ga = 0, w = 0, d = 0, n = 300;
+      for (let i = 0; i < n; i++) {
+        const home = i % 2 === 0;                     // ホーム補正を打ち消す
+        const r = E.resolveMatch(home ? me : ref, home ? ref : me, i + 1);
+        const my = home ? r.hg : r.ag, op = home ? r.ag : r.hg;
+        gf += my; ga += op; if (my > op) w++; else if (my === op) d++;
+      }
+      return { gf: gf / n, ga: ga / n, pts: (w * 3 + d) / n };
+    };
+    const def = play("5-4-1"), atk = play("4-2-4"), bal = play("4-4-2");
+    // **守備的な陣形は実際に失点が少ない**。ここが崩れると陣形を選ぶ意味が消える
+    assert.ok(def.ga < atk.ga * 0.92,
+      "5-4-1 は 4-2-4 より失点が少ない: " + def.ga.toFixed(2) + " vs " + atk.ga.toFixed(2));
+    assert.ok(atk.gf > def.gf * 1.10,
+      "4-2-4 は 5-4-1 より得点が多い: " + atk.gf.toFixed(2) + " vs " + def.gf.toFixed(2));
+    // 形だけの差は**倍にならない**。ここが開くと陣形が一択になる
+    const pts = [def.pts, atk.pts, bal.pts];
+    assert.ok(Math.max(...pts) < Math.min(...pts) * 1.8,
+      "陣形だけで勝点が倍近く変わらない: " + pts.map(v => v.toFixed(2)).join(" / "));
+    console.log("陣形の攻守バランスOK 5-4-1", def.gf.toFixed(2) + "得" + def.ga.toFixed(2) + "失",
+      "/ 4-2-4", atk.gf.toFixed(2) + "得" + atk.ga.toFixed(2) + "失",
+      "/ 勝点", pts.map(v => v.toFixed(2)).join("・"));
+  }
+
+  // ---------- クラブは名簿に合う陣形を選ぶ(D35) ----------
+  {
+    let worse = 0;
+    for (const c of E.CLUBS.slice(0, 12)) {
+      const roster = E.clubRoster(E.getS().world.seed, c.id);
+      const mine = E.formFor(c.id);
+      const mineP = E.squadPowerAt(E.bestXI(roster, mine), mine);
+      const best = Object.keys(E.FORMATIONS)
+        .reduce((a, k) => Math.max(a, E.squadPowerAt(E.bestXI(roster, k), k)), 0);
+      assert.ok(mineP >= best, c.id + " は名簿に最も合う陣形を選ぶ: " + mineP + " / 最良 " + best);
+      if (mineP < best) worse++;
+    }
+    const used = new Set(E.CLUBS.map(c => E.formFor(c.id)));
+    assert.ok(used.size >= 6, "クラブごとに陣形がばらける: " + used.size + " 種");
+    console.log("陣形の選定OK 48クラブで", used.size, "種の陣形 / 名簿に合わない選択",
+      worse, "件");
+  }
+
   // ---------- 終点チャンネル(D34 → docs/07 §7.13) ----------
   {
     const subs = new Set();

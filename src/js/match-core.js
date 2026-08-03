@@ -155,9 +155,10 @@ function nearOf(h){
  * ブロック — **GKの前に守備者が身体を入れる**。シュートの最初の関門。
  * 撃ち抜く側は tec(コースを作る)と atk、止める側は def と pow。
  */
-function resolveBlock(rng,atk,df,D,fin){
+function resolveBlock(rng,atk,df,D,fin,h,x){
   const aSc=(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
-  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*rr(rng);
+  // 人数を割いていればコースも消える(→§7.14)
+  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*coverOf(D,h,x)*rr(rng);
   // blk が大きい手ほど当たらない(コースを狙う / GKと一対一 など)
   return dSc>aSc*TUNING.th.block*(fin&&fin.blk||1);
 }
@@ -426,6 +427,24 @@ function matchupDefender(rng,h,x,D){
   });
 }
 /**
+ * **守備の厚み**(→docs/07 §7.14)。ボールの周りに守備側が何人いるかで守備が底上げされる。
+ *
+ * これが無いと「一番近い1人」しか守備に関与せず、**後ろに何人置いても失点が変わらない**。
+ * 実測で 5-3-2 の失点(1.95)が 4-4-2(1.75)より多いという逆転まで起きていた。
+ * マーカー本人ぶん(covBase)を引いた**支援の人数**だけが効く。
+ */
+function coverOf(D,h,x){
+  const C=TUNING.matchup;
+  const th=1-h, tx=100-x;
+  let n=0;
+  for(const q of D.players){
+    if(q.role==="GK")continue;
+    const dh=(heightOf(q)-th)/C.covH, dx=((q.x-tx)/100)/C.covX;
+    n+=Math.exp(-(dh*dh+dx*dx))*q.stam;                     // 消耗した選手は寄せきれない
+  }
+  return 1+Math.max(0,n-C.covBase)*C.covK;
+}
+/**
  * 守備のチャンネルを選ぶ(→docs/07 §7.12)。攻撃側とまったく同じ形で、
  * **その選手が得意な手ほど選ばれやすい**。
  * これが無いと守備側は「相手が選んだ能力に付き合うだけの数字」になり、
@@ -447,12 +466,12 @@ function pickCounterCh(rng,p){
  *   守備側 … def を主軸に、**自分が選んだ守備チャンネルの能力**を副次で足す。
  *            思い切った手ほど強い(k)が、そのぶん反則になりやすい(foul)。
  */
-function resolveChannel(rng,atk,df,ch,dch,D){
+function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX){
   const M=TUNING.matchup;
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
     *ch.risk*TUNING.atk.originK*rr(rng);
   const dSc=(eff(df,"def")*M.defW+eff(df,dch.stat)*(1-M.defW))
-    *dch.k*lineMul(D)*rr(rng);
+    *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }
 
@@ -500,7 +519,14 @@ function ballTarget(rng,h0,x0,ch){
   const x=clamp(lx+(rng()-0.5)*2*laneSpread(ch),2,98);
   return { h, x };
 }
-/** 抽選した位置に**近い味方**を選ぶ。自分は外す(パス系なので必ず他の選手へ渡る)。 */
+/**
+ * 抽選した位置に**近い味方**を選ぶ。自分は外す(パス系なので必ず他の選手へ渡る)。
+ *
+ * **前へ行くほど「誰に預けるか」が効く**(→docs/07 §7.14)。近さだけで決めると、
+ * 1トップの陣形ではボックス内で中盤の選手にボールが渡り、そのまま撃ってしまう。
+ * 実測で枠内率が 33%→17%、決定率が 15%→2% まで落ちていた。
+ * 深い位置ほど決定力の重みを乗せて、**点を取れる選手を探す**ようにする。
+ */
 function receiverAt(rng,T,tg,self){
   const C=TUNING.chain;
   const cand=T.players.filter(q=>q!==self&&q.role!=="GK");
@@ -508,7 +534,8 @@ function receiverAt(rng,T,tg,self){
   return pickW(rng,cand,q=>{
     const dh=(heightOf(q)-tg.h)/C.sigmaH;
     const dx=((q.x-tg.x)/100)/C.sigmaX;
-    return Math.exp(-(dh*dh+dx*dx));
+    const seek=1+eff(q,"atk")/STAT_MAX*C.recvAtk*clamp(tg.h,0,1);
+    return Math.exp(-(dh*dh+dx*dx))*seek;
   });
 }
 /**
@@ -661,7 +688,7 @@ function stepMatch(M){
     // **守備側も自分の手を選ぶ**(→docs/07 §7.12)。選んだ手が強さと反則率の両方を決める
     const dch=marker?pickCounterCh(rng,marker):null;
     carrier.stat.inv++; if(marker)marker.stat.inv++;
-    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D):true;
+    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x):true;
     carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
       by:carrier.c.id, sub:carrier.sub, ch:ch.id, label:ch.label, kind:ch.kind,
@@ -726,7 +753,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
 
   // ① ブロック — 打点に近い守備者が身体を入れる(PKは壁もブロックも無い)
   const blocker=fin.noBlk?null:matchupDefender(rng,tg.h,tg.x,D);
-  if(blocker&&resolveBlock(rng,shooter,blocker,D,fin)){
+  if(blocker&&resolveBlock(rng,shooter,blocker,D,fin,tg.h,tg.x)){
     blocker.stat.blocks=(blocker.stat.blocks||0)+1; blocker.stat.inv++;
     addMom(M,D.side,F.block);
     push(Object.assign({ type:"block", vs:blocker.c.id },base));
