@@ -152,9 +152,8 @@ function makeCard(rng,pos,opts={}){
   while(skills.length<n){ const s=rpick(rng,pool); if(!skills.includes(s))skills.push(s); }
   const subs=rollSubs(rng,pos,rarity);
   const sur=opts.family||rpick(rng,FAMILY[nation]);
-  const id=nextCardId();
   return {
-    id,
+    id:nextCardId(),
     // 姓は makeRoster が重複なしで配る。並び順は国籍で変わる(日本は姓が先)
     name:makeName(rng,nation,sur),
     sur,                          // 姓。表示名から切り出せないので別に持つ
@@ -165,29 +164,50 @@ function makeCard(rng,pos,opts={}){
     ...st,                        // atk/def/pow/tec/spd/sta
     skills,
     club:opts.club||"",           // 所属クラブ(コンビネーション combo の判定に使う)
-    art:opts.art||commonArt(id,pos),   // 汎用の絵(→docs/03 §3.19)
   };
 }
 
 // ---------- 汎用選手の絵(→docs/03 §3.19) ----------
-// 絵の一覧を**コードに持たない**。ID の先頭2文字が gk / fp なので、
-// ASSETS のキーを見れば振り分けられる。絵を足しても JS を触らなくてよい。
-let _artPool=null;
-function artPool(){
-  if(_artPool)return _artPool;
+// 絵の一覧を**コードに持たない**。書き出し名が `<段>-<ポジション>-<ハッシュ>` なので、
+// ASSETS のキーを見れば振り分けられる。**絵を足しても JS を触らなくてよい。**
+//
+// カードに art を持たせない(=セーブに残さない)のも要点。描画のたびに引き直すので、
+// **絵を足すとその場で手持ちの選手にも新しい絵が回る**。誰がどれになるかは変わるが、
+// カードの中身は変わらないので、これは意図した挙動(→§3.19)。
+const _artPool={};
+function artPool(rar,pos){
+  const key=rar+":"+pos;
+  if(_artPool[key])return _artPool[key];
   const A=(typeof window!=="undefined"&&window.ASSETS&&window.ASSETS.players)||{};
-  const pick=pre=>Object.keys(A).filter(k=>k.startsWith(pre)&&k.endsWith("_play"))
-    .map(k=>k.slice(0,-5)).sort();
-  return (_artPool={ gk:pick("gk"), fp:pick("fp") });
+  const all=Object.keys(A).filter(k=>k.endsWith("_play")).map(k=>k.slice(0,-5));
+  const r=(rar||"").toLowerCase(), p=(pos||"").toLowerCase();
+  // **合致するプールを全部足す**。段やポジション専用の絵を1枚入れた途端に
+  // 全員がその1枚になる、という事故を防ぐ(バラエティは足し算で増える)。
+  //
+  // **GK だけは外野の絵に落とさない。** 絵が明確に違うので、GKが外野の格好で
+  // 出るのは他のどのズレより目立つ。外野は "out"(外野なら誰でも可)まで落とす。
+  const tiers=p==="gk"?[[r,"gk"],["any","gk"]]
+                      :[[r,p],["any",p],[r,"out"],["any","out"]];
+  const seen=new Set(), out=[];
+  for(const [rr,pp] of tiers)
+    for(const k of all)
+      if(k.startsWith(rr+"-"+pp+"-")&&!seen.has(k)){ seen.add(k); out.push(k); }
+  return (_artPool[key]=out.sort());
 }
 /**
- * カードIDから決まる絵。**乱数を使わない**のが要点。
+ * カードに割り当てる絵のキー。**乱数を使わない**のが要点。
  * makeCard の rng を1回でも余計に引くと、そのあとに作られる選手が全員ずれる
  * (クラブの顔ぶれが総入れ替えになる)。IDのハッシュなら乱数列に触らずに決まる。
  */
-function commonArt(id,pos){
-  const p=artPool()[pos==="GK"?"gk":"fp"];
-  return p.length?p[hashStr("art:"+id)%p.length]:null;
+function commonArt(c){
+  const p=artPool(c.rarity,c.pos);
+  return p.length?p[hashStr("art:"+c.id)%p.length]:null;
+}
+/** そのカードが実際に使う絵。**手で指定した絵(署名カード)が最優先**。 */
+function artKeyOf(c){
+  const A=(typeof window!=="undefined"&&window.ASSETS&&window.ASSETS.players)||{};
+  if(c.art&&A[c.art+"_play"])return c.art;   // 素材が消えていたら汎用へ落とす
+  return commonArt(c);
 }
 /** プライマリのサブポジション(表示の既定)。 */
 const primarySub=c=>c.subs[0];

@@ -1,21 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""汎用選手カードの絵(commons)をまとめて切り出す。
+"""選手イラストの素材をまとめて切り出す。
 
-    python tools/slice_commons.py [--force] [--dry]
+    python tools/slice_commons.py [--force] [--dry] [--prune]
 
-src/assets/players/commons/ に置かれた3枚組シート(立ち絵 / プレイ絵 / ゴール)を
-1枚ずつ切り出し、透過して src/assets/players/ へ webp で書き出す。
-処理そのものは slice_player.py と同じ(あちらを import している)。
+素材は**レアリティとポジションのフォルダ**に置く(→docs/03 §3.19)。
 
-**IDは元ファイル名のハッシュから作る。** 連番にすると、あとからファイルを足したときに
-既存のIDがずれ、保存済みカードの絵が入れ替わってしまう(art はセーブに載る)。
+    src/assets/players/
+      commons/<レアリティ>/<ポジション>/*.png    汎用選手
+      signature/<レアリティ>/<ポジション>/*.png  WORLD CLASS / LEGENDS
 
-    fp3a9c21_play.webp   ← フィールドプレイヤー
-    gk8b12ef_stand.webp  ← GK(commons/gk/ に置かれたもの)
+      レアリティ … std / reg / spe / wc / leg / any
+      ポジション … gk / df / mf / fw / out
 
-先頭2文字が gk / fp なので、**実行時に ASSETS のキーだけを見て振り分けられる**。
-そのため生成物のリストをコードに持つ必要がない(→docs/03 §3.19)。
+`any` は「どの段にも使える」、`out` は「外野なら誰でもいい」の意味。
+**GK は必ず gk に入れる。** GKだけは絵が明確に違うので、他と混ぜてはいけない。
+いま置いてある汎用の絵は段を選ばないので `any/gk` と `any/out` に入っている。
+段やポジション専用の絵を足したくなったら、その名前のフォルダへ入れるだけでよい。
+
+書き出し名はそのまま**引き当てのキー**になる。
+
+    any-gk-e5bde2_play.webp     ← 汎用(どの段でも / GK)
+    reg-fw-1a2b3c_stand.webp    ← REGULAR のFW専用
+    ronaldo_play.webp           ← 署名カードはファイル名がそのままID
+
+実行時は ASSETS のキーを見るだけで振り分けられるので、**絵を足しても JS は触らない**。
 
 商標(→docs/03 §3.13): 実在のスポンサー名やエンブレムが読み取れる絵は使わない。
 SKIP に元ファイル名を書いておくと、その絵はプールから外れる。
@@ -34,8 +43,10 @@ except ImportError:
     sys.exit("Pillow が必要です: pip install Pillow")
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SRC = ROOT / "src/assets/players/commons"
-OUT = ROOT / "src/assets/players"
+PLAYERS = ROOT / "src/assets/players"
+GROUPS = ("commons", "signature")
+RARITIES = {"std", "reg", "spe", "wc", "leg", "any"}
+POSITIONS = {"gk", "df", "mf", "fw", "out"}
 
 # 実在のスポンサー名がはっきり読める絵。**商標方針に反するので使わない**(→docs/03 §3.13)。
 # 描き直したものに差し替えたら、この行を消せばそのままプールに戻る。
@@ -47,37 +58,51 @@ SKIP = {
 QUALITY = 82          # カード上では 120〜200px なので、署名カードより軽くしてよい
 
 
-def art_id(path):
-    """元ファイル名から決まるID。**ファイルが増えても既存のIDは動かない**。"""
-    kind = "gk" if path.parent.name == "gk" else "fp"
-    return kind + hashlib.sha1(path.name.encode("utf-8")).hexdigest()[:6]
+def slot_of(path):
+    """<種別>/<レアリティ>/<ポジション>/ の3階層から、書き出しIDを決める。"""
+    rel = path.relative_to(PLAYERS).parts
+    if len(rel) < 4:
+        return None, "フォルダが浅い(<種別>/<レアリティ>/<ポジション>/ に置く)"
+    kind, rar, pos = rel[0], rel[1], rel[2]
+    if rar not in RARITIES:
+        return None, "知らないレアリティ: " + rar
+    if pos not in POSITIONS:
+        return None, "知らないポジション: " + pos
+    # 署名カードは1人ずつ手で定義するので、**ファイル名がそのままID**
+    if kind == "signature":
+        return path.stem, None
+    # 汎用は元ファイル名のハッシュ。**同じフォルダに居る限りIDは動かない**
+    return "%s-%s-%s" % (rar, pos, hashlib.sha1(path.name.encode("utf-8")).hexdigest()[:6]), None
 
 
 def main():
     force = "--force" in sys.argv
     dry = "--dry" in sys.argv
-    if not SRC.is_dir():
-        sys.exit("見つかりません: %s" % SRC)
-    sheets = sorted(p for p in SRC.rglob("*.png") if p.is_file())
+    sheets = sorted(p for g in GROUPS for p in (PLAYERS / g).rglob("*.png") if p.is_file())
     if not sheets:
-        sys.exit("シートが1枚もありません: %s" % SRC)
+        sys.exit("シートが1枚もありません: %s" % PLAYERS)
 
-    OUT.mkdir(parents=True, exist_ok=True)
     made = skipped = kept = 0
     total = 0
+    alive = set()
     for sheet_path in sheets:
         if sheet_path.name in SKIP:
             print("skip  %s  (商標のため除外)" % sheet_path.name[:44])
             skipped += 1
             continue
-        pid = art_id(sheet_path)
-        paths = [OUT / ("%s_%s.webp" % (pid, n)) for n in CELLS]
+        pid, err = slot_of(sheet_path)
+        if err:
+            print("skip  %s  (%s)" % (sheet_path.name[:36], err))
+            skipped += 1
+            continue
+        alive.add(pid)
+        paths = [PLAYERS / ("%s_%s.webp" % (pid, n)) for n in CELLS]
         if all(p.exists() for p in paths) and not force:
             kept += 1
             total += sum(p.stat().st_size for p in paths)
             continue
         if dry:
-            print("would %s  ← %s" % (pid, sheet_path.name[:44]))
+            print("would %-22s ← %s" % (pid, sheet_path.name[:40]))
             made += 1
             continue
 
@@ -85,8 +110,7 @@ def main():
         W, H = sheet.size
         cw = W // len(CELLS)
         # シートのコマ境界には**灰色の仕切り線**が引かれている(実測 4px / RGB≒163)。
-        # 白ではないので抜き取りをすり抜け、カードの左端に縦線として残る。
-        # コマの内側を少し削って落とす。
+        # 白ではないので抜き取りをすり抜け、カードに縦線として残る。内側を少し削る。
         inset = max(2, int(cw * 0.014))
         sizes = []
         for i, name in enumerate(CELLS):
@@ -95,16 +119,28 @@ def main():
             if not content_box(cell):
                 print("  ⚠ %s のセル%d が空です" % (sheet_path.name, i + 1))
                 continue
-            # 切り抜きの縁に出る白いジャギーを抑える(→slice_player.py)
-            cell, _ = defringe(cell)
+            cell, _ = defringe(cell)          # 切り抜きの縁の白いジャギーを消す
             out = resize_rgba(cell, OUT_W, OUT_H)
-            path = OUT / ("%s_%s.webp" % (pid, name))
+            path = PLAYERS / ("%s_%s.webp" % (pid, name))
             out.save(path, "WEBP", quality=QUALITY, method=6)
             sizes.append(path.stat().st_size)
         total += sum(sizes)
         made += 1
-        print("%s  ← %-44s  %s" % (pid, sheet_path.name[:44],
-                                   " / ".join("%.0fKB" % (s / 1024) for s in sizes)))
+        print("%-22s ← %-40s  %s" % (pid, sheet_path.name[:40],
+                                     " / ".join("%.0fKB" % (s / 1024) for s in sizes)))
+
+    # 素材が消えた / 別のフォルダへ移ったときに、古い書き出しが残ると
+    # プールに幽霊が混ざる。--prune で掃除する。
+    stale = sorted(p for p in PLAYERS.glob("*.webp")
+                   if p.stem.rsplit("_", 1)[0] not in alive)
+    if stale:
+        if "--prune" in sys.argv and not dry:
+            for p in stale:
+                p.unlink()
+            print("古い書き出しを %d 枚削除した" % len(stale))
+        else:
+            print("⚠ 素材の無い書き出しが %d 枚ある(--prune で削除): %s ..."
+                  % (len(stale), stale[0].name))
 
     print("\n新規 %d 枚 / 既存のまま %d 枚 / 除外 %d 枚 / 合計 %.1f MB"
           % (made, kept, skipped, total / 1024 / 1024))

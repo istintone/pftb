@@ -539,6 +539,21 @@ const STEPS = [
         await ctx.wait(150);
         await ctx.js("goBack()");
         await ctx.wait(250);
+        // 絵の引き当て(→docs/03 §3.19)。段×ポジションのプールから、IDで決まる
+        ctx.log("  絵の引き当て:", await ctx.js(`(()=>{
+          const cs=availableCards();
+          const gk=cs.find(c=>c.pos==='GK'), fp=cs.find(c=>c.pos!=='GK');
+          const key=c=>artKeyOf(c);
+          if(gk&&!/^(any|std|reg|spe)-gk-/.test(key(gk)))
+            throw new Error('GKにGK以外の絵が付いた: '+key(gk));
+          if(fp&&/-gk-/.test(key(fp)))
+            throw new Error('外野にGKの絵が付いた: '+key(fp));
+          // 同じカードなら何度引いても同じ絵(セーブに持たずIDから決める)
+          if(fp&&key(fp)!==key(fp))throw new Error('引き当てが安定しない');
+          const uniq=new Set(cs.map(key)).size;
+          if(uniq<3)throw new Error('絵が偏りすぎ: '+uniq+'種');
+          return (gk?key(gk):'-')+' / '+(fp?key(fp):'-')+' / '+cs.length+'枚で'+uniq+'種';
+        })()`));
         // OVR の下のポジション(→docs/06 §6.13)。右端が OVR と揃っていること
         ctx.log("  ポジション表記:", await ctx.js(`(()=>{
           const c=document.querySelector('#cardsGrid .pcard');

@@ -33,7 +33,7 @@ headless Chrome を自動操作してスクリーンショットを撮り、**PN
 | セーブ項目を増やす | `state.js` の `defaultState()`。構造変更なら `SAVE_VER` を上げて `migrate()` を書く |
 | JS/CSSファイルを増やす | `build.py` の `JS_FILES`/`CSS_FILES`(JSは `src/tests/_setup.js` の `JS_FILES` も**両方**更新) |
 | 画像を足す | `src/assets/<グループ>/<名前>.png` に置く → `window.ASSETS["グループ"]["名前"]` で参照 |
-| 汎用選手の絵を足す | 3枚組シートを `src/assets/players/commons/`(GKは `commons/gk/`)に置く → `python tools/slice_commons.py` → `python build.py`。IDはファイル名から決まるので既存の絵はずれない(→[docs/03 §3.19](docs/03-game-design.md)) |
+| 選手の絵を足す | 3枚組シートを `src/assets/players/commons/<段>/<ポジション>/` に置く(段は std/reg/spe/any、ポジションは gk/df/mf/fw/out。**GKは必ず gk**) → `python tools/slice_commons.py` → `python build.py`。IDはファイル名から決まるので既存の絵はずれない(→[docs/03 §3.19](docs/03-game-design.md)) |
 
 ## 姉妹プロジェクト card-eleven の参照方針
 

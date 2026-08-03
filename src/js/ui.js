@@ -162,7 +162,8 @@ function gradeWord(c){
  * 画像を持たないカード(自動生成の選手)はプレースホルダのままにする。
  */
 function playerArt(c,kind){
-  const src=c.art&&(window.ASSETS&&window.ASSETS.players||{})[c.art+"_"+(kind||"play")];
+  const art=artKeyOf(c);
+  const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_"+(kind||"play")];
   return src?'<img class="pc-img" src="'+src+'" alt="">'
             :'<span class="pc-ph">PLAYER</span>';
 }
@@ -1145,7 +1146,8 @@ function mBallShot(e,delay){
 
 /** カットインに出す選手の顔。イラストがあれば使い、無ければクラブカラーの丸にOVR。 */
 function cutAvatar(p,side){
-  const src=p.c.art&&(window.ASSETS&&window.ASSETS.players||{})[p.c.art+"_play"];
+  const art=artKeyOf(p.c);
+  const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_play"];
   const col=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
   return '<div class="cut-av" style="--kit:'+col+'">'
     +(src?'<img src="'+src+'" alt="">':p.c.ovr)+'</div>';
