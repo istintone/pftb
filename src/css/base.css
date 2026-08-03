@@ -691,17 +691,20 @@ body{
 
 /* ボールと選手。**選手は枠から大きく動かない**(ブロックがボールへ寄るだけ)。
    位置はエンジンのイベントが持つので、描画は補間するだけでよい(→docs/07 §7.1)。 */
+/* 実際のボール。**プレイ絵の中にも小さなボールが描かれている**ので、
+   そのままだと本物がどれか分からない。金色に光らせて明確に区別する。 */
 .mball{
-  position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px;
-  border-radius:50%; background:#fff; box-shadow:0 0 7px oklch(1 0 0 / .8);
+  position:absolute; width:11px; height:11px; margin:-5.5px 0 0 -5.5px;
+  border-radius:50%; background:radial-gradient(circle at 35% 30%, #fff 40%, var(--gold));
+  box-shadow:0 0 5px var(--gold), 0 0 12px oklch(0.85 0.16 85 / .8);
   transition:left .45s cubic-bezier(.3,.7,.3,1), top .45s cubic-bezier(.3,.7,.3,1);
-  z-index:3;
+  z-index:4;
 }
 /* ピッチの選手は**全身**で出す(→docs/06 §6.17)。座標は足元に合わせる。
    絵そのものにはクラブカラーが無いので、**足元の影をチームカラー**にして
    どちらのチームかを見分ける(card-eleven の見せ方を踏襲)。 */
 .mp{
-  position:absolute; width:22px; height:28px; margin:-25px 0 0 -11px;
+  position:absolute; width:34px; height:40px; margin:-36px 0 0 -17px;
   transition:left .5s ease, top .5s ease, transform .2s ease;
   transform-origin:50% 100%;
 }
@@ -714,7 +717,7 @@ body{
 /* 影。**選手より下に敷く**ので、足元が地面に着いて見える */
 .mp-sh{
   position:absolute; left:50%; bottom:0; transform:translateX(-50%);
-  width:15px; height:5px; border-radius:50%;
+  width:20px; height:6px; border-radius:50%;
   background:var(--kit); opacity:.75; filter:blur(1px);
 }
 /* 絵が無いときの丸(従来の点) */

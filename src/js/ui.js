@@ -1005,7 +1005,8 @@ function mDrawSquads(){
       // **点ではなく全身を出す**(→docs/06 §6.17)。絵にはクラブカラーが無いので、
       // 足元の影をチームカラーにして、どちらのチームかを影で見分ける。
       const art=artKeyOf(p.c);
-      const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_stand"];
+      // **立ち絵ではなくプレイ絵**。棒立ちが22人並ぶと試合が止まって見える
+      const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_play"];
       html.push('<div class="mp" data-side="'+T.side+'" data-ix="'+i+'"'
         +' data-rx="'+p.x+'" data-ry="'+p.y+'"'          // 陣形そのままの座標(写像前)
         +' data-x="'+x+'" data-y="'+y+'" data-ph="'+((i*2.4+(T.side==="A"?1.1:0))%6.28).toFixed(2)+'"'
