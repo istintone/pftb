@@ -67,6 +67,18 @@ function refreshStamina(M,min){
     for(const p of T.players)p.stam=staminaOf(p,min);
 }
 
+/**
+ * イベントに載った選手IDから選手を引く。**盤面から消えた選手も引ける**ように、
+ * 出場中・控え・交代済み・退場済みを全部見る。過去のイベントを読み直すときに要る。
+ */
+function playerOf(M,side,id){
+  const T=side==="H"?M.home:M.away; if(!T)return null;
+  return T.players.find(p=>p.c.id===id)
+    ||(T.bench||[]).find(p=>p.c.id===id)
+    ||(T.subOut||[]).find(p=>p.c.id===id)
+    ||(T.sentOff||[]).find(p=>p.c.id===id)||null;
+}
+
 /** 出場選手1人。カードに「どの枠か・適性はいくつか・どこに立つか」を添えた形。 */
 function lineup(cards,form){
   const slots=FORMATIONS[form||DEFAULT_FORM];
@@ -83,13 +95,15 @@ function lineup(cards,form){
 }
 
 /** チームを組む。試合中に変わる値(得点・スタッツ)もここに持たせる。 */
-function buildTeam(cards,form,name,side){
+function buildTeam(cards,form,name,side,kickers){
   const { xi, bench }=lineup(cards,form);
-  xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1;
+  xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0;
     p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
       pass:0, passOk:0, duelW:0, duelL:0 }; });
   bench.forEach(p=>{ p.side=side; p.stam=1; });
-  return { players:xi, bench, form, name, side, score:0 };
+  // kickers … {pk,fk,ck} のカードID。自クラブは編成で指名し、CPUは自動選出に任せる
+  return { players:xi, bench, form, name, side, score:0,
+    kickers:kickers||null, subOut:[], sentOff:[] };
 }
 
 // ---------- 支配率 ----------
@@ -157,12 +171,155 @@ function onTarget(rng,atk,h){
  * それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.10)。
  * 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
  */
-function resolveShot(rng,atk,gk,h){
-  const S=TUNING.shot;
-  const sSc=(eff(atk,"atk")*0.7+eff(atk,"pow")*0.3)*Math.pow(nearOf(h),S.rangePow)*rr(rng);
+function resolveShot(rng,atk,gk,h,sp){
+  const S=TUNING.shot, SP=TUNING.sp;
+  // セットプレーは**止まったボールを蹴る / 完全にフリーで頭に当てる**ので威力が上がる
+  const k=sp==="pk"?SP.pkK:sp==="fk"?SP.fkK:1;
+  const base=sp==="hdr"?(eff(atk,"pow")*0.6+eff(atk,"atk")*0.4)
+            :sp==="fk" ?(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)
+                       :(eff(atk,"atk")*0.7+eff(atk,"pow")*0.3);
+  const sSc=base*Math.pow(nearOf(h),S.rangePow)*k*rr(rng);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)*rr(rng);
   return sSc>gSc*TUNING.th.shot;
 }
+/** 枠に飛ぶか。セットプレーは種類ごとに固有の精度を持つ(距離の効き方が違う)。 */
+function onTargetSp(rng,atk,h,sp){
+  const SP=TUNING.sp;
+  if(sp==="pk") return rng()<SP.pkAcc;
+  if(sp==="hdr")return rng()<SP.hdrAcc;
+  if(sp==="fk") return rng()<SP.fkAcc*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
+  return onTarget(rng,atk,h);
+}
+// ---------- セットプレー(→docs/07 §7.11) ----------
+// **ファウルは守備側が競り合いに勝った瞬間にしか起きない。** 独立した抽選にすると
+// 「何も起きていないのにPK」が出てしまい、見せかけのロジックになる(→§7.1)。
+//
+//   連鎖のマッチアップで守備側が勝つ ─┬─ ファウル ─┬─ h≧boxH → PK
+//                                     │            └─ それ以外 → FK
+//   シュートをブロックした ───────────┴─ ファウル / コーナー
+//   GKがセーブした ──────────────────── コーナー
+
+/**
+ * ファウルを引く。**位置の高さがそのまま重さを分ける**。
+ *   pk   … エリア内
+ *   fk   … 敵陣の蹴れる位置
+ *   free … それ以外(自陣寄り)。攻撃が止まるだけで、蹴りはしない。
+ *          ただし**カードは引く**ので、積み重なれば退場につながる。
+ */
+function rollFoul(rng,h,rate,allowPk){
+  const SP=TUNING.sp;
+  if(rng()>=rate)return null;
+  // **PKになるのはシュートを止めに行った反則だけ**(allowPk)。
+  // 陣形の最前列は h≒1.0 に立つので、連鎖のファウルまでPKにすると
+  // 「FW起点で潰された = 必ずPK」になってしまう。
+  if(allowPk&&h>=SP.boxH)return "pk";
+  return h>=SP.fkH?"fk":"free";
+}
+/**
+ * キッカーを決める。**指名があればそれを最優先**(→docs/06 §6.15)。
+ * 指名が居ない(未設定・交代済み・退場)なら能力で自動選出する。
+ * 抽選ではないので、同じ場面なら必ず同じ選手が蹴る。
+ */
+function spKicker(T,kind){
+  const out=T.players.filter(p=>p.role!=="GK");
+  if(!out.length)return T.players[0];
+  const want=T.kickers&&T.kickers[kind];
+  if(want){ const p=out.find(q=>q.c.id===want); if(p)return p; }
+  const w=kind==="pk"?(c=>c.atk*1.2+c.tec)
+         :kind==="ck"?(c=>c.pow+c.atk*0.6)
+                     :(c=>c.tec*1.2+c.atk*0.8);
+  return out.reduce((b,p)=>w(p.c)>w(b.c)?p:b,out[0]);
+}
+/**
+ * カードを抽選する。エリア内のファウルほど重い。
+ * 2枚目の警告 or 一発レッドで**退場**し、そのまま人数が減ったまま試合が続く。
+ */
+function bookCard(M,rng,push,df,D,pk,min){
+  const SP=TUNING.sp;
+  const red=rng()<(pk?SP.pkRed:SP.red);
+  const yellow=!red&&rng()<(pk?SP.pkYellow:SP.yellow);
+  if(!red&&!yellow)return null;
+  df.cards=(df.cards||0)+1;
+  const off=red||df.cards>=2;
+  push({ side:D.side, type:"card", by:df.c.id, card:red?"r":"y", off,
+    pos:[Math.round(df.x),Math.round(df.y)] });
+  // **GKは退場させない**(代役を立てる仕組みが無く、盤面が壊れる)。人数の下限も守る。
+  if(off&&df.role!=="GK"&&D.players.length>SP.minPlayers){
+    df.exit=min; df.sentOff=true;
+    D.players=D.players.filter(p=>p!==df);
+    (D.sentOff=D.sentOff||[]).push(df);
+  }
+  return red?"r":"y";
+}
+/**
+ * 空中戦。クロス(CK / 深くないFK)がボックスに入ったときの競り合い。
+ * **pow が主役**なので、足元の巧い選手ではなく高さのある選手が主役になる。
+ */
+function aerialDuel(rng,T,D){
+  const SP=TUNING.sp;
+  const pick=(list,k)=>pickW(rng,list,p=>eff(p,"pow")*0.7+eff(p,k)*0.3);
+  const atk=pick(T.players.filter(p=>p.role!=="GK"),"atk");
+  const df =pick(D.players.filter(p=>p.role!=="GK"),"def");
+  if(!atk)return null;
+  if(!df)return { atk, df:null, ok:true };
+  const aSc=(eff(atk,"pow")*SP.aerialPow+eff(atk,"atk")*(1-SP.aerialPow))*SP.aerialK*rr(rng);
+  const dSc=(eff(df,"pow")*SP.aerialPow+eff(df,"def")*(1-SP.aerialPow))*lineMul(D)*rr(rng);
+  return { atk, df, ok:aSc>dSc*TUNING.th.aerial };
+}
+/**
+ * セットプレーを蹴る。**ここから先は通常のシュートと同じ経路**に合流するので、
+ * ブロック・枠外・GK・こぼれ球の扱いが本編と食い違わない。
+ *   pk       … 壁もブロックも無い。キッカー vs GK
+ *   fk(直接) … 壁がブロックに入る。キッカー vs GK
+ *   fk/ck(クロス) … 空中戦に勝った選手のヘディング
+ */
+function takeSet(M,rng,push,T,D,kind,x,from,att){
+  const SP=TUNING.sp, F=TUNING.mom;
+  att.sp++;
+  if(kind==="pk"){
+    const kicker=spKicker(T,"pk");
+    push({ side:T.side, type:"setpiece", kind:"pk", mode:"direct",
+      by:kicker.c.id, h:SP.pkH, pos:[50,yOfH(SP.pkH)] });
+    return shoot(M,rng,push,T,D,kicker,null,{ h:SP.pkH, x:50 },from,0,att,"pk");
+  }
+  const kicker=spKicker(T,kind==="ck"?"ck":"fk");
+  // FK は距離で分かれる。遠ければ蹴り込むしかない
+  const h=kind==="ck"?SP.crossH:clamp(att.foulH||0.5,0,1);
+  const direct=kind==="fk"&&h>=SP.fkDirectH&&rng()<SP.fkDirect;
+  push({ side:T.side, type:"setpiece", kind, mode:direct?"direct":"cross",
+    by:kicker.c.id, h:Math.round(h*100)/100,
+    pos:kind==="ck"?[x<50?2:98,yOfH(0.99)]:[Math.round(x),yOfH(h)] });
+  if(direct)return shoot(M,rng,push,T,D,kicker,null,{ h, x },from,0,att,"fk");
+
+  // クロス → 空中戦 → ヘディング
+  const a=aerialDuel(rng,T,D);
+  if(!a)return M.events.slice(from);
+  a.atk.stat.inv++; if(a.df)a.df.stat.inv++;
+  push({ side:T.side, type:"aerial", by:a.atk.c.id, vs:a.df?a.df.c.id:null, ok:a.ok,
+    h:SP.crossH, pos:[50,yOfH(SP.crossH)] });
+  if(!a.ok){
+    a.atk.stat.duelL++; if(a.df)a.df.stat.duelW++;
+    addMom(M,D.side,F.duelLost); return M.events.slice(from);
+  }
+  a.atk.stat.duelW++; if(a.df)a.df.stat.duelL++;
+  addMom(M,T.side,F.duelWon);
+  return shoot(M,rng,push,T,D,a.atk,kicker,{ h:SP.crossH, x:50 },from,0,att,"hdr");
+}
+/** ファウルを積んで、カードを引いて、蹴る位置ならセットプレーへ渡す。 */
+function giveFoul(M,rng,push,T,D,kind,df,victim,h,x,from,att,min){
+  const F=TUNING.mom;
+  push({ side:T.side, type:"foul", kind, by:df.c.id, on:victim?victim.c.id:null,
+    h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
+  bookCard(M,rng,push,df,D,kind==="pk",min);
+  if(kind==="free"){                                        // 蹴らない位置。攻撃はここで終わる
+    addMom(M,D.side,F.duelLost);
+    return M.events.slice(from);
+  }
+  addMom(M,T.side,kind==="pk"?F.shot:F.duelWon);
+  att.foulH=h;
+  return takeSet(M,rng,push,T,D,kind,x,from,att);
+}
+
 /** こぼれ球を拾えるか。詰める側は spd と atk、防ぐ側は def と spd。 */
 function resolveRebound(rng,atk,df){
   const aSc=(eff(atk,"spd")*0.5+eff(atk,"atk")*0.5)*rr(rng);
@@ -372,8 +529,8 @@ function matchClock(rng){
 /** 試合の状態を作る。ここではまだ1ティックも解かない。 */
 function createMatch(home,away,seed){
   const s=seed>>>0;
-  const H=buildTeam(home.cards,home.form,home.name,"H");
-  const A=buildTeam(away.cards,away.form,away.name,"A");
+  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers);
+  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers);
   const M={
     seed:s, home:H, away:A, ix:0,
     clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定
@@ -468,6 +625,8 @@ function stepMatch(M){
   let h=heightOf(carrier), x=carrier.x;
   let assist=null, step=0, lastCh=null;
 
+  // 1回の攻撃で持ち回す状態。セットプレーを重ねすぎないための回数もここに持つ。
+  const att={ sp:0, foulH:0 };
   let carryRun=0;                                           // 同じ選手が連続で運んだ回数
   while(true){
     const stray=strayOf(carrier,h,x);
@@ -486,6 +645,9 @@ function stepMatch(M){
     if(ch.kind==="pass")carrier.stat.pass++;              // パスの試行(採点に使う)
     if(!ok){
       carrier.stat.duelL++; if(marker)marker.stat.duelW++;
+      // **止めた瞬間だけがファウルの入口**(→docs/07 §7.11)
+      const foul=marker?rollFoul(rng,h,TUNING.sp.foulDuel):null;
+      if(foul)return giveFoul(M,rng,push,T,D,foul,marker,carrier,h,x,from,att,t.min);
       addMom(M,D.side,F.duelLost); return M.events.slice(from);
     }
     carrier.stat.duelW++; if(marker)marker.stat.duelL++;
@@ -493,7 +655,7 @@ function stepMatch(M){
     addMom(M,T.side,F.duelWon);
 
     const tg=ballTarget(rng,h,x,ch);
-    if(ch.kind==="shot")return shoot(M,rng,push,T,D,carrier,assist,tg,from);
+    if(ch.kind==="shot")return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att);
 
     // **まずボールを誰が収めたかを決める**。撃つかどうかはそのあと。
     // 順番を逆にすると、スルーパスを出した本人がその球を自分で撃つことになる。
@@ -502,12 +664,12 @@ function stepMatch(M){
       nextLast=ch.id;                                       // 自分が次の起点になる
     }else{                                                  // パス系 → 行き先に近い味方へ
       const recv=receiverAt(rng,T,tg,carrier);
-      if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from);
+      if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att);
       next=recv; nextAssist=carrier;
     }
     // 撃つ: 深く入った / つなぎ上限。判断するのは**ボールを収めた選手**
     if(step>=C.maxLinks||shotUrge(rng,tg.h,step,next))
-      return shoot(M,rng,push,T,D,next,nextAssist,tg,from);
+      return shoot(M,rng,push,T,D,next,nextAssist,tg,from,0,att);
 
     carrier=next; assist=nextAssist; lastCh=nextLast;
     h=tg.h; x=tg.x; step++;
@@ -521,23 +683,31 @@ function stepMatch(M){
  * **GKに全部が来るわけではない。** 守備者が身体を入れ、技術が足りなければ枠を外れ、
  * 止められてもこぼれれば詰められる。GK以外の守備も結果に効く。
  */
-function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth){
-  const F=TUNING.mom, gk=pickGK(D);
+function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
+  const F=TUNING.mom, SP=TUNING.sp, gk=pickGK(D);
   const pos=[Math.round(tg.x),yOfH(tg.h)];
-  const d=depth||0;
-  const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100, depth:d };
+  const d=depth||0, A=att||{ sp:0 };
+  const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100, depth:d,
+    sp:sp||null };
   shooter.stat.shots++;
+  const more=A.sp<SP.maxSp;                                  // まだセットプレーを重ねてよいか
 
-  // ① ブロック — 打点に近い守備者が身体を入れる
-  const blocker=matchupDefender(rng,tg.h,tg.x,D);
+  // ① ブロック — 打点に近い守備者が身体を入れる(PKは壁もブロックも無い)
+  const blocker=sp==="pk"?null:matchupDefender(rng,tg.h,tg.x,D);
   if(blocker&&resolveBlock(rng,shooter,blocker,D)){
     blocker.stat.blocks=(blocker.stat.blocks||0)+1; blocker.stat.inv++;
     addMom(M,D.side,F.block);
     push(Object.assign({ type:"block", vs:blocker.c.id },base));
+    // 身体を投げ出した結果、ファウルにもコーナーにもなりうる
+    if(more){
+      const foul=rollFoul(rng,tg.h,SP.foulBlock,true);
+      if(foul)return giveFoul(M,rng,push,T,D,foul,blocker,shooter,tg.h,tg.x,from,A,base.min);
+      if(rng()<SP.ckOnBlock)return takeSet(M,rng,push,T,D,"ck",tg.x,from,A);
+    }
     return M.events.slice(from);
   }
-  // ② 枠外 — 技術と距離。GKは関与しない
-  if(!onTarget(rng,shooter,tg.h)){
+  // ② 枠外 — 技術と距離。GKは関与しない。セットプレーは種類ごとに精度が決まっている
+  if(!onTargetSp(rng,shooter,tg.h,sp)){
     addMom(M,D.side,F.miss);
     push(Object.assign({ type:"miss" },base));
     return M.events.slice(from);
@@ -546,7 +716,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth){
   gk.stat.inv++;
 
   // ③ GK
-  if(resolveShot(rng,shooter,gk,tg.h)){
+  if(resolveShot(rng,shooter,gk,tg.h,sp)){
     T.score++; shooter.stat.goals++;
     if(assist)assist.stat.assists++;
     addMom(M,T.side,F.goal);
@@ -557,6 +727,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth){
   gk.stat.saves=(gk.stat.saves||0)+1;
   addMom(M,T.side,F.shot); addMom(M,D.side,F.save);         // 止めた側にも流れが来る
   push(Object.assign({ type:"save", gk:gk.c.id },base));
+  if(more&&rng()<SP.ckOnSave)return takeSet(M,rng,push,T,D,"ck",tg.x,from,A);
 
   // ④ こぼれ球 — **回数は決め打ちしない**。
   //    「こぼれる(30%) × 詰め合いに勝つ(約40%)」で1回あたり約12%なので、
@@ -570,7 +741,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth){
     vs:guard?guard.c.id:null, ok:got, depth:d, pos });
   if(!got){ addMom(M,D.side,F.duelLost); return M.events.slice(from); }
   addMom(M,T.side,F.duelWon);
-  return shoot(M,rng,push,T,D,chaser,null,{ h:TUNING.shot.reboundH, x:tg.x },from,d+1);
+  return shoot(M,rng,push,T,D,chaser,null,{ h:TUNING.shot.reboundH, x:tg.x },from,d+1,A);
 }
 
 /** 試合終了イベント(1回だけ積む)。 */
@@ -647,7 +818,7 @@ function matchStats(M){
   for(const side of ["H","A"]){
     const T=side==="H"?M.home:M.away;
     // 交代で退いた選手のパスも足す(集計から消えると成功率が実態とずれる)
-    for(const p of T.players.concat(T.subOut||[])){
+    for(const p of T.players.concat(T.subOut||[],T.sentOff||[])){
       out[side].pass+=p.stat.pass||0; out[side].passOk+=p.stat.passOk||0;
     }
   }
@@ -671,6 +842,7 @@ function matchRatings(M,side){
     out.push({ p, side, min:minutesOf(p,full), rating:matchRating(p,conceded) });
   };
   T.players.forEach(add);
+  (T.sentOff||[]).forEach(add);                              // 退場した選手も採点に残す
   T.bench.forEach(p=>{ if(p.used)add(p); });              // 途中出場も
   T.subOut&&T.subOut.forEach(add);                        // 途中で退いた選手
   return out.sort((a,b)=>b.rating-a.rating);

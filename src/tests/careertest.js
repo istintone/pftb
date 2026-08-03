@@ -200,8 +200,9 @@ function runSeason() {
       for (const e of M.events) {
         if (e.type !== "origin") continue;
         const T = e.side === "H" ? M.home : M.away, D = e.side === "H" ? M.away : M.home;
-        const p = T.players.find(x => x.c.id === e.by);
-        const df = D.players.find(x => x.c.id === e.vs);
+        // 退場した選手は盤面から消えるので、playerOf で全員から引く
+        const p = E.playerOf(M, e.side, e.by);
+        const df = E.playerOf(M, e.side === "H" ? "A" : "H", e.vs);
         assert.ok(p, "起点の選手がイベントから引ける");
         assert.ok(df, "対応した相手がイベントから引ける");
         assert.notStrictEqual(df.role, "GK", "GKは起点のマッチアップに出ない");

@@ -188,6 +188,24 @@ const STEPS = [
     await ctx.shot("07e-cutin-shot");    // まず「シュート!」
     await ctx.wait(1250);
     await ctx.shot("07e-cutin-goal");    // そのあと結果
+    // セットプレー(→docs/07 §7.11)。出る局面が毎回変わるので直接呼ぶ
+    ctx.log("  セットプレーのカットイン:", await ctx.js(`(()=>{
+      const k=spKicker(_M.home,'pk');
+      cutSet({side:'H',kind:'pk'},k);
+      const hd=document.querySelector('#mCut .cut-hd').textContent;
+      if(!document.querySelector('#mCut .cut.sp'))throw new Error('セットプレーの帯が出ていない');
+      return hd+' / '+k.c.sur;
+    })()`));
+    await ctx.wait(400);
+    await ctx.shot("07h-cutin-setpiece");
+    ctx.log("  退場のカットイン:", await ctx.js(`(()=>{
+      const p=_M.away.players.find(q=>q.role==='DF');
+      cutCard({side:'A',card:'r',off:true},p);
+      if(!document.querySelector('#mCut .cut.red'))throw new Error('退場の帯が赤くない');
+      return document.querySelector('#mCut .cut-word').textContent;
+    })()`));
+    await ctx.wait(400);
+    await ctx.shot("07i-cutin-red");
     // 実際の試合でゴールしたとき、ボールがゴールへ入ること
     // シュートの着地点がゴールライン(2%/98%)に届いているか
     ctx.log("  シュートの着地:", await ctx.js(`(()=>{
@@ -291,6 +309,25 @@ const STEPS = [
     await ctx.shot("08-result");
     await ctx.js("document.getElementById('btnResultOk').click()");
     await ctx.wait(300);
+  }],
+  ["セットプレー(編成の指名 → カットイン)", async ctx => {
+    await ctx.js("document.querySelector('#tabs button[data-s=\"deck\"]').click()");
+    await ctx.wait(300);
+    ctx.log("担当枠:", await ctx.js(
+      `[...document.querySelectorAll('#deckKickers .kk')].map(k=>k.querySelector('.kk-t').textContent+':'+k.querySelector('.kk-nm').textContent+'('+k.querySelector('.kk-sub').textContent+')').join(' / ')`));
+    await ctx.shot("13a-kickers");
+    // FK の担当を指名 → 表示が「自動」から「指名」に変わる
+    await ctx.js("document.querySelector('#deckKickers [data-kick=\"fk\"]').click()");
+    await ctx.wait(250);
+    await ctx.shot("13b-kicker-pick");
+    ctx.log("指名後:", await ctx.js(`(()=>{
+      const rows=[...document.querySelectorAll('#slotModalBody [data-pick]')];
+      rows[rows.length-1].click();
+      const k=document.querySelector('#deckKickers [data-kick="fk"]');
+      if(k.classList.contains('auto'))throw new Error('指名しても自動のままになっている');
+      if(S.kickers.fk==null)throw new Error('指名がセーブに入っていない');
+      return k.querySelector('.kk-nm').textContent+' / '+k.querySelector('.kk-sub').textContent;
+    })()`));
   }],
   ["タブ巡回", async ctx => {
     for (const [tab, name] of [["cards", "09-cards"], ["deck", "10-deck"], ["season", "11-season"], ["clubhouse", "12-club"]]) {

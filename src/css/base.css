@@ -743,6 +743,12 @@ body{
     oklch(0.26 0.09 85 / .96) 10%, oklch(0.26 0.09 85 / .96) 90%, transparent);
   border-color:var(--accent) }
 .mcut.shake{ animation:cutShake .4s ease }
+/* セットプレー / 退場の帯。1人だけ出すので中央に寄せ、縁の色で意味を変える。 */
+.cut.sp .cut-row, .cut.red .cut-row{ justify-content:center }
+.cut.sp{ border-color:var(--gold) }
+.cut.red{ border-color:oklch(0.55 0.20 25);
+  background:linear-gradient(90deg, transparent, oklch(0.16 0.06 25 / .96) 12%,
+    oklch(0.16 0.06 25 / .96) 88%, transparent) }
 @keyframes cutShake{
   0%,100%{ transform:none } 20%{ transform:translate(-4px,2px) }
   45%{ transform:translate(4px,-2px) } 70%{ transform:translate(-2px,-1px) }
@@ -930,6 +936,16 @@ body{
 .pick .sl-pos{ padding:2px 5px; border-radius:3px; background:oklch(0.28 0.07 150) }
 
 /* ベンチ(横スクロール) */
+/* セットプレー担当(→docs/06 §6.15)。3枠を横並びで、蹴る種類ごとに1枠。 */
+.kickers{ display:flex; gap:8px; margin-top:8px }
+.kk{ flex:1; min-width:0; padding:8px 6px; text-align:center; cursor:pointer;
+  border-radius:8px; background:var(--panel); border:1px solid var(--line) }
+.kk-t{ font:700 9px/1 var(--f-head); letter-spacing:1px; color:var(--gold); margin-bottom:6px }
+.kk-nm{ font-size:11px; color:oklch(0.88 0.01 90);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.kk-sub{ font-size:8px; color:oklch(0.55 0.02 255); margin-top:2px }
+.kk.auto .kk-nm{ color:oklch(0.62 0.02 255) }
+
 .bench{ display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; margin-top:8px }
 .bn{ flex-shrink:0; width:76px; padding:6px; text-align:center; cursor:pointer;
   border-radius:8px; background:var(--panel); border:1px solid var(--rar, var(--line)) }

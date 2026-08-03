@@ -139,13 +139,28 @@ const E = setup({ tmpName: "_tmp_integration.js" });
     await E.importSave(JSON.stringify(save4));
     await E.loadGame();
     const s5 = E.getS();
-    assert.strictEqual(s5.v, 5, "v4 が v5 へ移行される");
+    assert.strictEqual(s5.v, E.SAVE_VER, "v4 が最新版へ移行される");
     assert.strictEqual(s5.squad.length, NX + NB, "控え5枠が足される");
     assert.deepStrictEqual(s5.squad.slice(0, NX), xi, "先発11人はそのまま");
     assert.strictEqual(new Set(s5.squad.filter(Boolean)).size,
       s5.squad.filter(Boolean).length, "控えに先発と同じ選手が入らない");
-    console.log("移行OK v4 → v5 先発は据え置き / 控え",
+    console.log("移行OK v4 → v" + E.SAVE_VER + " 先発は据え置き / 控え",
       s5.squad.slice(NX).filter(Boolean).length, "人を補充");
+  }
+
+  // v5 → v6: セットプレーの担当指名を足す(未指名 = 自動選出と同じなので空で足すだけ)
+  {
+    await E.newGame();
+    E.getS().coach = "テスト監督";
+    E.startTenure("sam-8");
+    const save5 = JSON.parse(JSON.stringify(E.getS()));
+    save5.v = 5; delete save5.kickers;
+    await E.importSave(JSON.stringify(save5));
+    await E.loadGame();
+    const s6 = E.getS();
+    assert.ok(s6.kickers && "pk" in s6.kickers && "fk" in s6.kickers && "ck" in s6.kickers,
+      "v5 にキッカー枠が補われる");
+    console.log("移行OK v5 → v" + E.SAVE_VER + " キッカー枠を補完");
   }
 
   E.deleteSave();

@@ -335,6 +335,54 @@ function setSlot(ix,cardId){
   save(); closeSlot(); renderDeck();
 }
 
+// ---------- セットプレー担当(→docs/06 §6.15 / docs/07 §7.11) ----------
+// 蹴る種類ごとに見る能力が違う。**指名は先発にしか効かない**(蹴る人が居ないため)。
+const SP_KINDS=[["pk","PK","指名"],["fk","FK","指名"],["ck","CK","指名"]];
+const SP_WEIGHT={ pk:c=>c.atk*1.2+c.tec, fk:c=>c.tec*1.2+c.atk*0.8, ck:c=>c.pow+c.atk*0.6 };
+/** 指名が無いときに蹴る選手。**エンジンの spKicker と同じ式**で選ぶ。 */
+function autoKicker(start,kind){
+  const out=start.filter(c=>c&&primarySub(c)!=="GK");
+  if(!out.length)return null;
+  const w=SP_WEIGHT[kind];
+  return out.reduce((b,c)=>w(c)>w(b)?c:b,out[0]);
+}
+function openKicker(kind){
+  const start=squadCards().slice(0,TUNING.squad.starters).filter(Boolean);
+  const w=SP_WEIGHT[kind];
+  const list=start.filter(c=>primarySub(c)!=="GK").sort((a,b)=>w(b)-w(a));
+  const cur=S.kickers[kind];
+  const auto=autoKicker(start,kind);
+  const note={ pk:"決定力と技術で決まる", fk:"技術が主役。直接狙うか蹴り込むかは位置しだい",
+    ck:"力が主役。競り合う相手ではなく、蹴る球の質" }[kind];
+  $("slotModalBody").innerHTML=
+    '<button class="close-btn" id="slotClose" aria-label="閉じる">×</button>'
+    +'<h3>'+kind.toUpperCase()+' を蹴る選手</h3>'
+    +'<div class="lg" style="margin-bottom:10px">'+note
+      +'　指名しなければ <b>'+(auto?esc(shortName(auto)):"—")+'</b> が蹴ります。</div>'
+    +(cur?'<button class="btn ghost" id="slotClear" style="margin-bottom:10px">'
+        +'指名を外す（自動に戻す）</button>':'')
+    +'<div class="picks">'+list.map(c=>
+        '<div class="pick'+(c.id===cur?" on":"")+'" data-pick="'+c.id+'">'
+        +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
+        +'<div class="pk-ovr">'+Math.round(w(c))+'</div>'
+        +'<div class="pk-b"><b>'+esc(c.name)+'</b><span>'+c.subs.join(" / ")+'</span></div>'
+        +'<div class="pk-r">'+(c.id===auto.id?'<span class="pk-at">自動</span>':'')+'</div>'
+      +'</div>').join("")+'</div>';
+  $("slotClose").onclick=closeSlot;
+  if(cur)$("slotClear").onclick=()=>setKicker(kind,null);
+  $("slotModalBody").querySelectorAll("[data-pick]").forEach(el=>{
+    el.onclick=()=>setKicker(kind,Number(el.dataset.pick));
+  });
+  $("slotModalBody").querySelectorAll("[data-info]").forEach(el=>{
+    el.onclick=e=>{ e.stopPropagation(); openCard(Number(el.dataset.info)); };
+  });
+  $("slotModal").classList.add("on");
+}
+function setKicker(kind,cardId){
+  S.kickers[kind]=cardId;
+  save(); closeSlot(); renderDeck();
+}
+
 // ---------- 陣形を選ぶ(→docs/06 §6.15) ----------
 /** 枠の内訳(GKを除いた大分類ごとの数)。"4-4-2" のような呼び名の裏付けになる。 */
 function formShape(form){
@@ -487,6 +535,23 @@ function renderDeck(){
   }).join("");
   $("deckBench").querySelectorAll(".bn").forEach(el=>{
     el.onclick=()=>openSlot(Number(el.dataset.slot));
+  });
+
+  // セットプレー担当(→docs/07 §7.11)。**指名しなければ能力で自動選出**なので、
+  // 空欄のままでも成立する。誰が蹴るのかは常に見えている必要があるため、
+  // 自動のときも実際に蹴る選手の名前を出す。
+  $("deckKickers").innerHTML=SP_KINDS.map(([k,label,note])=>{
+    const named=cardById(S.kickers&&S.kickers[k]);
+    const on=named&&start.some(c=>c&&c.id===named.id);   // 先発に居ないと蹴れない
+    const c=on?named:autoKicker(start,k);
+    return '<div class="kk'+(on?"":" auto")+'" data-kick="'+k+'"'+(c?kitStyle(c):"")+'>'
+      +'<div class="kk-t">'+label+'</div>'
+      +'<div class="kk-nm">'+(c?esc(shortName(c)):"—")+'</div>'
+      +'<div class="kk-sub">'+(on?note:"自動")+'</div>'
+    +'</div>';
+  }).join("");
+  $("deckKickers").querySelectorAll("[data-kick]").forEach(el=>{
+    el.onclick=()=>openKicker(el.dataset.kick);
   });
 
   // 注記は**状態だけ**を出す。読み方の説明はヘルプタブへ寄せる(→docs/06 §6.16)。
@@ -760,10 +825,7 @@ let _lastResult=null;
 // 味方=青 / 相手=赤 / ゴール=金 で色分けする(モックの実況欄に準拠)。
 
 /** イベントに出てくる選手を引く。 */
-function mPlayer(M,side,id){
-  const T=side==="H"?M.home:M.away;
-  return T.players.find(p=>p.c.id===id)||T.bench.find(p=>p.c.id===id)||null;
-}
+const mPlayer=(M,side,id)=>playerOf(M,side,id);
 const mName=p=>p?esc(shortName(p.c)):"選手";
 
 /** ボールのある高さを、実況で使える場所の言葉に直す。 */
@@ -801,6 +863,24 @@ function lineChannel(M,e){
   return sayOf(e,[nm+"の"+L+"、"+z+"へ", nm+"が"+L+"で繋ぐ", nm+"の"+L+"が通った"]);
 }
 /**
+ * ファウルの1行。**どこで倒したか**が、そのまま次に何が起きるかを予告する。
+ * `side` は**得た側**なので、反則した選手は相手チームから引く。
+ */
+function lineFoul(M,e){
+  const opp=e.side==="H"?"A":"H";
+  const dn=mName(mPlayer(M,opp,e.by)), vn=e.on?mName(mPlayer(M,e.side,e.on)):"選手";
+  if(e.kind==="pk")  return "<b>"+dn+"がエリア内で"+vn+"を倒した！ PK</b>";
+  if(e.kind==="fk")  return dn+"が"+vn+"を倒す。"+zoneOf(e.h)+"でフリーキック";
+  return dn+"のファウル。ここで試合が切れる";
+}
+/** セットプレーを蹴る1行。 */
+function lineSet(M,e,kicker){
+  const nm=mName(kicker);
+  if(e.kind==="pk")return "<b>"+nm+"</b>がスポットにボールを置く";
+  if(e.kind==="ck")return nm+"のコーナーキック";
+  return e.mode==="direct"?nm+"が直接狙う":nm+"が壁の向こうへ蹴り込む";
+}
+/**
  * 1イベント → 実況の1行。返り値 { text, cls } / 出さないなら null。
  * possession のような内部の刻みは出さない(読み物として意味が無い)。
  */
@@ -816,6 +896,13 @@ function matchLine(e,M){
     case "fulltime": return null;                    // 終了は mFinish が出す
     case "origin":
     case "link":     return { text:lineChannel(M,e), cls:side };
+    case "foul":     return { text:lineFoul(M,e), cls:side };
+    case "card":     return { text:(e.card==="r"?"🟥 ":"🟨 ")+mName(p)
+                        +(e.off?"、<b>退場！</b>数的優位が生まれた":"に"+(e.card==="r"?"レッドカード":"警告")),
+                        cls:e.off?"goal":"info" };
+    case "setpiece": return { text:lineSet(M,e,p), cls:side };
+    case "aerial":   return { text:e.ok?mName(p)+"が競り勝った！":mName(vs)+"が競り勝ってクリア",
+                        cls:side };
     case "block":    return { text:mName(p)+"のシュート！"+mName(vs)+"がブロック", cls:side };
     case "miss":     return { text:mName(p)+"のシュートは枠を外れた", cls:side };
     case "save":     return { text:"<b>"+mName(p)+"</b>のシュート！"+mName(gk)+"がセーブ", cls:side };
@@ -1130,6 +1217,26 @@ function cutShot(e,sc,keeper,word,scored,assist){
   return ms;
 }
 /** キックオフ。両クラブを向かい合わせる。 */
+/** セットプレー宣言。誰が蹴るのかを大きく出す(→docs/06 §6.19)。 */
+function cutSet(e,kicker){
+  const P=TUNING.play;
+  const head={ pk:"PENALTY KICK", fk:"FREE KICK", ck:"CORNER KICK" }[e.kind]||"SET PIECE";
+  const note={ pk:"ATK "+(kicker?kicker.c.atk:"-")+" / TEC "+(kicker?kicker.c.tec:"-"),
+    fk:"TEC "+(kicker?kicker.c.tec:"-"), ck:"POW "+(kicker?kicker.c.pow:"-") }[e.kind];
+  return cutShow('<div class="cut sp">'
+    +'<div class="cut-hd">'+head+'</div>'
+    +'<div class="cut-row">'+cutFig(kicker,e.side,"L win",note)+'</div>'
+    +'<div class="cut-word win">'+(e.kind==="pk"?"キッカーは…":"キッカー")+'</div>'
+  +'</div>',P.cutMs);
+}
+/** 退場。赤い帯で、盤面から1人減ることをはっきり伝える。 */
+function cutCard(e,p){
+  return cutShow('<div class="cut red">'
+    +'<div class="cut-hd">'+(e.card==="r"?"RED CARD":"SECOND YELLOW")+'</div>'
+    +'<div class="cut-row">'+cutFig(p,e.side,"L dim")+'</div>'
+    +'<div class="cut-word stop">退場!</div>'
+  +'</div>',TUNING.play.cutMs);
+}
 function cutKick(){
   const f=(name,id,cls)=>'<div class="cut-fig '+cls+'">'
     +'<div class="cut-av" style="--kit:'+clubColor(id)+'"></div><b>'+esc(name)+'</b></div>';
@@ -1154,6 +1261,10 @@ function mCut(e){
   const gk=e.gk&&mPlayer(_M,e.side==="H"?"A":"H",e.gk);
   switch(e.type){
     case "kickoff": return cutKick();
+    // セットプレーは**必ず見せる**。試合の山場であり、誰が蹴るかが読み物になる
+    case "setpiece": return cutSet(e,by);
+    case "card":     return e.off?cutCard(e,by):0;
+    case "aerial":   return vs?cutVs(e,by,vs,e.ok?"競り勝った!":"クリア!",e.ok):0;
     case "goal":    return cutShot(e,by,gk,"GOAL!!",true,e.assist&&mPlayer(_M,e.side,e.assist));
     case "save":    return cutShot(e,by,gk,"SAVE!",false);
     case "block":   return cutShot(e,by,vs,"BLOCK!",false);
@@ -1178,6 +1289,7 @@ function mApply(e){
   $("mClock").textContent=min;
   $("mClock").classList.toggle("late",e.min>=80);
   if(e.hg!=null)$("mSc").textContent=e.hg+" - "+e.ag;
+  if(e.type==="card"&&e.off)mDrawSquads();     // 退場した選手は盤面から消える
   mFocus(e); mMoveBall(e); mLayout(e);
   const hold=mCut(e);
   // シュートは打点に置いてから**実際に飛ばす**。カットインの決着と間を合わせる

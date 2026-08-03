@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=5;
+const SAVE_VER=6;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -26,6 +26,8 @@ function defaultState(){
     club:null,                      // 就任するまで null(→startTenure で作る)
     world:{ seed:0, season:1, matchday:1, table:{}, fixtures:[], results:{} },
     squad:[],                       // 編成(11枠。カードIDまたは null)
+    // セットプレーの担当(→docs/06 §6.15)。カードID。null なら能力で自動選出。
+    kickers:{ pk:null, fk:null, ck:null },
     // 任期 = キャリア1周(→docs/03 §3.2.3)。シーズンとは切り離し、節で通算する。
     career:{
       node:1,                       // 通算の節(1..limit)
@@ -155,6 +157,9 @@ function migrate(){
     const used=new Set(xi.filter(Boolean));
     S.squad=xi.concat(pickBench(availableCards().filter(c=>!used.has(c.id))));
   }
+  // v5 → v6: セットプレーの担当指名を足した(→docs/07 §7.11)。
+  // 未指名は「能力で自動選出」と同じ意味なので、空で足すだけでよい。
+  if(S.v<6&&!S.kickers)S.kickers={ pk:null, fk:null, ck:null };
   S.v=SAVE_VER;
 }
 
