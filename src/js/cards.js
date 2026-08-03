@@ -152,8 +152,9 @@ function makeCard(rng,pos,opts={}){
   while(skills.length<n){ const s=rpick(rng,pool); if(!skills.includes(s))skills.push(s); }
   const subs=rollSubs(rng,pos,rarity);
   const sur=opts.family||rpick(rng,FAMILY[nation]);
+  const id=nextCardId();
   return {
-    id:nextCardId(),
+    id,
     // 姓は makeRoster が重複なしで配る。並び順は国籍で変わる(日本は姓が先)
     name:makeName(rng,nation,sur),
     sur,                          // 姓。表示名から切り出せないので別に持つ
@@ -164,7 +165,29 @@ function makeCard(rng,pos,opts={}){
     ...st,                        // atk/def/pow/tec/spd/sta
     skills,
     club:opts.club||"",           // 所属クラブ(コンビネーション combo の判定に使う)
+    art:opts.art||commonArt(id,pos),   // 汎用の絵(→docs/03 §3.19)
   };
+}
+
+// ---------- 汎用選手の絵(→docs/03 §3.19) ----------
+// 絵の一覧を**コードに持たない**。ID の先頭2文字が gk / fp なので、
+// ASSETS のキーを見れば振り分けられる。絵を足しても JS を触らなくてよい。
+let _artPool=null;
+function artPool(){
+  if(_artPool)return _artPool;
+  const A=(typeof window!=="undefined"&&window.ASSETS&&window.ASSETS.players)||{};
+  const pick=pre=>Object.keys(A).filter(k=>k.startsWith(pre)&&k.endsWith("_play"))
+    .map(k=>k.slice(0,-5)).sort();
+  return (_artPool={ gk:pick("gk"), fp:pick("fp") });
+}
+/**
+ * カードIDから決まる絵。**乱数を使わない**のが要点。
+ * makeCard の rng を1回でも余計に引くと、そのあとに作られる選手が全員ずれる
+ * (クラブの顔ぶれが総入れ替えになる)。IDのハッシュなら乱数列に触らずに決まる。
+ */
+function commonArt(id,pos){
+  const p=artPool()[pos==="GK"?"gk":"fp"];
+  return p.length?p[hashStr("art:"+id)%p.length]:null;
 }
 /** プライマリのサブポジション(表示の既定)。 */
 const primarySub=c=>c.subs[0];
