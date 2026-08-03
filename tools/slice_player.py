@@ -100,6 +100,61 @@ def keyout_pockets(img, min_area=400, pure_ratio=0.60):
     return img, removed
 
 
+def resize_rgba(img, w, h):
+    """**アルファを掛けてから縮小する**(プリマルチプライ)。
+
+    透明にした画素のRGBは白のまま残っている。そのまま縮小すると、縁の画素が
+    「選手の色 × 白」で混ざり、切り抜きのまわりに**白いジャギー**が出る。
+    先にRGBへアルファを掛け、縮小してから割り戻すと、透明側の白が混ざらない。
+    """
+    from PIL import ImageChops, ImageMath
+    r, g, b, a = img.split()
+    pre = [ImageChops.multiply(c, a).resize((w, h), Image.LANCZOS) for c in (r, g, b)]
+    a2 = a.resize((w, h), Image.LANCZOS)
+    # ImageMath の min/max は画像同士の演算。定数と比べたいので float 側を先に書く
+    out = [ImageMath.unsafe_eval(
+        "convert(float(c) * 255.0 / float(al + 1), 'L')", c=c, al=a2) for c in pre]
+    return Image.merge("RGBA", (out[0], out[1], out[2], a2))
+
+
+def defringe(img, hi=252, lo=140):
+    """切り抜きの縁に残る**白いジャギー**を消す。
+
+    元絵の背景は純白で、選手との境目は**1画素だけ**中間色になっている(実測 253→198→15)。
+    白抜きは 238 以上しか消さないので、この198の画素が不透明のまま残り、
+    暗い地のカードに載せたときに白い縁取りとして浮く。
+
+    背景と隣り合う画素だけを対象に、**明るさからアルファを引き直す**。
+    さらに「白と混ざったぶん」を差し引いて元の色に戻す(アンマット)。
+    これをやらないと、半透明にしただけでは白っぽさが残る。
+    """
+    px = img.load()
+    w, h = img.size
+    edge = []
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a < 250:
+                continue
+            lum = (r + g + b) / 3.0
+            if lum < lo:                       # 輪郭線などの濃い画素はそのまま
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < w and 0 <= ny < h and px[nx, ny][3] < 60:
+                    edge.append((x, y, r, g, b, lum))
+                    break
+    for x, y, r, g, b, lum in edge:
+        cover = max(0.0, min(1.0, (hi - lum) / float(hi - lo)))   # どれだけ選手の色か
+        if cover <= 0.02:
+            px[x, y] = (r, g, b, 0)
+            continue
+        # 白の上に cover の濃さで乗っていたと見なして、元の色を取り戻す
+        un = lambda c: int(max(0, min(255, (c - (1 - cover) * 255) / cover)))
+        px[x, y] = (un(r), un(g), un(b), int(round(255 * cover)))
+    return img, len(edge)
+
+
 def content_box(img):
     """不透明な画素の範囲。切り出しの検証に使う(切り詰めはしない)。"""
     a = img.getchannel("A")
@@ -132,7 +187,8 @@ def main():
             print("  ⚠ セル%d(%s) が空です" % (i + 1, name))
             continue
         # セルごと固定サイズへ。中身は切り詰めない(3枚の相対位置を保つため)
-        out = cell.resize((OUT_W, OUT_H), Image.LANCZOS)
+        cell, _ = defringe(cell)
+        out = resize_rgba(cell, OUT_W, OUT_H)
         path = outdir / ("%s_%s.webp" % (pid, name))
         out.save(path, "WEBP", quality=90, method=6)
         cx = (box[0] + box[2]) // 2

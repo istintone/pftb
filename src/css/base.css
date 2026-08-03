@@ -468,12 +468,12 @@ body{
    **地の一部**なので、ホロも文字も選手もこの上に乗る。字間を大きく空けて、
    カードの縁に沿う帯として読ませる(語そのものを読ませる意図ではない)。 */
 .pc-grade{
-  position:absolute; left:5%; top:8%; bottom:13%; z-index:1;
+  position:absolute; left:9.5%; top:6%; bottom:10%; z-index:1;
   writing-mode:vertical-rl; text-orientation:mixed;
   display:flex; align-items:flex-end; justify-content:center;
   /* 8文字(WORLDCLASS は10文字)が縦に収まる大きさ。はみ出すと語が切れて
      ただのノイズになるので、字間で埋めて**縁に沿う帯**に見せる。 */
-  font:800 8.4cqw/1 var(--f-head); letter-spacing:.28em;
+  font:800 10.5cqw/1 var(--f-head); letter-spacing:.20em;
   /* 一覧サイズ(カード幅120px)では 1文字10px しかないので、薄すぎると消える。
      地に沈めつつ**在ることは分かる**濃さに置く。 */
   color:var(--ink); opacity:.26; pointer-events:none;

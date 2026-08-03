@@ -25,7 +25,8 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from slice_player import CELLS, OUT_W, OUT_H, keyout_white, keyout_pockets, content_box
+from slice_player import (CELLS, OUT_W, OUT_H, keyout_white, keyout_pockets,
+                          content_box, defringe, resize_rgba)
 
 try:
     from PIL import Image
@@ -94,7 +95,9 @@ def main():
             if not content_box(cell):
                 print("  ⚠ %s のセル%d が空です" % (sheet_path.name, i + 1))
                 continue
-            out = cell.resize((OUT_W, OUT_H), Image.LANCZOS)
+            # 切り抜きの縁に出る白いジャギーを抑える(→slice_player.py)
+            cell, _ = defringe(cell)
+            out = resize_rgba(cell, OUT_W, OUT_H)
             path = OUT / ("%s_%s.webp" % (pid, name))
             out.save(path, "WEBP", quality=QUALITY, method=6)
             sizes.append(path.stat().st_size)
