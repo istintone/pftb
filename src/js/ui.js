@@ -150,6 +150,34 @@ function cardFace(c){
       +'<span>'+esc(c.club||"—")+'</span>'
     +'</div>';
 }
+// ---------- スキルの効果を言葉にする(→docs/03 §3.21) ----------
+// 表(SKILL_FX)から**自動で1行を組み立てる**。手書きの説明を別に持つと、
+// 効果を変えたときに片方だけ古くなる。
+const SK_WHAT={
+  pass:"パス", carry:"持ち運び", passTec:"技巧的なパス", long:"一発の縦パス",
+  cross:"クロス", wide:"散らし", cut:"中への切れ込み", carryOut:"サイドの上がり",
+  press:"激しい寄せ", close:"ゴール前のシュート", far:"遠めのシュート",
+  spd:"速さで勝負する手", tec:"技術で勝負する手", all:"",
+};
+const SK_SOLO={
+  gk:"枠内のシュートを止めやすい", noRebound:"こぼれ球にしにくい",
+  longStop:"相手の一発の縦パスを摘む", pkGk:"PKを止めやすい",
+  aerial:"空中戦に強い", cover:"味方の守備を厚くする", stam:"スタミナの減りが緩やか",
+  vision:"良い受け手を見つけやすい", recv:"味方から預けられやすい",
+  start:"起点になりやすい", onTarget:"シュートが枠に飛びやすい",
+  pkKick:"PKを決めやすい", rebound:"こぼれ球に詰めやすい",
+};
+function skillNote(name){
+  const fx=SKILL_FX[name]; if(!fx)return "";
+  const solo=SK_SOLO[fx.at]||"";
+  if(!fx.grp)return solo;
+  const what=SK_WHAT[fx.grp]||"";
+  const at=fx.at2||fx.at;
+  const act=at==="origin"?"を仕掛け":at==="finish"?"を選び":"で守り";
+  const body=what?(what+(fx.w?act+"、成功しやすい":"が成功しやすい")):"すべての判定に強い";
+  return solo?solo+"／"+body:body;
+}
+
 /**
  * 段の名前を右側に縦に流す**半透明のデザイン文字**(→docs/06 §6.13)。
  * ホロを持つ段(SPECIALS / WORLD CLASS / LEGENDS)だけに出して、特別感を作る。
@@ -521,7 +549,9 @@ function openCard(x){
         +'<div class="tr"><i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i></div>'
         +'<b>'+c[k]+'</b></div>').join("")+'</div>'
       +'<div class="cm-k">SKILLS</div>'
-      +'<div class="skills">'+c.skills.map(s=>'<span class="skill">'+esc(s)+'</span>').join("")+'</div>'
+      // **名前だけでは何が起きるか分からない**ので、効果を必ず添える(→docs/03 §3.21)
+      +'<div class="skills">'+c.skills.map(s=>'<span class="skill">'+esc(s)
+        +'<i>'+esc(skillNote(s))+'</i></span>').join("")+'</div>'
       +'<div class="cm-k">COMBINATION</div>'
       +'<div class="cm-combo">'+esc(c.club||"—")+'</div>'
       +'<div class="cm-k">PROFILE</div>'

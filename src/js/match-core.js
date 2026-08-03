@@ -16,6 +16,39 @@
 /** 各スコアに乗る揺らぎ。0.6〜1.4(card-eleven から踏襲)。実力差があっても番狂わせが起きる。 */
 const rr=rng=>TUNING.rng.min+rng()*TUNING.rng.span;
 
+// ---------- スキル(→docs/03 §3.21) ----------
+// **1スキル = 1つの掛かり先**。選手ごとに1回だけ引き当てて畳んでおく
+// (判定は1試合に数百回走るので、そのたびに名前を引くのは避ける)。
+//   ch … 札に掛かるもの [{at,grp,w,s}]
+//   k  … 札を持たない単独の掛かり先 {gk:1.1, stam:0.8, ...}
+function skillsOf(card){
+  const ch=[], k={};
+  for(const name of card.skills||[]){
+    const fx=SKILL_FX[name]; if(!fx)continue;
+    if(fx.grp)ch.push({ at:fx.at2||fx.at, grp:fx.grp, w:fx.w||1, s:fx.s||1 });
+    if(fx.k!=null)k[fx.at]=(k[fx.at]||1)*fx.k;
+  }
+  return { ch, k };
+}
+/** 札を引く重みの倍率。at は "origin" / "counter" / "finish"。 */
+function skW(p,at,ch){
+  const f=p.sk; if(!f||!ch)return 1;
+  let m=1;
+  for(const x of f.ch)
+    if((x.at===at||x.at==="both")&&x.w!==1&&SK_GRP[x.grp](ch))m*=x.w;
+  return m;
+}
+/** 判定スコアの倍率。 */
+function skS(p,at,ch){
+  const f=p.sk; if(!f||!ch)return 1;
+  let m=1;
+  for(const x of f.ch)
+    if((x.at===at||x.at==="both")&&x.s!==1&&SK_GRP[x.grp](ch))m*=x.s;
+  return m;
+}
+/** 札を持たない掛かり先(GK・空中戦・スタミナなど)。 */
+const skK=(p,key)=>(p&&p.sk&&p.sk.k[key])||1;
+
 // ---------- 有効値 ----------
 /**
  * 有効値 — **すべての判定の単一集約点**(→docs/07 §7.3)。
@@ -43,7 +76,7 @@ function staminaOf(p,min){
   // **キャプテンは消耗が緩い**(→docs/03 §3.20)。長くピッチに居られるので、
   // 誰に腕章を巻くかが交代計画そのものになる。
   const cap=p.captain?F.capMul:1;
-  const drain=(played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul*cap;
+  const drain=(played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul*cap*skK(p,"stam");
   return clamp(1-drain,F.minStam,1);
 }
 /**
@@ -110,10 +143,10 @@ function pickCaptain(xi,want){
 }
 function buildTeam(cards,form,name,side,kickers,captain){
   const { xi, bench }=lineup(cards,form);
-  xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0;
+  xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
     p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
       pass:0, passOk:0, duelW:0, duelL:0 }; });
-  bench.forEach(p=>{ p.side=side; p.stam=1; });
+  bench.forEach(p=>{ p.side=side; p.stam=1; p.sk=skillsOf(p.c); });
   const cap=pickCaptain(xi,captain);
   if(cap)cap.captain=true;
   // kickers … {pk,fk,ck} のカードID。自クラブは編成で指名し、CPUは自動選出に任せる
@@ -189,7 +222,7 @@ function resolveBlock(rng,atk,df,D,fin,h,x){
 function pickFinish(rng,p,h){
   const all=FINISHES[p.sub]||FINISHES[p.role==="GK"?"GK":"CMF"]||FINISHES.CMF;
   const list=all.filter(f=>f.minH==null||h>=f.minH);
-  return pickW(rng,list.length?list:all,f=>eff(p,f.stat));
+  return pickW(rng,list.length?list:all,f=>eff(p,f.stat)*skW(p,"finish",f));
 }
 /** 攻撃側のシュートスコア。**atk が幹、チャンネルの能力が枝**(起点と同じ形)。 */
 function finishScore(atk,fin){
@@ -202,7 +235,7 @@ function onTarget(rng,atk,h,fin){
   if(fin&&fin.fixAcc!=null)return rng()<fin.fixAcc;          // PK/ヘディングは位置が決まっている
   if(fin&&fin.tecAcc)                                        // 直接FKは距離より技術
     return rng()<S.fkAccBase*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
-  const acc=fin?fin.acc||1:1;
+  const acc=(fin?fin.acc||1:1)*skK(atk,"onTarget");
   return rng()<acc*(S.accBase+eff(atk,"tec")/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
 }
 /**
@@ -213,8 +246,11 @@ function onTarget(rng,atk,h,fin){
  */
 function resolveShot(rng,atk,gk,h,fin){
   const S=TUNING.shot;
-  const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)*rr(rng);
-  const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)*rr(rng);
+  const pk=fin.id==="pk";
+  const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)
+    *skS(atk,"finish",fin)*(pk?skK(atk,"pkKick"):1)*rr(rng);
+  const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)
+    *skK(gk,"gk")*(pk?skK(gk,"pkGk"):1)*rr(rng);
   return sSc>gSc*TUNING.th.shot;
 }
 // ---------- セットプレー(→docs/07 §7.11) ----------
@@ -289,8 +325,10 @@ function aerialDuel(rng,T,D){
   const df =pick(D.players.filter(p=>p.role!=="GK"),"def");
   if(!atk)return null;
   if(!df)return { atk, df:null, ok:true };
-  const aSc=(eff(atk,"pow")*SP.aerialPow+eff(atk,"atk")*(1-SP.aerialPow))*SP.aerialK*rr(rng);
-  const dSc=(eff(df,"pow")*SP.aerialPow+eff(df,"def")*(1-SP.aerialPow))*lineMul(D)*rr(rng);
+  const aSc=(eff(atk,"pow")*SP.aerialPow+eff(atk,"atk")*(1-SP.aerialPow))*SP.aerialK
+    *skK(atk,"aerial")*rr(rng);
+  const dSc=(eff(df,"pow")*SP.aerialPow+eff(df,"def")*(1-SP.aerialPow))*lineMul(D)
+    *skK(df,"aerial")*rr(rng);
   return { atk, df, ok:aSc>dSc*TUNING.th.aerial };
 }
 /**
@@ -371,7 +409,7 @@ function giveFoul(M,rng,push,T,D,kind,df,victim,h,x,from,att,min){
 
 /** こぼれ球を拾えるか。詰める側は spd と atk、防ぐ側は def と spd。 */
 function resolveRebound(rng,atk,df){
-  const aSc=(eff(atk,"spd")*0.5+eff(atk,"atk")*0.5)*rr(rng);
+  const aSc=(eff(atk,"spd")*0.5+eff(atk,"atk")*0.5)*skK(atk,"rebound")*rr(rng);
   const dSc=(eff(df,"def")*0.5+eff(df,"spd")*0.5)*rr(rng);
   return aSc>dSc*TUNING.th.rebound;
 }
@@ -415,7 +453,7 @@ function pickOrigin(rng,T,mom){
   const target=clamp(0.5+mom*F.spread,0,1);
   return pickW(rng,T.players,p=>{
     const d=(heightOf(p)-target)/F.sigma;
-    return Math.exp(-d*d);
+    return Math.exp(-d*d)*skK(p,"start");     // 動き出しでボールを引き出す
   });
 }
 /**
@@ -434,7 +472,7 @@ function pickOriginCh(rng,p,lastCh,stray){
     if(ch.kind==="carry")w*=Math.max(C.strayFloor,1-away/C.strayFull);
     else if(ch.kind==="pass")w*=1+away*C.strayPass;
     if(lastCh&&ch.id===lastCh)w*=C.repeatW;                  // 同じ札の連発を避ける
-    return w;
+    return w*skW(p,"origin",ch);
   });
 }
 /** 選手の枠(元の立ち位置)から、いまボールがある場所までの離れ具合(0..1)。 */
@@ -477,7 +515,7 @@ function coverOf(D,h,x){
   for(const q of D.players){
     if(q.role==="GK")continue;
     const dh=(heightOf(q)-th)/C.covH, dx=((q.x-tx)/100)/C.covX;
-    n+=Math.exp(-(dh*dh+dx*dx))*q.stam;                     // 消耗した選手は寄せきれない
+    n+=Math.exp(-(dh*dh+dx*dx))*q.stam*skK(q,"cover");      // 消耗した選手は寄せきれない
   }
   return 1+Math.max(0,n-C.covBase)*C.covK;
 }
@@ -494,7 +532,7 @@ function pickCounterCh(rng,p){
   // 累乗にするのは、線形だと「少し避ける」程度にしかならないため。
   // 一度警告を受けた選手は、荒い手をはっきり選ばなくなる。
   const shy=p.cards?TUNING.sp.bookedShy:0;
-  return pickW(rng,list,ch=>eff(p,ch.stat)*(shy?Math.pow(1-ch.foul,shy):1));
+  return pickW(rng,list,ch=>eff(p,ch.stat)*(shy?Math.pow(1-ch.foul,shy):1)*skW(p,"counter",ch));
 }
 /**
  * チャンネルが成立するか。**攻撃側スコア > 守備側スコア × 閾値**(→docs/07 §7.4)。
@@ -506,9 +544,11 @@ function pickCounterCh(rng,p){
 function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX){
   const M=TUNING.matchup;
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
-    *ch.risk*TUNING.atk.originK*rr(rng);
+    *ch.risk*TUNING.atk.originK*skS(atk,"origin",ch)*rr(rng);
+  // **一発(long)はGKの飛び出しで摘まれる**。マーカーではなくGKが持つスキル
+  const gkStop=ch.to!=null?skK(pickGK(D),"longStop"):1;
   const dSc=(eff(df,"def")*M.defW+eff(df,dch.stat)*(1-M.defW))
-    *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*rr(rng);
+    *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*skS(df,"counter",dch)/gkStop*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }
 
@@ -571,8 +611,8 @@ function receiverAt(rng,T,tg,self){
   return pickW(rng,cand,q=>{
     const dh=(heightOf(q)-tg.h)/C.sigmaH;
     const dx=((q.x-tg.x)/100)/C.sigmaX;
-    const seek=1+eff(q,"atk")/STAT_MAX*C.recvAtk*clamp(tg.h,0,1);
-    return Math.exp(-(dh*dh+dx*dx))*seek;
+    const seek=1+eff(q,"atk")/STAT_MAX*C.recvAtk*skK(self,"vision")*clamp(tg.h,0,1);
+    return Math.exp(-(dh*dh+dx*dx))*seek*skK(q,"recv");   // 預けられやすさ
   });
 }
 /**
@@ -662,7 +702,7 @@ function applyOrders(M,t){
       // 交代: 出る選手の**枠をそのまま引き継ぐ**(位置と適性は枠側の属性なので付け替える)
       // 入る選手は**万全**で入る(出場時間も関与回数も0から)。これが交代の価値。
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
-        x:out.x, y:out.y, ix:out.ix, side, enter:t.min, stam:1,
+        x:out.x, y:out.y, ix:out.ix, side, enter:t.min, stam:1, sk:inc.sk,
         stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
           pass:0, passOk:0, duelW:0, duelL:0 } };
       out.exit=t.min;                                      // 出場時間の算出に使う
@@ -842,7 +882,8 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
   // ④ こぼれ球 — **回数は決め打ちしない**。
   //    「こぼれる(30%) × 詰め合いに勝つ(約40%)」で1回あたり約12%なので、
   //    幾何級数的に収束する(期待値 +0.14本)。reboundMax は暴走を防ぐ安全網。
-  if(d>=TUNING.shot.reboundMax||rng()>=TUNING.shot.rebound)return M.events.slice(from);
+  if(d>=TUNING.shot.reboundMax||rng()>=TUNING.shot.rebound*skK(gk,"noRebound"))
+    return M.events.slice(from);
   const chaser=pickShooter(rng,T)||shooter;
   const guard=matchupDefender(rng,1,tg.x,D);
   chaser.stat.inv++; if(guard)guard.stat.inv++;

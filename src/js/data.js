@@ -103,12 +103,79 @@ const RAR_KEYS=Object.keys(RARITY);
 // パックから出る段(実在選手の段は別経路で入手する)
 const RAR_DROPS=RAR_KEYS.filter(k=>RARITY[k].w>0);
 
-// --- スキル(ポジション別のプール。効果は第4段で実装する) ---
+// --- スキル(→docs/03 §3.21) ---
+// **1スキル = 1つの掛かり先**。効果は2つだけ:
+//   w … その札を**引く重み**の倍率
+//   s … その判定の**スコア**の倍率
+// **w と s は必ずセット**にする。引きやすいだけでは成功率に繋がらず、強くならない。
+//   w を持つスキルの s は弱め(×1.04〜1.08) … 「その手を多用し、少し上手い」
+//   s だけのスキルは強め(×1.10〜1.30)      … 「その手が明確に上手い」
+// 札を持たない層(GK・空中戦・スタミナ等)は k(単独の倍率)を使う。
 const SKILLS={
   GK:["セービング","反射神経","飛び出し判断","PKストップ","ハイボール処理"],
   DF:["対人守備","カバーリング","空中戦","ロングパス","オーバーラップ","クロス","スピード","タックル"],
-  MF:["スルーパス","視野の広さ","キープ力","ボール奪取","ロングシュート","ドリブル","展開力","運動量"],
-  FW:["決定力","ポストプレー","オフザボール","ドリブル突破","カットイン","フィニッシュ","スピード","空中戦"],
+  MF:["スルーパス","視野の広さ","キープ力","ボール奪取","ロングシュート","ドリブル","展開力","運動量",
+      "PKの名手"],
+  FW:["決定力","ポストプレー","オフザボール","ドリブル突破","カットイン","フィニッシュ","スピード","空中戦",
+      "ゴール前の嗅覚","詰めの速さ"],
+};
+
+// 札のグループ。**新しいデータは持たせない**。既にある属性から導く。
+//   起点  … kind(pass/carry) / lane(box=クロス, out・switch=散らす, in=中へ) / to(一発)
+//   守備  … foul(荒い手) / stat
+//   終点  … minH(ゴール前限定かどうか)
+const SK_GRP={
+  pass:    ch=>ch.kind==="pass",
+  carry:   ch=>ch.kind==="carry",
+  passTec: ch=>ch.kind==="pass"&&ch.stat==="tec",
+  long:    ch=>ch.to!=null,
+  cross:   ch=>ch.lane==="box",
+  wide:    ch=>ch.lane==="out"||ch.lane==="switch",
+  cut:     ch=>ch.lane==="in",
+  carryOut:ch=>ch.kind==="carry"&&ch.lane==="out",
+  press:   ch=>ch.foul>=0.35,
+  close:   ch=>ch.minH!=null,
+  far:     ch=>ch.minH==null,
+  spd:     ch=>ch.stat==="spd",
+  tec:     ch=>ch.stat==="tec",
+  all:     ()=>true,
+};
+// at … 札の層(origin / counter / finish)。それ以外は札を持たない**単独の掛かり先**
+const SKILL_FX={
+  // ---- GK ----
+  "セービング":     { at:"gk",       k:1.10 },   // 枠内シュート vs GK
+  "反射神経":       { at:"noRebound",k:0.65 },   // こぼれ球そのものが起きにくい
+  "飛び出し判断":   { at:"longStop", k:0.92 },   // 相手の一発(long)を摘む
+  "PKストップ":     { at:"pkGk",     k:1.30 },
+  "ハイボール処理": { at:"aerial",   k:1.12 },
+  // ---- DF ----
+  "対人守備":       { at:"counter", grp:"all",      s:1.08 },
+  "カバーリング":   { at:"cover",   k:1.45 },     // 守備の厚み(coverOf)
+  "空中戦":         { at:"aerial",  k:1.15 },     // 攻守とも自分の側に効く
+  "ロングパス":     { at:"origin",  grp:"long",     w:1.70, s:1.06 },
+  "オーバーラップ": { at:"origin",  grp:"carryOut", w:1.70, s:1.05 },
+  "クロス":         { at:"origin",  grp:"cross",    w:1.70, s:1.05 },
+  "スピード":       { at:"both",    grp:"spd",      w:1.60, s:1.05 },
+  "タックル":       { at:"counter", grp:"press",    s:1.12 },
+  // ---- MF ----
+  "スルーパス":     { at:"origin",  grp:"passTec",  w:1.70, s:1.08 },
+  "視野の広さ":     { at:"vision",  k:1.60, at2:"origin", grp:"pass", s:1.05 },
+  "キープ力":       { at:"origin",  grp:"carry",    s:1.08 },
+  "ボール奪取":     { at:"counter", grp:"tec",      w:1.60, s:1.06 },
+  "ロングシュート": { at:"finish",  grp:"far",      w:1.70, s:1.06 },
+  "ドリブル":       { at:"origin",  grp:"carry",    w:1.60, s:1.05 },
+  "展開力":         { at:"origin",  grp:"wide",     w:1.70, s:1.05 },
+  "運動量":         { at:"stam",    k:0.80 },      // 消耗が緩やか
+  "PKの名手":       { at:"pkKick",  k:1.25 },
+  // ---- FW ----
+  "決定力":         { at:"finish",  grp:"all",      s:1.10 },
+  "フィニッシュ":   { at:"onTarget",k:1.12 },      // 枠に飛ぶ率
+  "ポストプレー":   { at:"recv",    k:1.60, at2:"origin", grp:"carry", s:1.05 },
+  "オフザボール":   { at:"start",   k:1.50, at2:"origin", grp:"spd",   s:1.05 },
+  "ドリブル突破":   { at:"origin",  grp:"carry",    s:1.10 },
+  "カットイン":     { at:"origin",  grp:"cut",      w:1.70, s:1.06 },
+  "ゴール前の嗅覚": { at:"finish",  grp:"close",    w:1.70, s:1.06 },
+  "詰めの速さ":     { at:"rebound", k:1.15 },
 };
 
 // --- 画面ごとの説明(HELPタブの中身 → docs/06 §6.16) ---
