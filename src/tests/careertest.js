@@ -206,6 +206,37 @@ function runSeason() {
       Object.keys(E.ORIGINS).length * 3, "種 / 陣形の全", subs.size, "サブポジを網羅");
   }
 
+  // ---------- スカウト(D40 → docs/03 §3.22) ----------
+  {
+    const rng = E.mulberry32(4242);
+    for (const pk of E.TUNING.scout) {
+      assert.ok(pk.cost > 0 && pk.cards > 0, pk.id + " に値段と枚数がある");
+      const rank = k => E.RAR_KEYS.indexOf(k);
+      let floorHit = 0, real = 0;
+      for (let i = 0; i < 300; i++) {
+        const got = E.openScout(pk, rng);
+        assert.strictEqual(got.length, pk.cards, pk.id + " の枚数");
+        // **実在選手の段はパックから出さない**(別経路で配る → §3.13)
+        if (got.some(c => E.RARITY[c.rarity].real)) real++;
+        if (!pk.floor || got.some(c => rank(c.rarity) >= rank(pk.floor))) floorHit++;
+      }
+      assert.strictEqual(real, 0, pk.id + " から実在選手が出ない");
+      assert.strictEqual(floorHit, 300, pk.id + " の確定枠が必ず効く");
+    }
+    // 重点は通常より上の段が出やすい
+    const share = pk => {
+      let hi = 0, n = 0;
+      for (let i = 0; i < 400; i++)
+        for (const c of E.openScout(pk, rng)) { n++; if (c.rarity !== "STD") hi++; }
+      return hi / n;
+    };
+    const open = share(E.TUNING.scout[0]), focus = share(E.TUNING.scout[1]);
+    assert.ok(focus > open * 1.3,
+      "重点スカウトのほうが上の段が出やすい: " + (open * 100).toFixed(0) + "% → " + (focus * 100).toFixed(0) + "%");
+    console.log("スカウトOK", E.TUNING.scout.map(p => p.name + " " + p.cost).join(" / "),
+      "/ STD以外の割合", (open * 100).toFixed(0) + "% → " + (focus * 100).toFixed(0) + "%");
+  }
+
   // ---------- スキル(D39 → docs/03 §3.21) ----------
   {
     // 表の形が守られていること。**w と s は必ずセット**(引けるだけでは強くならない)

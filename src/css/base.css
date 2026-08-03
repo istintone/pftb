@@ -1064,6 +1064,34 @@ body{
 .sb-tag{ flex:0 0 auto; font:700 8px/1 var(--f-head); letter-spacing:.5px;
   color:var(--text-mute); border:1px solid var(--line); border-radius:4px; padding:2px 4px }
 
+/* HOME の2枚タイル(→docs/06 §6.8)。試合の次に触る導線を並べる。 */
+.tiles{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px }
+.tile{ border-radius:12px; padding:14px; background:var(--panel);
+  border:1px solid var(--line); cursor:pointer }
+.tile:active{ background:var(--panel-2) }
+.tile-i{ font-size:20px; margin-bottom:6px; color:var(--accent) }
+.tile-t{ font:600 13px/1 var(--f-head); color:var(--text) }
+.tile-s{ font-size:11px; color:var(--text-dim); margin-top:3px }
+
+/* スカウト(→docs/03 §3.22)。コインで引くパック。 */
+.sc-row{
+  display:flex; align-items:center; gap:12px; margin-top:10px; padding:12px;
+  border-radius:12px; background:var(--panel); border:1px solid var(--line);
+}
+.sc-row.hi{ border-color:var(--accent-dim); background:oklch(0.21 0.03 85) }
+.sc-b{ flex:1; min-width:0 }
+.sc-nm{ font:600 13px/1.3 var(--f-head); color:var(--text) }
+.sc-de{ font-size:11px; color:var(--text-dim); margin-top:3px; line-height:1.5 }
+/* .btn は width:100% なので、行の中に置くときは**幅を明示して奪い返す** */
+.sc-buy{ flex:0 0 auto; width:auto; min-width:98px; padding:12px 14px }
+.sc-buy:disabled{ opacity:.45 }
+/* 開封。**1枚ずつ間を置いて出す**(まとめて出すと引きの手応えが消える) */
+.scout-open{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px }
+.scout-open .pcard{ animation:pkPop .42s cubic-bezier(.2,1.3,.4,1) backwards }
+.scout-open .pcard:nth-child(2){ animation-delay:.28s }
+.scout-open .pcard:nth-child(3){ animation-delay:.56s }
+@keyframes pkPop{ from{ transform:scale(.7) rotate(-6deg); opacity:0 } to{ transform:none; opacity:1 } }
+
 /* キャプテン(→docs/06 §6.15)。1枠だけなので横長にして、効果まで見せる。 */
 .cap{
   display:flex; align-items:center; gap:10px; margin-top:8px; padding:9px 11px;

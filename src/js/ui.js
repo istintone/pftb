@@ -27,7 +27,7 @@ const SCREENS={
   schedule:  { title:"FIXTURES",  under:"season",  chrome:"back", render:()=>renderSchedule() },
   standings: { title:"STANDINGS", under:"season",  chrome:"back", render:()=>renderStandings() },
   gallery:   { title:"GALLERY",   under:"clubhouse", chrome:"back", render:()=>renderGallery() },
-  gacha:     { title:"SCOUT",     under:"home",    chrome:"back" },
+  gacha:     { title:"SCOUT",     under:"home",    chrome:"back", render:()=>renderScout() },
   secretary: { title:"SECRETARY", under:"home",    chrome:"back" },
   match:     { title:"MATCH",     chrome:"bare" },
   result:    { title:"RESULT",    chrome:"bare",   render:()=>renderResult() },
@@ -209,6 +209,10 @@ const clubName=id=>clubById(id)?clubById(id).name:id;
 // ---------- HOME(監督のデバイス → docs/06 §6.8) ----------
 function renderHome(){
   const W=S.world;
+  // 2枚タイル(→docs/06 §6.8)。試合の次に触る2つを並べ、**状態を添える**
+  const start=squadCards().slice(0,TUNING.squad.starters);
+  $("tileScoutSub").textContent=fmtNum(S.club?S.club.coins:0)+" コイン";
+  $("tileDeckSub").textContent="総合力 "+squadPowerAt(squadCards(),S.form);
   $("homeSeason").textContent="SEASON "+W.season+" · MATCHDAY "+String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0");
 
   const f=myFixture();
@@ -668,6 +672,45 @@ function renderDeck(){
 // 一覧やピッチに出す短い名前 = **姓**。表示名の並び順は国籍で変わる(日本は姓が先)ので、
 // 分割して末尾を取る方法は使えない。sur を持たない古いカードだけ従来どおり分割する。
 const shortName=c=>c.sur||c.name.split(" ").slice(-1)[0];
+
+// ---------- SCOUT(→docs/03 §3.22) ----------
+// **コインで引くパック。** 稼ぎをいつ補強に回すかを監督に選ばせる。
+let _scoutGot=null;                    // 直前に引いたカード(画面を出し直しても残す)
+function renderScout(){
+  $("scoutCoins").innerHTML="所持コイン <b class=\"num\">"+fmtNum(S.club?S.club.coins:0)+"</b>";
+  $("scoutList").innerHTML=TUNING.scout.map((pk,i)=>{
+    const can=S.club&&S.club.coins>=pk.cost;
+    return '<div class="sc-row'+(i?" hi":"")+'">'
+      +'<div class="sc-b"><div class="sc-nm">'+esc(pk.name)+'　'+pk.cards+'枚</div>'
+        +'<div class="sc-de">'+esc(pk.note)+'</div></div>'
+      +'<button class="btn sc-buy'+(i?"":" ghost")+'" data-pack="'+pk.id+'"'
+        +(can?"":" disabled")+'>'+fmtNum(pk.cost)+'</button>'
+    +'</div>';
+  }).join("");
+  $("scoutList").querySelectorAll("[data-pack]").forEach(el=>{
+    el.onclick=()=>buyScout(el.dataset.pack);
+  });
+  drawScoutGot();
+}
+function drawScoutGot(){
+  $("scoutOpen").innerHTML=_scoutGot?_scoutGot.map(c=>cardTile(c)).join(""):"";
+  $("scoutOpen").querySelectorAll("[data-card]").forEach((el,i)=>{
+    el.onclick=()=>openCard(_scoutGot[i]);
+  });
+}
+function buyScout(id){
+  const pk=TUNING.scout.find(x=>x.id===id); if(!pk||!S.club)return;
+  if(S.club.coins<pk.cost){ toast("コインが足りません"); return; }
+  S.club.coins-=pk.cost;
+  // **たねは引くたびに変える**。ここは資産が増える場所なので、
+  // 同じ結果を再現できてはいけない(セーブを戻して引き直す余地を作らない)。
+  const rng=mulberry32((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0);
+  _scoutGot=openScout(pk,rng);
+  S.player.coll.push(..._scoutGot);
+  save(); headUI(); renderScout();
+  const best=_scoutGot.reduce((b,c)=>RAR_KEYS.indexOf(c.rarity)>RAR_KEYS.indexOf(b.rarity)?c:b);
+  toast(pk.name+"：最高 "+RARITY[best.rarity].label+" "+shortName(best));
+}
 
 // ---------- SEASON(任期スケジュール = クラブ進行の起点) ----------
 // card-eleven のキャリア画面にあたる位置づけ。就任から任期満了までを一望し、
@@ -1877,6 +1920,8 @@ document.addEventListener("click",e=>{
   closeHelp();
 });
 $("btnGallery").onclick=()=>show("gallery",{push:1});
+$("tileScout").onclick=()=>{ _scoutGot=null; show("gacha",{push:1}); };
+$("tileDeck").onclick=()=>show("deck");
 /** 再生と一時停止。交代ドロワーからも呼ぶので関数にしてある。 */
 function mPause(on){
   _mPaused=on;

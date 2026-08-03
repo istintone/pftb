@@ -460,6 +460,45 @@ const STEPS = [
       return k.querySelector('.kk-nm').textContent+' / '+k.querySelector('.kk-sub').textContent;
     })()`));
   }],
+  ["スカウト(コインでパックを引く)", async ctx => {
+    await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
+    await ctx.wait(250);
+    ctx.log("HOMEのタイル:", await ctx.js(`(()=>{
+      const t=[...document.querySelectorAll('.tiles .tile')];
+      if(t.length!==2)throw new Error('タイルが2枚ではない: '+t.length);
+      return t.map(e=>e.querySelector('.tile-t').textContent+'('
+        +e.querySelector('.tile-s').textContent+')').join(' / ');
+    })()`));
+    await ctx.shot("19-home-tiles");
+    await ctx.js("document.getElementById('tileScout').click()");
+    await ctx.wait(300);
+    ctx.log("スカウト:", await ctx.screen(), "/", await ctx.js(
+      "document.getElementById('scoutCoins').textContent"),
+      "/ 種類:", await ctx.js("document.querySelectorAll('#scoutList .pk-row').length"));
+    await ctx.shot("20-scout");
+    ctx.log("開封:", await ctx.js(`(()=>{
+      const S0=S.club.coins, N0=S.player.coll.length;
+      // コインが足りるように積んでおく(検証用。ゲーム内の経路ではない)
+      S.club.coins=99999; renderScout();
+      const btn=document.querySelector('#scoutList [data-pack="focus"]');
+      if(btn.disabled)throw new Error('コインが足りているのに押せない');
+      btn.click();
+      const got=document.querySelectorAll('#scoutOpen .pcard');
+      const pk=TUNING.scout.find(p=>p.id==='focus');
+      if(got.length!==pk.cards)throw new Error('出た枚数が違う: '+got.length);
+      if(S.player.coll.length!==N0+pk.cards)throw new Error('所持カードが増えていない');
+      if(S.club.coins!==99999-pk.cost)throw new Error('コインが引かれていない');
+      // **必ず1枚は REGULAR 以上**
+      const rank=k=>RAR_KEYS.indexOf(k);
+      const last=S.player.coll.slice(-pk.cards);
+      if(!last.some(c=>rank(c.rarity)>=rank('REG')))
+        throw new Error('確定枠が効いていない: '+last.map(c=>c.rarity).join(','));
+      S.club.coins=S0;
+      return last.map(c=>c.rarity).join(' / ')+' / 残 '+fmtNum(S.club.coins);
+    })()`));
+    await ctx.wait(900);
+    await ctx.shot("21-scout-open");
+  }],
   ["タブ巡回", async ctx => {
     for (const [tab, name] of [["cards", "09-cards"], ["deck", "10-deck"], ["season", "11-season"], ["clubhouse", "12-club"]]) {
       await ctx.js(`document.querySelector('#tabs button[data-s="${tab}"]').click()`);

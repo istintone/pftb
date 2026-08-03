@@ -212,6 +212,38 @@ function artKeyOf(c){
 /** プライマリのサブポジション(表示の既定)。 */
 const primarySub=c=>c.subs[0];
 
+// ---------- スカウト(→docs/03 §3.22) ----------
+// **コインで引くパック。** 試合ごとに配るのではなく、稼いだコインをいつ使うかを選ばせる。
+// 監督が自分で補強のタイミングを決める、という体験にしたいため(WCCFの1試合1パックは踏襲しない)。
+
+/** 段を1つ引く。pack.w があればその重みで、無ければ通常の出現率。 */
+function scoutRarity(rng,pack,minKey){
+  if(!pack.w)return rollRarity(rng,minKey);
+  const from=minKey?Math.max(0,RAR_DROPS.indexOf(minKey)):0;
+  const pool=RAR_DROPS.slice(from);
+  const total=sum(pool.map(k=>pack.w[k]||0));
+  if(total<=0)return rollRarity(rng,minKey);
+  let x=rng()*total;
+  for(const k of pool){ x-=(pack.w[k]||0); if(x<=0)return k; }
+  return pool[pool.length-1];
+}
+/**
+ * パックを1つ開ける。**確定枠は最後ではなく最初に引く**。
+ * 最後に回すと「残り1枚で確定」が読めてしまい、めくる楽しみが消える。
+ */
+function openScout(pack,rng){
+  const out=[];
+  for(let i=0;i<pack.cards;i++){
+    const min=(i===0&&pack.floor)?pack.floor:null;
+    const rarity=scoutRarity(rng,pack,min);
+    const pos=rpick(rng,["GK","DF","DF","MF","MF","MF","FW","FW"]);   // GKは出過ぎない
+    out.push(makeCard(rng,pos,{ rarity }));
+  }
+  // 引いた順のままだと確定枠が必ず先頭に来る。並べ替えて隠す
+  for(let i=out.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [out[i],out[j]]=[out[j],out[i]]; }
+  return out;
+}
+
 /**
  * 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。
  *   opts.nations … 国籍の抽選箱(重み付きで展開済みのID配列 → world.js の nationBox)。
