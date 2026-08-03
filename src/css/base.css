@@ -852,6 +852,29 @@ body{
 #helpTab:active{ background:oklch(0.30 0.05 85) }
 #helpTab.off{ display:none }        /* 止めてはいけない画面では出さない */
 
+/* 交代タブ(→docs/06 §6.21)。HELP と同じ形で、**試合中だけ**右端に出す。
+   HELP は試合画面に出ないので、同じ位置を使ってよい。 */
+#subTab{
+  position:absolute; right:0; top:56%; transform:translateY(-50%); z-index:48;
+  writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
+  padding:12px 5px; border-radius:9px 0 0 9px;
+  border:1px solid oklch(0.55 0.12 255); border-right:none;
+  background:linear-gradient(270deg, oklch(0.26 0.06 255), oklch(0.19 0.02 255));
+  color:oklch(0.86 0.10 255); font:600 10px/1 var(--f-head); letter-spacing:2px;
+  box-shadow:-2px 0 12px oklch(0 0 0 / .5);
+}
+#subTab:active{ background:oklch(0.32 0.08 255) }
+#subTab.off{ display:none }
+/* **高さを実寸で決める**。max-height だけだと中身の max-height:100% が解決できず、
+   スクロールせずに画面外まで伸びる(実際にそうなった)。 */
+#subDrawer{
+  position:absolute; right:0; top:56%; z-index:70; width:min(88%,340px); height:78%;
+  transform:translate(105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
+#subDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
+#subDrawer .hd-in{ height:100%; max-height:100%; overflow-y:auto }
+
 #helpDrawer{
   position:absolute; right:0; top:56%; z-index:70; width:min(86%,320px);
   transform:translate(105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
@@ -1001,6 +1024,29 @@ body{
 .pick .sl-pos{ padding:2px 5px; border-radius:3px; background:oklch(0.28 0.07 150) }
 
 /* ベンチ(横スクロール) */
+/* 交代ドロワーの中身(→docs/06 §6.21)。
+   **スタミナで選ぶ画面**なので、名前より先にバーが目に入るように積む。 */
+.sb-sec{ font:600 10px/1 var(--f-head); letter-spacing:1.5px; color:var(--text-dim);
+  margin:12px 0 6px }
+.sb-r{
+  display:flex; align-items:center; gap:8px; padding:6px 8px; margin-bottom:4px;
+  border-radius:8px; background:var(--panel); border:1px solid transparent; cursor:pointer;
+}
+.sb-r.on{ border-color:var(--accent); background:oklch(0.24 0.05 85) }
+.sb-r.dim{ opacity:.4; cursor:default }
+.sb-pos{ flex:0 0 30px; font:700 9px/1 var(--f-mono); color:var(--text-dim); text-align:center }
+.sb-b{ flex:1; min-width:0 }
+.sb-nm{ font-size:11px; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+/* スタミナのバー。**残量で色が変わる**ので、一目で誰を替えるか決まる */
+.sb-bar{ height:4px; border-radius:2px; background:oklch(0.28 0.02 255); margin-top:3px }
+.sb-bar i{ display:block; height:100%; border-radius:2px; background:oklch(0.72 0.16 150) }
+.sb-bar.mid i{ background:var(--accent) }
+.sb-bar.low i{ background:var(--fit-bad) }
+.sb-v{ flex:0 0 auto; font:700 10px/1 var(--f-mono); color:var(--text-dim) }
+.sb-note{ font-size:10px; color:var(--text-dim); line-height:1.5 }
+.sb-go{ width:100%; margin-top:10px }
+
 /* キャプテン(→docs/06 §6.15)。1枠だけなので横長にして、効果まで見せる。 */
 .cap{
   display:flex; align-items:center; gap:10px; margin-top:8px; padding:9px 11px;

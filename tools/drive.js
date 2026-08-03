@@ -289,8 +289,9 @@ const STEPS = [
         const d=(a,x,y)=>Math.hypot(a.x-x,a.y-y);
         // **何人かはボールへ詰めている**こと。全員が離れるなら誰も行っていない。
         // 一番近い1人で見ないのは、空きを狙って**あえて離れる**動きもあるため
-        let toward=0;
-        for(const o of all){
+        // 再開の隊形(キックオフ/得点直後)は**わざと崩さない**ので、そのときは見ない
+        let toward=_mRestart?99:0;
+        for(const o of _mRestart?[]:all){
           const before=Math.hypot(o.sx-bx,o.sy-by);
           const after=Math.hypot(o.x-bx,o.y-by);
           if(after<before-1)toward++;
@@ -337,6 +338,42 @@ const STEPS = [
       return 'スコアボード '+sc+' / 実況 '+want+' (左=自分)';
     })()`));
     await ctx.shot("07b-match");
+    // 交代タブ(→docs/06 §6.21)。**開くと試合が止まる**
+    ctx.log("  交代タブ:", await ctx.js(`(()=>{
+      if(document.getElementById('subTab').classList.contains('off'))
+        throw new Error('試合中なのに交代タブが出ていない');
+      const wasPaused=_mPaused;
+      document.getElementById('subTab').click();
+      if(!_mPaused)throw new Error('交代タブを開いても試合が止まらない');
+      const outs=[...document.querySelectorAll('#subBody [data-out]')];
+      const ins=[...document.querySelectorAll('#subBody [data-in]')];
+      if(outs.length!==11)throw new Error('ピッチの選手が11人ではない: '+outs.length);
+      if(!ins.length)throw new Error('ベンチが出ていない');
+      // スタミナの低い順に替えたいので、残量が読めること
+      const v=outs.map(e=>e.querySelector('.sb-v').textContent);
+      return outs.length+'人 / 控え'+ins.length+'人 / 残量 '+v.slice(0,3).join(' ');
+    })()`));
+    await ctx.wait(420);
+    await ctx.shot("07j-sub");
+    ctx.log("  交代の申請:", await ctx.js(`(()=>{
+      const T=mMine()==='H'?_M.home:_M.away;
+      const before=T.bench.filter(b=>!b.used).length;
+      document.querySelector('#subBody [data-out]').click();
+      document.querySelector('#subBody [data-in]').click();
+      const go=document.getElementById('subGo');
+      if(go.disabled)throw new Error('2人選んでもボタンが押せない');
+      go.click();
+      const pend=_M.orders[T.side].filter(o=>o.type==='sub').length;
+      if(pend!==1)throw new Error('交代が積まれていない: '+pend);
+      // 枠を使い切るまで積める / 超えたら積めない
+      let ok=0;
+      for(let i=0;i<5;i++)if(orderMatch(_M,T.side,{type:'sub',out:i+1,in:i+1}))ok++;
+      const max=TUNING.squad.subMax;
+      if(1+ok>max)throw new Error('交代枠を超えて積めた: '+(1+ok)+'/'+max);
+      document.getElementById('subClose').click();
+      if(_mPaused!==false&&!_M.over)throw new Error('閉じても再生に戻らない');
+      return '控え'+before+'人 / 積めた '+(1+ok)+' 枠(上限'+max+')';
+    })()`));
     // 最後まで再生して終える(スキップではなく**実際に見終わったときと同じ経路**)。
     // ここで締め忘れると結果画面に試合の中身が渡らないので、over を確かめる。
     ctx.log("自然終了:", await ctx.js(`(()=>{

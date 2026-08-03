@@ -59,6 +59,9 @@ function show(id,opts){
   // 画面が変わったら必ず閉じる(前の画面の説明が残らないように)。
   closeHelp();
   $("helpTab").classList.toggle("off",helpFor(id)==null);
+  // 交代タブは**試合中だけ**。他の画面に出しても押せることが無い
+  $("subTab").classList.toggle("off",id!=="match");
+  if(id!=="match")closeSub();
 
   if(def.render)def.render();
   $("appBody").scrollTop=0;
@@ -1512,7 +1515,88 @@ function mFinish(){
   mFeed("90分","<b>試合終了</b>","goal");
   $("mDone").style.display="";
   $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=true;
+  closeSub(); $("subTab").classList.add("off");   // 終わったら交代はできない
 }
+// ---------- 選手交代(→docs/06 §6.21) ----------
+// **開くと試合が止まる。** 走らせたまま選ばせると、決めている間に局面が進んで
+// 「誰を替えるつもりだったか」が変わってしまう。
+let _subOut=-1, _subIn=-1, _subWasPaused=false;
+
+function subSide(){ return mMine()==="H"?_M.home:_M.away; }
+function openSub(){
+  if(!_M||_M.over)return;
+  _subWasPaused=_mPaused;
+  if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
+  _subOut=-1; _subIn=-1;
+  renderSub();
+  $("subDrawer").classList.add("on");
+  $("subDrawer").setAttribute("aria-hidden","false");
+}
+function closeSub(){
+  $("subDrawer").classList.remove("on");
+  $("subDrawer").setAttribute("aria-hidden","true");
+  if(!_subWasPaused&&_M&&!_M.over)mPause(false);   // 元が再生中なら戻す
+}
+const subOpen=()=>$("subDrawer").classList.contains("on");
+
+/** スタミナのバー1本。**残量で色が変わる**ので、替えどきが一目で分かる。 */
+function stamBar(v){
+  const pc=Math.round(clamp(v,0,1)*100);
+  const cls=pc<45?" low":pc<70?" mid":"";
+  return '<div class="sb-bar'+cls+'"><i style="width:'+pc+'%"></i></div>';
+}
+function renderSub(){
+  const T=subSide();
+  const used=_M.subs[T.side], left=TUNING.squad.subMax-used;
+  const pend=_M.orders[T.side].filter(o=>o.type==="sub").length;
+  const row=(cls,pos,name,v,attr)=>'<div class="sb-r'+cls+'"'+attr+'>'
+    +'<div class="sb-pos">'+pos+'</div>'
+    +'<div class="sb-b"><div class="sb-nm">'+name+'</div>'+stamBar(v)+'</div>'
+    +'<div class="sb-v">'+Math.round(v*100)+'%</div></div>';
+
+  let h='<div class="sb-note">残り <b>'+Math.max(0,left-pend)+'</b> 枠'
+    +(pend?'（申請中 '+pend+'）':'')
+    +'。<b>一度下がった選手は戻れません。</b>'
+    +'交代は次の再開時（3分ごと）に反映されます。</div>';
+  if(left-pend<=0){ h+='<div class="sb-sec">枠を使い切りました</div>'; }
+  else{
+    h+='<div class="sb-sec">下げる選手（ピッチ）</div>';
+    T.players.forEach((p,i)=>{
+      h+=row(i===_subOut?" on":"",p.sub||p.role,esc(shortName(p.c)),p.stam==null?1:p.stam,
+        ' data-out="'+i+'"');
+    });
+    h+='<div class="sb-sec">入れる選手（ベンチ）</div>';
+    const bench=T.bench.filter(b=>!b.used);
+    h+=bench.length?"":'<div class="sb-note">交代できる選手が居ません</div>';
+    T.bench.forEach((b,i)=>{
+      if(b.used)return;
+      h+=row(i===_subIn?" on":"",primarySub(b.c),esc(shortName(b.c)),1,' data-in="'+i+'"');
+    });
+    h+='<button class="btn sb-go" id="subGo"'+(_subOut<0||_subIn<0?" disabled":"")
+      +'>この2人を交代する</button>';
+  }
+  $("subBody").innerHTML=h;
+  $("subBody").querySelectorAll("[data-out]").forEach(el=>{
+    el.onclick=()=>{ _subOut=Number(el.dataset.out); renderSub(); };
+  });
+  $("subBody").querySelectorAll("[data-in]").forEach(el=>{
+    el.onclick=()=>{ _subIn=Number(el.dataset.in); renderSub(); };
+  });
+  const go=$("subGo");
+  if(go)go.onclick=doSub;
+}
+function doSub(){
+  if(_subOut<0||_subIn<0)return;
+  const T=subSide();
+  const out=T.players[_subOut], inc=T.bench[_subIn];
+  if(!orderMatch(_M,T.side,{ type:"sub", out:_subOut, in:_subIn })){
+    toast("交代枠が残っていません"); return;
+  }
+  toast(shortName(inc.c)+" ← "+shortName(out.c)+"（次の再開時）");
+  _subOut=-1; _subIn=-1;
+  renderSub();
+}
+
 function mSkip(){
   clearTimeout(_mTimer); _mTimer=null;
   clearTimeout(_mCutT); clearTimeout(_mCutJ); clearTimeout(_mBallT);
@@ -1728,11 +1812,15 @@ document.addEventListener("click",e=>{
   closeHelp();
 });
 $("btnGallery").onclick=()=>show("gallery",{push:1});
-$("mPlay").onclick=()=>{
-  _mPaused=!_mPaused;
-  $("mPlay").textContent=_mPaused?"▶ 再生":"⏸ 一時停止";
-  if(!_mPaused)mTick();
-};
+/** 再生と一時停止。交代ドロワーからも呼ぶので関数にしてある。 */
+function mPause(on){
+  _mPaused=on;
+  $("mPlay").textContent=on?"▶ 再生":"⏸ 一時停止";
+  if(!on)mTick();
+}
+$("mPlay").onclick=()=>mPause(!_mPaused);
+$("subTab").onclick=()=>{ subOpen()?closeSub():openSub(); };
+$("subClose").onclick=closeSub;
 $("mSpeed").onclick=()=>{
   const sp=TUNING.ui.speeds;
   _mSpeed=sp[(sp.indexOf(_mSpeed)+1)%sp.length];
