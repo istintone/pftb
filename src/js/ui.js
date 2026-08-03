@@ -846,11 +846,15 @@ function lineChannel(M,e){
   const nm=mName(p), dn=mName(d), z=zoneOf(e.h), L=e.label;
   if(!e.ok){
     if(!d)return nm+"の"+L+"が通らない";
-    if(e.kind==="carry")return sayOf(e,[dn+"が"+nm+"を止めた", dn+"が寄せて奪い返す",
-      nm+"、"+dn+"に前を塞がれた"]);
-    if(e.kind==="shot")  return sayOf(e,[dn+"が詰めて"+nm+"に打たせない", nm+"の"+L+"は潰された"]);
-    return sayOf(e,[dn+"が"+L+"をカット", nm+"の"+L+"は"+dn+"に読まれた",
-      nm+"の"+L+"、"+dn+"に引っかかる"]);
+    // **止めた側が何をしたか**を必ず出す(→docs/07 §7.12)。
+    // 守備が「止めた」としか言えないと、守備側の采配が読み物にならない。
+    const D=e.dlabel;
+    if(!D)return dn+"が"+nm+"の"+L+"を止めた";
+    if(e.kind==="carry")return sayOf(e,[dn+"の"+D+"、"+nm+"を止めた",
+      dn+"が"+D+"で奪い返す", nm+"、"+dn+"の"+D+"に阻まれた"]);
+    if(e.kind==="shot")  return sayOf(e,[dn+"の"+D+"で打たせない", nm+"の"+L+"は"+dn+"が潰した"]);
+    return sayOf(e,[dn+"の"+D+"、"+L+"をカット", nm+"の"+L+"は"+dn+"に読まれた",
+      nm+"の"+L+"、"+dn+"の"+D+"に引っかかる"]);
   }
   if(!e.step)return sayOf(e,[z+"、"+nm+"（"+e.sub+"）の"+L+"から仕掛ける",
     nm+"（"+e.sub+"）が"+z+"で持つ、"+L, z+"の"+nm+"（"+e.sub+"）、"+L+"で動き出す"]);
@@ -1153,9 +1157,14 @@ function cutVs(e,atk,df,word,atkWon){
 /** 競り合いで効いた能力を添える(何で勝ったのかが分かるように)。 */
 function statNote(p,e){
   if(!p)return "";
-  const ch=(ORIGINS[p.sub]||[]).find(c=>c.id===e.ch);
-  const k=ch?ch.stat:"atk";
-  return p.sub+" "+STAT_LABEL[k]+" "+p.c[k];
+  // 守備側は**自分が選んだ守備チャンネル**の能力を出す。攻撃側の能力を並べると
+  // 「何で competing しているのか」が読めない(→docs/07 §7.12)。
+  const isDf=e.vs&&p.c.id===e.vs;
+  const ch=isDf?(COUNTERS[p.sub]||[]).find(c=>c.id===e.dch)
+               :(ORIGINS[p.sub]||[]).find(c=>c.id===e.ch);
+  const k=ch?ch.stat:(isDf?"def":"atk");
+  const head=isDf&&e.dlabel?e.dlabel:p.sub;
+  return head+" "+STAT_LABEL[k]+" "+p.c[k];
 }
 /** パス成功。左に出し手、右から受け手がスライドインする。 */
 function cutPass(e,from,to){

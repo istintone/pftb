@@ -187,6 +187,58 @@ function runSeason() {
       Object.keys(E.ORIGINS).length * 3, "種 / 陣形の全", subs.size, "サブポジを網羅");
   }
 
+  // ---------- 守備チャンネル(D33 → docs/07 §7.12) ----------
+  {
+    const subs = new Set();
+    Object.values(E.FORMATIONS).forEach(f => f.forEach(([s]) => subs.add(s)));
+    for (const s of subs) assert.ok(E.COUNTERS[s], s + " の守備チャンネルがある");
+    for (const [sub, list] of Object.entries(E.COUNTERS)) {
+      assert.strictEqual(list.length, 3, sub + " の守備チャンネルは3種");
+      // 3枚が同じ能力だと「一番得意な1枚」しか出ない。必ず別の能力にする
+      assert.strictEqual(new Set(list.map(c => c.stat)).size, 3,
+        sub + " の3種は別々の能力で競う");
+      for (const c of list) {
+        assert.ok(E.STAT_KEYS.includes(c.stat), sub + "/" + c.id + " の stat が能力キー");
+        assert.ok(c.k > 0.5 && c.k < 1.5, sub + "/" + c.id + " の k が常識的な範囲");
+        assert.ok(c.foul >= 0 && c.foul <= 0.7, sub + "/" + c.id + " の foul が 0〜0.7");
+      }
+      // 強さと反則率はトレードオフ: 最も強い手が最も安全ではない
+      const hardest = list.reduce((a, b) => b.k > a.k ? b : a);
+      const safest = list.reduce((a, b) => b.foul < a.foul ? b : a);
+      assert.notStrictEqual(hardest.id, safest.id, sub + " は強さと安全が両立しない");
+    }
+    // 守備側が選んだ手がイベントに残り、実況と演出から引ける
+    const side = id => {
+      const roster = E.clubRoster(4242, id);
+      return { cards: E.bestXI(roster, "4-3-3"), form: "4-3-3", name: id };
+    };
+    const M = E.simulateMatch(side("eng-1"), side("sam-8"), 5150);
+    const links = M.events.filter(e => e.type === "origin" || e.type === "link");
+    const withD = links.filter(e => e.vs && e.dch);
+    assert.ok(withD.length > links.length * 0.9,
+      "マッチアップの大半に守備チャンネルが載っている: " + withD.length + "/" + links.length);
+    const kinds = new Set(withD.map(e => e.dch));
+    assert.ok(kinds.size >= 8, "1試合で複数の守備の手が出る: " + kinds.size + " 種");
+
+    // 警告を受けた選手は反則の多い手を選ばなくなる(→§7.12)
+    const rng = E.mulberry32(99);
+    const p = { c: { def: 15, pow: 15, tec: 15, spd: 15, sta: 15, atk: 5 },
+      sub: "CB", role: "DF", fit: 1, stam: 1, cards: 0 };
+    const count = who => {
+      let risky = 0;
+      for (let i = 0; i < 400; i++) if (E.pickCounterCh(rng, who).foul > 0.3) risky++;
+      return risky;
+    };
+    const clean = count(p);
+    p.cards = 1;
+    const booked = count(p);
+    assert.ok(booked < clean * 0.6,
+      "警告後は荒い手が減る: " + clean + " → " + booked + " / 400");
+    console.log("守備チャンネルOK", Object.keys(E.COUNTERS).length, "サブポジ ×3 =",
+      Object.keys(E.COUNTERS).length * 3, "種 / 1試合で", kinds.size, "種 / 警告後の荒い手",
+      clean + "→" + booked);
+  }
+
   // ---------- 起点はマッチアップで決まる(D27 → docs/07 §7.8) ----------
   {
     const side = id => {

@@ -324,6 +324,54 @@ const ORIGINS={
        {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.48, gain:0.54, to:0.90, kind:"pass",  lane:"box"}],
 };
 
+// --- 守備のチャンネル(サブポジごとに3種 → docs/07 §7.12) ---
+// **相手が仕掛けてきたときに、その選手が何をするか**。攻撃側と対の構造にしてある。
+//   stat … def と混ぜる能力。**この能力が高いほど選ばれやすく、止めやすい**
+//   k    … 守備力の係数。思い切った手ほど強いが、そのぶんファウルになりやすい
+//   foul … 止めたときにファウルになる率。**アクションが反則の重さを決める**
+//          (以前は一律だったので、削っても間合いを取っても同じ確率だった)
+const COUNTERS={
+  GK: [{id:"gkOut",  label:"飛び出し",       stat:"spd", k:1.02, foul:0.40},
+       {id:"gkLine", label:"高い位置取り", stat:"tec", k:0.94, foul:0.10},
+       {id:"gkStand",label:"正面の構え",   stat:"pow", k:1.00, foul:0.22}],
+  CB: [{id:"cbBody", label:"体当たり",     stat:"pow", k:1.02, foul:0.34},
+       {id:"cbRead", label:"インターセプト", stat:"tec", k:0.96, foul:0.08},
+       {id:"cbSlide",label:"スライディング", stat:"spd", k:1.08, foul:0.46}],
+  LSB:[{id:"sbStay", label:"並走",stat:"spd",k:0.95, foul:0.12},
+       {id:"sbLine", label:"縦切り",       stat:"tec", k:0.98, foul:0.16},
+       {id:"sbStop", label:"押し出し",     stat:"pow", k:1.04, foul:0.40}],
+  RSB:[{id:"sbStay", label:"並走",stat:"spd",k:0.95, foul:0.12},
+       {id:"sbLine", label:"縦切り",       stat:"tec", k:0.98, foul:0.16},
+       {id:"sbStop", label:"押し出し",     stat:"pow", k:1.04, foul:0.40}],
+  DMF:[{id:"dmCrush",label:"潰し",     stat:"pow", k:1.06, foul:0.48},
+       {id:"dmRead", label:"先読み",     stat:"tec", k:0.97, foul:0.10},
+       {id:"dmBlock",label:"進路封鎖",     stat:"sta", k:1.00, foul:0.22}],
+  CMF:[{id:"cmClose",label:"寄せ",         stat:"spd", k:0.98, foul:0.24},
+       {id:"cmHook", label:"引っ掛け",     stat:"tec", k:1.00, foul:0.44},
+       {id:"cmChase",label:"粘りの追走",   stat:"sta", k:0.94, foul:0.16}],
+  OMF:[{id:"omPress",label:"軽い寄せ",     stat:"spd", k:0.92, foul:0.18},
+       {id:"omDelay",label:"遅らせ",       stat:"tec", k:0.90, foul:0.12},
+       {id:"omHold", label:"腕での牽制",stat:"pow",k:0.98, foul:0.55}],
+  LMF:[{id:"wmSand", label:"挟み込み",       stat:"spd", k:0.98, foul:0.28},
+       {id:"wmIn",   label:"絞り",     stat:"tec", k:0.96, foul:0.14},
+       {id:"wmBody", label:"体寄せ",     stat:"pow", k:1.00, foul:0.38}],
+  RMF:[{id:"wmSand", label:"挟み込み",       stat:"spd", k:0.98, foul:0.28},
+       {id:"wmIn",   label:"絞り",     stat:"tec", k:0.96, foul:0.14},
+       {id:"wmBody", label:"体寄せ",     stat:"pow", k:1.00, foul:0.38}],
+  CF: [{id:"cfChase",label:"前からの追走",     stat:"spd", k:0.88, foul:0.20},
+       {id:"cfCut",  label:"パスコース切り",stat:"tec",k:0.86, foul:0.08},
+       {id:"cfHack", label:"削り",     stat:"pow", k:0.94, foul:0.58}],
+  ST: [{id:"stBack", label:"戻りの牽制",     stat:"sta", k:0.84, foul:0.14},
+       {id:"stStand",label:"コース取り",   stat:"tec", k:0.86, foul:0.10},
+       {id:"stSteal",label:"強引な奪取",stat:"spd",k:0.92, foul:0.55}],
+  LWG:[{id:"wgHerd", label:"追い込み",       stat:"spd", k:0.90, foul:0.20},
+       {id:"wgCut",  label:"コース消し",   stat:"tec", k:0.88, foul:0.10},
+       {id:"wgHook", label:"引っ掛け",     stat:"pow", k:0.94, foul:0.50}],
+  RWG:[{id:"wgHerd", label:"追い込み",       stat:"spd", k:0.90, foul:0.20},
+       {id:"wgCut",  label:"コース消し",   stat:"tec", k:0.88, foul:0.10},
+       {id:"wgHook", label:"引っ掛け",     stat:"pow", k:0.94, foul:0.50}],
+};
+
 // --- 打ち手(各節に1つ選ぶ。→docs/03 §3.2.3) ---
 // WCCF を踏襲した3種。**効果の詳細は D16 で決める**ため、ここでは選択肢の定義だけを持つ。
 // 1手 = 1エントリなので、後から足すのも効果を実装するのもこの表を触ればよい。
@@ -398,20 +446,22 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:0.96, origin:1.00, block:1.36, rebound:1.00, aerial:1.15 },
+  th:{ shot:0.95, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
   // セットプレー(→docs/07 §7.11)。**守備側が競り合いに勝った瞬間だけ**ファウルが起きる。
-  //   foulDuel/foulBlock … 連鎖のマッチアップ / ブロックのあとのファウル率
+  //   foulK              … 守備チャンネルが持つ反則率に一括で掛ける倍率(→§7.12)
+  //   foulBlock          … ブロックのあとのファウル率
   //   boxH               … この高さ以上のファウルは PK(それ以外は FK)
   //   fkDirectH/fkDirect … 直接狙える高さと、そのとき直接を選ぶ割合(残りはクロス)
   //   ckOnBlock/ckOnSave … ブロック・セーブがコーナーに逃げる割合
   //   maxSp              … 1回の攻撃で連鎖できるセットプレーの上限(CK→CK の暴走止め)
   //   fkH                … この高さ未満のファウルは蹴らない(カードだけ引いて攻撃終了)
-  sp:{ foulDuel:0.32, foulBlock:0.055, boxH:0.92, fkH:0.50,
+  sp:{ foulK:1.00, foulBlock:0.055, boxH:0.92, fkH:0.50,
        pkH:0.97, pkAcc:0.86, pkK:1.62,
        fkDirectH:0.62, fkDirect:0.55, fkK:1.15, fkAcc:0.62,
        crossH:0.93, aerialPow:0.65, aerialK:0.85, hdrAcc:0.50,
        ckOnBlock:0.34, ckOnSave:0.28, maxSp:2,
-       yellow:0.55, pkYellow:0.62, red:0.008, pkRed:0.030, minPlayers:8 },
+       yellow:0.50, pkYellow:0.60, red:0.006, pkRed:0.025,
+       bookedShy:3.0, minPlayers:8 },
   // シュートの距離減衰(→docs/07 §7.9)。h=1 がゴール前、0 が自陣ゴール前。
   //   deadZone この高さ以下はほぼ入らない / minRange その下限 / rangePow 減衰の効き
   //   gkDef/gkPow/gkTec  GKのセーブの配合(合計1.0)

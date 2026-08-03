@@ -173,9 +173,17 @@ const STEPS = [
     // 各カットインの見た目を確かめる(実戦では出る局面が毎回変わるので直接呼ぶ)
     await ctx.js("document.getElementById('mPlay').click()");   // 一時停止
     await ctx.wait(200);
-    await ctx.js(`(()=>{ const H=_M.home,A=_M.away;
+    ctx.log("  マッチアップの見出し:", await ctx.js(`(()=>{ const H=_M.home,A=_M.away;
       const atk=H.players.find(p=>p.role==='FW'), df=A.players.find(p=>p.role==='DF');
-      cutVs({side:'H',label:'裏抜け',ch:'cfRun'},atk,df,'突破!',true); })()`);
+      const dch=(COUNTERS[df.sub]||COUNTERS.CB)[0];
+      // 守備側も自分の手を持つ(→docs/07 §7.14)。両者の札が読めることを確かめる
+      cutVs({side:'H',label:'裏抜け',ch:'cfRun',vs:df.c.id,dch:dch.id,dlabel:dch.label},
+        atk,df,'突破!',true);
+      const n=[...document.querySelectorAll('#mCut .cut-fig span')].map(x=>x.textContent);
+      if(!n[1]||n[1].indexOf(dch.label)<0)
+        throw new Error('守備側のカットインに守備チャンネルが出ていない: '+n[1]);
+      return n.join(' | ');
+    })()`));
     await ctx.wait(250);
     await ctx.shot("07d-cutin-vs-1");   // 両者が入ってきたところ
     await ctx.wait(600);

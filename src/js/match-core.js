@@ -208,7 +208,7 @@ function onTargetSp(rng,atk,h,sp){
  */
 function rollFoul(rng,h,rate,allowPk){
   const SP=TUNING.sp;
-  if(rng()>=rate)return null;
+  if(rng()>=rate*SP.foulK)return null;
   // **PKになるのはシュートを止めに行った反則だけ**(allowPk)。
   // 陣形の最前列は h≒1.0 に立つので、連鎖のファウルまでPKにすると
   // 「FW起点で潰された = 必ずPK」になってしまう。
@@ -415,18 +415,33 @@ function matchupDefender(rng,h,x,D){
   });
 }
 /**
+ * 守備のチャンネルを選ぶ(→docs/07 §7.12)。攻撃側とまったく同じ形で、
+ * **その選手が得意な手ほど選ばれやすい**。
+ * これが無いと守備側は「相手が選んだ能力に付き合うだけの数字」になり、
+ * 何をして止めたのかが残らない(実況にも采配にも使えない)。
+ */
+function pickCounterCh(rng,p){
+  const list=COUNTERS[p.sub]||COUNTERS[p.role==="GK"?"GK":"CMF"]||COUNTERS.CMF;
+  // **警告を受けた選手は慎重になる**。反則になりやすい手ほど選ばなくなるので、
+  // 2枚目の退場が減り、そのぶん守備も緩む。カードが戦力に効く経路がここ。
+  // 累乗にするのは、線形だと「少し避ける」程度にしかならないため。
+  // 一度警告を受けた選手は、荒い手をはっきり選ばなくなる。
+  const shy=p.cards?TUNING.sp.bookedShy:0;
+  return pickW(rng,list,ch=>eff(p,ch.stat)*(shy?Math.pow(1-ch.foul,shy):1));
+}
+/**
  * チャンネルが成立するか。**攻撃側スコア > 守備側スコア × 閾値**(→docs/07 §7.4)。
  * 起点でも連鎖の各ステップでも同じ式を使う。
  *   攻撃側 … チャンネルの能力 × risk(選択の安全さ)
- *   守備側 … 対応する選手の def を主軸に、同じ能力を副次で足す。
- *            速さで抜けようとすれば速い守備者が追いつき、
- *            技術で運ぼうとすれば読める守備者が止める
+ *   守備側 … def を主軸に、**自分が選んだ守備チャンネルの能力**を副次で足す。
+ *            思い切った手ほど強い(k)が、そのぶん反則になりやすい(foul)。
  */
-function resolveChannel(rng,atk,df,ch,D){
+function resolveChannel(rng,atk,df,ch,dch,D){
   const M=TUNING.matchup;
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
     *ch.risk*TUNING.atk.originK*rr(rng);
-  const dSc=(eff(df,"def")*M.defW+eff(df,ch.stat)*(1-M.defW))*lineMul(D)*rr(rng);
+  const dSc=(eff(df,"def")*M.defW+eff(df,dch.stat)*(1-M.defW))
+    *dch.k*lineMul(D)*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }
 
@@ -632,12 +647,15 @@ function stepMatch(M){
     const stray=strayOf(carrier,h,x);
     const ch=pickOriginCh(rng,carrier,lastCh,stray);
     const marker=matchupDefender(rng,h,x,D);                // 対応する相手(位置が近いほど)
+    // **守備側も自分の手を選ぶ**(→docs/07 §7.12)。選んだ手が強さと反則率の両方を決める
+    const dch=marker?pickCounterCh(rng,marker):null;
     carrier.stat.inv++; if(marker)marker.stat.inv++;
-    const ok=marker?resolveChannel(rng,carrier,marker,ch,D):true;
+    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D):true;
     carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
       by:carrier.c.id, sub:carrier.sub, ch:ch.id, label:ch.label, kind:ch.kind,
       ok, vs:marker?marker.c.id:null, run:carryRun,
+      dch:dch?dch.id:null, dlabel:dch?dch.label:null, dsub:marker?marker.sub:null,
       stray:Math.round(stray*100)/100,
       h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
 
@@ -645,8 +663,9 @@ function stepMatch(M){
     if(ch.kind==="pass")carrier.stat.pass++;              // パスの試行(採点に使う)
     if(!ok){
       carrier.stat.duelL++; if(marker)marker.stat.duelW++;
-      // **止めた瞬間だけがファウルの入口**(→docs/07 §7.11)
-      const foul=marker?rollFoul(rng,h,TUNING.sp.foulDuel):null;
+      // **止めた瞬間だけがファウルの入口**(→docs/07 §7.11)。
+      // 反則率は**守備側が選んだ手**が持つ(削りにいけば高く、間合いを取れば低い)
+      const foul=marker?rollFoul(rng,h,dch.foul):null;
       if(foul)return giveFoul(M,rng,push,T,D,foul,marker,carrier,h,x,from,att,t.min);
       addMom(M,D.side,F.duelLost); return M.events.slice(from);
     }
