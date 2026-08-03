@@ -350,6 +350,47 @@ function setSlot(ix,cardId){
   save(); closeSlot(); renderDeck();
 }
 
+// ---------- キャプテン(→docs/03 §3.20) ----------
+// 腕章を巻いた選手は**スタミナの減りが緩く、長くピッチに居られる**。
+// 誰に巻くかがそのまま交代計画になるので、編成画面で決められるようにする。
+const CAP_W=c=>c.ovr+(c.age-18)*1.5;      // エンジンの pickCaptain と同じ式
+function autoCaptain(start){
+  const list=start.filter(Boolean);
+  if(!list.length)return null;
+  return list.reduce((b,c)=>CAP_W(c)>CAP_W(b)?c:b,list[0]);
+}
+function openCaptain(){
+  const start=squadCards().slice(0,TUNING.squad.starters).filter(Boolean);
+  const list=start.slice().sort((a,b)=>CAP_W(b)-CAP_W(a));
+  const cur=S.captain, auto=autoCaptain(start);
+  $("slotModalBody").innerHTML=
+    '<button class="close-btn" id="slotClose" aria-label="閉じる">×</button>'
+    +'<h3>キャプテン</h3>'
+    +'<div class="lg" style="margin-bottom:10px">腕章を巻いた選手は<b>スタミナの減りが'
+      +Math.round((1-TUNING.fatigue.capMul)*100)+"% 緩やか</b>になり、長くピッチに居られます。"
+      +"総合力と経験で並んでいます。指名しなければ <b>"+(auto?esc(shortName(auto)):"—")
+      +"</b> が務めます。</div>"
+    +(cur?'<button class="btn ghost" id="slotClear" style="margin-bottom:10px">'
+        +'指名を外す（自動に戻す）</button>':'')
+    +'<div class="picks">'+list.map(c=>
+        '<div class="pick'+(c.id===cur?" on":"")+'" data-pick="'+c.id+'">'
+        +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
+        +'<div class="pk-ovr">'+c.ovr+'</div>'
+        +'<div class="pk-b"><b>'+esc(c.name)+'</b><span>'+primarySub(c)+' · '+c.age+'歳</span></div>'
+        +'<div class="pk-r">'+(auto&&c.id===auto.id?'<span class="pk-at">自動</span>':'')+'</div>'
+      +'</div>').join("")+'</div>';
+  $("slotClose").onclick=closeSlot;
+  if(cur)$("slotClear").onclick=()=>setCaptain(null);
+  $("slotModalBody").querySelectorAll("[data-pick]").forEach(el=>{
+    el.onclick=()=>setCaptain(Number(el.dataset.pick));
+  });
+  $("slotModalBody").querySelectorAll("[data-info]").forEach(el=>{
+    el.onclick=e=>{ e.stopPropagation(); openCard(Number(el.dataset.info)); };
+  });
+  $("slotModal").classList.add("on");
+}
+function setCaptain(cardId){ S.captain=cardId; save(); closeSlot(); renderDeck(); }
+
 // ---------- セットプレー担当(→docs/06 §6.15 / docs/07 §7.11) ----------
 // 蹴る種類ごとに見る能力が違う。**指名は先発にしか効かない**(蹴る人が居ないため)。
 const SP_KINDS=[["pk","PK","指名"],["fk","FK","指名"],["ck","CK","指名"]];
@@ -551,6 +592,22 @@ function renderDeck(){
   $("deckBench").querySelectorAll(".bn").forEach(el=>{
     el.onclick=()=>openSlot(Number(el.dataset.slot));
   });
+
+  // キャプテン(→docs/03 §3.20)。**指名しなければ総合力と経験で自動選出**。
+  {
+    const named=cardById(S.captain);
+    const on=named&&start.some(c=>c&&c.id===named.id);   // 先発に居ないと務まらない
+    const c=on?named:autoCaptain(start);
+    $("deckCaptain").innerHTML='<div class="cap'+(on?"":" auto")+'"'+(c?kitStyle(c):"")+'>'
+      +'<div class="cap-band">CAP</div>'
+      +'<div class="cap-b"><div class="cap-nm">'+(c?esc(c.name):"—")+'</div>'
+        +'<div class="cap-sub">'+(on?"指名":"自動")+"　スタミナの減りが "
+        +Math.round((1-TUNING.fatigue.capMul)*100)+"% 緩やか</div></div>"
+      +'<div class="cap-go">›</div>'
+    +'</div>';
+    const el=$("deckCaptain").querySelector(".cap");
+    if(el)el.onclick=openCaptain;
+  }
 
   // セットプレー担当(→docs/07 §7.11)。**指名しなければ能力で自動選出**なので、
   // 空欄のままでも成立する。誰が蹴るのかは常に見えている必要があるため、
@@ -1348,13 +1405,24 @@ function cutCard(e,p){
     +'<div class="cut-word stop">退場!</div>'
   +'</div>',TUNING.play.cutMs);
 }
+/**
+ * キックオフ。**両チームのキャプテンを向かい合わせる**(→docs/03 §3.20)。
+ * クラブ名だけだと毎試合まったく同じ絵になり、誰の試合なのかが立ち上がらない。
+ */
 function cutKick(){
-  const f=(name,id,cls)=>'<div class="cut-fig '+cls+'">'
-    +'<div class="cut-av" style="--kit:'+clubColor(id)+'"></div><b>'+esc(name)+'</b></div>';
+  const f=(T,side,cls)=>{
+    const cap=T.captain;
+    const kit=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
+    return '<div class="cut-fig '+cls+'">'
+      +(cap?cutAvatar(cap,side):'<div class="cut-av" style="--kit:'+kit+'"></div>')
+      +'<b>'+esc(T.name)+'</b>'
+      +'<span>'+(cap?"C "+esc(shortName(cap.c))+" · "+cap.sub:"")+'</span>'
+    +'</div>';
+  };
   return cutShow('<div class="cut">'
     +'<div class="cut-hd">KICK OFF</div>'
-    +'<div class="cut-row">'+f(_M.home.name,_M.fixture.h,"L")
-      +'<div class="cut-vs">VS</div>'+f(_M.away.name,_M.fixture.a,"R")+'</div>'
+    +'<div class="cut-row">'+f(_M.home,"H","L")
+      +'<div class="cut-vs">VS</div>'+f(_M.away,"A","R")+'</div>'
   +'</div>',TUNING.play.kickMs);
 }
 

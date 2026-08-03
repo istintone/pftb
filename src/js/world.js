@@ -200,7 +200,8 @@ function startTenure(clubId){
 function matchSide(clubId){
   const club=clubById(clubId);
   if(S.club&&clubId===S.club.id)
-    return { cards:squadCards(), form:S.form, name:club.name, kickers:S.kickers };
+    return { cards:squadCards(), form:S.form, name:club.name,
+      kickers:S.kickers, captain:S.captain };
   const roster=clubRoster(S.world.seed,clubId);
   const form=formFor(clubId);
   return { cards:bestXI(roster,form), form, name:club.name };

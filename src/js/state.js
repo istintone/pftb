@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=6;
+const SAVE_VER=7;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -28,6 +28,8 @@ function defaultState(){
     squad:[],                       // 編成(11枠。カードIDまたは null)
     // セットプレーの担当(→docs/06 §6.15)。カードID。null なら能力で自動選出。
     kickers:{ pk:null, fk:null, ck:null },
+    // キャプテン(→docs/03 §3.20)。カードID。null なら能力と年齢で自動選出。
+    captain:null,
     // 任期 = キャリア1周(→docs/03 §3.2.3)。シーズンとは切り離し、節で通算する。
     career:{
       node:1,                       // 通算の節(1..limit)
@@ -160,6 +162,8 @@ function migrate(){
   // v5 → v6: セットプレーの担当指名を足した(→docs/07 §7.11)。
   // 未指名は「能力で自動選出」と同じ意味なので、空で足すだけでよい。
   if(S.v<6&&!S.kickers)S.kickers={ pk:null, fk:null, ck:null };
+  // v6 → v7: キャプテンを足した(→docs/03 §3.20)。未指名は自動選出と同じ。
+  if(S.v<7&&S.captain===undefined)S.captain=null;
   S.v=SAVE_VER;
 }
 

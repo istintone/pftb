@@ -369,6 +369,21 @@ const STEPS = [
   ["セットプレー(編成の指名 → カットイン)", async ctx => {
     await ctx.js("document.querySelector('#tabs button[data-s=\"deck\"]').click()");
     await ctx.wait(300);
+    // キャプテン(→docs/03 §3.20)。指名すると自動から切り替わり、セーブに載る
+    ctx.log("キャプテン:", await ctx.js(`(()=>{
+      const c=document.querySelector('#deckCaptain .cap');
+      if(!c)throw new Error('キャプテン枠が無い');
+      const before=c.querySelector('.cap-nm').textContent;
+      c.click();
+      const rows=[...document.querySelectorAll('#slotModalBody [data-pick]')];
+      if(!rows.length)throw new Error('候補が出ない');
+      rows[rows.length-1].click();
+      const el=document.querySelector('#deckCaptain .cap');
+      if(el.classList.contains('auto'))throw new Error('指名しても自動のまま');
+      if(S.captain==null)throw new Error('指名がセーブに入っていない');
+      return before+' → '+el.querySelector('.cap-nm').textContent;
+    })()`));
+    await ctx.shot("13e-captain");
     ctx.log("担当枠:", await ctx.js(
       `[...document.querySelectorAll('#deckKickers .kk')].map(k=>k.querySelector('.kk-t').textContent+':'+k.querySelector('.kk-nm').textContent+'('+k.querySelector('.kk-sub').textContent+')').join(' / ')`));
     await ctx.shot("13a-kickers");

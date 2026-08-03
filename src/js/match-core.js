@@ -40,7 +40,10 @@ function staminaOf(p,min){
   const F=TUNING.fatigue;
   const played=Math.max(0,min-(p.enter||0));
   const staMul=1-(p.c.sta-1)/(STAT_MAX-1)*F.staReduce;     // sta20 で最も緩やか
-  const drain=(played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul;
+  // **キャプテンは消耗が緩い**(→docs/03 §3.20)。長くピッチに居られるので、
+  // 誰に腕章を巻くかが交代計画そのものになる。
+  const cap=p.captain?F.capMul:1;
+  const drain=(played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul*cap;
   return clamp(1-drain,F.minStam,1);
 }
 /**
@@ -95,15 +98,27 @@ function lineup(cards,form){
 }
 
 /** チームを組む。試合中に変わる値(得点・スタッツ)もここに持たせる。 */
-function buildTeam(cards,form,name,side,kickers){
+/**
+ * キャプテン(→docs/03 §3.20)。**指名があればそれを最優先**、無ければ
+ * 総合力と経験(年齢)で自動選出する。抽選ではないので毎回同じ選手になる。
+ */
+function pickCaptain(xi,want){
+  if(!xi.length)return null;
+  if(want){ const p=xi.find(q=>q.c.id===want); if(p)return p; }
+  const w=c=>c.ovr+(c.age-18)*1.5;
+  return xi.reduce((b,p)=>w(p.c)>w(b.c)?p:b,xi[0]);
+}
+function buildTeam(cards,form,name,side,kickers,captain){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0;
     p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
       pass:0, passOk:0, duelW:0, duelL:0 }; });
   bench.forEach(p=>{ p.side=side; p.stam=1; });
+  const cap=pickCaptain(xi,captain);
+  if(cap)cap.captain=true;
   // kickers … {pk,fk,ck} のカードID。自クラブは編成で指名し、CPUは自動選出に任せる
   return { players:xi, bench, form, name, side, score:0,
-    kickers:kickers||null, subOut:[], sentOff:[] };
+    kickers:kickers||null, captain:cap, subOut:[], sentOff:[] };
 }
 
 // ---------- 支配率 ----------
@@ -604,8 +619,8 @@ function matchClock(rng){
 /** 試合の状態を作る。ここではまだ1ティックも解かない。 */
 function createMatch(home,away,seed){
   const s=seed>>>0;
-  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers);
-  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers);
+  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain);
+  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain);
   const M={
     seed:s, home:H, away:A, ix:0,
     clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定
@@ -653,6 +668,12 @@ function applyOrders(M,t){
       out.exit=t.min;                                      // 出場時間の算出に使う
       (T.subOut||(T.subOut=[])).push(out);                 // 採点に残す
       T.players[o.out]=nw; inc.used=true; M.subs[side]++;
+      // **キャプテンが退いたら腕章を渡す**。誰も付けていない状態を作らない
+      if(out.captain){
+        out.captain=false;
+        const next=pickCaptain(T.players,null);
+        if(next){ next.captain=true; T.captain=next; }
+      }
       M.events.push({ min:t.min, half:t.half, at:!!t.at, side, type:"sub",
         out:out.c.id, in:inc.c.id, pos:[out.x,out.y] });
     }

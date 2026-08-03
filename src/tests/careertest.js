@@ -206,14 +206,43 @@ function runSeason() {
       Object.keys(E.ORIGINS).length * 3, "種 / 陣形の全", subs.size, "サブポジを網羅");
   }
 
+  // ---------- キャプテン(D38 → docs/03 §3.20) ----------
+  {
+    const side = id => ({ cards: E.bestXI(E.clubRoster(4242, id), "4-4-2"),
+      form: "4-4-2", name: id });
+    // 指名が無ければ総合力と経験で自動。**必ず誰か1人が付ける**
+    const M = E.finishMatch(E.createMatch(side("eng-1"), side("sam-8"), 777));
+    for (const T of [M.home, M.away]) {
+      const caps = T.players.concat(T.subOut || [], T.sentOff || [])
+        .filter(p => p.captain);
+      assert.ok(T.captain, T.side + " にキャプテンが居る");
+      assert.ok(caps.length <= 1, T.side + " の腕章は1人だけ: " + caps.length + "人");
+    }
+    // 指名するとその選手になる
+    const h = side("eng-1");
+    const want = h.cards[7].id;
+    const M2 = E.createMatch({ ...h, captain: want }, side("sam-8"), 778);
+    assert.strictEqual(M2.home.captain.c.id, want, "指名した選手がキャプテンになる");
+    // **消耗が緩い**。同じ条件の2人を並べて比べる
+    const mk = cap => ({ c: { sta: 10, age: 26 }, stat: { inv: 10 }, enter: 0, captain: cap });
+    const full = 90;
+    const plain = E.staminaOf(mk(false), full), capt = E.staminaOf(mk(true), full);
+    assert.ok(capt > plain + 0.03,
+      "キャプテンは消耗が緩い: " + plain.toFixed(2) + " → " + capt.toFixed(2));
+    console.log("キャプテンOK 自動選出", M.home.captain.c.sur || M.home.captain.c.name,
+      "/ 90分後のスタミナ 通常", plain.toFixed(2), "→ 腕章", capt.toFixed(2));
+  }
+
   // ---------- セットプレーは連鎖に戻る(D36 → docs/07 §7.15) ----------
   {
     const mk = cid => ({ cards: E.bestXI(E.clubRoster(4242, cid), E.formFor(cid)),
       form: E.formFor(cid), name: cid });
     const modes = {}, afterAerial = {};
     let restartChained = 0, restarts = 0;
-    for (let i = 0; i < 40; i++) {
-      const M = E.simulateMatch(mk("eng-1"), mk("sam-8"), 4200 + i);
+    // PK は 0.14本/試合 しか出ない。40試合では 0 になることがあるので広く取る
+    const a = mk("eng-1"), b = mk("sam-8");
+    for (let i = 0; i < 150; i++) {
+      const M = E.simulateMatch(a, b, 4200 + i);
       M.events.forEach((e, k) => {
         if (e.type !== "setpiece") {
           if (e.type === "aerial" && e.ok) {
