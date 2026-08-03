@@ -132,6 +132,9 @@ function cardFace(c){
   const own=!isLoaned(c);
   return '<span class="pc-crest">'+RARITY[c.rarity].abbr+'</span>'
     +'<span class="pc-ovr">'+c.ovr+'</span>'
+    // OVR の下にポジション。**サブが他にもあれば下段に「+」**だけ添える(数は詳細で見る)
+    +'<div class="pc-pos"><b>'+primarySub(c)+'</b>'
+      +(c.subs.length>1?'<i>+</i>':'')+'</div>'
     +gradeWord(c)
     +'<div class="pc-art">'+playerArt(c)+'</div>'
     +sparks(c)   // 粒子はカード面全体に散らす(絵の中に閉じ込めない)
@@ -140,8 +143,8 @@ function cardFace(c){
       +'<b>'+c[k]+'</b></div>').join("")+'</div>'
     +'<div class="pc-name">'
       +'<b>'+(own?'<i class="own">★</i>':'')+esc(shortName(c))+'</b>'
-      +'<span>'+primarySub(c)+(c.subs.length>1?" +"+(c.subs.length-1):"")
-      +' · '+esc(c.club||"—")+'</span>'
+      // ポジションは OVR の下へ移したので、名前帯は**クラブだけ**
+      +'<span>'+esc(c.club||"—")+'</span>'
     +'</div>';
 }
 /**

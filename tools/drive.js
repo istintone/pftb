@@ -539,6 +539,23 @@ const STEPS = [
         await ctx.wait(150);
         await ctx.js("goBack()");
         await ctx.wait(250);
+        // OVR の下のポジション(→docs/06 §6.13)。右端が OVR と揃っていること
+        ctx.log("  ポジション表記:", await ctx.js(`(()=>{
+          const c=document.querySelector('#cardsGrid .pcard');
+          const ovr=c.querySelector('.pc-ovr').getBoundingClientRect();
+          const pos=c.querySelector('.pc-pos b');
+          if(!pos)throw new Error('OVRの下にポジションが無い');
+          const pr=pos.getBoundingClientRect();
+          if(Math.abs(pr.right-ovr.right)>2)
+            throw new Error('右端がOVRと揃っていない: '+pr.right.toFixed(1)+' / '+ovr.right.toFixed(1));
+          if(pr.top<ovr.bottom-1)throw new Error('ポジションがOVRより上にある');
+          // 名前帯はクラブだけ(ポジションを二重に出さない)
+          const band=c.querySelector('.pc-name span').textContent;
+          if(/^(GK|CB|LSB|RSB|DMF|CMF|OMF|LMF|RMF|CF|ST|LWG|RWG)/.test(band))
+            throw new Error('名前帯にポジションが残っている: '+band);
+          const plus=[...document.querySelectorAll('#cardsGrid .pc-pos i')].length;
+          return pos.textContent+' / 名前帯「'+band+'」/ サブ持ち '+plus+'枚';
+        })()`));
         // 段のデザイン文字(→docs/06 §6.13)。ホロを持つ段だけに出て、地の一部として敷く
         ctx.log("  段のデザイン文字:", await ctx.js(`(()=>{
           const g=[...document.querySelectorAll('#cardsGrid .pc-grade')];

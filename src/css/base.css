@@ -419,8 +419,8 @@ body{
      4 選手(.pc-art) … **カードの主役なので一番上**
      5 ✦粒子(カード全体に散る飾り。面全体の演出なので選手の上に残す)
    文字は選手と重なるので、地ではなく**文字色の反対**で縁取る(--halo)。 */
-.pc-crest,.pc-ovr,.pc-stats,.pc-name{ z-index:3 }
-.pc-crest,.pc-ovr,.pc-stats span,.pc-stats b,.pc-name b,.pc-name span{
+.pc-crest,.pc-ovr,.pc-pos,.pc-stats,.pc-name{ z-index:3 }
+.pc-crest,.pc-ovr,.pc-pos b,.pc-pos i,.pc-stats span,.pc-stats b,.pc-name b,.pc-name span{
   /* 小さいぼかしを3回重ねて実質のアウトラインにする。1発のぼかしだと
      一覧サイズ(カード幅120px)では選手の色に負けて読めない。 */
   text-shadow:0 0 .55cqw var(--halo), 0 0 .55cqw var(--halo),
@@ -439,6 +439,21 @@ body{
   position:absolute; right:7%; top:4%;
   font:700 17cqw/1 var(--f-head); color:var(--ink);
 }
+/* OVR の下のポジション。**右端を OVR と揃える**。
+   2文字(ST)と3文字(CMF)が混ざるので、min-width で箱の幅を決めて右寄せし、
+   カードごとに位置がずれないようにする。 */
+.pc-pos{
+  position:absolute; right:7%; top:16.5%;
+  display:flex; flex-direction:column; align-items:flex-end;
+}
+.pc-pos b{
+  font:700 8.4cqw/1 var(--f-head); letter-spacing:.04em; color:var(--ink);
+  min-width:3.4ch; text-align:right;
+}
+/* 他にもサブポジがある印。数は出さない(カード詳細で見る) */
+.pc-pos i{ font:700 6cqw/1 var(--f-head); font-style:normal; margin-top:.8cqw;
+  color:var(--ink); opacity:.7 }
+
 /* 選手。カードの主役なので**中央に大きく**置き、文字が上に乗るのを許す。
    下端(bottom)は名前帯のすぐ上。object-position:bottom と合わせて
    **どの選手も足元が同じ高さに揃う**ようにしている。 */
@@ -452,7 +467,7 @@ body{
   image-rendering:pixelated; pointer-events:none }
 /* 能力欄(右・下ぞろえ) */
 .pc-stats{
-  position:absolute; right:7%; bottom:24%; width:26%;
+  position:absolute; right:7%; bottom:19%; width:26%;
   display:flex; flex-direction:column; gap:.6cqw;
 }
 /* ラベルと数値は**同じ大きさ**にして右端へ寄せる(space-between で離すと
