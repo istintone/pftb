@@ -1314,8 +1314,8 @@ body{
         <div class="pt-spot"></div>
         <div class="pt-box away"></div><div class="pt-6yd away"></div><div class="pt-goal away"></div>
         <div class="pt-box home"></div><div class="pt-6yd home"></div><div class="pt-goal home"></div>
-        <div class="pt-tag away">AWAY</div>
-        <div class="pt-tag home">HOME</div>
+        <div class="pt-tag away" id="mTagTop">相手</div>
+        <div class="pt-tag home" id="mTagBottom">自陣</div>
         <div class="pt-slots" id="mSlots"></div>
         <div class="mball" id="mBall"></div>
         <div class="mcut" id="mCut"></div>
@@ -4901,7 +4901,7 @@ function matchLine(e,M){
   const vs=e.vs?mPlayer(M,e.side==="H"?"A":"H",e.vs):null;
   switch(e.type){
     case "kickoff":  return { text:"<b>キックオフ</b>", cls:"info" };
-    case "halftime": return { text:"<b>ハーフタイム</b> "+e.hg+" - "+e.ag, cls:"info" };
+    case "halftime": return { text:"<b>ハーフタイム</b> "+scOrder(M,e.hg,e.ag), cls:"info" };
     case "fulltime": return null;                    // 終了は mFinish が出す
     case "origin":
     case "link":     return { text:lineChannel(M,e), cls:side };
@@ -4920,7 +4920,7 @@ function matchLine(e,M){
     case "rebound":  return { text:e.ok?mName(p)+"がこぼれ球に詰める！":"こぼれ球は"+mName(vs)+"がクリア", cls:side };
     case "goal":     return { text:"⚽ <b>"+mName(p)+" "+shotWord(e)+"でゴール！</b>"
                         +(e.assist?"（"+mName(mPlayer(M,e.side,e.assist))+"）":"")
-                        +"　"+e.hg+" - "+e.ag, cls:"goal" };
+                        +"　"+scOrder(M,e.hg,e.ag), cls:"goal" };
     case "sub":      return { text:"🔄 交代 "+mName(mPlayer(M,e.side,e.in))+" ← "
                         +mName(mPlayer(M,e.side,e.out)), cls:"info" };
     default:         return null;                    // possession / build は出さない
@@ -4952,14 +4952,32 @@ function dispY(y,restart){
   const top=restart?P.kickTop:P.lineTop;               // 再開時は自陣に収める
   return top+(y-13)*(P.lineBottom-top)/74;
 }
-/** イベントの座標を画面の向きへ直す。アウェイの攻撃は上下左右が反転する。 */
+/**
+ * **自分のクラブは常に画面の下**(→docs/06 §6.17)。上のゴールを目指す。
+ *
+ * ホームを下に固定すると、アウェイの試合だけ自分が上から下へ攻めることになり、
+ * 「どちらが自分か」を毎回読み替えることになる。WCCF と同じく、
+ * 見る側の陣地を固定して、相手だけを反転させる。
+ */
+const mMine=()=>_M&&_M.fixture&&_M.fixture.a===S.club.id?"A":"H";
+/** その側を上下左右ひっくり返して描くか。**自分側は返さない**。 */
+const mFlip=side=>side!==mMine();
+
+/**
+ * スコアの並びも**左が自分**。ピッチと逆にすると読み替えになる。
+ * 実況の中のスコアも同じ順で出す(スコアボードと食い違うと混乱する)。
+ */
+const scOrder=(M,hg,ag)=>M&&M.fixture&&M.fixture.a===S.club.id?ag+" - "+hg:hg+" - "+ag;
+const mScore=(hg,ag)=>scOrder(_M,hg,ag);
+
+/** イベントの座標を画面の向きへ直す。相手の攻撃は上下左右が反転する。 */
 function toScreen(e,pos){
   const [x,y]=pos||e.pos||[50,50];
   const dy=dispY(y);
-  return e.side==="A"?[100-x,100-dy]:[x,dy];
+  return mFlip(e.side)?[100-x,100-dy]:[x,dy];
 }
-/** 選手の枠を画面の向きへ直す(アウェイは反転)。縦は詰めて並べる。 */
-const slotXY=(p,side,restart)=>side==="A"
+/** 選手の枠を画面の向きへ直す(相手は反転)。縦は詰めて並べる。 */
+const slotXY=(p,side,restart)=>mFlip(side)
   ?[100-p.x,100-dispY(p.y,restart)]:[p.x,dispY(p.y,restart)];
 
 /** ピッチに22人を並べる。以後の位置は mLayout が毎イベント計算する。 */
@@ -5010,7 +5028,7 @@ function mLayout(e){
 
   for(const T of [_M.home,_M.away]){
     const mine=T.side===atkSide;                       // 攻めている側か
-    const goalY=T.side==="H"?dispY(87,_mRestart):100-dispY(87,_mRestart);  // 自陣ゴールの側
+    const goalY=mFlip(T.side)?100-dispY(87,_mRestart):dispY(87,_mRestart); // 自陣ゴールの側
     // ブロックの中心(枠の平均)。ここを基準にボールへ寄せる
     const ps=T.players.map((p,i)=>({ p, i, xy:slotXY(p,T.side,_mRestart) }));
     const cy=ps.reduce((s,o)=>s+o.xy[1],0)/ps.length;
@@ -5058,7 +5076,7 @@ function mLayout(e){
   if(e.by&&e.pos)at(e.side,e.by,0,0);                  // 持ち手はボールの上
   if(e.vs&&e.pos){                                     // 対応する相手は自陣側から寄せる
     const dSide=e.side==="H"?"A":"H";
-    at(dSide,e.vs,ri(-3,3),dSide==="H"?4.5:-4.5);
+    at(dSide,e.vs,ri(-3,3),mFlip(dSide)?-4.5:4.5);
   }
 }
 /** 関与している2人だけ強調する。**位置は動かさない**。 */
@@ -5089,7 +5107,7 @@ function mMoveBall(e){
  * そこへ入れないと**ボールがピッチの中で止まって見える**。
  */
 function mBallShot(e,delay){
-  const P=TUNING.play, top=e.side==="H";                 // HOMEは上のゴールを攻める
+  const P=TUNING.play, top=!mFlip(e.side);               // 下に描かれた側が上のゴールを攻める
   const at=v=>top?v:100-v;                               // 上下を入れ替える
   let tx=50, ty=at(P.goalLine);
   switch(e.type){
@@ -5304,7 +5322,7 @@ function mApply(e){
   const min=(e.at?e.min+"+":e.min)+"分";
   $("mClock").textContent=min;
   $("mClock").classList.toggle("late",e.min>=80);
-  if(e.hg!=null)$("mSc").textContent=e.hg+" - "+e.ag;
+  if(e.hg!=null)$("mSc").textContent=mScore(e.hg,e.ag);
   if(e.type==="card"&&e.off)mDrawSquads();     // 退場した選手は盤面から消える
   mFocus(e); mMoveBall(e); mLayout(e);
   const hold=mCut(e);
@@ -5344,7 +5362,7 @@ function mFinish(){
   // **必ずここで試合を締める**。再生ループは matchOver で抜けるので stepMatch を
   // 通らずに終わることがあり、締めないと _M.over が立たず結果画面に中身が渡らない。
   finishTick(_M);
-  $("mSc").textContent=_M.home.score+" - "+_M.away.score;
+  $("mSc").textContent=mScore(_M.home.score,_M.away.score);
   $("mClock").textContent="FULL TIME";
   mFeed("90分","<b>試合終了</b>","goal");
   $("mDone").style.display="";
@@ -5363,9 +5381,11 @@ function startMatch(){
   _mBall=[50,50]; _mPhase=0; _mRestart=true;
   if(!_M){ toast("試合を開始できません"); return; }
   _mSpeed=1; _mPaused=false;
-  $("mNameH").textContent=_M.home.name; $("mNameA").textContent=_M.away.name;
-  $("mEmbH").style.setProperty("--kit",clubColor(_M.fixture.h));
-  $("mEmbA").style.setProperty("--kit",clubColor(_M.fixture.a));
+  // **左が自分・右が相手**。ピッチの下が自分なのに、名前だけホーム基準だと読み替えになる
+  const mine=mMine()==="H"?_M.home:_M.away, opp=mMine()==="H"?_M.away:_M.home;
+  $("mNameH").textContent=mine.name; $("mNameA").textContent=opp.name;
+  $("mEmbH").style.setProperty("--kit",clubColor(mMine()==="H"?_M.fixture.h:_M.fixture.a));
+  $("mEmbA").style.setProperty("--kit",clubColor(mMine()==="H"?_M.fixture.a:_M.fixture.h));
   $("mSc").textContent="0 - 0"; $("mClock").textContent="KICK OFF";
   $("mFeed").innerHTML=""; $("mDone").style.display="none";
   $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=false;

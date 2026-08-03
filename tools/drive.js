@@ -160,11 +160,13 @@ const STEPS = [
     // キックオフ時は**両チームとも自陣**にいること
     ctx.log("  キックオフ隊形:", await ctx.js(`(()=>{
       const g=s=>[...document.querySelectorAll('#mSlots .mp[data-side="'+s+'"]')].map(e=>+e.dataset.y);
-      const H=g('H'), A=g('A');
-      const hOver=H.filter(y=>y<50).length, aOver=A.filter(y=>y>50).length;
-      if(hOver||aOver)throw new Error('相手陣に立っている: HOME '+hOver+'人 / AWAY '+aOver+'人');
-      return 'HOME y='+Math.min(...H).toFixed(0)+'〜'+Math.max(...H).toFixed(0)
-        +' / AWAY y='+Math.min(...A).toFixed(0)+'〜'+Math.max(...A).toFixed(0)
+      // **自分のクラブは常に下**(→docs/06 §6.17)。ホーム/アウェイではなく自分基準で見る
+      const me=mMine(), op=me==='H'?'A':'H';
+      const My=g(me), Op=g(op);
+      const myOver=My.filter(y=>y<50).length, opOver=Op.filter(y=>y>50).length;
+      if(myOver||opOver)throw new Error('相手陣に立っている: 自軍 '+myOver+'人 / 相手 '+opOver+'人');
+      return '自軍('+me+') y='+Math.min(...My).toFixed(0)+'〜'+Math.max(...My).toFixed(0)
+        +' / 相手('+op+') y='+Math.min(...Op).toFixed(0)+'〜'+Math.max(...Op).toFixed(0)
         +' (中央線は50%。どちらも越えていない)';
     })()`));
     await ctx.shot("07a-cutin-kickoff");
@@ -255,15 +257,15 @@ const STEPS = [
     // 両チームの色と向きが合っているか(HOMEは下、AWAYは上)
     ctx.log("  配色/向き:", await ctx.js(`(()=>{
       const g=s=>[...document.querySelectorAll('#mSlots .mp[data-side="'+s+'"]')];
-      const H=g('H'),A=g('A');
-      // GK は全陣形で枠0。HOMEは下(y大)、AWAYは上(y小)に立つはず
+      const me=mMine(), op=me==='H'?'A':'H';
+      const My=g(me), Op=g(op);
+      // GK は全陣形で枠0。**自分のGKは下(y大)・相手のGKは上(y小)**でなければならない
       const gk=a=>+a.find(e=>e.dataset.ix==='0').dataset.y;
-      // **自軍FWが相手の最終ラインより深くない**こと(常時オフサイドの絵にならない)
-      const line=(a,role)=>a.map(e=>+e.dataset.y);
-      const fwH=Math.min(...H.filter(e=>+e.dataset.y<50).map(e=>+e.dataset.y));
-      const dfA=Math.min(...A.map(e=>+e.dataset.y));
-      return 'H '+H.length+'人 GK y='+gk(H).toFixed(0)+' / A '+A.length+'人 GK y='+gk(A).toFixed(0)
-        +' / 別の色?'+(H[0].style.background!==A[0].style.background);
+      if(gk(My)<50)throw new Error('自軍のGKが上にいる: y='+gk(My));
+      if(gk(Op)>50)throw new Error('相手のGKが下にいる: y='+gk(Op));
+      return '自軍('+me+') '+My.length+'人 GK y='+gk(My).toFixed(0)
+        +' / 相手('+op+') '+Op.length+'人 GK y='+gk(Op).toFixed(0)
+        +' / 別の色?'+(My[0].style.background!==Op[0].style.background);
     })()`));
     // 選手が枠に張り付かず、かつ陣形が崩壊していないこと(演出の要 → docs/06 §6.18)
     ctx.log("  動き:", await ctx.js(`(()=>{
@@ -286,14 +288,28 @@ const STEPS = [
     ctx.log("  ライン:", await ctx.js(`(()=>{
       const g=s=>[...document.querySelectorAll('#mSlots .mp[data-side="'+s+'"]')]
         .map(e=>({ix:+e.dataset.ix, y:+e.dataset.y}));
-      const H=g('H'), A=g('A'), form=FORMATIONS[_M.form||S.form];
-      const roleOf=ix=>subGroup(FORMATIONS[_M.home.form][ix][0]);
-      const hFW=Math.min(...H.filter(p=>subGroup(FORMATIONS[_M.home.form][p.ix][0])==='FW').map(p=>p.y));
-      const aDF=Math.max(...A.filter(p=>subGroup(FORMATIONS[_M.away.form][p.ix][0])==='DF').map(p=>p.y));
-      const aDFline=Math.min(...A.filter(p=>subGroup(FORMATIONS[_M.away.form][p.ix][0])==='DF').map(p=>p.y));
-      const ok=hFW>aDFline;
-      if(!ok)throw new Error('自軍FW('+hFW.toFixed(0)+')が相手の最終ライン('+aDFline.toFixed(0)+')より深い');
-      return 'HOME最前線 y='+hFW.toFixed(0)+' > AWAY最終ライン y='+aDFline.toFixed(0)+' (オフサイドの絵にならない)';
+      const me=mMine(), op=me==='H'?'A':'H';
+      const formOf=s=>(s==='H'?_M.home:_M.away).form;
+      const grp=(s,p)=>subGroup(FORMATIONS[formOf(s)][p.ix][0]);
+      const myFW=Math.min(...g(me).filter(p=>grp(me,p)==='FW').map(p=>p.y));
+      const opDF=Math.min(...g(op).filter(p=>grp(op,p)==='DF').map(p=>p.y));
+      if(!(myFW>opDF))
+        throw new Error('自軍FW('+myFW.toFixed(0)+')が相手の最終ライン('+opDF.toFixed(0)+')より深い');
+      return '自軍の最前線 y='+myFW.toFixed(0)+' > 相手の最終ライン y='+opDF.toFixed(0)
+        +' (オフサイドの絵にならない)';
+    })()`));
+    // スコアボードと実況のスコアが**同じ並び**であること(左=自分)
+    ctx.log("  スコアの並び:", await ctx.js(`(()=>{
+      const me=mMine();
+      const sc=document.getElementById('mSc').textContent.trim();
+      const g=[..._M.events].reverse().find(e=>e.type==='goal');
+      if(!g)return sc+' (まだ得点なし)';
+      const want=(me==='A'?g.ag+' - '+g.hg:g.hg+' - '+g.ag);
+      const line=[...document.querySelectorAll('#mFeed div')].map(d=>d.textContent)
+        .find(t=>t.indexOf('ゴール！')>=0)||'';
+      if(line&&line.indexOf(want)<0)
+        throw new Error('実況のスコアがスコアボードと逆: 実況「'+line.trim()+'」/ 期待 '+want);
+      return 'スコアボード '+sc+' / 実況 '+want+' (左=自分)';
     })()`));
     await ctx.shot("07b-match");
     // 最後まで再生して終える(スキップではなく**実際に見終わったときと同じ経路**)。

@@ -163,6 +163,28 @@ const E = setup({ tmpName: "_tmp_integration.js" });
     console.log("移行OK v5 → v" + E.SAVE_VER + " キッカー枠を補完");
   }
 
+  // ---------- 試合画面の向きは**常に自分が下**(→docs/06 §6.17) ----------
+  {
+    await E.newGame();
+    E.getS().coach = "テスト監督";
+    E.startTenure("sam-8");
+    const me = E.getS().club.id;
+    for (const [fx, label] of [[{ h: me, a: "eng-1" }, "ホーム"], [{ h: "eng-1", a: me }, "アウェイ"]]) {
+      const M = { fixture: fx };
+      E.setM(M);
+      const mine = fx.h === me ? "H" : "A", opp = mine === "H" ? "A" : "H";
+      // 自分側は反転しない = 画面の下。相手だけ反転する
+      assert.strictEqual(E.mMine(), mine, label + ": 自分側を正しく見ている");
+      assert.strictEqual(E.mFlip(mine), false, label + ": 自分側は反転しない");
+      assert.strictEqual(E.mFlip(opp), true, label + ": 相手側は反転する");
+      // スコアの並びも左が自分。ピッチと逆だと読み替えになる
+      assert.strictEqual(E.scOrder(M, 3, 1), mine === "H" ? "3 - 1" : "1 - 3",
+        label + ": スコアは左が自分");
+    }
+    E.setM(null);
+    console.log("試合の向きOK ホームでもアウェイでも自分が下 / スコアは左が自分");
+  }
+
   E.deleteSave();
   assert.strictEqual(await E.hasSave(), false, "削除後はセーブが無い");
 
