@@ -469,6 +469,13 @@ const TUNING={
          pushUp:4, dropBack:4, stretch:-0.05, compact:0.09,
          maxDevY:13, maxDevX:11,
          gkOut:0.06, gkSide:0.22, wander:1.4, wanderStep:0.7,
+         // --- 運動量(→docs/06 §6.18)。**見た目だけ**で、判定には一切効かない ---
+         //   age*      年齢の係数。若いほどよく動く
+         //   vigorStam スタミナの効き(1 で完全比例。疲れると動きが鈍る)
+         //   chase*    ボールに近い選手ほど強く追う(K=強さ / R=届く距離)
+         //   space*    攻撃側の前の選手が**マークを外して空きへ動く**(K=強さ / R=見る距離)
+         ageYoung:18, ageOld:34, ageLo:0.84, ageHi:1.16,
+         vigorStam:0.70, chaseK:0.50, chaseR:26, spaceK:5.5, spaceR:15,
          // カットイン(→docs/06 §6.19)。盛り上がる局面は必ず、繋ぎは抽選で出す
          // 表示時間。演出は「帯→両者→決着語」で約1.0秒かかるので、
          // それに読む間を足した長さにする(短いと認知が追いつかない)

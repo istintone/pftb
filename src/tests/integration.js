@@ -185,6 +185,22 @@ const E = setup({ tmpName: "_tmp_integration.js" });
     console.log("試合の向きOK ホームでもアウェイでも自分が下 / スコアは左が自分");
   }
 
+  // ---------- 運動量は年齢とスタミナで決まる(→docs/06 §6.18) ----------
+  {
+    const mk = (age, stam) => ({ c: { age }, stam });
+    const young = E.vigorOf(mk(18, 1)), old = E.vigorOf(mk(34, 1));
+    assert.ok(young > old * 1.15, "若いほどよく動く: " + young.toFixed(2) + " / " + old.toFixed(2));
+    const fresh = E.vigorOf(mk(24, 1)), tired = E.vigorOf(mk(24, 0.3));
+    assert.ok(fresh > tired * 1.5, "疲れると動きが鈍る: " + fresh.toFixed(2) + " / " + tired.toFixed(2));
+    // 範囲の外(年齢の上下)でも暴れない
+    for (const [a, s2] of [[15, 1], [40, 1], [24, 0.3], [24, 1]]) {
+      const v = E.vigorOf(mk(a, s2));
+      assert.ok(v > 0.2 && v < 1.5, a + "歳/スタミナ" + s2 + " の運動量が常識的: " + v.toFixed(2));
+    }
+    console.log("運動量OK 18歳", young.toFixed(2), "/ 34歳", old.toFixed(2),
+      "/ 万全", fresh.toFixed(2), "/ 消耗", tired.toFixed(2));
+  }
+
   E.deleteSave();
   assert.strictEqual(await E.hasSave(), false, "削除後はセーブが無い");
 

@@ -277,6 +277,26 @@ const STEPS = [
         const d=Math.hypot(dx,dy);
         if(d>1)moved++; if(d>22)far++; maxd=Math.max(maxd,d);
       }
+      // **ボールに一番近い選手は、枠よりボール側にいる**(→docs/06 §6.18)。
+      // ブロックごと平行移動するだけだと、誰もボールに行っていないように見える
+      {
+        const b=document.getElementById('mBall');
+        const bx=parseFloat(b.style.left), by=parseFloat(b.style.top);
+        const all=[...document.querySelectorAll('#mSlots .mp')]
+          .map(e=>({e, sx:+e.dataset.x, sy:+e.dataset.y,
+                    x:parseFloat(e.style.left), y:parseFloat(e.style.top)}))
+          .filter(o=>o.e.querySelector('img')||true);
+        const d=(a,x,y)=>Math.hypot(a.x-x,a.y-y);
+        // **何人かはボールへ詰めている**こと。全員が離れるなら誰も行っていない。
+        // 一番近い1人で見ないのは、空きを狙って**あえて離れる**動きもあるため
+        let toward=0;
+        for(const o of all){
+          const before=Math.hypot(o.sx-bx,o.sy-by);
+          const after=Math.hypot(o.x-bx,o.y-by);
+          if(after<before-1)toward++;
+        }
+        if(toward<3)throw new Error('誰もボールへ動いていない: '+toward+'人');
+      }
       // 点ではなく全身。**足元の影はチームカラー**で、両チームで色が違うこと
       const sh=s2=>getComputedStyle(document.querySelector(
         '#mSlots .mp[data-side="'+s2+'"] .mp-sh')).backgroundColor;

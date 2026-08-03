@@ -1031,6 +1031,19 @@ function mDrawSquads(){
 const L=()=>TUNING.play;
 /** ラインごとの寄り方。DFはラインを保ち、MFが一番ボールを追い、FWは前で待つ。 */
 const followW=r=>r==="GK"?L().gkFollow:r==="DF"?L().dfFollow:r==="MF"?L().mfFollow:L().fwFollow;
+/**
+ * **運動量**(→docs/06 §6.18)。動きの幅と寄りの強さに一様に掛かる。
+ * 若い選手はよく走り、消耗した選手は足が止まる。**見た目だけ**の係数で、
+ * 判定には一切効かない(判定側の疲労は eff() → docs/07 §7.10)。
+ */
+function vigorOf(p){
+  const P=L();
+  const t=clamp((p.c.age-P.ageYoung)/(P.ageOld-P.ageYoung),0,1);
+  const age=P.ageHi+(P.ageLo-P.ageHi)*t;                 // 18歳=1.16 … 34歳=0.84
+  const st=p.stam==null?1:p.stam;
+  return age*(1-P.vigorStam+P.vigorStam*st);
+}
+const dist2=(ax,ay,bx,by)=>{ const dx=ax-bx, dy=ay-by; return dx*dx+dy*dy; };
 
 /**
  * 22人の表示位置を決める。**毎イベント呼ぶ**。
@@ -1049,43 +1062,82 @@ function mLayout(e){
   _mPhase+=P.wanderStep;
   const atkSide=e.side||_mLastSide; if(e.side)_mLastSide=e.side;
 
-  for(const T of [_M.home,_M.away]){
-    const mine=T.side===atkSide;                       // 攻めている側か
-    const goalY=mFlip(T.side)?100-dispY(87,_mRestart):dispY(87,_mRestart); // 自陣ゴールの側
-    // ブロックの中心(枠の平均)。ここを基準にボールへ寄せる
+  // **2周する**。1周目で両チームの位置を決め、2周目で相手の位置を見て動く
+  // (マークを外す = 相手から離れる、なので相手の座標が要る)。
+  const teams=[_M.home,_M.away].map(T=>{
     const ps=T.players.map((p,i)=>({ p, i, xy:slotXY(p,T.side,_mRestart) }));
-    const cy=ps.reduce((s,o)=>s+o.xy[1],0)/ps.length;
-    const cx=ps.reduce((s,o)=>s+o.xy[0],0)/ps.length;
+    return { T, ps,
+      mine:T.side===atkSide,
+      goalY:mFlip(T.side)?100-dispY(87,_mRestart):dispY(87,_mRestart),
+      cy:ps.reduce((s,o)=>s+o.xy[1],0)/ps.length,
+      cx:ps.reduce((s,o)=>s+o.xy[0],0)/ps.length };
+  });
 
+  for(const t of teams){
+    const { T, ps, mine, goalY, cx, cy }=t;
     for(const o of ps){
       const el=$("mSlots").querySelector('.mp[data-side="'+T.side+'"][data-ix="'+o.i+'"]');
       if(!el)continue;
       el.dataset.x=o.xy[0].toFixed(1); el.dataset.y=o.xy[1].toFixed(1);
       let [x,y]=o.xy;
-      const r=o.p.role, w=followW(r);
+      const r=o.p.role, w=followW(r), vg=vigorOf(o.p);
 
       // ① ブロックがボールへ寄る(縦・横)。ラインごとに寄り方が違う
-      y+=(by-cy)*P.followY*w;
-      x+=(bx-cx)*P.followX*w;
+      y+=(by-cy)*P.followY*w*vg;
+      x+=(bx-cx)*P.followX*w*vg;
+      // ①' **ボールに近い選手ほど自分から詰める**。ブロックごと動かすだけだと
+      //     全員が同じ量だけ平行移動して、誰もボールに行っていないように見える
+      if(r!=="GK"){
+        const d=Math.sqrt(dist2(o.xy[0],o.xy[1],bx,by))/P.chaseR;
+        const near=Math.exp(-d*d);
+        x+=(bx-x)*P.chaseK*near*vg;
+        y+=(by-y)*P.chaseK*near*vg;
+      }
       // ② 攻めている側は前へ出て広がる / 守っている側は下がって圧縮する
       const push=(mine?P.pushUp:-P.dropBack)*(goalY===87?-1:1);
-      y+=push*(r==="GK"?0.2:r==="DF"?0.8:1);
+      y+=push*(r==="GK"?0.2:r==="DF"?0.8:1)*vg;
       const comp=mine?P.stretch:P.compact;
       y+=(cy-y)*comp;
       // ③ **枠から離れすぎない**。上限を付けないと全員がボールに吸い寄せられ、
-      //    陣形が消えて団子になる(実際にそうなった)
-      x=o.xy[0]+clamp(x-o.xy[0],-P.maxDevX,P.maxDevX);
-      y=o.xy[1]+clamp(y-o.xy[1],-P.maxDevY,P.maxDevY);
-      // ④ ゆっくり揺れる(完全に止めない)
+      //    陣形が消えて団子になる(実際にそうなった)。よく走る選手ほど枠は広い
+      const mx=P.maxDevX*vg, my=P.maxDevY*vg;
+      x=o.xy[0]+clamp(x-o.xy[0],-mx,mx);
+      y=o.xy[1]+clamp(y-o.xy[1],-my,my);
+      // ④ ゆっくり揺れる(完全に止めない)。疲れた選手の揺れは小さい
       const ph=+el.dataset.ph;
-      x+=Math.sin(_mPhase+ph)*P.wander;
-      y+=Math.cos(_mPhase*0.8+ph*1.7)*P.wander*0.7;
+      x+=Math.sin(_mPhase+ph)*P.wander*vg;
+      y+=Math.cos(_mPhase*0.8+ph*1.7)*P.wander*0.7*vg;
       // ⑤ GKはゴールラインに残り、ボールの左右にだけ追従する
       if(r==="GK"){ y=goalY+(by-goalY)*P.gkOut; x=50+(bx-50)*P.gkSide; }
 
-      el.style.left=clamp(x,4,96)+"%";
-      el.style.top=clamp(y,8,92)+"%";
+      o.pos=[x,y]; o.vg=vg; o.el=el;
     }
+  }
+  // ⑥ **空いたスペースを狙う**。攻めている側の前の選手は、一番近い相手から離れる。
+  //    マークを外す動きに見えるうえ、密集がほどけて盤面が読みやすくなる。
+  if(!_mRestart)for(const t of teams){
+    if(!t.mine)continue;
+    const opp=teams.find(o=>o!==t);
+    for(const o of t.ps){
+      if(!o.pos||o.p.role==="GK"||o.p.role==="DF")continue;
+      let near=null, nd=1e9;
+      for(const q of opp.ps){
+        if(!q.pos)continue;
+        const d=dist2(o.pos[0],o.pos[1],q.pos[0],q.pos[1]);
+        if(d<nd){ nd=d; near=q; }
+      }
+      if(!near)continue;
+      const d=Math.sqrt(nd);
+      if(d>=P.spaceR||d<0.001)continue;
+      const k=(1-d/P.spaceR)*P.spaceK*o.vg;
+      o.pos[0]+=(o.pos[0]-near.pos[0])/d*k;
+      o.pos[1]+=(o.pos[1]-near.pos[1])/d*k;
+    }
+  }
+  for(const t of teams)for(const o of t.ps){
+    if(!o.pos)continue;
+    o.el.style.left=clamp(o.pos[0],4,96)+"%";
+    o.el.style.top=clamp(o.pos[1],8,92)+"%";
   }
   // ⑥ 関与している選手は**ボールまで実際に動く**(ここが「戦略的に見える」核)
   const at=(side,id,ox,oy)=>{
