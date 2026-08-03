@@ -516,10 +516,10 @@ const TUNING={
   //   fkH                … この高さ未満のファウルは蹴らない(カードだけ引いて攻撃終了)
   sp:{ foulK:1.00, foulBlock:0.055, boxH:0.92, fkH:0.50,
        pkH:0.97,
-       fkDirectH:0.62, fkDirect:0.55,
+       fkDirectH:0.62, fkDirect:0.55, fkCrossH:0.62, restartGain:0.14,
        crossH:0.93, aerialPow:0.65, aerialK:0.85,
        ckOnBlock:0.34, ckOnSave:0.28, maxSp:2,
-       yellow:0.50, pkYellow:0.60, red:0.006, pkRed:0.025,
+       yellow:0.42, pkYellow:0.55, red:0.005, pkRed:0.020,
        bookedShy:3.0, minPlayers:8 },
   // シュートの距離減衰(→docs/07 §7.9)。h=1 がゴール前、0 が自陣ゴール前。
   //   deadZone この高さ以下はほぼ入らない / minRange その下限 / rangePow 減衰の効き

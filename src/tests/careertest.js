@@ -206,6 +206,47 @@ function runSeason() {
       Object.keys(E.ORIGINS).length * 3, "種 / 陣形の全", subs.size, "サブポジを網羅");
   }
 
+  // ---------- セットプレーは連鎖に戻る(D36 → docs/07 §7.15) ----------
+  {
+    const mk = cid => ({ cards: E.bestXI(E.clubRoster(4242, cid), E.formFor(cid)),
+      form: E.formFor(cid), name: cid });
+    const modes = {}, afterAerial = {};
+    let restartChained = 0, restarts = 0;
+    for (let i = 0; i < 40; i++) {
+      const M = E.simulateMatch(mk("eng-1"), mk("sam-8"), 4200 + i);
+      M.events.forEach((e, k) => {
+        if (e.type !== "setpiece") {
+          if (e.type === "aerial" && e.ok) {
+            const nx = M.events[k + 1];
+            if (nx) afterAerial[nx.type] = (afterAerial[nx.type] || 0) + 1;
+          }
+          return;
+        }
+        modes[e.kind + ":" + e.mode] = (modes[e.kind + ":" + e.mode] || 0) + 1;
+        if (e.mode === "restart") {
+          restarts++;
+          const nx = M.events[k + 1];
+          if (nx && (nx.type === "origin" || nx.type === "link")) restartChained++;
+        }
+      });
+    }
+    // PK と直接FKは**そのまま終わる**。CK と遠いFKは繋ぐ
+    assert.ok(modes["pk:direct"] > 0, "PK は必ず直接");
+    assert.ok(!modes["pk:cross"] && !modes["pk:restart"], "PK が繋ぎになることはない");
+    assert.ok(modes["ck:cross"] > 0, "CK はボックスへ入れる");
+    assert.ok(!modes["ck:direct"], "CK が直接シュートになることはない");
+    assert.ok(modes["fk:direct"] > 0 && modes["fk:cross"] > 0, "FK は位置で分かれる");
+    if (restarts) assert.strictEqual(restartChained, restarts,
+      "遠いFKは必ず連鎖に戻る: " + restartChained + "/" + restarts);
+    // 空中戦に勝ったあとは、直接ヘディングだけでなく**セカンドボール**が続く
+    const tot = Object.values(afterAerial).reduce((a, b) => a + b, 0);
+    const chained = (afterAerial.link || 0) + (afterAerial.origin || 0);
+    assert.ok(chained > tot * 0.25 && chained < tot * 0.85,
+      "空中戦に勝ったあとは撃つことも繋ぐこともある: 繋ぎ " + Math.round(chained / tot * 100) + "%");
+    console.log("セットプレーの連鎖OK", Object.entries(modes).map(([k, v]) => k + " " + v).join(" / "),
+      "/ 空中戦のあと繋ぎ", Math.round(chained / tot * 100) + "%");
+  }
+
   // ---------- 陣形の攻守バランス(D35 → docs/07 §7.14) ----------
   {
     // **枠適性を完全に揃えて形だけを比べる。** 実クラブの名簿を使うと

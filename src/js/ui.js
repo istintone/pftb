@@ -884,7 +884,10 @@ function lineSet(M,e,kicker){
   const nm=mName(kicker);
   if(e.kind==="pk")return "<b>"+nm+"</b>がスポットにボールを置く";
   if(e.kind==="ck")return nm+"のコーナーキック";
-  return e.mode==="direct"?nm+"が直接狙う":nm+"が壁の向こうへ蹴り込む";
+  if(e.mode==="direct")return nm+"が直接狙う";
+  // 遠いFKは蹴り込む位置ではない。**繋いで作り直す**(→docs/07 §7.15)
+  if(e.mode==="restart")return nm+"のリスタート、ここから作り直す";
+  return nm+"が壁の向こうへ蹴り込む";
 }
 /**
  * 1イベント → 実況の1行。返り値 { text, cls } / 出さないなら null。
@@ -907,8 +910,8 @@ function matchLine(e,M){
                         +(e.off?"、<b>退場！</b>数的優位が生まれた":"に"+(e.card==="r"?"レッドカード":"警告")),
                         cls:e.off?"goal":"info" };
     case "setpiece": return { text:lineSet(M,e,p), cls:side };
-    case "aerial":   return { text:e.ok?mName(p)+"が競り勝った！":mName(vs)+"が競り勝ってクリア",
-                        cls:side };
+    case "aerial":   return { text:e.ok?"<b>"+mName(p)+"</b>が競り勝った！"
+                        :mName(vs)+"が競り勝ってクリア", cls:side };
     // **どう撃ったか**を出す(→docs/07 §7.13)。「シュート」だけだと
     // ヘディングもミドルもGKとの一対一も同じ文になり、局面が読めない
     case "block":    return { text:mName(p)+"の"+shotWord(e)+"！"+mName(vs)+"がブロック", cls:side };

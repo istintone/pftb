@@ -279,31 +279,49 @@ function aerialDuel(rng,T,D){
   return { atk, df, ok:aSc>dSc*TUNING.th.aerial };
 }
 /**
- * セットプレーを蹴る。**ここから先は通常のシュートと同じ経路**に合流するので、
- * ブロック・枠外・GK・こぼれ球の扱いが本編と食い違わない。
- *   pk       … 壁もブロックも無い。キッカー vs GK
- *   fk(直接) … 壁がブロックに入る。キッカー vs GK
- *   fk/ck(クロス) … 空中戦に勝った選手のヘディング
+ * セットプレーを蹴る(→docs/07 §7.15)。**直接で終わる手と、繋いで続く手がある**。
+ *
+ *   PK          … 直接。壁もブロックも無い。キッカー vs GK
+ *   FK(近い・直接) … 直接。壁がブロックに入る
+ *   FK(近い・クロス) / CK … ボックスへ蹴る → 空中戦
+ *                            ・競り勝って構えが良ければヘディングシュート
+ *                            ・そうでなければ**そこから連鎖が続く**(セカンドボール)
+ *   FK(遠い)    … そもそも蹴り込む位置ではない。**ただのリスタート**として繋ぎ、
+ *                  そこから連鎖に戻る
+ *
+ * 直接シュートに合流する手は、通常のシュートとまったく同じ経路
+ * (ブロック→枠外→GK→こぼれ球)を通るので、扱いが本編と食い違わない。
  */
-function takeSet(M,rng,push,T,D,kind,x,from,att){
+function takeSet(M,rng,push,T,D,kind,x,from,att,min){
   const SP=TUNING.sp, F=TUNING.mom;
   att.sp++;
   if(kind==="pk"){
     const kicker=spKicker(T,"pk");
     push({ side:T.side, type:"setpiece", kind:"pk", mode:"direct",
       by:kicker.c.id, h:SP.pkH, pos:[50,yOfH(SP.pkH)] });
-    return shoot(M,rng,push,T,D,kicker,null,{ h:SP.pkH, x:50 },from,0,att,"pk");
+    return shoot(M,rng,push,T,D,kicker,null,{ h:SP.pkH, x:50 },from,0,att,"pk",min);
   }
   const kicker=spKicker(T,kind==="ck"?"ck":"fk");
-  // FK は距離で分かれる。遠ければ蹴り込むしかない
   const h=kind==="ck"?SP.crossH:clamp(att.foulH||0.5,0,1);
+  // 蹴り方は位置で決まる。直接狙える / ボックスへ入れる / まだ繋ぐだけ
   const direct=kind==="fk"&&h>=SP.fkDirectH&&rng()<SP.fkDirect;
-  push({ side:T.side, type:"setpiece", kind, mode:direct?"direct":"cross",
+  const intoBox=kind==="ck"||h>=SP.fkCrossH;
+  const mode=direct?"direct":intoBox?"cross":"restart";
+  push({ side:T.side, type:"setpiece", kind, mode,
     by:kicker.c.id, h:Math.round(h*100)/100,
     pos:kind==="ck"?[x<50?2:98,yOfH(0.99)]:[Math.round(x),yOfH(h)] });
-  if(direct)return shoot(M,rng,push,T,D,kicker,null,{ h, x },from,0,att,"fk");
+  kicker.stat.pass++;
+  if(direct)return shoot(M,rng,push,T,D,kicker,null,{ h, x },from,0,att,"fk",min);
 
-  // クロス → 空中戦 → ヘディング
+  if(!intoBox){
+    // **遠いFKは繋ぐだけ**。蹴った先で収めた選手から、ふつうの連鎖が始まる
+    const tg={ h:clamp(h+SP.restartGain,0,1), x:clamp(x+(rng()-0.5)*30,2,98) };
+    const recv=receiverAt(rng,T,tg,kicker)||kicker;
+    kicker.stat.passOk++;
+    return runChain(M,rng,push,T,D,recv,tg.h,tg.x,0,kicker,att,from,min);
+  }
+
+  // ボックスへ入れる → 空中戦
   const a=aerialDuel(rng,T,D);
   if(!a)return M.events.slice(from);
   a.atk.stat.inv++; if(a.df)a.df.stat.inv++;
@@ -313,9 +331,13 @@ function takeSet(M,rng,push,T,D,kind,x,from,att){
     a.atk.stat.duelL++; if(a.df)a.df.stat.duelW++;
     addMom(M,D.side,F.duelLost); return M.events.slice(from);
   }
-  a.atk.stat.duelW++; if(a.df)a.df.stat.duelL++;
+  a.atk.stat.duelW++; if(a.df)a.df.stat.duelL++; kicker.stat.passOk++;
   addMom(M,T.side,F.duelWon);
-  return shoot(M,rng,push,T,D,a.atk,kicker,{ h:SP.crossH, x:50 },from,0,att,"hdr");
+  // **競り勝ってもそのまま撃てるとは限らない**。触っただけならボールはこぼれ、
+  // そこから連鎖が続く(セカンドボール)。撃てる選手ほど直接ヘディングへ行く。
+  if(shotUrge(rng,SP.crossH,0,a.atk))
+    return shoot(M,rng,push,T,D,a.atk,kicker,{ h:SP.crossH, x:50 },from,0,att,"hdr",min);
+  return runChain(M,rng,push,T,D,a.atk,SP.crossH,50,1,kicker,att,from,min);
 }
 /** ファウルを積んで、カードを引いて、蹴る位置ならセットプレーへ渡す。 */
 function giveFoul(M,rng,push,T,D,kind,df,victim,h,x,from,att,min){
@@ -329,7 +351,7 @@ function giveFoul(M,rng,push,T,D,kind,df,victim,h,x,from,att,min){
   }
   addMom(M,T.side,kind==="pk"?F.shot:F.duelWon);
   att.foulH=h;
-  return takeSet(M,rng,push,T,D,kind,x,from,att);
+  return takeSet(M,rng,push,T,D,kind,x,from,att,min);
 }
 
 /** こぼれ球を拾えるか。詰める側は spd と atk、防ぐ側は def と spd。 */
@@ -670,17 +692,25 @@ function stepMatch(M){
     mom:Math.round(M.mom*100)/100 });
 
   // ③ 起点 — **モメンタムが高さを決め、高さが選手を決め、サブポジがチャンネルを決める**
-  //    以降は連鎖。**各ステップは起点とまったく同じ仕組み**で回す(→docs/07 §7.9)。
-  const C=TUNING.chain, F=TUNING.mom;
-  let carrier=pickOrigin(rng,T,mom)||pickAttacker(rng,T);
-  // **ボールの位置は選手の枠とは別に持つ**。持ち運びで動くのはボールであって、
-  // 枠(FORMATIONS の座標)は動かない。マッチアップも受け手選びもこの位置で引く。
-  let h=heightOf(carrier), x=carrier.x;
-  let assist=null, step=0, lastCh=null;
-
+  //    以降は連鎖(→docs/07 §7.9)。
+  const origin=pickOrigin(rng,T,mom)||pickAttacker(rng,T);
   // 1回の攻撃で持ち回す状態。セットプレーを重ねすぎないための回数もここに持つ。
   const att={ sp:0, foulH:0 };
-  let carryRun=0;                                           // 同じ選手が連続で運んだ回数
+  // **ボールの位置は選手の枠とは別に持つ**。持ち運びで動くのはボールであって、
+  // 枠(FORMATIONS の座標)は動かない。マッチアップも受け手選びもこの位置で引く。
+  return runChain(M,rng,push,T,D,origin,heightOf(origin),origin.x,0,null,att,from,t.min);
+}
+
+/**
+ * 連鎖(→docs/07 §7.9)。**起点もセットプレーの後もここに入る**。
+ * 各ステップは起点とまったく同じ仕組み: ボールを持った選手がサブポジの3枚から
+ * チャンネルを選び、座標の近い相手と競る。勝てば次へ、負ければそこで失う。
+ *
+ * セットプレーから戻ってくる(→§7.15)ときは、蹴った先で収めた選手が carrier になる。
+ */
+function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
+  const C=TUNING.chain, F=TUNING.mom;
+  let lastCh=null, carryRun=0;                              // 同じ選手が連続で運んだ回数
   while(true){
     const stray=strayOf(carrier,h,x);
     const ch=pickOriginCh(rng,carrier,lastCh,stray);
@@ -704,7 +734,7 @@ function stepMatch(M){
       // **止めた瞬間だけがファウルの入口**(→docs/07 §7.11)。
       // 反則率は**守備側が選んだ手**が持つ(削りにいけば高く、間合いを取れば低い)
       const foul=marker?rollFoul(rng,h,dch.foul):null;
-      if(foul)return giveFoul(M,rng,push,T,D,foul,marker,carrier,h,x,from,att,t.min);
+      if(foul)return giveFoul(M,rng,push,T,D,foul,marker,carrier,h,x,from,att,min);
       addMom(M,D.side,F.duelLost); return M.events.slice(from);
     }
     carrier.stat.duelW++; if(marker)marker.stat.duelL++;
@@ -712,7 +742,7 @@ function stepMatch(M){
     addMom(M,T.side,F.duelWon);
 
     const tg=ballTarget(rng,h,x,ch);
-    if(ch.kind==="shot")return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att);
+    if(ch.kind==="shot")return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att,null,min);
 
     // **まずボールを誰が収めたかを決める**。撃つかどうかはそのあと。
     // 順番を逆にすると、スルーパスを出した本人がその球を自分で撃つことになる。
@@ -721,12 +751,12 @@ function stepMatch(M){
       nextLast=ch.id;                                       // 自分が次の起点になる
     }else{                                                  // パス系 → 行き先に近い味方へ
       const recv=receiverAt(rng,T,tg,carrier);
-      if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att);
+      if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att,null,min);
       next=recv; nextAssist=carrier;
     }
     // 撃つ: 深く入った / つなぎ上限。判断するのは**ボールを収めた選手**
     if(step>=C.maxLinks||shotUrge(rng,tg.h,step,next))
-      return shoot(M,rng,push,T,D,next,nextAssist,tg,from,0,att);
+      return shoot(M,rng,push,T,D,next,nextAssist,tg,from,0,att,null,min);
 
     carrier=next; assist=nextAssist; lastCh=nextLast;
     h=tg.h; x=tg.x; step++;
@@ -740,7 +770,7 @@ function stepMatch(M){
  * **GKに全部が来るわけではない。** 守備者が身体を入れ、技術が足りなければ枠を外れ、
  * 止められてもこぼれれば詰められる。GK以外の守備も結果に効く。
  */
-function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
+function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
   const F=TUNING.mom, SP=TUNING.sp, gk=pickGK(D);
   const pos=[Math.round(tg.x),yOfH(tg.h)];
   const d=depth||0, A=att||{ sp:0 };
@@ -760,8 +790,8 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
     // 身体を投げ出した結果、ファウルにもコーナーにもなりうる
     if(more){
       const foul=rollFoul(rng,tg.h,SP.foulBlock,true);
-      if(foul)return giveFoul(M,rng,push,T,D,foul,blocker,shooter,tg.h,tg.x,from,A,base.min);
-      if(rng()<SP.ckOnBlock)return takeSet(M,rng,push,T,D,"ck",tg.x,from,A);
+      if(foul)return giveFoul(M,rng,push,T,D,foul,blocker,shooter,tg.h,tg.x,from,A,min);
+      if(rng()<SP.ckOnBlock)return takeSet(M,rng,push,T,D,"ck",tg.x,from,A,min);
     }
     return M.events.slice(from);
   }
@@ -786,7 +816,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
   gk.stat.saves=(gk.stat.saves||0)+1;
   addMom(M,T.side,F.shot); addMom(M,D.side,F.save);         // 止めた側にも流れが来る
   push(Object.assign({ type:"save", gk:gk.c.id },base));
-  if(more&&rng()<SP.ckOnSave)return takeSet(M,rng,push,T,D,"ck",tg.x,from,A);
+  if(more&&rng()<SP.ckOnSave)return takeSet(M,rng,push,T,D,"ck",tg.x,from,A,min);
 
   // ④ こぼれ球 — **回数は決め打ちしない**。
   //    「こぼれる(30%) × 詰め合いに勝つ(約40%)」で1回あたり約12%なので、
@@ -800,7 +830,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp){
     vs:guard?guard.c.id:null, ok:got, depth:d, pos });
   if(!got){ addMom(M,D.side,F.duelLost); return M.events.slice(from); }
   addMom(M,T.side,F.duelWon);
-  return shoot(M,rng,push,T,D,chaser,null,{ h:TUNING.shot.reboundH, x:tg.x },from,d+1,A);
+  return shoot(M,rng,push,T,D,chaser,null,{ h:TUNING.shot.reboundH, x:tg.x },from,d+1,A,null,min);
 }
 
 /** 試合終了イベント(1回だけ積む)。 */
