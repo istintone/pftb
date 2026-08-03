@@ -328,14 +328,17 @@ const STEPS = [
     ctx.log("  スコアの並び:", await ctx.js(`(()=>{
       const me=mMine();
       const sc=document.getElementById('mSc').textContent.trim();
-      const g=[..._M.events].reverse().find(e=>e.type==='goal');
-      if(!g)return sc+' (まだ得点なし)';
-      const want=(me==='A'?g.ag+' - '+g.hg:g.hg+' - '+g.ag);
+      const goals=_M.events.filter(e=>e.type==='goal');
+      if(!goals.length)return sc+' (まだ得点なし)';
       const line=[...document.querySelectorAll('#mFeed div')].map(d=>d.textContent)
         .find(t=>t.indexOf('ゴール！')>=0)||'';
-      if(line&&line.indexOf(want)<0)
-        throw new Error('実況のスコアがスコアボードと逆: 実況「'+line.trim()+'」/ 期待 '+want);
-      return 'スコアボード '+sc+' / 実況 '+want+' (左=自分)';
+      if(!line)return sc+' (実況にまだ出ていない)';
+      // 実況の行は**その時点のスコア**なので、どのゴールかは特定できない。
+      // 「いずれかのゴールの並びと一致する」ことだけを見る(左=自分になっているか)
+      const wants=goals.map(g=>me==='A'?g.ag+' - '+g.hg:g.hg+' - '+g.ag);
+      if(!wants.some(w=>line.indexOf(w)>=0))
+        throw new Error('実況のスコアがスコアボードと逆: 実況「'+line.trim()+'」/ 期待 '+wants.join(' か '));
+      return 'スコアボード '+sc+' / 実況「'+line.trim().slice(-9)+'」(左=自分)';
     })()`));
     await ctx.shot("07b-match");
     // 交代タブ(→docs/06 §6.21)。**開くと試合が止まる**
@@ -357,22 +360,42 @@ const STEPS = [
     await ctx.shot("07j-sub");
     ctx.log("  交代の申請:", await ctx.js(`(()=>{
       const T=mMine()==='H'?_M.home:_M.away;
-      const before=T.bench.filter(b=>!b.used).length;
-      document.querySelector('#subBody [data-out]').click();
-      document.querySelector('#subBody [data-in]').click();
       const go=document.getElementById('subGo');
-      if(go.disabled)throw new Error('2人選んでもボタンが押せない');
-      go.click();
-      const pend=_M.orders[T.side].filter(o=>o.type==='sub').length;
-      if(pend!==1)throw new Error('交代が積まれていない: '+pend);
-      // 枠を使い切るまで積める / 超えたら積めない
-      let ok=0;
-      for(let i=0;i<5;i++)if(orderMatch(_M,T.side,{type:'sub',out:i+1,in:i+1}))ok++;
       const max=TUNING.squad.subMax;
-      if(1+ok>max)throw new Error('交代枠を超えて積めた: '+(1+ok)+'/'+max);
+      const label=()=>go.textContent.trim();
+      if(!/残り\s*3\s*回/.test(label()))throw new Error('残り回数がボタンに出ていない: '+label());
+      if(!go.disabled)throw new Error('誰も選んでいないのにボタンが押せる');
+      const log=[];
+      // **枠を使い切るまで連続で積める**。押すたびにリストが入れ替わること
+      for(let n=0;n<max;n++){
+        const outs=[...document.querySelectorAll('#subBody [data-out]')];
+        const ins=[...document.querySelectorAll('#subBody [data-in]')];
+        if(!outs.length||!ins.length)throw new Error(n+'回目で候補が尽きた');
+        const outName=outs[0].querySelector('.sb-nm').textContent;
+        const inName=ins[0].querySelector('.sb-nm').textContent;
+        outs[0].click(); ins[0].click();
+        if(go.disabled)throw new Error('2人選んでもボタンが押せない');
+        go.click();
+        // 下げた選手は「交代済み」に落ち、選べなくなっていること
+        const still=[...document.querySelectorAll('#subBody [data-out],#subBody [data-in]')]
+          .some(e=>e.querySelector('.sb-nm').textContent===outName);
+        if(still)throw new Error('下げた選手がまだ選べる: '+outName);
+        log.push(inName+'←'+outName);
+      }
+      if(!/残り\s*0\s*回/.test(label()))throw new Error('使い切っても残りが0にならない: '+label());
+      if(!go.disabled)throw new Error('使い切ってもボタンが押せる');
+      // **使い切ってもスタミナ一覧としては見られる**
+      if(!document.querySelectorAll('#subBody .sb-r').length)
+        throw new Error('枠を使い切ると一覧が消える');
+      const pend=_M.orders[T.side].filter(o=>o.type==='sub').length;
+      if(pend!==max)throw new Error('積まれた数が合わない: '+pend+'/'+max);
+      return log.join(' / ')+' (上限'+max+')';
+    })()`));
+    await ctx.shot("07k-sub-used");
+    ctx.log("  交代タブを閉じる:", await ctx.js(`(()=>{
       document.getElementById('subClose').click();
       if(_mPaused!==false&&!_M.over)throw new Error('閉じても再生に戻らない');
-      return '控え'+before+'人 / 積めた '+(1+ok)+' 枠(上限'+max+')';
+      return '再生に戻った';
     })()`));
     // 最後まで再生して終える(スキップではなく**実際に見終わったときと同じ経路**)。
     // ここで締め忘れると結果画面に試合の中身が渡らないので、over を確かめる。

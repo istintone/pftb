@@ -873,7 +873,13 @@ body{
   pointer-events:none;
 }
 #subDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
-#subDrawer .hd-in{ height:100%; max-height:100%; overflow-y:auto }
+/* **説明とボタンは固定、選手だけスクロール**(→docs/06 §6.21)。
+   替える相手を探して上下する画面なので、決定ボタンが流れて消えると押せなくなる。 */
+#subDrawer .hd-in{ height:100%; max-height:100%; overflow:hidden;
+  display:flex; flex-direction:column }
+.sb-list{ flex:1; min-height:0; overflow-y:auto; scrollbar-width:none;
+  margin:0 -4px; padding:0 4px }
+.sb-list::-webkit-scrollbar{ display:none }
 
 #helpDrawer{
   position:absolute; right:0; top:56%; z-index:70; width:min(86%,320px);
@@ -1045,7 +1051,15 @@ body{
 .sb-bar.low i{ background:var(--fit-bad) }
 .sb-v{ flex:0 0 auto; font:700 10px/1 var(--f-mono); color:var(--text-dim) }
 .sb-note{ font-size:10px; color:var(--text-dim); line-height:1.5 }
-.sb-go{ width:100%; margin-top:10px }
+.sb-go{ width:100%; margin-top:10px; flex:0 0 auto }
+.sb-go:disabled{ opacity:.5; filter:grayscale(.85) }
+/* 申請済みの枠。**消し込みではなく施錠**(入った選手を打ち消すと意味が逆に読める) */
+.sb-r.lock{ opacity:.6; cursor:default }
+/* 交代で下がった選手 / 既に出場した選手。**選べないことが分かる濃さ**にする */
+.sb-r.done{ opacity:.35; cursor:default }
+.sb-r.done .sb-nm{ text-decoration:line-through }
+.sb-tag{ flex:0 0 auto; font:700 8px/1 var(--f-head); letter-spacing:.5px;
+  color:var(--text-mute); border:1px solid var(--line); border-radius:4px; padding:2px 4px }
 
 /* キャプテン(→docs/06 §6.15)。1枠だけなので横長にして、効果まで見せる。 */
 .cap{

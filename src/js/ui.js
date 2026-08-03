@@ -1545,45 +1545,80 @@ function stamBar(v){
   const cls=pc<45?" low":pc<70?" mid":"";
   return '<div class="sb-bar'+cls+'"><i style="width:'+pc+'%"></i></div>';
 }
+/**
+ * 交代ドロワーの中身。**申請済みの交代を先に反映して見せる**(→docs/06 §6.21)。
+ * 実際の入れ替えは次の再開時だが、リスト上ですぐ入れ替わらないと
+ * 「もう選んだのか、まだなのか」が分からず、3枠を続けて使えない。
+ */
+function subView(T){
+  const pitch=T.players.map((p,i)=>({ i, p, pending:false }));
+  const bench=T.bench.map((b,i)=>({ i, b, used:!!b.used, out:null }));
+  for(const o of _M.orders[T.side]){
+    if(o.type!=="sub")continue;
+    const slot=pitch[o.out], bn=bench[o.in];
+    if(!slot||!bn)continue;
+    bn.used=true; bn.pending=true;
+    bn.out=slot.p;                         // この枠から下がる選手(戻れない)
+    slot.p={ c:bn.b.c, sub:slot.p.sub, role:slot.p.role, stam:1 };
+    slot.pending=true;
+  }
+  return { pitch, bench };
+}
 function renderSub(){
   const T=subSide();
-  const used=_M.subs[T.side], left=TUNING.squad.subMax-used;
+  const used=_M.subs[T.side];
   const pend=_M.orders[T.side].filter(o=>o.type==="sub").length;
-  const row=(cls,pos,name,v,attr)=>'<div class="sb-r'+cls+'"'+attr+'>'
-    +'<div class="sb-pos">'+pos+'</div>'
-    +'<div class="sb-b"><div class="sb-nm">'+name+'</div>'+stamBar(v)+'</div>'
-    +'<div class="sb-v">'+Math.round(v*100)+'%</div></div>';
+  const left=Math.max(0,TUNING.squad.subMax-used-pend);
+  const v=subView(T);
 
-  let h='<div class="sb-note">残り <b>'+Math.max(0,left-pend)+'</b> 枠'
-    +(pend?'（申請中 '+pend+'）':'')
-    +'。<b>一度下がった選手は戻れません。</b>'
-    +'交代は次の再開時（3分ごと）に反映されます。</div>';
-  if(left-pend<=0){ h+='<div class="sb-sec">枠を使い切りました</div>'; }
-  else{
-    h+='<div class="sb-sec">下げる選手（ピッチ）</div>';
-    T.players.forEach((p,i)=>{
-      h+=row(i===_subOut?" on":"",p.sub||p.role,esc(shortName(p.c)),p.stam==null?1:p.stam,
-        ' data-out="'+i+'"');
-    });
-    h+='<div class="sb-sec">入れる選手（ベンチ）</div>';
-    const bench=T.bench.filter(b=>!b.used);
-    h+=bench.length?"":'<div class="sb-note">交代できる選手が居ません</div>';
-    T.bench.forEach((b,i)=>{
-      if(b.used)return;
-      h+=row(i===_subIn?" on":"",primarySub(b.c),esc(shortName(b.c)),1,' data-in="'+i+'"');
-    });
-    h+='<button class="btn sb-go" id="subGo"'+(_subOut<0||_subIn<0?" disabled":"")
-      +'>この2人を交代する</button>';
+  $("subNote").innerHTML="スタミナの少ない選手から替えます。"
+    +"<b>一度下がった選手は戻れません。</b>"
+    +"交代は次の再開時（3分ごと）に反映されます。";
+
+  const row=(cls,pos,name,val,attr,tag)=>'<div class="sb-r'+cls+'"'+attr+'>'
+    +'<div class="sb-pos">'+pos+'</div>'
+    +'<div class="sb-b"><div class="sb-nm">'+name+'</div>'+stamBar(val)+'</div>'
+    +(tag?'<div class="sb-tag">'+tag+'</div>':'')
+    +'<div class="sb-v">'+Math.round(val*100)+'%</div></div>';
+
+  let h='<div class="sb-sec">ピッチ</div>';
+  v.pitch.forEach(o=>{
+    // 申請済みの枠は**もう使った枠**。入った選手は消し込みではなく施錠して見せる
+    // 枠を使い切っても**薄くしない**。ここは最後までスタミナ一覧として読む画面
+    const sel=o.i===_subOut, dis=o.pending||left<=0;
+    h+=row((sel?" on":"")+(o.pending?" lock":""),
+      o.p.sub||o.p.role, esc(shortName(o.p.c)), o.p.stam==null?1:o.p.stam,
+      dis?"":' data-out="'+o.i+'"', o.pending?"IN":"");
+  });
+  // ベンチには**まだ出ていない選手だけ**。送り出した選手はピッチ欄に移る
+  h+='<div class="sb-sec">ベンチ</div>';
+  const rest=v.bench.filter(o=>!o.used);
+  h+=rest.length?"":'<div class="sb-note">出せる選手が居ません</div>';
+  rest.forEach(o=>{
+    const sel=o.i===_subIn, dis=left<=0;
+    h+=row(sel?" on":"",
+      primarySub(o.b.c), esc(shortName(o.b.c)), 1,
+      dis?"":' data-in="'+o.i+'"', "");
+  });
+  // 下がった選手は**ベンチにも戻らない**。並べて「戻れない」ことを見せる
+  const gone=v.bench.filter(o=>o.out).map(o=>o.out)
+    .concat((T.subOut||[]).filter(p=>!v.bench.some(o=>o.out===p)));
+  if(gone.length){
+    h+='<div class="sb-sec">交代済み（戻れません）</div>';
+    gone.forEach(p=>{ h+=row(" done",p.sub||p.role,esc(shortName(p.c)),
+      p.stam==null?0:p.stam,"","OUT"); });
   }
   $("subBody").innerHTML=h;
   $("subBody").querySelectorAll("[data-out]").forEach(el=>{
-    el.onclick=()=>{ _subOut=Number(el.dataset.out); renderSub(); };
+    el.onclick=()=>{ _subOut=_subOut===Number(el.dataset.out)?-1:Number(el.dataset.out); renderSub(); };
   });
   $("subBody").querySelectorAll("[data-in]").forEach(el=>{
-    el.onclick=()=>{ _subIn=Number(el.dataset.in); renderSub(); };
+    el.onclick=()=>{ _subIn=_subIn===Number(el.dataset.in)?-1:Number(el.dataset.in); renderSub(); };
   });
+  // **残り回数はボタンに出す**。使い切ったら 0 のまま押せなくする(閉じるのは×)
   const go=$("subGo");
-  if(go)go.onclick=doSub;
+  go.textContent="交代する　残り"+left+"回";
+  go.disabled=left<=0||_subOut<0||_subIn<0;
 }
 function doSub(){
   if(_subOut<0||_subIn<0)return;
@@ -1821,6 +1856,7 @@ function mPause(on){
 $("mPlay").onclick=()=>mPause(!_mPaused);
 $("subTab").onclick=()=>{ subOpen()?closeSub():openSub(); };
 $("subClose").onclick=closeSub;
+$("subGo").onclick=doSub;
 $("mSpeed").onclick=()=>{
   const sp=TUNING.ui.speeds;
   _mSpeed=sp[(sp.indexOf(_mSpeed)+1)%sp.length];
