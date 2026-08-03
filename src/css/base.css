@@ -411,14 +411,14 @@ body{
   color:var(--text-mute); font-size:10px;
 }
 
-/* 重なり順 — **文字 > 選手 > ホロ > 背景**(→docs/06 §6.13)。
-   ホロを選手より上に置くと選手が沈んで見えないため、選手の上には文字しか置かない。
+/* 重なり順 — **選手 > 文字 > ホロ > 段の文字 > 背景**(→docs/06 §6.13)。
      0 背景(.pcard の background)
-     1 ホロ / キラ流光(::after / ::before)
-     2 選手(.pc-art)
+     1 段のデザイン文字(.pc-grade) … 地の一部として敷く
+     2 ホロ / キラ流光(::after / ::before)
      3 文字(クレスト・OVR・能力欄・名前帯)
-     4 ✦粒子(カード全体に散る飾りなので最前面)
-   文字は選手の上に乗るので、地ではなく**文字色の反対**で縁取る(--halo)。 */
+     4 選手(.pc-art) … **カードの主役なので一番上**
+     5 ✦粒子(カード全体に散る飾り。面全体の演出なので選手の上に残す)
+   文字は選手と重なるので、地ではなく**文字色の反対**で縁取る(--halo)。 */
 .pc-crest,.pc-ovr,.pc-stats,.pc-name{ z-index:3 }
 .pc-crest,.pc-ovr,.pc-stats span,.pc-stats b,.pc-name b,.pc-name span{
   /* 小さいぼかしを3回重ねて実質のアウトラインにする。1発のぼかしだと
@@ -443,7 +443,7 @@ body{
    下端(bottom)は名前帯のすぐ上。object-position:bottom と合わせて
    **どの選手も足元が同じ高さに揃う**ようにしている。 */
 .pc-art{
-  position:absolute; left:12%; right:12%; top:12%; bottom:20%; z-index:2;
+  position:absolute; left:12%; right:12%; top:12%; bottom:20%; z-index:4;
   display:flex; align-items:flex-end; justify-content:center; isolation:isolate;
 }
 .pc-ph{ font:6cqw/1 var(--f-mono); color:var(--ink); opacity:.28 }
@@ -463,7 +463,23 @@ body{
   color:color-mix(in oklch, var(--stat) 74%, var(--halo)) }  /* opacity だと縁取りまで薄くなる */
 .pc-stats b{ font:400 6.6cqw/1.55 var(--f-mono); color:var(--stat);
   min-width:2.2ch; text-align:right }
-.pc-stats .mx span,.pc-stats .mx b{ color:var(--mx); opacity:1 }   /* 上限20だけ赤 */
+.pc-stats .mx b{ color:var(--mx) }   /* **数値だけ**赤。ラベルまで赤いと行全体が警告に見える */
+/* 段のデザイン文字(→docs/06 §6.13)。右側を上から下へ流す。
+   **地の一部**なので、ホロも文字も選手もこの上に乗る。字間を大きく空けて、
+   カードの縁に沿う帯として読ませる(語そのものを読ませる意図ではない)。 */
+.pc-grade{
+  position:absolute; right:1%; top:8%; bottom:13%; z-index:1;
+  writing-mode:vertical-rl; text-orientation:mixed;
+  display:flex; align-items:flex-start; justify-content:center;
+  /* 8文字(WORLDCLASS は10文字)が縦に収まる大きさ。はみ出すと語が切れて
+     ただのノイズになるので、字間で埋めて**縁に沿う帯**に見せる。 */
+  font:800 8.4cqw/1 var(--f-head); letter-spacing:.28em;
+  /* 一覧サイズ(カード幅120px)では 1文字10px しかないので、薄すぎると消える。
+     地に沈めつつ**在ることは分かる**濃さに置く。 */
+  color:var(--ink); opacity:.26; pointer-events:none;
+  text-shadow:0 .18cqw .18cqw oklch(0 0 0 / .35);
+  white-space:nowrap; overflow:hidden; user-select:none;
+}
 /* 名前帯(下) */
 .pc-name{ position:absolute; left:8%; right:8%; bottom:5.5% }
 .pc-name b{
@@ -485,7 +501,7 @@ body{
      gold    … 金の光沢（LEGENDS: 黒金の高級感）
    ------------------------------------------------------------------------- */
 .holo-sheen::after,.holo-rainbow::after,.holo-gold::after{
-  content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+  content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
   background-size:260% 260%;
 }
 .holo-sheen::after{
@@ -525,7 +541,7 @@ body{
 
 /* ✦粒子 — 明滅する光の点。上位ほど数が多い */
 .pcard .spark{
-  position:absolute; z-index:4; pointer-events:none; opacity:0;
+  position:absolute; z-index:5; pointer-events:none; opacity:0;
   font:8cqw/1 var(--f-body); color:oklch(0.99 0 0);
   text-shadow:0 0 7px currentColor, 0 0 14px currentColor;
   animation:sparkle 3.4s ease-in-out infinite;

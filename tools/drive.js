@@ -539,6 +539,25 @@ const STEPS = [
         await ctx.wait(150);
         await ctx.js("goBack()");
         await ctx.wait(250);
+        // 段のデザイン文字(→docs/06 §6.13)。ホロを持つ段だけに出て、地の一部として敷く
+        ctx.log("  段のデザイン文字:", await ctx.js(`(()=>{
+          const g=[...document.querySelectorAll('#cardsGrid .pc-grade')];
+          const holo=[...document.querySelectorAll('#cardsGrid .pcard')]
+            .filter(e=>/holo-/.test(e.className)).length;
+          if(g.length!==holo)
+            throw new Error('ホロの段の数と一致しない: 文字'+g.length+' / ホロ'+holo);
+          for(const e of g){
+            const z=+getComputedStyle(e).zIndex;
+            if(z!==1)throw new Error('段の文字が地の上に出ている: z='+z);
+          }
+          // 選手が一番上・段の文字が一番下、という重なり順を数字で押さえる
+          const art=document.querySelector('#cardsGrid .pc-art');
+          const st=document.querySelector('#cardsGrid .pc-stats');
+          const za=+getComputedStyle(art).zIndex, zs=+getComputedStyle(st).zIndex;
+          if(!(za>zs))throw new Error('選手が文字より下にいる: 選手'+za+' / 文字'+zs);
+          return ([...new Set(g.map(e=>e.textContent))].join(' / ')||'ホロの段が無い')
+            +' / '+g.length+'枚 / 選手z='+za+' 文字z='+zs;
+        })()`));
         // 通常のカードでも詳細が開くこと
         await ctx.js("document.querySelector('#cardsGrid [data-card]').click()");
         await ctx.wait(300);

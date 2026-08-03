@@ -132,6 +132,7 @@ function cardFace(c){
   const own=!isLoaned(c);
   return '<span class="pc-crest">'+RARITY[c.rarity].abbr+'</span>'
     +'<span class="pc-ovr">'+c.ovr+'</span>'
+    +gradeWord(c)
     +'<div class="pc-art">'+playerArt(c)+'</div>'
     +sparks(c)   // 粒子はカード面全体に散らす(絵の中に閉じ込めない)
     +'<div class="pc-stats">'+STAT_KEYS.map(k=>
@@ -142,6 +143,16 @@ function cardFace(c){
       +'<span>'+primarySub(c)+(c.subs.length>1?" +"+(c.subs.length-1):"")
       +' · '+esc(c.club||"—")+'</span>'
     +'</div>';
+}
+/**
+ * 段の名前を右側に縦に流す**半透明のデザイン文字**(→docs/06 §6.13)。
+ * ホロを持つ段(SPECIALS / WORLD CLASS / LEGENDS)だけに出して、特別感を作る。
+ * 空白は詰める(WORLDCLASS)。字間を空けた1語の方が意匠として締まる。
+ */
+function gradeWord(c){
+  const r=RARITY[c.rarity];
+  if(!r.holo)return "";
+  return '<span class="pc-grade">'+r.label.replace(/\s+/g,"")+'</span>';
 }
 /**
  * 選手のイラスト。カードでは**プレイ絵(play)**を使う(→player-art-prompt.md)。
