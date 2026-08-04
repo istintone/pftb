@@ -1390,7 +1390,7 @@ body{
 }
 .ch-av.sec{ background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300);
   color:oklch(0.75 0.03 300) }
-.ch-av img{ width:150%; height:150%; object-fit:contain; object-position:center top }
+
 .ch-hn{ font:600 14px/1.2 var(--f-head); color:var(--text) }
 .ch-hs{ font-size:10px; color:var(--text-dim); margin-top:1px }
 .ch-day{
@@ -1405,7 +1405,18 @@ body{
   font:400 6px/1 var(--f-mono); color:oklch(0.75 0.03 300);
   background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300) }
 .ch-sm.pl{ background:var(--panel-2); border-color:var(--line) }
-.ch-sm img{ width:160%; height:160%; object-fit:contain; object-position:center top }
+/* **顔を大きく見せる**(→docs/06 §6.23)。素材は全身の立ち絵(420×500)なので、
+   そのまま丸に収めると腹のあたりが中心に来て顔が潰れる。
+   図の上から約4割 = 頭〜胸 だけが丸に入るよう、拡大して上端に寄せる。
+     幅200% … 丸の直径の2倍まで拡大(=図の高さの約43%が見える)
+     -51.7% … 立ち絵の重心が中央よりわずかに右にあるぶんの補正
+     -3.6%  … 頭のてっぺんが丸の上端にちょうど乗る位置 */
+.ch-av, .ch-sm{ position:relative }
+.ch-av img, .ch-sm img{
+  position:absolute; left:50%; top:0;
+  width:200%; height:auto; max-width:none;
+  transform:translate(-51.7%,-3.6%);
+}
 .ch-b{
   max-width:76%; padding:10px 12px; font-size:12px; line-height:1.65;
   background:var(--panel); color:var(--text-2); border-radius:12px 12px 12px 4px;
