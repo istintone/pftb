@@ -251,8 +251,22 @@ function openScout(pack,rng){
  * **姓はロスター全体で重複させない**。同じクラブに同姓が並ぶと編成画面で見分けが付かない。
  * 国籍が混ざるので姓のプールも混ざる。埋まらなければ他の国籍から借りてでも重複を避ける。
  */
+/** 内訳({STD:10,REG:6} など)を16人ぶんの段の並びに展開する。 */
+function expandRarPlan(plan){
+  const bag=[];
+  RAR_KEYS.forEach(k=>{ for(let i=0;i<(plan[k]||0);i++)bag.push(k); });
+  return bag;
+}
 function makeRoster(rng,opts={}){
   const plan=["GK","GK","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];
+  // **段の内訳が指定されていれば、それを配り切る**(→docs/03 §3.25)。
+  // どのポジションに強い段が来るかは抽選(偏らないよう並びをかき混ぜる)
+  let bag=null;
+  if(opts.rarPlan){
+    bag=expandRarPlan(opts.rarPlan);
+    while(bag.length<plan.length)bag.push("STD");
+    bag=rshuffle(rng,bag).slice(0,plan.length);
+  }
   const box=opts.nations&&opts.nations.length?opts.nations:NATION_IDS;
   const bags={};                                  // 国籍ごとの姓の袋(引いたら減る)
   const used=new Set();
@@ -264,9 +278,10 @@ function makeRoster(rng,opts={}){
     }
     return null;                                  // 320個あるので実際には起きない
   };
-  return plan.map(pos=>{
+  return plan.map((pos,i)=>{
     const nation=rpick(rng,box);
-    return makeCard(rng,pos,{ ...opts, nation, family:takeFamily(nation) });
+    return makeCard(rng,pos,{ ...opts, nation, family:takeFamily(nation),
+      rarity:bag?bag[i]:opts.rarity });
   });
 }
 

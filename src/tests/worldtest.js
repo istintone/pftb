@@ -238,6 +238,41 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   }
   console.log("戦力の階段OK eng-1:", top, "> sam-24:", bottom);
 
+  // --- 部ごとの編成の内訳(→docs/03 §3.25) ---
+  {
+    const share=(lgid,d)=>{
+      const got={};
+      E.clubsOfDiv(lgid,d).forEach(c=>E.clubRoster(4242,c.id)
+        .forEach(x=>got[x.rarity]=(got[x.rarity]||0)+1));
+      return got;
+    };
+    // DIV3 は STANDARD + REGULAR だけ。SPECIALS 以上は出てこない
+    const d3=share("sam",3);
+    assert.ok(!d3.SPE&&!d3.WC&&!d3.LEG, "DIV3 は STD/REG のみ: "+JSON.stringify(d3));
+    assert.ok(d3.STD>d3.REG, "DIV3 は STANDARD が主体");
+    // DIV2 は REGULAR/SPECIALS 中心で、WORLD CLASS が各クラブ1人
+    const d2=share("sam",2);
+    assert.strictEqual(d2.WC, E.TUNING.league.clubs, "DIV2 は1クラブに WC が1人");
+    assert.ok(d2.REG>d2.STD&&d2.SPE>0, "DIV2 は REG/SPE 中心: "+JSON.stringify(d2));
+    // DIV1 は SPECIALS と WORLD CLASS 中心。**国の格が上がるほど WC が増える**
+    const wcOf=lgid=>share(lgid,1).WC||0;
+    const byTier=[...E.LEAGUES].sort((a,b)=>a.tier-b.tier).map(l=>l.id);
+    let prev=-1;
+    for(const id of byTier){
+      const n=wcOf(id);
+      assert.ok(n>prev, id+" は下位リーグより WC が多い: "+n);
+      prev=n;
+    }
+    const d1=share("sam",1);
+    assert.ok(!d1.STD, "DIV1 に STANDARD は居ない");
+    assert.ok(d1.SPE>d1.WC, "カンピオナート DIV1 は SPECIALS 多め: "+JSON.stringify(d1));
+    const eng1=share("eng",1);
+    assert.ok(eng1.WC>eng1.SPE, "プレミア DIV1 は WORLD CLASS がほとんど: "+JSON.stringify(eng1));
+    console.log("  部の編成: DIV3", JSON.stringify(d3), "/ DIV2", JSON.stringify(d2));
+    console.log("  DIV1 の WC 枚数(格の順):", byTier.map(id=>
+      E.leagueById(id).name+" "+wcOf(id)).join(" / "));
+  }
+
   // --- 日程(ホーム&アウェイの総当たり) ---
   const ids = E.clubsOfDiv("sam", 1).map(c => c.id);
   const fx = E.makeFixtures(ids, E.mulberry32(7));

@@ -237,6 +237,15 @@ function runSeason(hand) {
     S4.career.node = conti.every * E.CUPS[0].every;          // 両方の開催サイクル
     const pick = E.cupEnterable();
     assert.strictEqual(pick && pick.id, conti.id, "重なったら賞金の大きいほうを選ぶ");
+    // 大陸カップの相手は**DIV1 のリーグ首位級**(→docs/03 §3.25)
+    {
+      const plan = E.cupPlan(conti, false), elite = E.cupPlan(conti, true);
+      const n = k => plan[k] || 0;
+      assert.ok(n("WC") >= 8, "WORLD CLASS が主体: " + JSON.stringify(plan));
+      assert.ok(!n("STD"), "STANDARD は居ない");
+      assert.ok((elite.WC || 0) > n("WC"), "強豪(★)はさらに WC が厚い");
+      console.log("  大陸カップの相手:", JSON.stringify(plan), "／ ★", JSON.stringify(elite));
+    }
     S4.world.div = 3; S4.club.exp = 0; S4.career.node = 1;
     console.log("大会の解禁OK", conti.name, "は " + E.divName(conti.needDiv)
       + " ／ 熟練度" + conti.needExp + " ／ 賞金 " + conti.prize[0]);

@@ -2105,9 +2105,11 @@ function renderBoard(){
   $("boardGo").textContent=S.career.over?"キャリアを振り返る":divName(m.to)+" を始める";
   $("boardGo").onclick=async()=>{
     if(S.career.over){ show("career"); return; }
-    startNextSeason();
+    const r=startNextSeason();
     await save(); headUI(); show("home");
     toast("SEASON "+S.world.season+" ／ "+divName(S.world.div)+" が始まりました");
+    // **部が変わるとクラブが編成を入れ替える**(→docs/03 §3.25)
+    if(r&&r.rebuilt)toast("クラブが"+divName(S.world.div)+"向けに編成を入れ替えました");
   };
 }
 /** 任期終了 = キャリア1周の終わり。積み上げたものを見せて次の周へ送り出す。 */

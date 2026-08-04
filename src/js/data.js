@@ -634,7 +634,17 @@ const TUNING={
   // 世界の階段(→docs/03 §3.24)。リーグの格 < 部 の順に段差が大きい
   //   tierK … リーグ(国)の格1つぶん / divK … 部1つぶん / rankK … 部内順位1つぶん
   //   fameLg/fameDiv/fameRank … 就任に必要な名声。fameFree はキャリア開始の下駄
-  world:{ tierK:2.7, divK:8.0, rankK:2.2,
+  // 部ごとの編成(16人の内訳 → docs/03 §3.25)。**部の段差は段(レアリティ)で表す**ので、
+  // clubBias には部の項を持たせない(二重に効かせない)。
+  //   div1 は「REG 2 + 残り14」を基準に、WC の枚数をリーグの格と部内順位で決める
+  //   wcByTier … tier1(カンピオナート) 〜 tier6(プレミア) の WC 枚数
+  //   rankWc   … 部内順位1つぶんの WC 枚数の差(上位ほど多い)
+  //   contiWc  … 大陸カップに出てくる「リーグ首位級」の WC 枚数
+  roster:{ div3:{ STD:10, REG:6 },
+           div2:{ STD:3, REG:8, SPE:4, WC:1 },
+           div1:{ REG:2, rest:14 },
+           wcByTier:[2,4,6,8,10,13], rankWc:0.5, contiWc:11 },
+  world:{ tierK:1.2, rankK:1.6,
           fameLg:1400, fameDiv:520, fameRank:70, fameFree:300,
           promote:2, relegate:2 },                           // 上位/下位 何クラブが入れ替わるか
   squad:{ starters:11, bench:5, subMax:3 },   // subMax = 1試合の交代枠
@@ -714,7 +724,7 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:0.88, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
+  th:{ shot:0.99, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
   // セットプレー(→docs/07 §7.11)。**守備側が競り合いに勝った瞬間だけ**ファウルが起きる。
   //   foulK              … 守備チャンネルが持つ反則率に一括で掛ける倍率(→§7.12)
   //   foulBlock          … ブロックのあとのファウル率
@@ -735,10 +745,13 @@ const TUNING={
   //   gkDef/gkPow/gkTec  GKのセーブの配合(合計1.0)
   //   accBase/accTec/accRange  枠に飛ぶ率 = (accBase + tec/20×accTec) × near^accRange
   //   rebound                  セーブがこぼれる率(そのあと詰める勝負になる)
+  // **水準が上がっても得点が膨らまないように**(→docs/07 §7.16)。
+  // GKのセービング(def)は OVR80 あたりで 20 に張り付くのに、攻撃側は tec/spd が
+  // 伸び続ける。GKの評価を pow/tec 寄りにし、枠内率の tec 依存も浅くしてある。
   shot:{ deadZone:0.25, minRange:0.04, rangePow:1.00,
-         gkDef:0.65, gkPow:0.20, gkTec:0.15,
+         gkDef:0.40, gkPow:0.28, gkTec:0.32,
          finStat:0.35, fkAccBase:0.62,
-         accBase:0.30, accTec:0.45, accRange:0.55, rebound:0.30,
+         accBase:0.44, accTec:0.18, accRange:0.55, rebound:0.30,
          reboundH:0.95, reboundMax:4 },  // 詰める位置(ゴール前) / 連続の上限(安全網)
   // 各スコアに乗る揺らぎ rr() = min + random×span
   rng:{ min:0.60, span:0.80 },
@@ -763,7 +776,7 @@ const TUNING={
   //   lane*     lane 規則ごとの左右のばらつき
   //   gainJitter 前進量のゆらぎ(±の割合)
   chain:{ maxLinks:4, shotBase:0.02, shotDepth:0.85, shotCurve:3.0, shotStep:0.06,
-          shotAtkLo:0.30,   // 撃つ判断に乗る「撃てる選手か」の下限(atk0でこの倍率)
+          shotAtkLo:0.45,   // 撃つ判断に乗る「撃てる選手か」の下限(atk0でこの倍率)
           sigmaH:0.20, sigmaX:0.26, recvAtk:1.60,
           laneTight:8, laneNormal:16, laneWide:34, gainK:1.00, gainJitter:0.5, toJitter:0.12,
           repeatW:0.30,     // 直前と同じチャンネルを選ぶ重み(同じ札の連発を避ける)

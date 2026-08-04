@@ -119,9 +119,38 @@ const clubsOfDiv=(leagueId,div)=>CLUBS.filter(c=>c.league===leagueId&&c.div===di
  */
 function clubBias(club){
   const lg=leagueById(club.league), t=TUNING.world;
-  // **DIV1 が今までの世界**。新しく足した DIV2/DIV3 はその下に伸ばす
-  return Math.round((lg.tier-3.5)*t.tierK + (1-club.div)*t.divK + (4.5-club.rank)*t.rankK);
+  // **部の差は段(レアリティ)で表す**ので、ここには部の項を入れない(→§3.25)
+  return Math.round((lg.tier-3.5)*t.tierK + (4.5-club.rank)*t.rankK);
 }
+/**
+ * クラブの編成の内訳(→docs/03 §3.25)。**どの段の選手が並ぶか**が部の顔になる。
+ *   DIV3 … STANDARD + REGULAR(就任時の自クラブと同じ水準)
+ *   DIV2 … REGULAR と SPECIALS が中心、WORLD CLASS が1人
+ *   DIV1 … SPECIALS と WORLD CLASS が中心。**国の格が上がるほど WC が増える**
+ *          (カンピオナートは SPE 多め / プレミアはほとんど WC)
+ */
+function rosterPlan(tier,div,rank){
+  const R=TUNING.roster;
+  if(div>=3)return { ...R.div3 };
+  if(div===2)return { ...R.div2 };
+  const wc=clamp(Math.round(R.wcByTier[clamp(tier,1,R.wcByTier.length)-1]
+    +(4.5-rank)*R.rankWc),0,R.div1.rest);
+  return { REG:R.div1.REG, SPE:R.div1.rest-wc, WC:wc };
+}
+/**
+ * そのクラブが**いま戦っている部**。昇降格で動くので、編成の内訳もこれに従う
+ * (持ち場の部のままだと、昇格したクラブが下の部の顔ぶれのまま上がってしまう)。
+ * 自リーグ以外は動かないので、持ち場をそのまま返す。
+ */
+function divOfClub(club){
+  const W=typeof S!=="undefined"&&S?S.world:null;
+  if(W&&W.divs&&S.club&&clubById(S.club.id).league===club.league){
+    const i=W.divs.findIndex(ids=>ids.includes(club.id));
+    if(i>=0)return i+1;
+  }
+  return club.div;
+}
+const clubPlan=club=>rosterPlan(leagueById(club.league).tier,divOfClub(club),club.rank);
 
 /** クラブの所属選手を決定的に再生成する(貸与される戦力・CPUの戦力の両方に使う)。 */
 function clubRoster(seed,clubId){
@@ -129,7 +158,7 @@ function clubRoster(seed,clubId){
   const rng=mulberry32((seed^hashStr(clubId))>>>0);
   const saveUid=uid; uid=1000000+(hashStr(clubId)%900000);   // クラブ選手のIDは別空間に置く
   const roster=makeRoster(rng,{ club:club.name, ovrBias:clubBias(club),
-    nations:nationBox(leagueById(club.league)) });
+    rarPlan:clubPlan(club), nations:nationBox(leagueById(club.league)) });
   uid=saveUid;
   return roster;
 }
@@ -293,6 +322,7 @@ function startTenure(clubId){
     exp:0,                                                   // チーム熟練度(→§3.7)
     eval:TUNING.eval.start,                                  // 会長の評価
     loan:clubRoster(seed,clubId),                            // 任期中だけ借りる所属選手
+    div0:clubById(clubId).div,                               // 貸与を組んだときの部
     expect:0,
   };
   S.world.table=emptyTable(league);
@@ -597,6 +627,21 @@ function cupDraw(cup,c){
 /** いま挑む回戦。敗退後は進まない。 */
 const cupRound=()=>S.career.cup?S.career.cup.round:1;
 
+/**
+ * カップに出てくるクラブの編成の内訳(→docs/03 §3.25)。
+ * 大陸カップは**DIV1 のリーグ首位級**。キングズカップは自分の部の一つ上あたり。
+ * 強豪(★)の枠はさらに WORLD CLASS を厚くする。
+ */
+function cupPlan(cup,elite){
+  const R=TUNING.roster;
+  if(cup.needDiv===1){
+    const wc=elite?R.div1.rest:R.contiWc;
+    return { REG:R.div1.REG, SPE:R.div1.rest-wc, WC:wc };
+  }
+  const div=clamp(S.world.div-(elite?1:0),1,3);
+  const plan=rosterPlan(leagueById(clubById(S.club.id).league).tier,div,elite?1:4);
+  return plan;
+}
 /** 枠の呼び名。強豪には目印を付ける。 */
 const cupTeamName=(c,i)=>(i===c.elite?"★ ":"")+c.field[i];
 /** その回戦に出そろっている枠(fieldの添字)。前の回戦が未決なら null。 */
@@ -676,7 +721,7 @@ function cupSide(cup,round,foe){
   const saveUid=uid; uid=7000000+Math.floor(rng()*900000);  // 手持ちカードとIDをぶつけない
   const roster=makeRoster(rng,{
     club:"", ovrBias:base+cup.bias+round,                    // 勝ち上がるほど強くなる
-    rarity:elite?"SPE":null });
+    rarPlan:cupPlan(cup,elite) });
   uid=saveUid;
   const form=Object.keys(FORMATIONS)[Math.floor(rng()*Object.keys(FORMATIONS).length)];
   return { cards:bestXI(roster,form), form, name:cupTeamName(c,foe), elite };
@@ -895,6 +940,16 @@ function judgeSeason(){
 function startNextSeason(){
   const W=S.world;
   W.season++;
+  // **部が変われば、クラブも編成を入れ替える**(→docs/03 §3.25)。
+  // 昇格したのに下の部の顔ぶれのままだと、上がった手応えが出ない
+  let rebuilt=false;
+  if(S.club.div0!==W.div){
+    S.club.loan=clubRoster(W.seed,S.club.id);                // 貸与の顔ぶれが入れ替わる
+    S.club.div0=W.div;
+    S.form=bestFormFor(availableCards());
+    S.squad=autoSquad();                                     // 居ない選手を残さない
+    rebuilt=true;
+  }
   const league=divClubs();
   const rng=mulberry32((W.seed^hashStr(S.club.id+":"+W.season+":d"+W.div))>>>0);
   W.table=emptyTable(league);
@@ -903,4 +958,5 @@ function startNextSeason(){
   W.matchday=1;
   S.club.expect=expectedRank(W.seed,S.club.id,squadPower(squadCards().slice(0,TUNING.squad.starters)));
   S.player.history.push({ season:W.season, clubId:S.club.id, div:W.div, result:"在任" });
+  return { rebuilt };
 }

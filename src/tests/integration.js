@@ -82,8 +82,20 @@ const E = setup({ tmpName: "_tmp_integration.js" });
     fameBefore, "→", S.player.fame, "/", S.player.history[0].result,
     "DIV" + j.move.from + "→DIV" + j.move.to);
 
-  // 次のシーズンは同じクラブのまま、新しい部で組み直す
-  E.startNextSeason();
+  // 次のシーズンは同じクラブのまま、新しい部で組み直す。
+  // **部が変わればクラブも編成を入れ替える**(→docs/03 §3.25)
+  // IDはクラブごとに決まった帯から採るので、**中身(段と名前)**で見る
+  const loanOf = () => S.club.loan.map(c => c.rarity + ":" + c.name).join(",");
+  const loan0 = loanOf();
+  const r = E.startNextSeason();
+  if (j.move.move !== 0) {
+    assert.ok(r.rebuilt, "部が変わったら編成を入れ替える");
+    assert.notStrictEqual(loanOf(), loan0, "貸与の顔ぶれが変わる");
+    assert.strictEqual(S.squad.filter(Boolean).length, NX + NB, "編成が組み直される");
+    assert.ok(S.squad.filter(Boolean).every(id => E.cardById(id)), "居ない選手が残らない");
+  } else {
+    assert.ok(!r.rebuilt, "残留なら編成はそのまま");
+  }
   assert.strictEqual(S.world.matchday, 1, "節が1に戻る");
   assert.strictEqual(S.world.fixtures.length, E.TUNING.league.rounds, "日程が組み直される");
   assert.ok(E.myFixture(), "新シーズンの初戦がある");
