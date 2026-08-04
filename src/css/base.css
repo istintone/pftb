@@ -531,9 +531,22 @@ body{
     oklch(0.70 0.20 320 / .40) 72%, transparent 84%);
   mix-blend-mode:color-dodge; animation:holoSweep 5.5s ease-in-out infinite;
 }
+/* LEGENDS だけは**金の帯**。単色をぼかしただけだと「明るい所」にしか見えないので、
+   細い芯を濃い金で挟んで金属の帯にする。両側に落ち影のような暗い縁も置くと、
+   帯が地から浮いて見える(→docs/06 §6.13)。
+   **芯を明るくしすぎない**。screen で乗るので、ピークで能力値が飲み込まれる。 */
 .holo-gold::after{
-  background:linear-gradient(115deg, transparent 40%, oklch(0.82 0.13 85 / .34) 50%, transparent 60%);
-  mix-blend-mode:screen; animation:holoSweep 7s ease-in-out infinite;
+  background:linear-gradient(115deg,
+    transparent 30%,
+    oklch(0.55 0.09 70 / .18) 38%,
+    oklch(0.78 0.14 82 / .40) 45%,
+    oklch(0.93 0.13 92 / .62) 49.5%,
+    oklch(1.00 0.06 98 / .72) 50.5%,
+    oklch(0.93 0.13 92 / .62) 52%,
+    oklch(0.78 0.14 82 / .40) 56%,
+    oklch(0.55 0.09 70 / .18) 63%,
+    transparent 70%);
+  mix-blend-mode:screen; animation:holoSweep 6s ease-in-out infinite;
 }
 @keyframes holoSweep{
   0%,100%{ background-position:0% 50% }
