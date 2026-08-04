@@ -62,15 +62,34 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   console.log("シーズン完走OK 優勝:", rows[0].id, rows[0].pts + "pts / 自クラブ:",
     E.rankOf(S.world.table, S.club.id) + "位 / コイン", S.club.coins);
 
-  // ---------- 審判(続投 / 解任 / 名声) ----------
-  const fameBefore = S.player.fame;
+  // ---------- 審判(昇格 / 残留 / 降格 / 名声) → docs/03 §3.24 ----------
+  const fameBefore = S.player.fame, divBefore = S.world.div, clubBefore = S.club.id;
   const j = E.judgeSeason();
-  assert.ok(typeof j.rank === "number" && typeof j.dismissed === "boolean", "審判の結果が返る");
+  assert.ok(typeof j.rank === "number" && j.move, "審判の結果が返る");
   assert.strictEqual(S.player.fame, Math.max(0, fameBefore + j.fameGain), "名声が増減する");
   assert.strictEqual(S.player.history.length, 1, "キャリア履歴が残る");
-  assert.ok(["続投", "解任"].includes(S.player.history[0].result), "在任結果が記録される");
+  assert.ok(["昇格", "残留", "降格"].includes(S.player.history[0].result), "在任結果が記録される");
+  // **クラブは替わらない**。替わるのは部だけ(→§3.24)
+  assert.strictEqual(S.club.id, clubBefore, "シーズンをまたいでもクラブは替わらない");
+  assert.strictEqual(S.world.div, divBefore + j.move.move, "部が上下する");
+  assert.ok(S.world.div >= 1 && S.world.div <= 3, "部は1〜3に収まる");
+  E.DIVS.forEach(d => assert.strictEqual(E.divClubs(d).length, 8,
+    "DIV" + d + " は入れ替え後も8クラブ"));
+  const all = E.DIVS.flatMap(d => E.divClubs(d));
+  assert.strictEqual(new Set(all).size, 24, "同じクラブが2つの部に居ない");
+  assert.ok(E.divClubs().includes(S.club.id), "自クラブは自分の部に居る");
   console.log("審判OK", j.rank + "位(期待" + S.club.expect + "位) / 名声",
-    fameBefore, "→", S.player.fame, "/", S.player.history[0].result);
+    fameBefore, "→", S.player.fame, "/", S.player.history[0].result,
+    "DIV" + j.move.from + "→DIV" + j.move.to);
+
+  // 次のシーズンは同じクラブのまま、新しい部で組み直す
+  E.startNextSeason();
+  assert.strictEqual(S.world.matchday, 1, "節が1に戻る");
+  assert.strictEqual(S.world.fixtures.length, E.TUNING.league.rounds, "日程が組み直される");
+  assert.ok(E.myFixture(), "新シーズンの初戦がある");
+  assert.strictEqual(S.player.history.length, 2, "新しい在任記録が積まれる");
+  console.log("新シーズンOK DIV" + S.world.div, "／ 期待", S.club.expect + "位 ／ 相手",
+    E.divClubs().length + "クラブ");
 
   // ---------- 編成の書き出し(将来の非同期対戦の前提 → §3.2.2) ----------
   const sq = E.exportSquad();

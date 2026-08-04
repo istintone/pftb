@@ -169,7 +169,8 @@ const STEPS = [
       // **開催日は事前にカレンダーへ出す**(→docs/03 §3.23)
       const soon=[...document.querySelectorAll('#seasonCal .cal.cup.soon .cal-n')].map(e=>+e.textContent);
       if(!soon.length)throw new Error('開催予定がカレンダーに出ていない');
-      if(soon.some(n=>n%cup.every!==0))throw new Error('開催サイクル外に予定が出ている: '+soon);
+      if(soon.some(n=>!CUPS.some(c=>n%c.every===0)))
+        throw new Error('開催サイクル外に予定が出ている: '+soon);
       return '条件前「'+before+'」 ／ 開催予定 '+soon.length+'節(第'+soon.slice(0,3).join('/')+'…)';
     })()`));
     await ctx.js("document.getElementById('hdBack').click()");
@@ -963,12 +964,14 @@ const STEPS = [
     await ctx.shot("12b-tenure-calendar");
   }],
   ["シーズンを最後まで進める", async ctx => {
-    for (let i = 0; i < 20; i++) {
+    // カップの節が割り込むので、リーグ14節ぶんより多く回す。
+    // 打ち手は**エントリー以外**を選ぶ(ここで見たいのはリーグの決着)
+    for (let i = 0; i < 40; i++) {
       await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
       await ctx.wait(100);
       const playable = await ctx.js("!!document.getElementById('calGo')");
       if (!playable) break;
-      await ctx.js("document.querySelector('#seasonCal .hand').click()");
+      await ctx.js("document.querySelector('#seasonCal .hand:not(.cup)').click()");
       await ctx.wait(60);
       await ctx.js("document.getElementById('calGo').click()");
       await ctx.wait(150);
@@ -988,17 +991,45 @@ const STEPS = [
     await ctx.shot("14-season-end");
     await ctx.js("document.getElementById('btnFinishSeason').click()");
     await ctx.wait(600);
+    // **クラブは替わらない**。総括を見て次の部へ進む(→docs/03 §3.24)
     ctx.log("審判後の画面:", await ctx.screen(),
-      "/ 名声:", await ctx.js("document.getElementById('offerHead').textContent"));
-    await ctx.shot("15-offers-2");
+      "/", await ctx.js("document.getElementById('boardHead').textContent"),
+      "/", await ctx.js("document.querySelector('#boardMove b').textContent"),
+      "/ オーナー:", await ctx.js("document.querySelector('#boardOwner b').textContent"));
+    await ctx.shot("15-board-review");
   }],
-  ["2つ目のクラブへ就任", async ctx => {
-    await ctx.js("document.querySelectorAll('#offerList [data-club]')[0].click()");
-    await ctx.wait(600);
-    ctx.log("画面:", await ctx.screen(),
-      "/ クラブ:", await ctx.js("document.getElementById('hdClubName').textContent"),
-      "/ 節:", await ctx.js("document.querySelector('#homeNext .nx-md').textContent"));
-    await ctx.shot("16-second-club");
+  ["昇降格して次のシーズンへ", async ctx => {
+    const before = await ctx.js("S.club.id+':'+S.world.div+':'+S.world.season");
+    await ctx.js("document.getElementById('boardGo').click()");
+    await ctx.wait(700);
+    ctx.log("次のシーズン:", await ctx.screen(),
+      "/", before, "→", await ctx.js("S.club.id+':'+S.world.div+':'+S.world.season"));
+    ctx.log("  同じクラブか:", await ctx.js(`(()=>{
+      const h=S.player.history;
+      if(h.length<2)throw new Error('在任記録が積まれていない');
+      if(h[0].clubId!==h[1].clubId)throw new Error('シーズンをまたいでクラブが替わった');
+      if(S.world.matchday!==1)throw new Error('節が1に戻っていない');
+      // 3部とも8クラブのまま入れ替わっている
+      const all=DIVS.flatMap(d=>divClubs(d));
+      if(all.length!==24||new Set(all).size!==24)throw new Error('部の所属が壊れている');
+      if(!divClubs().includes(S.club.id))throw new Error('自クラブが自分の部に居ない');
+      return h[0].result+' → '+divName(S.world.div)+' / '+divClubs().length+'クラブ';
+    })()`));
+    await ctx.shot("16-next-division");
+    // 順位表に昇格圏・降格圏が出る
+    await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
+    await ctx.wait(200);
+    await ctx.js(`document.querySelector('#seasonComps [data-comp="league"]').click()`);
+    await ctx.wait(250);
+    await ctx.js("document.getElementById('schedStandH').click()");
+    await ctx.wait(300);
+    ctx.log("  順位表:", await ctx.js("document.getElementById('standHead').textContent"),
+      "/ 昇格圏", await ctx.js("document.querySelectorAll('#standTbl tr.up').length"),
+      "/ 降格圏", await ctx.js("document.querySelectorAll('#standTbl tr.down').length"),
+      "/", await ctx.js("document.getElementById('standNote').textContent"));
+    await ctx.shot("16b-standings-zones");
+    await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
+    await ctx.wait(200);
   }],
   ["リロード → RETURN TO CAREER で再開", async ctx => {
     await ctx.reload();

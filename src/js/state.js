@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=10;
+const SAVE_VER=11;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -24,7 +24,10 @@ function defaultState(){
       history:[],                   // キャリアの軌跡 [{season,clubId,rank,result}]
     },
     club:null,                      // 就任するまで null(→startTenure で作る)
-    world:{ seed:0, season:1, matchday:1, table:{}, fixtures:[], results:{} },
+    // div/divs = いま戦っている部と、リーグ3部の所属(→docs/03 §3.24)。
+    // 昇降格で動くので**決定的に作り直せない唯一の世界情報**。就任時に作る。
+    world:{ seed:0, season:1, matchday:1, table:{}, fixtures:[], results:{},
+            div:3, divs:null },
     squad:[],                       // 編成(11枠。カードIDまたは null)
     // セットプレーの担当(→docs/06 §6.15)。カードID。null なら能力で自動選出。
     kickers:{ pk:null, fk:null, ck:null },
@@ -175,6 +178,15 @@ function migrate(){
   // v9 → v10: エントリー時に組み合わせ表を作るようにした。表の無い進行中の大会は
   // 相手を復元できないので畳む(次の開催節から入り直せる)。
   if(S.v<10&&S.career&&S.career.cup&&!S.career.cup.field)S.career.cup=null;
+  // v10 → v11: リーグを3部制にした(→docs/03 §3.24)。クラブIDの割り当てが変わり、
+  // 部の所属もセーブに持つようになったので、**進行中の任期は畳んで就任からやり直す**。
+  // 集めたカード・名声・実績は監督のものなので残す。
+  // v10 → v11: リーグを3部制にした(→docs/03 §3.24)。旧8クラブはそのまま DIV1 なので
+  // 任期は畳まず、**部の所属だけ足す**。進行中の日程も DIV1 の顔ぶれのまま噛み合う。
+  if(S.v<11&&S.world){
+    if(S.world.div===undefined)S.world.div=S.club?clubById(S.club.id).div:3;
+    if(!S.world.divs)S.world.divs=S.club?makeDivs(clubById(S.club.id).league):null;
+  }
   S.v=SAVE_VER;
 }
 

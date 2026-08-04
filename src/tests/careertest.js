@@ -55,16 +55,23 @@ function runSeason() {
       "/ 名声", fame0, "→", E.getS().player.fame);
   } else console.log("上振れ検証: 今回は8位のままだった(乱数依存のためスキップ)");
 
-  // ---------- 期待を大きく下回れば解任されうる ----------
+  // ---------- 期待を大きく下回れば任期が削られる(→docs/03 §3.24) ----------
   await E.newGame();
   E.getS().coach = "検証";
   E.startTenure("sam-8");
   E.getS().club.expect = 1;                  // 優勝を期待されている状態にする(弱小なので届かない)
+  const limit0 = E.getS().career.limit;
   const r2 = runSeason();
   assert.ok(E.getS().club.eval < E.TUNING.eval.start, "期待を下回れば評価が落ちる");
-  assert.strictEqual(r2.dismissed, E.getS().club.eval < E.TUNING.eval.floorDismiss, "解任判定が閾値と一致する");
+  // **解任は無い**。評価が下限を割ると「持ち時間」が減る
+  assert.strictEqual(r2.poor, E.getS().club.eval < E.TUNING.eval.floorDismiss,
+    "任期短縮の判定が閾値と一致する");
+  assert.strictEqual(E.getS().career.limit, limit0 - (r2.shrunk || 0), "削られたぶんだけ上限が減る");
+  if (r2.poor) assert.strictEqual(r2.shrunk, E.TUNING.tenure.shrink, "1シーズンぶん削られる");
+  assert.ok(E.getS().club.id === "sam-8", "評価が低くてもクラブは替わらない");
   console.log("下振れOK", r2.rank + "位(期待1位) / 評価", Math.round(E.getS().club.eval),
-    "/", r2.dismissed ? "解任" : "続投");
+    "/ 任期", limit0, "→", E.getS().career.limit, "節 /", r2.move.promoted ? "昇格"
+      : r2.move.relegated ? "降格" : "残留");
 
   // ---------- 名声が上がるとキャリアの階段が開く ----------
   const s = E.getS();
@@ -100,14 +107,29 @@ function runSeason() {
     let lg = 0, lgN = 0, lgD = 0;
     const mk = cid => ({ cards: E.bestXI(E.clubRoster(4242, cid), E.formFor(cid)),
       form: E.formFor(cid), name: cid });
-    for (const id of E.LEAGUES.map(l => l.id)) {
-      const sides = E.clubsOf(id).map(c => mk(c.id));      // 編成は1回だけ作る
+    // **部の中の対戦だけ**を数える。遊ぶときに見えるのは自分の部の試合だけで、
+    // DIV1 と DIV3 を混ぜると力差の大きい試合ばかりになって数字が壊れる(→§3.24)
+    const byDiv = {};
+    for (const id of E.LEAGUES.map(l => l.id)) for (const d of E.DIVS) {
+      const sides = E.clubsOfDiv(id, d).map(c => mk(c.id));   // 編成は1回だけ作る
+      let g = 0, n2 = 0, dr = 0;
       for (let i = 0; i < sides.length; i++) for (let j = 0; j < sides.length; j++) {
         if (i === j) continue;
         const r = E.resolveMatch(sides[i], sides[j], (i * 97 + j * 13) >>> 0);
-        lg += r.hg + r.ag; lgN++; if (r.hg === r.ag) lgD++;
+        g += r.hg + r.ag; n2++; if (r.hg === r.ag) dr++;
       }
+      lg += g; lgN += n2; lgD += dr;
+      byDiv[d] = byDiv[d] || { g: 0, n: 0, d: 0 };
+      byDiv[d].g += g; byDiv[d].n += n2; byDiv[d].d += dr;
     }
+    for (const d of E.DIVS) {
+      const b = byDiv[d], avg2 = b.g / b.n;
+      assert.ok(avg2 > 2.0 && avg2 < 4.0,
+        E.divName(d) + " の平均得点が現実的: " + avg2.toFixed(2));
+    }
+    console.log("  部ごとの水準:", E.DIVS.map(d =>
+      E.divName(d) + " " + (byDiv[d].g / byDiv[d].n).toFixed(2) + "点/"
+      + (byDiv[d].d / byDiv[d].n * 100).toFixed(0) + "%").join(" / "));
     const lgAvg = lg / lgN, lgDraw = lgD / lgN;
     assert.ok(lgAvg > 2.0 && lgAvg < 4.0, "リーグ全体の平均得点が現実的: " + lgAvg.toFixed(2));
     assert.ok(lgDraw > 0.15 && lgDraw < 0.40, "リーグ全体の引き分けが現実的: " + (lgDraw * 100).toFixed(1) + "%");

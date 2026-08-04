@@ -222,6 +222,26 @@ function runSeason(hand) {
     C.cup = null;
   }
 
+  // ---------- 大陸大会は DIV1 に上がるまで開かない(→docs/03 §3.24) ----------
+  {
+    const conti = E.CUPS.find(c => c.needDiv);
+    assert.ok(conti, "部で解禁される大会がある");
+    const S4 = E.getS();
+    S4.career.cup = null;
+    S4.club.exp = conti.needExp + 100;
+    S4.world.div = 2;
+    assert.ok(!E.cupOpen(conti), conti.name + " は DIV2 では出られない");
+    S4.world.div = 1;
+    assert.ok(E.cupOpen(conti), conti.name + " は DIV1 で開く");
+    // 同じ節に2つ重なったら格の高いほうが出る
+    S4.career.node = conti.every * E.CUPS[0].every;          // 両方の開催サイクル
+    const pick = E.cupEnterable();
+    assert.strictEqual(pick && pick.id, conti.id, "重なったら賞金の大きいほうを選ぶ");
+    S4.world.div = 3; S4.club.exp = 0; S4.career.node = 1;
+    console.log("大会の解禁OK", conti.name, "は " + E.divName(conti.needDiv)
+      + " ／ 熟練度" + conti.needExp + " ／ 賞金 " + conti.prize[0]);
+  }
+
   // 全日程を消化したらリーグは選べなくなる
   while (!E.seasonOver()) { E.pickHand("rest"); E.playMatchday(); }
   assert.ok(!E.compsAvailable().includes("league"), "リーグを消化しきったら選べない");

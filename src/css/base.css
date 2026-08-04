@@ -1343,6 +1343,27 @@ body{
 .cup-res.win .eyebrow, .cup-res.win b{ color:var(--accent) }
 /* HELPタブが右端に浮くので、右寄せの数字を少し内側に寄せる */
 .cup-info{ padding-right:26px }
+/* 順位表の昇格圏 / 降格圏(→docs/03 §3.24) */
+.tbl tr.up td:first-child{ box-shadow:inset 3px 0 0 var(--accent) }
+.tbl tr.down td:first-child{ box-shadow:inset 3px 0 0 oklch(0.60 0.16 25) }
+#standNote{ margin-top:8px }
+/* シーズン総括(→docs/03 §3.24) */
+.bd-move{
+  display:flex; flex-direction:column; gap:3px;
+  padding:14px; margin-bottom:10px; border-radius:12px;
+  background:var(--panel); border:1px solid var(--line);
+}
+.bd-move b{ font:600 20px/1.2 var(--f-head); color:var(--text) }
+.bd-move.up{ background:oklch(0.26 0.07 85 / .40); border-color:var(--accent) }
+.bd-move.up .eyebrow, .bd-move.up b{ color:var(--accent) }
+.bd-move.down{ background:oklch(0.24 0.05 25 / .35); border-color:oklch(0.55 0.14 25) }
+.bd-move.down .eyebrow, .bd-move.down b{ color:oklch(0.72 0.15 25) }
+.bd-say{
+  padding:12px 14px; margin-bottom:12px; border-radius:12px;
+  background:var(--surface); border:1px dashed var(--line);
+}
+.bd-say .eyebrow{ display:block; margin-bottom:4px; color:var(--text-mute) }
+.bd-say b{ font:400 13px/1.7 var(--f-body); color:var(--text-2) }
 /* 組み合わせ表(→docs/03 §3.23)。回戦ごとに束ね、決まった枠だけ明るくする */
 .br-r{ margin-bottom:18px }
 .br-k{

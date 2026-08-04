@@ -38,39 +38,89 @@ function nationBox(league){
   return box;
 }
 
-// --- クラブ(各リーグ8クラブ = 計48)。rank 1 がリーグ内最上位。
+// --- クラブ(各リーグ 3部 × 8クラブ = 24。世界で 144)。
+// リーグは国、DIVはその国の中の階段(→docs/03 §3.24)。
+// **就任したクラブとは任期の終わりまで添い遂げる**ので、キャリアの成長は
+// 「このクラブをどこまで上げたか」で表れる。d1 が最上位、d3 が入口。
 // 実在クラブが元ネタと分かる程度に改変した名前を使う(→docs/03 §3.13 の商標方針)。
 const CLUB_NAMES={
-  eng:   ["マンチェスター・レッズ","マンチェスター・スカイ","ロンドン・ガナーズ","リヴァプール・コップ","ロンドン・ブルーズ","ノースロンドン・スパーズ","タインサイド・マグパイズ",
-          "バーミンガム・ヴィランズ"],
-  esp:   ["マドリード・ブランコス","カタルーニャ・ブラウグラナ","マドリード・コルチョネロス","セビージャ・ネルビオン","バレンシア・チェ","ビルバオ・レオネス","サンセバスティアン・レアレス",
-          "アンダルシア・ベティコス"],
-  ita:   ["トリノ・ビアンコネーリ","ミラノ・ロッソネーリ","ミラノ・ネラッズーリ","ナポリ・パルテノペイ","ローマ・ジャッロロッシ","ローマ・チェレスティ","フィレンツェ・ヴィオラ",
-          "ベルガモ・オロビチ"],
-  ger:   ["ミュンヘン・ローテン","ドルトムント・シュヴァルツゲルプ","レヴァークーゼン・ヴェルクセルフ","ライプツィヒ・ローテブレン","ゲルゼンキルヒェン・クナッペン","フランクフルト・アドラー",
-          "シュトゥットガルト・ブルステン","ブレーメン・グリューンヴァイス"],
-  fra:   ["パリ・キャピタル","マルセイユ・オリンピアン","リヨン・ゴーヌ","モナコ・ルージュブラン","リール・ドーグ","レンヌ・ルージュノワール","ニース・エーグロン","ナント・カナリ"],
-  sam:   ["リオ・ルブロネグロ","サンパウロ・ヴェルダン","ブエノスアイレス・ボンボネーラ","ブエノスアイレス・ミジョナリオス","サンパウロ・チマォン","サントス・ペイシェ","モンテビデオ・カルボネーロ",
-          "メデジン・ベルデ"],
+  eng:{
+    d1:["マンチェスター・レッズ","マンチェスター・スカイ","ロンドン・ガナーズ","リヴァプール・コップ","ロンドン・ブルーズ","ノースロンドン・スパーズ","タインサイド・マグパイズ",
+        "バーミンガム・ヴィランズ"],
+    d2:["リーズ・ホワイツ","シェフィールド・ブレイズ","ノッティンガム・フォレスターズ","サウサンプトン・セインツ","ブライトン・シーガルズ","レスター・フォクシーズ",
+        "ウェストロンドン・ホーネッツ","ストーク・ポッターズ"],
+    d3:["サンダーランド・ブラックキャッツ","ノリッジ・カナリーズ","ハル・タイガース","ランカシャー・ローヴァーズ","サウスロンドン・ライオンズ","コヴェントリー・スカイブルーズ",
+        "プリマス・パイルグリムズ","イプスウィッチ・トラクターズ"],
+  },
+  esp:{
+    d1:["マドリード・ブランコス","カタルーニャ・ブラウグラナ","マドリード・コルチョネロス","セビージャ・ネルビオン","バレンシア・チェ","ビルバオ・レオネス","サンセバスティアン・レアレス",
+        "アンダルシア・ベティコス"],
+    d2:["ビーゴ・セレステス","ヒホン・ロヒブランコス","サラゴサ・マニョス","バジャドリード・ブランキビオレタ","グラナダ・ナサリエス","マヨルカ・ベルメジョネス",
+        "カディス・スブマリノ","ラスパルマス・アマリージョス"],
+    d3:["テネリフェ・チチャレロス","ヘタフェ・アスレホス","エルチェ・フランヒベルデス","オビエド・カルバジョネス","サンタンデール・ラシンギスタス","コルドバ・カリファレス",
+        "ムルシア・ピメントネロス","アルバセテ・マンチェゴス"],
+  },
+  ita:{
+    d1:["トリノ・ビアンコネーリ","ミラノ・ロッソネーリ","ミラノ・ネラッズーリ","ナポリ・パルテノペイ","ローマ・ジャッロロッシ","ローマ・チェレスティ","フィレンツェ・ヴィオラ",
+        "ベルガモ・オロビチ"],
+    d2:["ジェノヴァ・グリフォーニ","ジェノヴァ・ブルチェルラーティ","ボローニャ・ロッソブル","ウディネ・フリウラーニ","トリノ・グラナータ","ヴェローナ・ジャッロブル",
+        "カリアリ・イゾラーニ","エンポリ・アッズッリ"],
+    d3:["パレルモ・ロザネロ","バーリ・ガッレッティ","ペスカーラ・デルフィーニ","パルマ・クロチャーティ","ヴェネツィア・アランチョネロ","ブレシア・ロンディネッレ",
+        "チェゼーナ・カヴァルッチ","モデナ・カナリーニ"],
+  },
+  ger:{
+    d1:["ミュンヘン・ローテン","ドルトムント・シュヴァルツゲルプ","レヴァークーゼン・ヴェルクセルフ","ライプツィヒ・ローテブレン","ゲルゼンキルヒェン・クナッペン","フランクフルト・アドラー",
+        "シュトゥットガルト・ブルステン","ブレーメン・グリューンヴァイス"],
+    d2:["ハンブルク・ラウテン","ケルン・ガイスボック","メンヒェングラートバッハ・フォーレン","ベルリン・ハウプトシュテッター","ニュルンベルク・アルトマイスター","フライブルク・ブライスガウ",
+        "ボーフム・ウンアプシュタイクバー","アウクスブルク・フッゲライ"],
+    d3:["デュッセルドルフ・ライン","カイザースラウテルン・ローテトイフェル","ドレスデン・エルプフローレンツ","ロストック・オストゼー","ビーレフェルト・アルミネン","ブラウンシュヴァイク・レーヴェン",
+        "マクデブルク・ボルデ","エッセン・ルールポット"],
+  },
+  fra:{
+    d1:["パリ・キャピタル","マルセイユ・オリンピアン","リヨン・ゴーヌ","モナコ・ルージュブラン","リール・ドーグ","レンヌ・ルージュノワール","ニース・エーグロン","ナント・カナリ"],
+    d2:["サンテティエンヌ・ヴェール","ボルドー・マリーヌ","トゥールーズ・ヴィオレ","ランス・サンエオール","ストラスブール・アルザシアン","モンペリエ・パイヨラン",
+        "ロリアン・メルル","アンジェ・スコイスト"],
+    d3:["オセール・アイジェオワ","メス・グルナ","カーン・マリーヌエブラン","ブレスト・ピラート","ルアーヴル・シエルエマリーヌ","ディジョン・ムタルディエ",
+        "トロワ・ドーファン","アミアン・リコルヌ"],
+  },
+  sam:{
+    d1:["リオ・ルブロネグロ","サンパウロ・ヴェルダン","ブエノスアイレス・ボンボネーラ","ブエノスアイレス・ミジョナリオス","サンパウロ・チマォン","サントス・ペイシェ","モンテビデオ・カルボネーロ",
+        "メデジン・ベルデ"],
+    d2:["ポルトアレグレ・コロラド","ポルトアレグレ・トリコロール","ベロオリゾンテ・ガロ","ベロオリゾンテ・コエーリョ","クリチバ・フーブロネグロ","ロサリオ・カナージャ",
+        "ロサリオ・レプロ","アスンシオン・オリンピスタ"],
+    d3:["レシフェ・レオン","サルバドール・エスカラーダ","フォルタレザ・ヴォゾン","ゴイアニア・エスメラウジーノ","カリ・アスカレロス","キト・アルボレータ",
+        "リマ・クレマ","ラパス・アティグレス"],
+  },
 };
+const DIVS=[1,2,3];
+/** 部の呼び名。表示は必ずここを通す(「DIV2」の書き方を1か所に閉じる)。 */
+const divName=d=>"DIV"+d;
 const CLUBS=[];
 LEAGUES.forEach(lg=>{
-  CLUB_NAMES[lg.id].forEach((name,i)=>{
-    CLUBS.push({
-      id:lg.id+"-"+(i+1), name, league:lg.id, rank:i+1,
-      abbr:(lg.abbr+(i+1)),
-      // クラブの格(1..10)。リーグの格とクラブ順位から決める。就任先選びの目安になる。
-      grade:clamp(Math.round(lg.tier*1.5+(8-i)*0.55),1,10),
+  DIVS.forEach(d=>{
+    CLUB_NAMES[lg.id]["d"+d].forEach((name,i)=>{
+      const n=(d-1)*8+i+1;
+      CLUBS.push({
+        id:lg.id+"-"+n, name, league:lg.id, div:d, rank:i+1,
+        abbr:(lg.abbr+n),
+        // クラブの格(1..10)。リーグの格・部・部内順位から決める。就任先選びの目安になる。
+        grade:clamp(Math.round(lg.tier*1.1+(3-d)*1.6+(8-i)*0.35),1,10),
+      });
     });
   });
 });
 const clubById=id=>CLUBS.find(c=>c.id===id);
 const clubsOf=leagueId=>CLUBS.filter(c=>c.league===leagueId);
 
-/** クラブの戦力水準(生成される選手のOVR補正)。リーグの格 × クラブ順位。 */
+const clubsOfDiv=(leagueId,div)=>CLUBS.filter(c=>c.league===leagueId&&c.div===div);
+/**
+ * クラブの戦力水準(生成される選手のOVR補正)。リーグの格 × 部 × 部内順位。
+ * **部の段差がいちばん大きい**。昇格すると相手が一段強くなるのが分かるようにする。
+ */
 function clubBias(club){
-  const lg=leagueById(club.league);
-  return Math.round((lg.tier-3.5)*2.7 + (4.5-club.rank)*2.2);
+  const lg=leagueById(club.league), t=TUNING.world;
+  // **DIV1 が今までの世界**。新しく足した DIV2/DIV3 はその下に伸ばす
+  return Math.round((lg.tier-3.5)*t.tierK + (1-club.div)*t.divK + (4.5-club.rank)*t.rankK);
 }
 
 /** クラブの所属選手を決定的に再生成する(貸与される戦力・CPUの戦力の両方に使う)。 */
@@ -148,7 +198,7 @@ function applyResult(table,h,a,hg,ag){
  * 「あなたほどの陣容なら勝って当然だ」という圧がかかるようにする。
  */
 function expectedRank(seed,clubId,squadPow){
-  const league=clubsOf(clubById(clubId).league).map(c=>c.id);
+  const league=divClubs();
   const powers=league.map(id=>({ id, p:clubPower(seed,id) }));
   const mine=powers.find(p=>p.id===clubId);
   const blended=mine.p*(1-TUNING.expect.squadWeight)+squadPow*TUNING.expect.squadWeight;
@@ -161,15 +211,80 @@ function expectedRank(seed,clubId,squadPow){
  *  末尾の -560 は「キャリア開始時点で最下位国の下位4クラブが選べる」ようにするための下駄。
  *  最初から選択肢がないと就任がただの通過儀礼になるため。 */
 function requiredFame(club){
-  const lg=leagueById(club.league);
-  return Math.max(0,Math.round((lg.tier-1)*1200+(8-club.rank)*180-560));
+  const lg=leagueById(club.league), t=TUNING.world;
+  return Math.max(0,Math.round((lg.tier-1)*t.fameLg+(3-club.div)*t.fameDiv
+    +(8-club.rank)*t.fameRank-t.fameFree));
 }
 const offersFor=fame=>CLUBS.filter(c=>requiredFame(c)<=fame);
+
+// --- 部(DIV)の昇降格 → docs/03 §3.24 ---
+// 所属は任期のあいだ動くので**セーブに持つ**。決定的に作り直せない唯一の世界情報。
+/** いま自クラブが戦っている部の顔ぶれ(クラブIDの配列)。 */
+const divClubs=(div)=>{
+  const W=S.world;
+  return (W.divs&&W.divs[(div||W.div)-1])||[];
+};
+/** 就任時の部割り。各クラブの持ち場(club.div)がそのまま初期配置になる。 */
+function makeDivs(leagueId){
+  return DIVS.map(d=>clubsOfDiv(leagueId,d).map(c=>c.id));
+}
+/**
+ * 自分が出ていない部の最終順位。**エンジンは回さず**、戦力に節ごとの ぶれ を足して
+ * 決定的に並べる。世界のほうも入れ替わっていないと、階段が嘘になる。
+ */
+function cpuOrder(ids,div){
+  const W=S.world;
+  return ids.map(id=>{
+    const rng=mulberry32((W.seed^hashStr("cpu:"+id+":"+W.season+":"+div))>>>0);
+    return { id, p:clubPower(W.seed,id)+rng()*7-3.5 };
+  }).sort((a,b)=>b.p-a.p).map(x=>x.id);
+}
+/**
+ * シーズンの入れ替え。上位2が上の部へ、下位2が下の部へ。
+ * **同時に交換する**ので、どの部もつねに8クラブに保たれる。
+ * 返り値: 自クラブの行方 { move:-1|0|1, from, to }
+ */
+function applyPromotion(myRank){
+  const W=S.world, t=TUNING.world;
+  const order=DIVS.map(d=>{
+    if(d===W.div){                                            // 自分の部は順位表が正
+      return standings(W.table).map(r=>r.id);
+    }
+    return cpuOrder(divClubs(d),d);
+  });
+  const up=order.map(o=>o.slice(0,t.promote));                // 各部の上位
+  const down=order.map(o=>o.slice(-t.relegate));              // 各部の下位
+  const next=order.map(o=>o.slice());
+  for(let d=0;d<DIVS.length-1;d++){
+    // d は上の部、d+1 は下の部。**下位2と上位2をそっくり入れ替える**
+    next[d]=next[d].filter(id=>!down[d].includes(id)).concat(up[d+1]);
+    next[d+1]=next[d+1].filter(id=>!up[d+1].includes(id)).concat(down[d]);
+  }
+  W.divs=next.map(ids=>ids.slice());
+  const from=W.div;
+  const promoted=from>1&&myRank<=t.promote;
+  const relegated=from<DIVS.length&&myRank>8-t.relegate;
+  W.div=from-(promoted?1:0)+(relegated?1:0);
+  return { move:W.div-from, from, to:W.div, promoted, relegated };
+}
+
+/**
+ * 任期が明けた監督が、次のクラブを探せる状態に戻す(→docs/03 §3.24)。
+ * **集めたカード・名声・実績は監督のもの**なので持ち越し、任期の記録だけを畳む。
+ * クラブを移れるのはここだけ(シーズンの区切りでは移らない)。
+ */
+function newTenure(){
+  S.career=defaultState().career;
+  return true;
+}
 
 /** 新しい任期を開始する(就任)。S.club / S.world をこのクラブ用に組み直す。 */
 function startTenure(clubId){
   const seed=S.world.seed;
-  const league=clubsOf(clubById(clubId).league).map(c=>c.id);
+  const club=clubById(clubId);
+  S.world.divs=makeDivs(club.league);
+  S.world.div=club.div;                                      // **入口はそのクラブの持ち場**
+  const league=divClubs();
   const rng=mulberry32((seed^hashStr(clubId+":"+S.world.season))>>>0);
   S.club={
     id:clubId,
@@ -190,7 +305,7 @@ function startTenure(clubId){
   S.form=bestFormFor(availableCards());
   S.squad=autoSquad();
   S.club.expect=expectedRank(seed,clubId,squadPower(squadCards().slice(0,TUNING.squad.starters)));
-  S.player.history.push({ season:S.world.season, clubId, result:"在任" });
+  S.player.history.push({ season:S.world.season, clubId, div:S.world.div, result:"在任" });
 }
 
 /**
@@ -440,12 +555,15 @@ const cupMustPlay=()=>{
 function cupEnterable(){
   if(S.career.cup)return null;                             // **同時に複数はエントリーできない**
   if(S.career.plan[S.career.node])return null;             // 予定が埋まっている節は不可
-  for(const cup of CUPS){
-    if(!cupDay(cup,S.career.node))continue;                // 開催サイクル
-    if((S.club&&S.club.exp||0)<cup.needExp)continue;       // 参加条件(チーム熟練度)
-    return cup;
-  }
-  return null;
+  // 同じ節に2つ重なったら**格の高いほう**(賞金の大きいほう)を出す
+  const open=CUPS.filter(cup=>cupOpen(cup)&&cupDay(cup,S.career.node));
+  return open.sort((a,b)=>b.prize[0]-a.prize[0])[0]||null;
+}
+/** 参加条件(熟練度・部)を満たしているか。**開催日とは別に判定する**(予告に使う)。 */
+function cupOpen(cup){
+  if((S.club&&S.club.exp||0)<cup.needExp)return false;
+  if(cup.needDiv&&S.world.div>cup.needDiv)return false;    // DIV1 に上がると開く大会
+  return true;
 }
 /**
  * エントリーする。**節はまだ進まない**(この節の1回戦をこれから戦う)。
@@ -741,16 +859,48 @@ function advanceNode(){
 
 const seasonOver=()=>S.world.matchday>(S.world.fixtures||[]).length;
 
-/** シーズン終了時の審判: 期待順位との差で 続投 / 解任 / オファー を決める。 */
+/**
+ * シーズン終了時の審判(→docs/03 §3.24)。
+ * **クラブは替わらない。** 決まるのは 昇格 / 残留 / 降格 と、任期の残りだけ。
+ * 評価が下限を割ると任期が削られ、好成績なら上限に達したときに延命する。
+ */
 function judgeSeason(){
-  const rank=rankOf(S.world.table,S.club.id);
+  const W=S.world;
+  const rank=rankOf(W.table,S.club.id);
   const diff=S.club.expect-rank;                 // 正なら期待を上回った
   S.club.eval=chairmanEval();
   const fameGain=Math.round(diff*140+(rank===1?900:0));
   S.player.fame=Math.max(0,S.player.fame+fameGain);
+  // **順位が確定したこの時点で入れ替えを行う**。世界のほうも同時に動く
+  const move=applyPromotion(rank);
+  // 評価が低いと任期が短くなる。解任のかわりに「持ち時間を失う」形で効かせる
+  const poor=S.club.eval<TUNING.eval.floorDismiss;
+  let shrunk=null;
+  if(poor){
+    const before=S.career.limit;
+    S.career.limit=Math.max(S.career.node,S.career.limit-TUNING.tenure.shrink);
+    shrunk=before-S.career.limit;
+    checkTenureClosing();
+  }
   const h=S.player.history[S.player.history.length-1];
-  if(h){ h.rank=rank; h.result=S.club.eval<TUNING.eval.floorDismiss?"解任":"続投"; }
+  if(h){ h.rank=rank; h.result=move.promoted?"昇格":move.relegated?"降格":"残留"; }
   // 大会が決着したこの時点で、任期の去就も決まる(→§3.2.3)
   const tenure=judgeTenure(rank);
-  return { rank, diff, fameGain, dismissed:S.club.eval<TUNING.eval.floorDismiss, tenure };
+  return { rank, diff, fameGain, move, poor, shrunk, tenure, eval:S.club.eval };
+}
+/**
+ * 次のシーズンを始める。**同じクラブのまま、決まった部で組み直す**。
+ * 借りている選手(loan)も熟練度も評価も持ち越す。
+ */
+function startNextSeason(){
+  const W=S.world;
+  W.season++;
+  const league=divClubs();
+  const rng=mulberry32((W.seed^hashStr(S.club.id+":"+W.season+":d"+W.div))>>>0);
+  W.table=emptyTable(league);
+  W.fixtures=makeFixtures(league,rng);
+  W.results={};
+  W.matchday=1;
+  S.club.expect=expectedRank(W.seed,S.club.id,squadPower(squadCards().slice(0,TUNING.squad.starters)));
+  S.player.history.push({ season:W.season, clubId:S.club.id, div:W.div, result:"在任" });
 }

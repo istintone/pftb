@@ -19,6 +19,7 @@ const SCREENS={
   title:     { chrome:"bare" },
   contract:  { chrome:"bare" },
   offer:     { title:"OFFERS",    chrome:"back",  render:()=>renderOffers() },
+  board:     { title:"REVIEW",    chrome:"back",  render:()=>renderBoard() },
   home:      { title:"HOME",      tab:"home",      chrome:"full", render:()=>renderHome() },
   cards:     { title:"CARDS",     tab:"cards",     chrome:"full", render:()=>renderCards() },
   deck:      { title:"DECK",      tab:"deck",      chrome:"full", render:()=>renderDeck() },
@@ -800,7 +801,8 @@ function renderSeason(){
   const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
   $("seasonHead").textContent="SEASON "+W.season+" · 任期スケジュール";
   $("seasonBox").innerHTML='<div class="sect-t">契約</div>'
-    +kv("クラブ",esc(club.name)+"（"+lg.name+"・格★"+club.grade+"）")
+    +kv("クラブ",esc(club.name)+"（格★"+club.grade+"）")
+    +kv("いまの舞台",lg.name+" "+divName(W.div))
     +kv("期待順位",S.club.expect+"位")
     +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
     +kv("会長の評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
@@ -814,7 +816,7 @@ function renderSeason(){
   $("seasonComps").innerHTML=
     '<div class="comp-card" data-comp="league">'
       +'<div class="cc-l"><div class="cc-k">LEAGUE</div>'
-      +'<b>'+esc(lg.name)+'</b>'
+      +'<b>'+esc(lg.name)+' '+divName(W.div)+'</b>'
       +'<div class="lg">'+r+'位 · 勝点'+pts(t)+'（'+played+'/'+W.fixtures.length+'節）</div></div>'
       +'<div class="cc-r">›</div></div>'
     +CUPS.map(cup=>{
@@ -908,11 +910,11 @@ function cupCalNote(n){
       cls:c.alive?"planned cup":"planned cup out", mark:c.alive?"▣":"—" };
     return null;                                   // 大会中は次の開催日を出さない
   }
-  for(const cup of CUPS){
-    if(!cupDay(cup,n))continue;
-    return { label:cup.name, sub:"開催予定（条件を満たせばエントリーできます）",
-      cls:"cup soon", mark:"◇" };
-  }
+  // 同じ節に重なったら格の高いほうを出す(エントリーの判定と揃える)
+  const on=CUPS.filter(cup=>cupDay(cup,n)).sort((a,b)=>b.prize[0]-a.prize[0]);
+  if(on.length)return { label:on[0].name,
+    sub:cupOpen(on[0])?"開催予定（エントリーできます）":"開催予定（条件を満たせば参加できます）",
+    cls:"cup soon", mark:"◇" };
   return null;
 }
 const seasonDivider=(season,clubId)=>
@@ -928,7 +930,7 @@ function renderSchedule(){
   if(_comp==="cup"){ renderCupSchedule(); return; }
 
   const W=S.world, lg=leagueById(clubById(S.club.id).league);
-  $("schedHead").textContent=lg.abbr+" "+lg.name.toUpperCase()+" · CLUB CHAMPIONSHIP";
+  $("schedHead").textContent=lg.abbr+" "+lg.name.toUpperCase()+" · "+divName(S.world.div);
   $("schedList").innerHTML=W.fixtures.map((round,i)=>{
     const m=round.find(x=>x.h===S.club.id||x.a===S.club.id);
     const md=i+1, done=md<W.matchday, next=md===W.matchday;
@@ -1033,12 +1035,17 @@ function currentRow(){
 const cupJoinedName=()=>{ const c=cupJoined(); return c?c.name:"カップ戦"; };
 /** カップに出られない理由。**条件が見えないと待つ理由が分からない**。 */
 function cupWhy(){
-  const cup=CUPS[0], C=S.career, exp=S.club?S.club.exp:0;
-  const j=C.cup;
+  const C=S.career, exp=S.club?S.club.exp:0, j=C.cup;
   if(j&&!j.done)
     return cupJoinedName()+"が進行中です。大会が終わるまで次の大会にはエントリーできません。";
+  // **いちばん早く出られる大会**を基準に理由を書く
+  const cand=CUPS.map(cup=>({ cup, next:(Math.floor(C.node/cup.every)+1)*cup.every }))
+    .sort((a,b)=>a.next-b.next);
+  const cup=(cand.find(x=>cupOpen(x.cup))||cand[0]).cup;
   if(exp<cup.needExp)
     return cup.name+"は熟練度 "+fmtNum(cup.needExp)+" から参加できます（現在 "+fmtNum(exp)+"）。";
+  if(cup.needDiv&&S.world.div>cup.needDiv)
+    return cup.name+"は"+divName(cup.needDiv)+"に上がると出場権が得られます（現在 "+divName(S.world.div)+"）。";
   const next=(Math.floor(C.node/cup.every)+1)*cup.every;
   return cup.name+"は"+cup.every+"の倍数の節に開催されます（次は第"+next+"節）。エントリーは打ち手から選びます。";
 }
@@ -1079,12 +1086,20 @@ function renderCupSchedule(){
   $("schedHead").textContent="KING'S CLUB CUP · KNOCKOUT STAGE";
 
   if(!c){
-    const exp=S.club?S.club.exp:0, next=(Math.floor(C.node/cup.every)+1)*cup.every;
-    $("schedList").innerHTML='<div class="stub"><b>'+esc(cup.name)+'</b>'
-      +'<span>'+esc(cup.note)+'<br>次の開催は第'+next+'節。'
-      +(exp<cup.needExp?'熟練度が '+fmtNum(cup.needExp)+' に届けば':'開催節の打ち手から')
-      +'エントリーできます。</span></div>';
-    $("schedStand").innerHTML=cupInfoBox(cup,null);
+    // どの大会がいつ開くのか、条件は何かを**まとめて**見せる
+    const exp=S.club?S.club.exp:0;
+    $("schedList").innerHTML=CUPS.map(x=>{
+      const next=(Math.floor(C.node/x.every)+1)*x.every;
+      const why=exp<x.needExp?"熟練度 "+fmtNum(exp)+" / "+fmtNum(x.needExp)
+        :x.needDiv&&S.world.div>x.needDiv?divName(x.needDiv)+"で出場権"
+        :"第"+next+"節";
+      return '<div class="cal'+(cupOpen(x)?"":" none")+'">'
+        +'<span class="cal-h">🏆</span>'
+        +'<span class="cal-b"><b>'+esc(x.name)+'</b>'
+        +'<span class="lg">'+esc(x.note)+'</span></span>'
+        +'<span class="cal-r">'+esc(why)+'</span></div>';
+    }).join("");
+    $("schedStand").innerHTML=CUPS.map(x=>cupInfoBox(x,null)).join("");
     return;
   }
 
@@ -1140,10 +1155,10 @@ function cupBrRow(c,i,g,won){
 /** 大会の要項(条件・賞金)。順位ごとの賞金は完了節にまとめて入る。 */
 function cupInfoBox(cup,c){
   const names=cup.prize.map((_,i)=>i===0?"優勝":i===1?"準優勝":"ベスト"+Math.pow(2,i));
-  return '<div class="stand-h"><span class="sect-t">大会要項</span></div>'
+  return '<div class="stand-h"><span class="sect-t">'+esc(cup.name)+' 要項</span></div>'
     +'<div class="stand-box cup-info">'
     +kv("開催",cup.every+"の倍数の節")
-    +kv("参加条件","熟練度 "+fmtNum(cup.needExp))
+    +kv("参加条件","熟練度 "+fmtNum(cup.needExp)+(cup.needDiv?" ／ "+divName(cup.needDiv):""))
     +kv("方式",cup.rounds+"回戦（ノックアウト）")
     +cup.prize.map((v,i)=>kv(names[i],"+"+fmtNum(v)+" コイン"
       +(c&&c.done&&c.dist===i?"（受領）":""))).join("")
@@ -1168,9 +1183,18 @@ function resClass(md){
   return r?(r.win?"w":r.draw?"d":"l"):"";
 }
 function renderStandings(){
-  const rows=standings(S.world.table);
+  const rows=standings(S.world.table), W=S.world, t=TUNING.world;
+  const lg=leagueById(clubById(S.club.id).league);
+  $("standHead").textContent=lg.abbr+" "+lg.name.toUpperCase()+" · "+divName(W.div);
+  // **昇格圏と降格圏を色で示す**。順位表は「いまどっちに転びそうか」を見る道具(→§3.24)
+  const zone=r=>W.div>1&&r.rank<=t.promote?" up"
+    :W.div<DIVS.length&&r.rank>rows.length-t.relegate?" down":"";
+  $("standNote").textContent=
+    (W.div>1?"上位"+t.promote+"クラブが "+divName(W.div-1)+" へ昇格。":"")
+    +(W.div<DIVS.length?"下位"+t.relegate+"クラブが "+divName(W.div+1)+" へ降格。":"")
+    +(W.div===1?"最上位の部です。ここを制すれば大陸の舞台が開きます。":"");
   $("standTbl").innerHTML='<tr><th>#</th><th>CLUB</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>PTS</th></tr>'
-    +rows.map(r=>'<tr'+(r.id===S.club.id?' class="me"':'')+'><td class="num">'+r.rank+'</td>'
+    +rows.map(r=>'<tr class="'+(r.id===S.club.id?"me":"")+zone(r)+'"><td class="num">'+r.rank+'</td>'
       +'<td class="nm">'+esc(clubName(r.id))+'</td><td class="num">'+r.w+'</td><td class="num">'+r.d+'</td>'
       +'<td class="num">'+r.l+'</td><td class="num">'+r.gf+'</td><td class="num">'+r.ga+'</td>'
       +'<td class="num pt">'+r.pts+'</td></tr>').join("");
@@ -2037,19 +2061,54 @@ function renderResult(){
 }
 const passPct=t=>t.pass?Math.round(t.passOk/t.pass*100):0;
 
-/** シーズン終了 → 審判 → 続投 or 解任 → 次の就任先へ。
+/** シーズン終了 → 審判 → 総括画面へ。**クラブは替わらず、部だけが動く**(→§3.24)。
  *  任期が上限に達していれば、ここで延命 or キャリア終了も決まる(→§3.2.3)。 */
 async function finishSeason(){
-  const expect=S.club.expect;
-  const j=judgeSeason();
-  S.world.season++;
+  _review={ expect:S.club.expect, j:judgeSeason() };
   await save();
-  toast(j.rank+"位（期待"+expect+"位）／名声 "+(j.fameGain>=0?"+":"")+j.fameGain);
-  if(j.tenure&&j.tenure.extended){
-    toast("好成績により任期が延長されました（上限 "+j.tenure.limit+" 節）");
-  }
-  if(S.career.over){ show("career"); return; }
-  show("offer",{push:1});
+  show("board",{push:1});
+}
+/**
+ * シーズン総括(→docs/03 §3.24)。**クラブは替わらない**ので、ここで見せるのは
+ * 「どこまで上がったか」と「次に何を期待されているか」。
+ */
+let _review=null;
+function renderBoard(){
+  const r=_review; if(!r)return;
+  const j=r.j, m=j.move, W=S.world;
+  const lg=leagueById(clubById(S.club.id).league);
+  $("boardHead").textContent="SEASON "+W.season+" REVIEW · "+lg.abbr+" "+divName(m.from);
+  // ① 昇格 / 残留 / 降格
+  const kind=m.promoted?"up":m.relegated?"down":"stay";
+  const lab=m.promoted?"昇格":m.relegated?"降格":"残留";
+  $("boardMove").innerHTML='<div class="bd-move '+kind+'">'
+    +'<span class="eyebrow">'+(m.promoted?"PROMOTED":m.relegated?"RELEGATED":"STAY")+'</span>'
+    +'<b>'+j.rank+'位 ／ '+lab+'</b>'
+    +'<span class="lg">'+esc(lg.name+" "+divName(m.from)
+      +(m.move?" → "+divName(m.to):"（"+divName(m.to)+"のまま）"))+'</span></div>';
+  // ② オーナーの言葉。**評価より「次に何を求められているか」**
+  const key=m.promoted?"up":m.relegated?"down":j.rank<S.club.expect?"over":j.rank>S.club.expect?"under":"met";
+  const say=OWNER[key][Math.abs(hashStr(S.club.id+":"+W.season))%OWNER[key].length];
+  $("boardOwner").innerHTML='<div class="bd-say"><span class="eyebrow">OWNER</span>'
+    +'<b>「'+esc(say)+'」</b></div>';
+  // ③ 数字
+  const tenure=j.tenure&&j.tenure.extended
+    ?"延長 +"+TUNING.tenure.extend+"節（上限 "+j.tenure.limit+"）"
+    :j.shrunk?"短縮 −"+j.shrunk+"節（上限 "+S.career.limit+"）"
+    :"残り "+tenureLeft()+" 節";
+  $("boardBox").innerHTML='<div class="sect-t">総括</div>'
+    +kv("順位",j.rank+"位（期待 "+r.expect+"位）")
+    +kv("会長の評価",evalLabel(j.eval)+"（"+Math.round(j.eval)+"）")
+    +kv("名声",(j.fameGain>=0?"+":"")+fmtNum(j.fameGain)+" ／ 通算 "+fmtNum(S.player.fame))
+    +kv("任期",tenure)
+    +(S.career.over?'<div class="lg" style="margin-top:10px">任期が明けました。次のクラブを選べます。</div>':"");
+  $("boardGo").textContent=S.career.over?"キャリアを振り返る":divName(m.to)+" を始める";
+  $("boardGo").onclick=async()=>{
+    if(S.career.over){ show("career"); return; }
+    startNextSeason();
+    await save(); headUI(); show("home");
+    toast("SEASON "+S.world.season+" ／ "+divName(S.world.div)+" が始まりました");
+  };
 }
 /** 任期終了 = キャリア1周の終わり。積み上げたものを見せて次の周へ送り出す。 */
 function renderCareerEnd(){
@@ -2066,7 +2125,8 @@ function renderCareerEnd(){
     +kv("最終的な名声",fmtNum(S.player.fame))
     +kv("集めたカード",S.player.coll.length+" 枚")
     +'<div class="sect-t" style="margin-top:14px">CAREER</div>'
-    +h.map(x=>'<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'
+    +h.map(x=>'<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))
+      +(x.div?' '+divName(x.div):"")+'</span><b>'
       +(x.rank?x.rank+"位 "+x.result:"—")+'</b></div>').join("");
 }
 
@@ -2081,7 +2141,7 @@ function renderOffers(){
     const lg=leagueById(c.league);
     return '<div class="offer" data-club="'+c.id+'">'
       +'<div class="of-l"><b>'+esc(c.name)+'</b>'
-      +'<div class="lg">'+lg.name+' ／ 国内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
+      +'<div class="lg">'+lg.name+' '+divName(c.div)+' ／ 部内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
       +'<div class="of-r num">'+fmtNum(requiredFame(c))+'</div></div>';
   }).join("");
   $("offerList").querySelectorAll("[data-club]").forEach(el=>{
@@ -2109,8 +2169,8 @@ function openContract(){
   const c=_pickedClub?clubById(_pickedClub):null;
   $("ctPickClub").textContent=c?c.name:"クラブを選ぶ";
   $("ctPickClub").classList.toggle("picked",!!c);
-  $("ctLeague").textContent=c?leagueById(c.league).name:"—";
-  $("ctGrade").textContent=c?"★"+c.grade+"（国内"+c.rank+"位相当）":"—";
+  $("ctLeague").textContent=c?leagueById(c.league).name+" "+divName(c.div):"—";
+  $("ctGrade").textContent=c?"★"+c.grade+"（部内"+c.rank+"位相当）":"—";
   $("ctNote").textContent=c?c.name+" 監督として登録されます":"クラブを選ぶと契約内容が確定します";
   updateSignature();
   show("contract");

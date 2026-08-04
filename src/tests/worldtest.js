@@ -7,12 +7,16 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
 (async () => {
   // --- リーグ構成(→docs/03 §3.8) ---
   assert.strictEqual(E.LEAGUES.length, 6, "リーグは6つ");
-  assert.strictEqual(E.CLUBS.length, 48, "クラブは 6リーグ × 8 = 48");
-  for (const lg of E.LEAGUES)
-    assert.strictEqual(E.clubsOf(lg.id).length, E.TUNING.league.clubs, lg.name + "は8クラブ");
+  assert.strictEqual(E.CLUBS.length, 144, "クラブは 6リーグ × 3部 × 8 = 144");
+  for (const lg of E.LEAGUES) {
+    assert.strictEqual(E.clubsOf(lg.id).length, 24, lg.name + "は3部で24クラブ");
+    for (const d of E.DIVS)
+      assert.strictEqual(E.clubsOfDiv(lg.id, d).length, E.TUNING.league.clubs,
+        lg.name + " " + E.divName(d) + "は8クラブ");
+  }
   assert.deepStrictEqual([...E.LEAGUES].sort((a, b) => a.tier - b.tier).map(l => l.id),
     ["sam", "fra", "ger", "ita", "esp", "eng"], "リーグの格が階段になっている");
-  assert.strictEqual(new Set(E.CLUBS.map(c => c.name)).size, 48, "クラブ名に重複が無い");
+  assert.strictEqual(new Set(E.CLUBS.map(c => c.name)).size, 144, "クラブ名に重複が無い");
 
   // --- 国籍(→docs/03 §3.16) ---
   assert.strictEqual(E.NATIONS.length, 17, "国籍は17(実在16か国 + 日本)");
@@ -26,7 +30,7 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     assert.ok(homeShare > 0.15 && homeShare < 0.75,
       lg.name + "の自国比率が極端でない: " + (homeShare * 100).toFixed(0) + "%");
   }
-  assert.strictEqual(new Set(E.CLUBS.map(c => c.id)).size, 48, "クラブIDが重複しない");
+  assert.strictEqual(new Set(E.CLUBS.map(c => c.id)).size, 144, "クラブIDが重複しない");
   console.log("リーグ構成OK", E.LEAGUES.length, "リーグ /", E.CLUBS.length, "クラブ /",
     E.NATIONS.length, "国籍");
 
@@ -66,7 +70,9 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     const natSeen = new Set();
     for (const club of E.CLUBS) {
       const roster = E.clubRoster(12345, club.id);
-      const fam = roster.map(c => c.name.split(" ").pop());
+      // **姓は sur を見る**。並び順が east の国籍だと表示名の末尾は名になるので、
+      // 表示名から取ると「姓が同じ」ではないものまで衝突として数えてしまう
+      const fam = roster.map(c => c.sur);
       worst = Math.max(worst, fam.length - new Set(fam).size);
       roster.forEach(c => natSeen.add(c.nation));
       // 選手の国籍は実在の16か国のいずれか
@@ -81,7 +87,7 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     }
     assert.strictEqual(worst, 0, "どのクラブにも同姓が並ばない");
     assert.strictEqual(natSeen.size, E.NATIONS.length,
-      "48クラブ全体ですべての国籍に選手がいる");
+      E.CLUBS.length + "クラブ全体ですべての国籍に選手がいる");
     console.log("  姓:", Object.values(E.FAMILY).flat().length, "個 /",
       E.CLUBS.length, "クラブすべてで同姓なし / 出現国籍", natSeen.size);
   }
@@ -159,6 +165,7 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     //   ・不一致(0.50)の配置がほぼ出ない
     // main を none に近づけすぎると、高OVRの不一致が「メインのみ」を押しのけて増える。
     let wrongGK = 0, clubs = 0, slots = 0;
+    const byDiv = {};
     const tier = { a: 0, b: 0, c: 0 };
     for (const club of E.CLUBS) {
       const roster = E.clubRoster(12345, club.id);
@@ -173,13 +180,19 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
         }
         if (!best) return;
         used.add(best.id); slots++; tier[E.fitTier(best, sub)]++;
+        byDiv[club.div] = byDiv[club.div] || { n: 0, c: 0 };
+        byDiv[club.div].n++; if (E.fitTier(best, sub) === "c") byDiv[club.div].c++;
         if (hasGK && sub === "GK" && best.pos !== "GK") wrongGK++;
       });
       clubs++;
     }
     assert.strictEqual(wrongGK, 0, "GKがいる名簿でGK枠にGK以外を置かない(" + clubs + "クラブ)");
-    assert.ok(tier.c / slots < 0.02,
-      "不一致の配置は2%未満: " + tier.c + "/" + slots);
+    // **下の部ほど名簿が薄く**、枠にぴったりの選手が居ないことが増える。
+    // 3%を超えるようなら生成側(ポジション配分)を疑う
+    assert.ok(tier.c / slots < 0.03,
+      "不一致の配置は3%未満: " + tier.c + "/" + slots);
+    console.log("  部ごとの不一致:", E.DIVS.map(d =>
+      E.divName(d) + " " + (byDiv[d].c / byDiv[d].n * 100).toFixed(1) + "%").join(" / "));
     console.log("  自動編成:", clubs, "クラブ / 完全一致",
       (tier.a / slots * 100).toFixed(1) + "% ・メインのみ",
       (tier.b / slots * 100).toFixed(1) + "% ・不一致", tier.c, "件 / GK枠の誤り", wrongGK);
@@ -214,12 +227,19 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   console.log("レアリティOK", keys.map(k => k + ":" + (got[k] || 0)).join(" / "), "(400枚)");
 
   // --- クラブの格と戦力が相関する ---
-  const top = E.clubPower(12345, "eng-1"), bottom = E.clubPower(12345, "sam-8");
+  const top = E.clubPower(12345, "eng-1"), bottom = E.clubPower(12345, "sam-24");
   assert.ok(top > bottom, "上位国の強豪(" + top + ")が下位国の弱小(" + bottom + ")より強い");
-  console.log("戦力の階段OK eng-1:", top, "> sam-8:", bottom);
+  // **部の段差がリーグの段差より大きい**(昇格したら相手が強くなったと分かる)
+  {
+    const d1 = E.clubPower(12345, "sam-1"), d2 = E.clubPower(12345, "sam-9"),
+          d3 = E.clubPower(12345, "sam-17");
+    assert.ok(d1 > d2 && d2 > d3, "部が上がるほど強い: " + d1 + " > " + d2 + " > " + d3);
+    console.log("  部の階段: DIV1", d1, "> DIV2", d2, "> DIV3", d3);
+  }
+  console.log("戦力の階段OK eng-1:", top, "> sam-24:", bottom);
 
   // --- 日程(ホーム&アウェイの総当たり) ---
-  const ids = E.clubsOf("sam").map(c => c.id);
+  const ids = E.clubsOfDiv("sam", 1).map(c => c.id);
   const fx = E.makeFixtures(ids, E.mulberry32(7));
   assert.strictEqual(fx.length, E.TUNING.league.rounds, "14節");
   const count = {}, pairs = {};
@@ -244,13 +264,17 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   console.log("日程OK", fx.length, "節 / 各クラブ14試合(H7 A7) / 重複なし");
 
   // --- 期待順位は持ち込んだ編成の強さを見る(→docs/03 §3.9) ---
+  E.getS().world.divs = E.makeDivs("sam"); E.getS().world.div = 1;
   const weak = E.expectedRank(12345, "sam-8", 60);
   const strong = E.expectedRank(12345, "sam-8", 95);
   assert.ok(strong < weak, "強い編成を持ち込むと期待順位も上がる(" + weak + "位 → " + strong + "位)");
   console.log("期待順位OK 弱い編成:", weak, "位 / 強い編成:", strong, "位");
 
   // --- 名声のしきい値がキャリアの階段になっている ---
-  assert.strictEqual(E.requiredFame(E.clubById("sam-8")), 0, "最下位リーグの弱小は名声0で就任できる");
+  assert.strictEqual(E.requiredFame(E.clubById("sam-24")), 0,
+    "最下位リーグ最下部の弱小は名声0で就任できる");
+  assert.ok(E.requiredFame(E.clubById("sam-1")) > E.requiredFame(E.clubById("sam-17")),
+    "同じリーグでも上の部ほど名声が要る");
   assert.ok(E.offersFor(0).length >= 3, "名声0でも就任先を選べる(選択肢が複数ある)");
   assert.ok(E.offersFor(0).length < E.CLUBS.length, "名声0では全クラブは開いていない");
   // 6リーグが名声の階段として順に開くこと(飛び級で上位リーグが先に開かない)
@@ -258,12 +282,12 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     const byTier = [...E.LEAGUES].sort((a, b) => a.tier - b.tier);
     let prev = -1;
     for (const lg of byTier) {
-      const min = Math.min(...E.clubsOf(lg.id).map(c => E.requiredFame(c)));
+      const min = Math.min(...E.clubsOfDiv(lg.id, 3).map(c => E.requiredFame(c)));
       assert.ok(min > prev, lg.name + " は下位リーグより後に開く: " + min);
       prev = min;
     }
-    console.log("  リーグの解禁:", byTier.map(lg =>
-      lg.name + " " + Math.min(...E.clubsOf(lg.id).map(c => E.requiredFame(c)))).join(" / "));
+    console.log("  リーグの解禁(DIV3):", byTier.map(lg =>
+      lg.name + " " + Math.min(...E.clubsOfDiv(lg.id, 3).map(c => E.requiredFame(c)))).join(" / "));
   }
   assert.strictEqual(E.offersFor(999999).length, E.CLUBS.length, "名声が十分なら全クラブが開く");
   console.log("名声の階段OK 名声0:", E.offersFor(0).length, "クラブ / 上限:", E.CLUBS.length);
