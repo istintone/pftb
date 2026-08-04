@@ -167,6 +167,38 @@ const SK_SOLO={
   start:"起点になりやすい", onTarget:"シュートが枠に飛びやすい",
   pkKick:"PKを決めやすい", rebound:"こぼれ球に詰めやすい",
 };
+/**
+ * スキルの効果を**タップで浮かせる**(→docs/03 §3.21)。
+ * 常に添えると説明が4行並んで、肝心の「何を持っているか」が読めなくなる。
+ * 吹き出しは `.skills` の中に絶対配置し、**枠からはみ出さないよう左右を丸める**。
+ */
+function bindSkillPop(skills){
+  const wrap=$("cardModalBody").querySelector(".skills");
+  const pop=$("skPop"); if(!wrap||!pop)return;
+  const hide=()=>{ pop.hidden=true; pop.dataset.i="";
+    wrap.querySelectorAll(".skill").forEach(e=>e.classList.remove("on")); };
+  wrap.querySelectorAll("[data-sk]").forEach(el=>{
+    el.onclick=e=>{
+      e.stopPropagation();
+      const i=el.dataset.sk;
+      if(!pop.hidden&&pop.dataset.i===i){ hide(); return; }   // 同じ札で閉じる
+      hide();
+      el.classList.add("on");
+      pop.textContent=skillNote(skills[+i]);
+      pop.dataset.i=i; pop.hidden=false;
+      // 位置はチップの真下。左右は枠の内側に収める(端の札でも切れない)
+      pop.style.left="0px";
+      const w=wrap.getBoundingClientRect(), r=el.getBoundingClientRect();
+      const pw=pop.offsetWidth;
+      const x=clamp(r.left-w.left+r.width/2-pw/2,0,Math.max(0,w.width-pw));
+      pop.style.top=(r.bottom-w.top+7)+"px";
+      pop.style.left=x+"px";
+      pop.style.setProperty("--arrow",(r.left-w.left+r.width/2-x)+"px");
+    };
+  });
+  $("cardModalBody").addEventListener("click",hide);
+  hide();
+}
 function skillNote(name){
   const fx=SKILL_FX[name]; if(!fx)return "";
   const solo=SK_SOLO[fx.at]||"";
@@ -553,9 +585,11 @@ function openCard(x){
         +'<div class="tr"><i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i></div>'
         +'<b>'+c[k]+'</b></div>').join("")+'</div>'
       +'<div class="cm-k">SKILLS</div>'
-      // **名前だけでは何が起きるか分からない**ので、効果を必ず添える(→docs/03 §3.21)
-      +'<div class="skills">'+c.skills.map(s=>'<span class="skill">'+esc(s)
-        +'<i>'+esc(skillNote(s))+'</i></span>').join("")+'</div>'
+      // 効果は**タップで浮かせる**(→docs/03 §3.21)。常に添えると説明が4行並んで、
+      // 肝心の「何を持っているか」が読み取れなくなる
+      +'<div class="skills">'+c.skills.map((s,i)=>'<span class="skill" data-sk="'+i+'">'
+        +esc(s)+'</span>').join("")
+        +'<div class="skill-pop" id="skPop" hidden></div></div>'
       +'<div class="cm-k">COMBINATION</div>'
       +'<div class="cm-combo">'+esc(c.club||"—")+'</div>'
       +'<div class="cm-k">PROFILE</div>'
@@ -564,6 +598,7 @@ function openCard(x){
         ? "クラブからの貸与 — 退任するとこのクラブに残ります"
         : "<span class=\"own\">★</span> 自分のカード — 移籍しても連れて行けます")+'</div>'
     +'</div>';
+  bindSkillPop(c.skills);
   $("cardModalClose").onclick=closeCard;
   $("cardModal").classList.add("on");
 }

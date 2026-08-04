@@ -736,6 +736,30 @@ const STEPS = [
           "/ クレスト:", await ctx.js("document.querySelector('#cardModalBody .pc-crest').textContent"),
           "/ 能力欄:", await ctx.js("document.querySelectorAll('#cardModalBody .pc-stats div').length"),
           "/ 背景:", await ctx.js("!!document.querySelector('#cardModalBody .cm-card').style.getPropertyValue('--face')"));
+        // スキルの効果は**タップで浮かせる**(→docs/03 §3.21)
+        ctx.log("  スキルの吹き出し:", await ctx.js(`(()=>{
+          const chips=[...document.querySelectorAll('#cardModalBody .skill')];
+          const pop=document.getElementById('skPop');
+          if(!chips.length)throw new Error('スキルが出ていない');
+          if(!pop.hidden)throw new Error('最初から吹き出しが開いている');
+          if(chips[0].textContent.indexOf('やすい')>=0)
+            throw new Error('効果が常時出たままになっている');
+          chips[0].click();
+          if(pop.hidden||!pop.textContent)throw new Error('タップしても出ない');
+          if(!chips[0].classList.contains('on'))throw new Error('タップした札が光らない');
+          const w=document.querySelector('#cardModalBody .skills').getBoundingClientRect();
+          const r=pop.getBoundingClientRect();
+          if(r.left<w.left-1||r.right>w.right+1)
+            throw new Error('吹き出しが枠からはみ出している');
+          const t=pop.textContent;
+          chips[0].click();
+          if(!pop.hidden)throw new Error('もう一度タップしても閉じない');
+          // 別の札を押したら中身が入れ替わる
+          if(chips[1]){ chips[1].click();
+            if(pop.textContent===t&&chips.length>1&&chips[0].textContent!==chips[1].textContent)
+              throw new Error('別の札でも中身が変わらない'); }
+          return chips.length+'枚 / 「'+pop.textContent+'」';
+        })()`));
         await ctx.shot("09b-card-detail");
         await ctx.js("document.getElementById('cardModalClose').click()");
         await ctx.wait(200);
