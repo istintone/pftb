@@ -387,21 +387,28 @@ body{
   --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .30);
   --ink:oklch(0.95 0.01 90); --stat:oklch(0.95 0.01 90); --mx:oklch(0.62 0.23 27);
   --halo:oklch(0.11 0.02 255);
+  /* --lab 能力ラベル / --sub クラブ名。**明るい地の段(STANDARD/WORLD CLASS)では
+     薄めてはいけない**(白い地に白を混ぜることになり、読めなくなる) */
+  --lab:color-mix(in oklch, var(--stat) 74%, var(--halo));
+  --sub:color-mix(in oklch, var(--ink) 58%, var(--halo));
   position:relative; aspect-ratio:360/525; cursor:pointer; overflow:hidden;
   border-radius:9px; background:var(--face) center/100% 100% no-repeat, oklch(0.19 0.02 255);
   box-shadow:0 0 12px var(--glow);
   container-type:inline-size;              /* 枠内の文字をカード幅に追従させる */
 }
-/* 白い地 … 文字は黒 */
+/* 白い地 … 文字は黒。**ラベルとクラブ名は薄めず、値より少し明るい程度に留める** */
 .pcard.r-std{ --ink:oklch(0.24 0.02 255); --stat:oklch(0.24 0.02 255);
-              --halo:oklch(0.99 0 0) }
+              --halo:oklch(0.99 0 0);
+              --lab:oklch(0.38 0.02 255); --sub:oklch(0.40 0.02 255) }
 /* 黒い地 … 文字は白 */
 .pcard.r-reg{ --rar:var(--rar-reg); --glow:oklch(0.80 0.01 255 / .22) }
 .pcard.r-spe{ --rar:var(--rar-spe); --glow:oklch(0.66 0.15 285 / .38) }
-/* 銀の地 … 顔の文字はマゼンタ、能力値は黒 */
+/* 銀の地 … 顔の文字はマゼンタ、能力値は黒。
+   クラブ名までマゼンタにすると**虹のホロに沈んで読めない**ので黒に寄せる */
 .pcard.r-wc { --rar:var(--rar-wc); --glow:oklch(0.72 0.19 335 / .42);
               --ink:#c71585; --stat:oklch(0.24 0.02 255);
-              --halo:oklch(0.99 0 0) }
+              --halo:oklch(0.99 0 0);
+              --lab:oklch(0.38 0.02 255); --sub:oklch(0.34 0.02 255) }
 /* 黒金の地 … 顔の文字は金、能力値は白 */
 .pcard.r-leg{ --rar:var(--rar-leg); --glow:oklch(0.78 0.14 85 / .45);
               --ink:var(--rar-leg) }
@@ -475,7 +482,7 @@ body{
    数値は mono の桁幅で揃えるので、1桁でも右端がずれない。 */
 .pc-stats div{ display:flex; align-items:baseline; justify-content:flex-end; gap:1.4cqw }
 .pc-stats span{ font:6.6cqw/1.55 var(--f-mono);
-  color:color-mix(in oklch, var(--stat) 74%, var(--halo)) }  /* opacity だと縁取りまで薄くなる */
+  color:var(--lab) }        /* opacity だと縁取りまで薄くなる(→docs/06 §6.13) */
 .pc-stats b{ font:400 6.6cqw/1.55 var(--f-mono); color:var(--stat);
   min-width:2.2ch; text-align:right }
 .pc-stats .mx b{ color:var(--mx) }   /* **数値だけ**赤。ラベルまで赤いと行全体が警告に見える */
@@ -504,7 +511,7 @@ body{
 /* 借りているカードの印。**名前より弱く**出す(名前を読む邪魔をしない) */
 .pc-name b .loan{ font-style:normal; font-size:.72em; opacity:.72; margin-left:.3em }
 .pc-name span{
-  display:block; font:5.2cqw/1.4 var(--f-mono); color:var(--ink); opacity:.6;
+  display:block; font:5.2cqw/1.4 var(--f-mono); color:var(--sub);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 

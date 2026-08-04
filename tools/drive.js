@@ -363,7 +363,8 @@ const STEPS = [
       const go=document.getElementById('subGo');
       const max=TUNING.squad.subMax;
       const label=()=>go.textContent.trim();
-      if(!/残り\s*3\s*回/.test(label()))throw new Error('残り回数がボタンに出ていない: '+label());
+      if(label().replace(/[ 　]/g,'')!=='交代する残り3回')
+        throw new Error('残り回数がボタンに出ていない: '+label());
       if(!go.disabled)throw new Error('誰も選んでいないのにボタンが押せる');
       const log=[];
       // **枠を使い切るまで連続で積める**。押すたびにリストが入れ替わること
@@ -382,7 +383,8 @@ const STEPS = [
         if(still)throw new Error('下げた選手がまだ選べる: '+outName);
         log.push(inName+'←'+outName);
       }
-      if(!/残り\s*0\s*回/.test(label()))throw new Error('使い切っても残りが0にならない: '+label());
+      if(label().replace(/[ 　]/g,'')!=='交代する残り0回')
+        throw new Error('使い切っても残りが0にならない: '+label());
       if(!go.disabled)throw new Error('使い切ってもボタンが押せる');
       // **使い切ってもスタミナ一覧としては見られる**
       if(!document.querySelectorAll('#subBody .sb-r').length)
@@ -736,6 +738,34 @@ const STEPS = [
           "/ クレスト:", await ctx.js("document.querySelector('#cardModalBody .pc-crest').textContent"),
           "/ 能力欄:", await ctx.js("document.querySelectorAll('#cardModalBody .pc-stats div').length"),
           "/ 背景:", await ctx.js("!!document.querySelector('#cardModalBody .cm-card').style.getPropertyValue('--face')"));
+        // **明るい地の段(ST/WC)で能力ラベルとクラブ名が読めること**(→docs/06 §6.13)。
+        // 白い地に白を混ぜると消えるので、段ごとに色を持たせている
+        ctx.log("  明るい地の可読性:", await ctx.js(`(()=>{
+          // 返る形は環境で変わる(oklch(...) / rgb(...))。**明度だけ**を取り出す。
+          // テンプレートリテラルの中なので、正規表現に \\d 等の**バックスラッシュを使わない**
+          const lum=c=>{
+            const m=c.split(/[^0-9.]+/).filter(x=>x.length).map(Number);
+            if(c.indexOf('oklch')===0)return m[0];          // oklch の L はそのまま明度
+            if(m.length>=3)return (0.2126*m[0]+0.7152*m[1]+0.0722*m[2])/255;
+            return 1;
+          };
+          const out=[];
+          for(const rar of ['STD','WC']){
+            const card=makeCard(mulberry32(7),'MF',{rarity:rar});
+            card.club='テストクラブ';
+            const d=document.createElement('div');
+            d.className='pcard '+rarClass(card); d.style.position='fixed'; d.style.left='-9999px';
+            d.innerHTML=cardFace(card); document.body.appendChild(d);
+            const lab=getComputedStyle(d.querySelector('.pc-stats span')).color;
+            const sub=getComputedStyle(d.querySelector('.pc-name span')).color;
+            d.remove();
+            // 地は白に近いので、文字は**十分に暗い**必要がある
+            if(!(lum(lab)<=0.55))throw new Error(rar+' の能力ラベルが明るすぎる: '+lab);
+            if(!(lum(sub)<=0.55))throw new Error(rar+' のクラブ名が明るすぎる: '+sub);
+            out.push(rar+' ラベル['+lab+'] クラブ['+sub+']');
+          }
+          return out.join(' / ');
+        })()`));
         // スキルの効果は**タップで浮かせる**(→docs/03 §3.21)
         ctx.log("  スキルの吹き出し:", await ctx.js(`(()=>{
           const chips=[...document.querySelectorAll('#cardModalBody .skill')];
