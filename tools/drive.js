@@ -189,25 +189,56 @@ const STEPS = [
       if(S.career.node!==cup.every)throw new Error('エントリーで節が進んでしまう');
       const rows=[...document.querySelectorAll('#seasonCal .cal.cup')].map(e=>e.querySelector('b').textContent);
       if(rows.length!==cup.rounds-1)throw new Error('大会の予定が節に並ばない: '+rows.length);
-      return '節'+cup.every+'で '+cup.name+' へ ／ 予定: '+rows.join(' → ');
+      // **組み合わせ表はこの時点で出来上がっている**(先の回戦は TBD)
+      const n=Math.pow(2,cup.rounds);
+      if(!c.field||c.field.length!==n)throw new Error('組み合わせ表が作られていない');
+      if(cupPairs(c,2))throw new Error('2回戦が最初から決まってしまっている');
+      return '節'+cup.every+'で '+cup.name+' へ ／ 予定: '+rows.join(' → ')
+        +' ／ 参加 '+n+'クラブ(自分は '+(c.slot+1)+'番)';
     })()`));
     await ctx.shot("07l-cup-entered");
 
     // 大会の日程(勝ち残り中)
     await ctx.js(`document.querySelector('#seasonComps [data-comp="cup"]').click()`);
     await ctx.wait(300);
-    ctx.log("  大会の日程:", await ctx.js(`(()=>{
-      const n=document.querySelectorAll('#schedList .cal').length;
-      const st=document.querySelector('.cup-res b').textContent;
-      if(n!==CUPS[0].rounds)throw new Error('回戦の行が足りない: '+n);
-      return n+'行 ／ '+st;
+    ctx.log("  組み合わせ表:", await ctx.js(`(()=>{
+      const cup=CUPS[0];
+      const rnd=document.querySelectorAll('#schedList .br-r').length;
+      const ms=document.querySelectorAll('#schedList .br-m').length;
+      const tbd=document.querySelectorAll('#schedList .br-row.tbd').length;
+      const me=document.querySelectorAll('#schedList .br-row.me').length;
+      if(rnd!==cup.rounds)throw new Error('回戦の束が足りない: '+rnd);
+      if(ms!==Math.pow(2,cup.rounds)-1)throw new Error('試合の数が合わない: '+ms);
+      if(!tbd)throw new Error('TBD が出ていない');
+      if(me!==1)throw new Error('自クラブの行が1つでない: '+me);
+      if(!document.querySelector('#schedList .br-m.next'))throw new Error('次戦が示されていない');
+      return rnd+'回戦 / '+ms+'試合 / TBD '+tbd+'枠 ／ '
+        +document.querySelector('.cup-res b').textContent;
     })()`));
     await ctx.shot("07m-cup-plan");
+
+    // 1回戦を戦うと**TBDが次の回戦ぶんだけ埋まる**
+    ctx.log("  1回戦のあと:", await ctx.js(`(()=>{
+      const c=S.career.cup;
+      const before=document.querySelectorAll('#schedList .br-row.tbd').length;
+      S.career.hand='train'; S.career.comp='cup';
+      const out=playCupDay(null);
+      renderSchedule();
+      const after=document.querySelectorAll('#schedList .br-row.tbd').length;
+      if(after>=before)throw new Error('TBD が埋まらない: '+before+' → '+after);
+      if(!cupPairs(c,2))throw new Error('2回戦の枠が決まらない');
+      return '自分 '+out.my.gf+'-'+out.my.ga+(out.my.win?' 勝ち':' 敗退')
+        +' ／ TBD '+before+' → '+after+'枠';
+    })()`));
+    await ctx.shot("07m2-cup-bracket");
 
     // 優勝して大会が締まったところ(**賞金は完了節に入る**)
     ctx.log("  大会の決着:", await ctx.js(`(()=>{
       const cup=CUPS[0], c=S.career.cup;
-      c.round=cup.rounds; S.career.node=cupLastNode();
+      c.alive=true; c.out=null; c.res.length=0;
+      for(let r=1;r<cup.rounds;r++)cupResolveRound(c,r,{gf:2,ga:0,win:true});
+      S.career.node=cupLastNode();
+      cupResolveRound(c,cup.rounds,{gf:1,ga:0,win:true});
       const coin0=S.club.coins;
       const closed=advanceNode();
       if(!closed||!closed.win)throw new Error('優勝で締まらない');

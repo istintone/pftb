@@ -1334,7 +1334,7 @@ body{
 /* カップの決着帯 */
 .cup-res{
   display:flex; flex-direction:column; gap:3px;
-  padding:12px; margin-bottom:10px; border-radius:var(--r-m);
+  padding:12px; margin-bottom:10px; border-radius:10px;
   background:oklch(0.22 0.02 255); border:1px solid var(--line);
 }
 .cup-res .eyebrow{ color:var(--text-mute) }
@@ -1343,6 +1343,39 @@ body{
 .cup-res.win .eyebrow, .cup-res.win b{ color:var(--accent) }
 /* HELPタブが右端に浮くので、右寄せの数字を少し内側に寄せる */
 .cup-info{ padding-right:26px }
+/* 組み合わせ表(→docs/03 §3.23)。回戦ごとに束ね、決まった枠だけ明るくする */
+.br-r{ margin-bottom:18px }
+.br-k{
+  display:flex; align-items:baseline; justify-content:space-between;
+  margin-bottom:6px; font:600 11px/1 var(--f-head); letter-spacing:1.5px; color:var(--text-2);
+}
+.br-k .num{ font:400 10px/1 var(--f-mono); color:var(--text-mute); letter-spacing:1px }
+.br-m{
+  margin-bottom:8px; border:1px solid var(--line); border-radius:9px;
+  overflow:hidden; background:var(--panel);
+}
+.br-m.next{ border-color:var(--accent) }
+.br-row{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 10px; font-size:12px; color:var(--text-dim);
+}
+.br-row+.br-row{ border-top:1px solid var(--line) }
+.br-row .br-n{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.br-row .br-s{ font:400 13px/1 var(--f-mono); flex-shrink:0 }
+/* 勝ち上がった枠 */
+.br-row.w{ background:oklch(0.24 0.03 255); color:var(--text); font-weight:600 }
+.br-row.w .br-s{ font-weight:600 }
+/* 自クラブ */
+.br-row.me .br-n{ color:var(--accent) }
+.br-row.tbd .br-n{ font-family:var(--f-mono); font-size:11px; color:var(--text-mute) }
+.br-pk{
+  padding:3px; text-align:center; background:oklch(0.16 0.02 255);
+  font:400 9px/1.4 var(--f-mono); color:var(--text-mute);
+}
+.br-next{
+  padding:6px; text-align:center; background:var(--accent); color:var(--bg);
+  font:600 11px/1 var(--f-head); letter-spacing:1px;
+}
 /* シーズンとクラブの区切り(任期カレンダーの見出し行) */
 .cal-div{
   display:flex; align-items:baseline; gap:8px; margin:14px 0 6px;

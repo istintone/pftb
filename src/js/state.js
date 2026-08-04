@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=9;
+const SAVE_VER=10;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -172,6 +172,9 @@ function migrate(){
   // v8 → v9: カップを「エントリーして大会ごと追う」形に作り替えた。
   // 途中の勝ち抜き状態は持ち越せないので畳む(次の開催節から入り直せる)。
   if(S.v<9&&S.career)S.career.cup=null;
+  // v9 → v10: エントリー時に組み合わせ表を作るようにした。表の無い進行中の大会は
+  // 相手を復元できないので畳む(次の開催節から入り直せる)。
+  if(S.v<10&&S.career&&S.career.cup&&!S.career.cup.field)S.career.cup=null;
   S.v=SAVE_VER;
 }
 

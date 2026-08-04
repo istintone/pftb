@@ -1088,21 +1088,7 @@ function renderCupSchedule(){
     return;
   }
 
-  const rows=cupNodes().map((n,i)=>{
-    const e=C.log.find(x=>x.node===n&&x.comp==="cup"&&x.cup===cup.id);
-    const nm=cupRoundName(cup,i+1);
-    const next=c.alive&&!c.done&&!e&&n===C.node;
-    const skip=!e&&(!c.alive||c.done);
-    return '<div class="cal'+(e?" done":next?" next":"")+(e&&e.champ?" champ":"")+'">'
-      +'<span class="cal-n num">'+n+'</span>'
-      +'<span class="cal-b"><b>'+esc(nm)+'</b>'
-      +'<span class="lg">'+esc(e?e.oppName:skip?"不参加":"相手は当日に決まります")+'</span></span>'
-      +(e?'<span class="cal-s num '+(e.res==="win"?"w":"l")+'">'
-          +(e.res==="win"?"○":"●")+' '+e.gf+'-'+e.ga+'</span>'
-        :next?'<span class="cal-r next-lb">次戦</span>'
-             :'<span class="cal-r">'+(skip?"—":"予定")+'</span>')
-      +'</div>';
-  }).join("");
+  const rows=cupNodes().map((n,i)=>cupRoundBlock(cup,c,i+1,n)).join("");
 
   // 決着の帯。**賞金は大会が完了した節にまとめて入る**ので、ここに出るのも完了後
   const head=c.done
@@ -1119,6 +1105,37 @@ function renderCupSchedule(){
 
   $("schedList").innerHTML=head+rows;
   $("schedStand").innerHTML=cupInfoBox(cup,c);
+}
+/**
+ * 組み合わせ表の1回戦ぶん(→docs/03 §3.23)。
+ * **表はエントリー時に出来上がっていて**、勝ち上がりが決まるたびに TBD が埋まる。
+ */
+function cupRoundBlock(cup,c,round,node){
+  const ps=cupPairs(c,round), res=c.res[round-1];
+  const n=Math.pow(2,cup.rounds-round);
+  const mine=c.alive&&!c.done&&!res&&node===S.career.node;   // これから戦う回戦
+  const ms=[];
+  for(let k=0;k<n;k++){
+    const m=res&&res[k];
+    const pair=ps&&ps[k];
+    const a=m?m.i:pair?pair[0]:null, b=m?m.j:pair?pair[1]:null;
+    const next=mine&&pair&&(pair[0]===c.slot||pair[1]===c.slot);
+    ms.push('<div class="br-m'+(next?" next":"")+'">'
+      +cupBrRow(c,a,m?m.gi:null,m&&m.w===a)
+      +cupBrRow(c,b,m?m.gj:null,m&&m.w===b)
+      +(m&&m.pk?'<div class="br-pk">PK '+esc(m.pk)+'</div>':"")
+      +(next?'<div class="br-next">次戦</div>':"")
+      +'</div>');
+  }
+  return '<div class="br-r"><div class="br-k">'+esc(cupRoundName(cup,round))
+    +'<span class="num">第'+node+'節</span></div>'+ms.join("")+'</div>';
+}
+/** 組み合わせ表の1行。決まっていない枠は TBD。 */
+function cupBrRow(c,i,g,won){
+  const tbd=i===null||i===undefined;
+  return '<div class="br-row'+(won?" w":"")+(!tbd&&i===c.slot?" me":"")+(tbd?" tbd":"")+'">'
+    +'<span class="br-n">'+esc(tbd?"TBD":cupTeamName(c,i))+'</span>'
+    +'<span class="br-s num">'+(g===null||g===undefined?"-":g)+'</span></div>';
 }
 /** 大会の要項(条件・賞金)。順位ごとの賞金は完了節にまとめて入る。 */
 function cupInfoBox(cup,c){

@@ -132,6 +132,21 @@ function runSeason(hand) {
     assert.deepStrictEqual(E.cupNodes(), [node0, node0 + 1, node0 + 2], "大会の予定が節に並ぶ");
     assert.strictEqual(E.cupLastNode(), node0 + cup.rounds - 1, "決勝の節");
     assert.ok(!E.cupEnterable(), "同時に複数の大会へはエントリーできない");
+
+    // **組み合わせ表はエントリー時に出来上がる**。先の回戦はまだ TBD
+    {
+      const c = C.cup, n = Math.pow(2, cup.rounds);
+      assert.strictEqual(c.field.length, n, "参加は " + n + " クラブ");
+      assert.strictEqual(new Set(c.field).size, n, "同じクラブが2枠に入らない");
+      assert.strictEqual(c.field[c.slot], E.getS().club && E.clubById(E.getS().club.id).name,
+        "自クラブが表に入っている");
+      assert.strictEqual(E.cupPairs(c, 1).length, n / 2, "1回戦の組み合わせは決まっている");
+      assert.ok(E.cupMyPair(c, 1), "自分の1回戦の相手が決まっている");
+      assert.strictEqual(E.cupPairs(c, 2), null, "2回戦以降はまだ TBD");
+      const f0 = E.cupFixtureOf();
+      const pair = E.cupMyPair(c, 1), foe = pair[0] === c.slot ? pair[1] : pair[0];
+      assert.strictEqual(f0.side.name, E.cupTeamName(c, foe), "表の相手とそのまま戦う");
+    }
     assert.deepStrictEqual(E.compsAvailable(), ["cup"], "勝ち残っている間はカップ一択");
     assert.strictEqual(E.pickComp("league"), false, "辞退してリーグへは回れない");
 
@@ -150,6 +165,11 @@ function runSeason(hand) {
     assert.strictEqual(S3.world.matchday, md0, "リーグの節は進まない");
     assert.strictEqual(C.node, node0 + 1, "任期の節は進む");
     assert.ok(C.cup, "敗退しても大会は残る(進行を確認できる)");
+    // 1回戦を戦うと、表が1回戦ぶん埋まり**2回戦の枠が決まる**
+    assert.strictEqual(C.cup.res[0].length, Math.pow(2, cup.rounds - 1), "1回戦が全部埋まる");
+    assert.ok(C.cup.res[0].every(m => m.w === m.i || m.w === m.j), "各試合に勝者が居る");
+    assert.ok(E.cupPairs(C.cup, 2), "2回戦の組み合わせが決まる");
+    assert.ok(C.cup.res[0].every(m => m.gi !== m.gj || m.pk), "同点ならPKが記録される");
     if (r.my.win) assert.ok(C.cup.alive && C.cup.round === 2, "勝てば次の回戦へ");
     else {
       assert.ok(!C.cup.alive && C.cup.out === 1, "負ければ勝ち残りが消える");
@@ -159,8 +179,10 @@ function runSeason(hand) {
 
     // --- 敗退したまま決勝の節を越えると、そこで大会が締まって賞金が入る ---
     {
-      C.cup = { id: cup.id, node0: C.node - 1, round: 2, alive: false, out: 1,
-        champ: null, done: false };
+      C.cup = null; C.node = cup.every; S3.club.exp = cup.needExp + 500;
+      assert.ok(E.enterCup(cup.id), "入り直せる");
+      E.cupResolveRound(C.cup, 1, { gf: 0, ga: 2, win: false });   // 1回戦で敗退
+      assert.ok(!C.cup.alive && C.cup.out === 1, "敗退が表から読める");
       C.node = E.cupLastNode();
       const coin0 = S3.club.coins;
       const closed = E.advanceNode();
@@ -176,9 +198,11 @@ function runSeason(hand) {
     let champ = null;
     const coin1 = S3.club.coins;
     for (let i = 0; i < 40 && !champ; i++) {
-      C.node = cup.every;
-      C.cup = { id: cup.id, node0: cup.every - cup.rounds + 1, round: cup.rounds,
-        alive: true, out: null, champ: null, done: false };
+      C.cup = null; C.node = cup.every;
+      E.enterCup(cup.id);
+      // 決勝まで勝ち上がった状態にする(手前の回戦は自分の勝ちで埋める)
+      for (let r = 1; r < cup.rounds; r++) E.cupResolveRound(C.cup, r, { gf: 2, ga: 0, win: true });
+      C.node = E.cupLastNode();
       C.hand = "train"; C.comp = "cup";
       S3.world.seed = (S3.world.seed + 7919) >>> 0;      // 勝つまでたねを変えて探す
       const x = E.playCupDay(null);
