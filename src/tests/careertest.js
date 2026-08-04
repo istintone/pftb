@@ -234,15 +234,18 @@ function runSeason() {
     for (const pk of E.TUNING.scout) {
       assert.ok(pk.cost > 0 && pk.cards > 0, pk.id + " に値段と枚数がある");
       const rank = k => E.RAR_KEYS.indexOf(k);
-      let floorHit = 0, real = 0;
+      let floorHit = 0, sig = 0, off = 0;
       for (let i = 0; i < 300; i++) {
         const got = E.openScout(pk, rng);
         assert.strictEqual(got.length, pk.cards, pk.id + " の枚数");
-        // **実在選手の段はパックから出さない**(別経路で配る → §3.13)
-        if (got.some(c => E.RARITY[c.rarity].real)) real++;
+        // **実在選手カード(SIGNATURES)はパックから出さない**(別経路で配る → §3.13)
+        if (got.some(c => c.sig)) sig++;
+        // パックが名指ししていない段は出ない(→§3.26)
+        if (pk.w && got.some(c => !pk.w[c.rarity])) off++;
         if (!pk.floor || got.some(c => rank(c.rarity) >= rank(pk.floor))) floorHit++;
       }
-      assert.strictEqual(real, 0, pk.id + " から実在選手が出ない");
+      assert.strictEqual(sig, 0, pk.id + " から実在選手カードが出ない");
+      assert.strictEqual(off, 0, pk.id + " は指定した段しか出さない");
       assert.strictEqual(floorHit, 300, pk.id + " の確定枠が必ず効く");
     }
     // 重点は通常より上の段が出やすい
@@ -255,6 +258,32 @@ function runSeason() {
     const open = share(E.TUNING.scout[0]), focus = share(E.TUNING.scout[1]);
     assert.ok(focus > open * 1.3,
       "重点スカウトのほうが上の段が出やすい: " + (open * 100).toFixed(0) + "% → " + (focus * 100).toFixed(0) + "%");
+    // --- プロスカウト(→docs/03 §3.26)。SPECIALS 確定で、まれに WORLD CLASS ---
+    {
+      const pro = E.TUNING.scout.find(p => p.id === "pro");
+      assert.ok(pro, "プロスカウトがある");
+      assert.ok(pro.cost > E.TUNING.scout[1].cost, "重点より高額");
+      let spe = 0, wc = 0, n = 0, packWithWc = 0, N = 1200;
+      for (let i = 0; i < N; i++) {
+        const got = E.openScout(pro, rng);
+        if (got.some(c => c.rarity === "WC")) packWithWc++;
+        for (const c of got) {
+          n++;
+          if (c.rarity === "SPE") spe++;
+          if (c.rarity === "WC") wc++;
+          assert.ok(c.rarity === "SPE" || c.rarity === "WC", "SPECIALS 未満は出ない: " + c.rarity);
+          assert.ok(!c.sig, "実在選手カードではない");
+        }
+      }
+      const wcRate = wc / n, packRate = packWithWc / N;
+      assert.ok(Math.abs(wcRate - pro.w.WC / 100) < 0.03,
+        "WC の割合が定義どおり: " + (wcRate * 100).toFixed(1) + "%");
+      assert.ok(packRate > 0.25 && packRate < 0.40,
+        "1回で WC を引ける確率が3割前後: " + (packRate * 100).toFixed(0) + "%");
+      console.log("プロスカウトOK", pro.cost, "コイン / SPE",
+        (spe / n * 100).toFixed(0) + "% ・WC", (wcRate * 100).toFixed(0) + "%",
+        "/ 1回で WC が出る確率", (packRate * 100).toFixed(0) + "%");
+    }
     console.log("スカウトOK", E.TUNING.scout.map(p => p.name + " " + p.cost).join(" / "),
       "/ STD以外の割合", (open * 100).toFixed(0) + "% → " + (focus * 100).toFixed(0) + "%");
   }

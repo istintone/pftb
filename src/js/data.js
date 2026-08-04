@@ -92,15 +92,17 @@ const RARITY={
          note:"スタメン。クラブのメイン選手" },
   SPE: { label:"SPECIALS",    abbr:"SP", ovr:[82,98],   skills:3, w:8,  real:false, bg:"reg", holo:"sheen",
          note:"切り札。REGULAR と同じ地だが光る" },
+  // w:0 = **既定の重みでは出ない段**。プロスカウトのように段を名指ししたパックからは出る
+  // (→docs/03 §3.26)。実在選手そのものは SIGNATURES だけで、段は「強さと見た目の階級」
   WC:  { label:"WORLD CLASS", abbr:"WC", ovr:[96,110],  skills:3, w:0,  real:true,  bg:"wc",  holo:"rainbow",
-         note:"実在の現役選手。シルバー(Chrome)地に虹ホロ" },
+         note:"世界屈指。シルバー(Chrome)地に虹ホロ" },
   LEG: { label:"LEGENDS",     abbr:"LE", ovr:[100,116], skills:4, w:0,  real:true,  bg:"leg", holo:"gold",
-         note:"実在の過去の名選手。黒地に金縁" },
+         note:"歴史に残る名選手。黒地に金縁" },
 };
 /** 背景画像の種類。SPECIALS が REGULAR を共有するので5段でも4枚で足りる。 */
 const CARD_BGS=[...new Set(Object.values(RARITY).map(r=>r.bg))];
 const RAR_KEYS=Object.keys(RARITY);
-// パックから出る段(実在選手の段は別経路で入手する)
+// 既定の重みで出る段(w:0 の段はパック側が名指ししたときだけ出る → §3.26)
 const RAR_DROPS=RAR_KEYS.filter(k=>RARITY[k].w>0);
 
 // --- スキル(→docs/03 §3.21) ---
@@ -713,6 +715,11 @@ const TUNING={
     { id:"focus", name:"重点スカウト", cost:4800, cards:3, floor:"REG",
       w:{ STD:34, REG:48, SPE:18 },
       note:"目星を付けた選手に絞る。必ず1枚は REGULAR 以上" },
+    // **1シーズンの稼ぎをまるごと賭ける枠**(→docs/03 §3.26)。3枚とも SPECIALS 以上で、
+    // 1回あたり 32% で WORLD CLASS が混じる(0.88^3)。解禁条件は付けない
+    { id:"pro", name:"プロスカウト", cost:12000, cards:3, floor:"SPE",
+      w:{ SPE:88, WC:12 },
+      note:"世界中に網を張る。3枚とも SPECIALS 以上／まれに WORLD CLASS" },
   ],
   // 会長の評価。期待順位との差(上回るとプラス)で毎節動く。
   eval:{ start:50, max:100, perRank:6, floorDismiss:15 },

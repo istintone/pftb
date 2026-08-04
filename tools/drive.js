@@ -611,6 +611,31 @@ const STEPS = [
     })()`));
     await ctx.wait(900);
     await ctx.shot("21-scout-open");
+
+    // プロスカウト(→docs/03 §3.26)。**3枚とも SPECIALS 以上**で、まれに WORLD CLASS
+    ctx.log("プロスカウト:", await ctx.js(`(()=>{
+      const S0=S.club.coins;
+      const pk=TUNING.scout.find(p=>p.id==='pro');
+      S.club.coins=99999; renderScout();
+      const btn=document.querySelector('#scoutList [data-pack="pro"]');
+      if(!btn)throw new Error('プロスカウトの行が無い');
+      if(btn.disabled)throw new Error('コインが足りているのに押せない');
+      // WORLD CLASS が出るまで引き直して、虹ホロのカードを撮る
+      let last=null;
+      for(let i=0;i<40;i++){
+        S.club.coins=99999; renderScout();
+        document.querySelector('#scoutList [data-pack="pro"]').click();
+        last=S.player.coll.slice(-pk.cards);
+        if(last.some(c=>c.rarity==='WC'))break;
+      }
+      if(last.some(c=>c.rarity!=='SPE'&&c.rarity!=='WC'))
+        throw new Error('SPECIALS 未満が出た: '+last.map(c=>c.rarity).join(','));
+      if(last.some(c=>c.sig))throw new Error('実在選手カードが出た');
+      S.club.coins=S0;
+      return last.map(c=>c.rarity+':'+c.ovr).join(' / ');
+    })()`));
+    await ctx.wait(900);
+    await ctx.shot("21b-scout-pro");
   }],
   ["タブ巡回", async ctx => {
     for (const [tab, name] of [["cards", "09-cards"], ["deck", "10-deck"], ["season", "11-season"], ["clubhouse", "12-club"]]) {

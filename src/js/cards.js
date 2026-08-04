@@ -219,8 +219,12 @@ const primarySub=c=>c.subs[0];
 /** 段を1つ引く。pack.w があればその重みで、無ければ通常の出現率。 */
 function scoutRarity(rng,pack,minKey){
   if(!pack.w)return rollRarity(rng,minKey);
-  const from=minKey?Math.max(0,RAR_DROPS.indexOf(minKey)):0;
-  const pool=RAR_DROPS.slice(from);
+  // **重みを持つパックは、そこに書かれた段だけを見る。**
+  // WORLD CLASS は RARITY.w が 0 なので普通のパックからは出ないが、
+  // プロスカウトのように明示したパックからは出る(→docs/03 §3.26)
+  const keys=RAR_KEYS.filter(k=>(pack.w[k]||0)>0);
+  const from=minKey?Math.max(0,keys.indexOf(minKey)):0;
+  const pool=keys.slice(from);
   const total=sum(pool.map(k=>pack.w[k]||0));
   if(total<=0)return rollRarity(rng,minKey);
   let x=rng()*total;
@@ -244,19 +248,20 @@ function openScout(pack,rng){
   return out;
 }
 
-/**
- * 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。
- *   opts.nations … 国籍の抽選箱(重み付きで展開済みのID配列 → world.js の nationBox)。
- *                  省略すると世界中から一様に引く。
- * **姓はロスター全体で重複させない**。同じクラブに同姓が並ぶと編成画面で見分けが付かない。
- * 国籍が混ざるので姓のプールも混ざる。埋まらなければ他の国籍から借りてでも重複を避ける。
- */
 /** 内訳({STD:10,REG:6} など)を16人ぶんの段の並びに展開する。 */
 function expandRarPlan(plan){
   const bag=[];
   RAR_KEYS.forEach(k=>{ for(let i=0;i<(plan[k]||0);i++)bag.push(k); });
   return bag;
 }
+/**
+ * 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。
+ *   opts.nations … 国籍の抽選箱(重み付きで展開済みのID配列 → world.js の nationBox)。
+ *                  省略すると世界中から一様に引く。
+ *   opts.rarPlan … 段の内訳(→docs/03 §3.25)。指定するとその内訳を配り切る。
+ * **姓はロスター全体で重複させない**。同じクラブに同姓が並ぶと編成画面で見分けが付かない。
+ * 国籍が混ざるので姓のプールも混ざる。埋まらなければ他の国籍から借りてでも重複を避ける。
+ */
 function makeRoster(rng,opts={}){
   const plan=["GK","GK","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];
   // **段の内訳が指定されていれば、それを配り切る**(→docs/03 §3.25)。

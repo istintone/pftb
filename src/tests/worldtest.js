@@ -211,7 +211,7 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   // 実在選手の段はパックから出ない(手で定義するデータ)
   for (const k of keys) {
     const r = E.RARITY[k];
-    assert.strictEqual(r.w > 0, !r.real, k + " は " + (r.real ? "実在選手なのでパックから出ない" : "パックから出る"));
+    assert.strictEqual(r.w > 0, !r.real, k + " は " + (r.real ? "既定の重みでは出ない" : "パックから出る"));
     assert.ok(r.ovr[1] <= E.OVR_MAX, k + " の上限が OVR_MAX を超えない");
   }
   // 大量に引いて、出るのは自動生成の段だけ・比率が重みどおりか
@@ -220,7 +220,7 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   for (let i = 0; i < 400; i++) roster.push(E.makeCard(rngR, "MF"));
   roster.forEach(c => got[c.rarity] = (got[c.rarity] || 0) + 1);
   for (const k of keys) {
-    if (E.RARITY[k].real) assert.ok(!got[k], k + " はパックから出ていない");
+    if (E.RARITY[k].real) assert.ok(!got[k], k + " は既定の重みでは出ていない");
   }
   assert.ok(got.STD > got.REG && got.REG > got.SPE, "排出比が STD > REG > SPE の順");
   roster.forEach(c => assert.strictEqual(c.skills.length, E.RARITY[c.rarity].skills, "スキル数が段の定義どおり"));
