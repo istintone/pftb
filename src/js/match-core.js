@@ -53,11 +53,11 @@ const skK=(p,key)=>(p&&p.sk&&p.sk.k[key])||1;
 /**
  * 有効値 — **すべての判定の単一集約点**(→docs/07 §7.3)。
  * 能力に掛かる修正は必ずここへ足す。そうすれば全判定に一様に効く。
- *   いま掛かるもの : 枠適性(→§3.14)
- *   これから足すもの: 疲労 / 状況(終盤・ビハインド) / スキル / 連携
+ *   いま掛かるもの : 枠適性(→§3.14) / スタミナ(→§7.10) / 采配(→§3.28)
+ *   これから足すもの: 状況(終盤・ビハインド) / 連携
  */
 function eff(p,k){
-  return p.c[k]*p.fit*p.stam;
+  return p.c[k]*p.fit*p.stam*((p.ordM&&p.ordM[k])||1);
 }
 
 // ---------- スタミナ ----------
@@ -141,17 +141,42 @@ function pickCaptain(xi,want){
   const w=c=>c.ovr+(c.age-18)*1.5;
   return xi.reduce((b,p)=>w(p.c)>w(b.c)?p:b,xi[0]);
 }
-function buildTeam(cards,form,name,side,kickers,captain){
+function buildTeam(cards,form,name,side,kickers,captain,order){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
+    p.y0=p.y; p.ordM=null;                      // y0 = 采配で動かす前の縦位置
     p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
       pass:0, passOk:0, duelW:0, duelL:0 }; });
   bench.forEach(p=>{ p.side=side; p.stam=1; p.sk=skillsOf(p.c); });
   const cap=pickCaptain(xi,captain);
   if(cap)cap.captain=true;
   // kickers … {pk,fk,ck} のカードID。自クラブは編成で指名し、CPUは自動選出に任せる
-  return { players:xi, bench, form, name, side, score:0,
-    kickers:kickers||null, captain:cap, subOut:[], sentOff:[] };
+  const T={ players:xi, bench, form, name, side, score:0,
+    kickers:kickers||null, captain:cap, subOut:[], sentOff:[], order:null, lane:null };
+  setTeamOrder(T,order||null);
+  return T;
+}
+/**
+ * 采配を掛け直す(→docs/03 §3.28)。**1つだけ**が効く。
+ * 陣形の上下は y0 から取り直すので、指示を変えても位置がずれ続けない。
+ */
+function setTeamOrder(T,id){
+  const O=TUNING.order, o=id?orderById(id):null;
+  T.order=o?o.id:null;
+  T.lane=o&&o.lane!=null?o.lane:null;
+  T.laneK=(o&&o.laneK)||1;
+  const push=(o&&o.push)||0;
+  // 攻撃重視は前に出るぶん ATK、守備重視は下がるぶん DEF が上がる。
+  // **下がるだけでは損にしかならない**ので、必ず見返りを付ける
+  const m=push>0?{ atk:O.buf }:push<0?{ def:O.buf }:null;
+  T.players.forEach(p=>{
+    p.ordM=m;
+    if(p.role==="GK")return;                     // GKは前に出ない
+    // 陣形の縦は 13〜87 なので、押し出しぶんの余白(±shiftY)まで許す。
+    // 13 で切ると最前線だけ動かず、押し上げているのに絵が変わらない
+    p.y=clamp((p.y0!=null?p.y0:p.y)-push*O.shiftY,13-O.shiftY,87+O.shiftY);
+  });
+  return T.order;
 }
 
 // ---------- 支配率 ----------
@@ -446,15 +471,21 @@ const heightOf=p=>clamp((87-p.y)/74,0,1);
  *   拮抗(mom≒0)         → 中盤     = MF起点
  *   勢いがある(mom>0)   → 高い位置 = FW起点
  * 距離に対してガウス重みを掛けるので、**遠い位置の選手も低確率で選ばれる**(決定は確率的)。
- * 左右のレーンは当面見ない(監督の指示で操作する段で足す → §7.9)。
+ * 左右のレーンは**監督の采配**で寄せる(→docs/03 §3.28)。指示が無ければ効かない。
  */
 function pickOrigin(rng,T,mom){
   const F=TUNING.mom;
   const target=clamp(0.5+mom*F.spread,0,1);
   return pickW(rng,T.players,p=>{
     const d=(heightOf(p)-target)/F.sigma;
-    return Math.exp(-d*d)*skK(p,"start");     // 動き出しでボールを引き出す
+    return Math.exp(-d*d)*skK(p,"start")*laneW(T,p);  // 動き出しでボールを引き出す
   });
+}
+/** 采配で指したレーンの選手に乗る重み(→docs/03 §3.28)。指示が無ければ1。 */
+function laneW(T,p){
+  if(!T||T.lane==null)return 1;
+  const O=TUNING.order, dx=(p.x-T.lane)/O.laneSigma;
+  return 1+O.laneW*(T.laneK||1)*Math.exp(-dx*dx);
 }
 /**
  * 起点のチャンネルを選ぶ。**その選手のサブポジが持つ3種**から、
@@ -612,7 +643,7 @@ function receiverAt(rng,T,tg,self){
     const dh=(heightOf(q)-tg.h)/C.sigmaH;
     const dx=((q.x-tg.x)/100)/C.sigmaX;
     const seek=1+eff(q,"atk")/STAT_MAX*C.recvAtk*skK(self,"vision")*clamp(tg.h,0,1);
-    return Math.exp(-(dh*dh+dx*dx))*seek*skK(q,"recv");   // 預けられやすさ
+    return Math.exp(-(dh*dh+dx*dx))*seek*skK(q,"recv")*laneW(T,q);   // 預けられやすさ
   });
 }
 /**
@@ -659,8 +690,8 @@ function matchClock(rng){
 /** 試合の状態を作る。ここではまだ1ティックも解かない。 */
 function createMatch(home,away,seed){
   const s=seed>>>0;
-  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain);
-  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain);
+  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain,home.order);
+  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain,away.order);
   const M={
     seed:s, home:H, away:A, ix:0,
     clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定
@@ -678,7 +709,8 @@ const matchMin=M=>M.ix?M.clock[M.ix-1].min:0;
 /**
  * 監督の指示を積む。**次のティックの頭で反映される**(→docs/07 §7.6)。
  * 試合中いつ呼んでもよく、積んだ時点では何も起きない=描画から独立している。
- *   { type:"sub", out:<出す選手の枠index>, in:<入れる控えのindex> }
+ *   { type:"sub",   out:<出す選手の枠index>, in:<入れる控えのindex> }
+ *   { type:"order", id:<ORDERS の id / null で解除> }
  */
 function orderMatch(M,side,order){
   if(M.over||!order)return false;
@@ -696,13 +728,21 @@ function applyOrders(M,t){
     const T=side==="H"?M.home:M.away;
     const q=M.orders[side]; M.orders[side]=[];
     for(const o of q){
+      if(o.type==="order"){
+        // **采配はいつでも上書きできる**。1つだけが効く(→docs/03 §3.28)
+        setTeamOrder(T,o.id||null);
+        M.events.push({ min:t.min, half:t.half, at:t.at, side, type:"order",
+          order:T.order, label:T.order?orderById(T.order).label:"指示なし" });
+        continue;
+      }
       if(o.type!=="sub")continue;
       const out=T.players[o.out], inc=T.bench[o.in];
       if(!out||!inc||inc.used||M.subs[side]>=TUNING.squad.subMax)continue;
       // 交代: 出る選手の**枠をそのまま引き継ぐ**(位置と適性は枠側の属性なので付け替える)
       // 入る選手は**万全**で入る(出場時間も関与回数も0から)。これが交代の価値。
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
-        x:out.x, y:out.y, ix:out.ix, side, enter:t.min, stam:1, sk:inc.sk,
+        x:out.x, y:out.y, y0:out.y0, ordM:out.ordM,      // 采配は枠側の属性なので引き継ぐ
+        ix:out.ix, side, enter:t.min, stam:1, sk:inc.sk,
         stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
           pass:0, passOk:0, duelW:0, duelL:0 } };
       out.exit=t.min;                                      // 出場時間の算出に使う

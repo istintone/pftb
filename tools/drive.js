@@ -453,6 +453,48 @@ const STEPS = [
     })()`));
     await ctx.shot("07b-match");
     // 交代タブ(→docs/06 §6.21)。**開くと試合が止まる**
+    // 采配(→docs/03 §3.28)。**交代の反対側**のタブ。開くと止まり、選ぶと閉じて再開する
+    ctx.log("  采配タブ:", await ctx.js(`(()=>{
+      const tab=document.getElementById('ordTab');
+      if(!tab||tab.classList.contains('off'))throw new Error('指示タブが出ていない');
+      const r=tab.getBoundingClientRect(), sr=document.getElementById('subTab').getBoundingClientRect();
+      if(r.left>=sr.left)throw new Error('指示タブが交代タブの反対側にない');
+      tab.click();
+      if(!document.getElementById('ordDrawer').classList.contains('on'))throw new Error('開かない');
+      if(!_mPaused)throw new Error('開いても試合が止まらない');
+      const btns=[...document.querySelectorAll('#ordPad .od-b')];
+      if(btns.length!==ORDERS.length)throw new Error('指示の数が合わない: '+btns.length);
+      return btns.length+'手 / 指示タブ x='+Math.round(r.left)+' 交代タブ x='+Math.round(sr.left);
+    })()`));
+    await ctx.wait(450);                       // 引き出しが出切るまで待つ
+    await ctx.shot("07l-order");
+    ctx.log("  指示を出す:", await ctx.js(`(()=>{
+      document.querySelector('#ordPad [data-ord="attack"]').click();
+      if(document.getElementById('ordDrawer').classList.contains('on'))throw new Error('閉じない');
+      if(_mPaused)throw new Error('再開しない');
+      if(S.order!=='attack')throw new Error('指示が保存されていない');
+      // **次のティックの頭で効く**(再開したループが先に1ティック進めることもある)。
+      // 元の縦位置 y0 と比べる
+      const T=_M.home.side===mMine()?_M.home:_M.away;
+      stepMatch(_M);
+      if(T.order!=='attack')throw new Error('チームに反映されない');
+      const moved=T.players.filter(p=>p.role!=='GK'&&p.y<p.y0).length;
+      const gk=T.players.filter(p=>p.role==='GK'&&p.y!==p.y0).length;
+      if(moved<8)throw new Error('陣形が上がっていない: '+moved+'人');
+      if(gk)throw new Error('GKまで前に出ている');
+      return 'attack / 前に出た '+moved+'人 / ATK×'+TUNING.order.buf;
+    })()`));
+    await ctx.wait(500);
+    await ctx.shot("07l2-order-attack");
+    ctx.log("  指示を解除:", await ctx.js(`(()=>{
+      document.getElementById('ordTab').click();
+      document.querySelector('#ordPad [data-ord="attack"]').click();
+      stepMatch(_M);
+      const T=_M.home.side===mMine()?_M.home:_M.away;
+      if(T.order)throw new Error('解除できない');
+      return '指示なしに戻る';
+    })()`));
+    await ctx.wait(300);
     ctx.log("  交代タブ:", await ctx.js(`(()=>{
       if(document.getElementById('subTab').classList.contains('off'))
         throw new Error('試合中なのに交代タブが出ていない');

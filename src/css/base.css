@@ -911,6 +911,37 @@ body{
 }
 #subTab:active{ background:oklch(0.32 0.08 255) }
 #subTab.off{ display:none }
+/* 采配タブ(→docs/06 §6.22)。**交代の反対側**に置いて、攻めと守りの手を左右に分ける */
+#ordTab{
+  position:absolute; left:0; top:56%; transform:translateY(-50%); z-index:48;
+  writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
+  padding:12px 5px; border-radius:0 9px 9px 0;
+  border:1px solid var(--accent-dim); border-left:none;
+  background:linear-gradient(90deg, oklch(0.26 0.06 85), oklch(0.19 0.02 255));
+  color:var(--accent); font:600 10px/1 var(--f-head); letter-spacing:2px;
+  box-shadow:2px 0 12px oklch(0 0 0 / .5);
+}
+#ordTab:active{ background:oklch(0.32 0.08 85) }
+#ordTab.off{ display:none }
+#ordDrawer{
+  position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
+  transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
+#ordDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
+.od-in{ border-radius:0 14px 14px 0 }
+.od-note{ font-size:11px; color:var(--text-dim); margin-bottom:10px }
+/* **十字に並べる**。上=攻撃 / 左中右=レーン / 下=守備 */
+.od-pad{ display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,auto); gap:6px }
+.od-b{
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:10px 4px; border-radius:10px; cursor:pointer;
+  background:var(--panel); border:1px solid var(--line); color:var(--text-2);
+}
+.od-b .od-i{ font:600 15px/1 var(--f-head) }
+.od-b .od-l{ font-size:10px; letter-spacing:.5px }
+.od-b.on{ background:var(--accent); border-color:var(--accent); color:var(--bg) }
+.od-desc{ margin-top:10px; font-size:11px; line-height:1.6; color:var(--text-dim); min-height:3.4em }
 /* **高さを実寸で決める**。max-height だけだと中身の max-height:100% が解決できず、
    スクロールせずに画面外まで伸びる(実際にそうなった)。 */
 #subDrawer{

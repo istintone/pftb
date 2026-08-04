@@ -16,7 +16,8 @@
 | `hangtest.js` | ストレージ無応答でも起動が止まらない(タイムアウトで既定データ続行) | 必須 |
 | `worldtest.js` | クラブ構成・**選手生成の決定性**・OVR整合・日程(14節/各クラブH7A7/重複なし)・期待順位・名声の階段 | 必須 |
 | `tenuretest.js` | 任期(96節/最大120節)の通算・打ち手を選ばないと進めない・大会の決着で延命/終了が決まる | 必須 |
-| `careertest.js` | 複数シーズンを回して**評価が期待との差に対して対称**か、名声・解任・試合結果の分布が妥当か | バランス変更時 |
+| `careertest.js` | 複数シーズンを回して**評価が期待との差に対して対称**か、名声・任期・試合結果の分布が妥当か | バランス変更時 |
+| `ordtest.js` | 采配(→docs/03 §3.28)。陣形の上下・能力の見返り・レーンの偏り・**表と裏があるか** | 采配やチャンネルを触ったとき |
 
 > **画面レジストリ整合**は `SCREENS` のキーと `index.html` の `id="scr-*"` が1対1であること、
 > タブが5つでそれぞれ同名画面を指していること、`under` が実在するタブを指していることを検査する。
@@ -27,7 +28,7 @@
 
 ```bash
 cd src/tests
-for t in integration hangtest worldtest careertest tenuretest; do
+for t in integration hangtest worldtest careertest tenuretest ordtest; do
   echo -n "$t: "; node $t.js >/dev/null 2>&1 && echo OK || echo FAIL
 done
 ```
@@ -36,7 +37,7 @@ PowerShell の場合:
 
 ```powershell
 cd src\tests
-foreach ($t in @("integration","hangtest","worldtest","careertest","tenuretest")) {
+foreach ($t in @("integration","hangtest","worldtest","careertest","tenuretest","ordtest")) {
   node "$t.js" *> $null; if ($?) { "$t : OK" } else { "$t : FAIL" }
 }
 ```

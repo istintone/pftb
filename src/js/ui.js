@@ -62,7 +62,8 @@ function show(id,opts){
   $("helpTab").classList.toggle("off",helpFor(id)==null);
   // 交代タブは**試合中だけ**。他の画面に出しても押せることが無い
   $("subTab").classList.toggle("off",id!=="match");
-  if(id!=="match")closeSub();
+  $("ordTab").classList.toggle("off",id!=="match");
+  if(id!=="match"){ closeSub(); closeOrd(); }
 
   if(def.render)def.render();
   $("appBody").scrollTop=0;
@@ -1843,6 +1844,7 @@ function mFinish(){
   $("mDone").style.display="";
   $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=true;
   closeSub(); $("subTab").classList.add("off");   // 終わったら交代はできない
+  closeOrd(); $("ordTab").classList.add("off");   // 指示も同じ
 }
 // ---------- 選手交代(→docs/06 §6.21) ----------
 // **開くと試合が止まる。** 走らせたまま選ばせると、決めている間に局面が進んで
@@ -1865,6 +1867,52 @@ function closeSub(){
   if(!_subWasPaused&&_M&&!_M.over)mPause(false);   // 元が再生中なら戻す
 }
 const subOpen=()=>$("subDrawer").classList.contains("on");
+
+// ---------- 采配(→docs/03 §3.28 / docs/06 §6.22) ----------
+// **同時に効くのは1つだけ。** 選んだ時点で閉じて試合が再開し、いつでも変えられる。
+// 指示は試合をまたいで持ち越す(監督の構え)ので、次の試合もその形で始まる。
+let _ordWasPaused=false;
+function renderOrd(){
+  const cur=S.order;
+  // **十字に置く**。行/列は指示の意味そのもの(上=攻撃 / 左中右=レーン / 下=守備)
+  const cell=o=>o.push>0?"1 / 2":o.push<0?"3 / 2"
+    :o.lane<40?"2 / 1":o.lane>60?"2 / 3":"2 / 2";
+  const btn=o=>'<button class="od-b'+(cur===o.id?" on":"")
+    +'" data-ord="'+o.id+'" style="grid-area:'+cell(o)+'">'
+    +'<span class="od-i">'+o.icon+'</span><span class="od-l">'+esc(o.label)+'</span></button>';
+  const up=ORDERS.find(o=>o.push>0), dn=ORDERS.find(o=>o.push<0);
+  const lanes=ORDERS.filter(o=>o.lane!=null);
+  $("ordNote").textContent=cur
+    ?"いま出している指示: "+orderById(cur).label+"（もう一度押すと解除）"
+    :"指示を1つ選ぶと、その形で試合が再開します。";
+  $("ordPad").innerHTML=btn(up)+lanes.map(btn).join("")+btn(dn);
+  $("ordDesc").textContent=cur?orderById(cur).desc:"指示なし。陣形どおりに戦います。";
+  $("ordPad").querySelectorAll("[data-ord]").forEach(el=>{
+    el.onclick=()=>pickOrder(el.dataset.ord===cur?null:el.dataset.ord);
+  });
+}
+/** 指示を出す。**エンジンには積むだけ**で、次のティックの頭で効く(→docs/07 §7.6)。 */
+function pickOrder(id){
+  S.order=id||null;
+  if(_M&&!_M.over)orderMatch(_M,mMine(),{ type:"order", id:S.order });
+  save();
+  toast(id?orderById(id).label+" を指示しました":"指示を解除しました");
+  closeOrd();
+}
+function openOrd(){
+  if(!_M||_M.over)return;
+  _ordWasPaused=_mPaused;
+  if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
+  renderOrd();
+  $("ordDrawer").classList.add("on");
+  $("ordDrawer").setAttribute("aria-hidden","false");
+}
+function closeOrd(){
+  $("ordDrawer").classList.remove("on");
+  $("ordDrawer").setAttribute("aria-hidden","true");
+  if(!_ordWasPaused&&_M&&!_M.over)mPause(false);   // 元が再生中なら戻す
+}
+const ordOpen=()=>$("ordDrawer").classList.contains("on");
 
 /** スタミナのバー1本。**残量で色が変わる**ので、替えどきが一目で分かる。 */
 function stamBar(v){
@@ -2223,6 +2271,8 @@ function mPause(on){
 $("mPlay").onclick=()=>mPause(!_mPaused);
 $("subTab").onclick=()=>{ subOpen()?closeSub():openSub(); };
 $("subClose").onclick=closeSub;
+$("ordTab").onclick=()=>{ ordOpen()?closeOrd():openOrd(); };
+$("ordClose").onclick=closeOrd;
 $("subGo").onclick=doSub;
 $("mSpeed").onclick=()=>{
   const sp=TUNING.ui.speeds;
