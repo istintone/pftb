@@ -132,7 +132,6 @@ function cardTile(c){
  *   名前帯(下)     … 名前 / サブポジション・クラブ
  */
 function cardFace(c){
-  const own=!isLoaned(c);
   return '<span class="pc-crest">'+RARITY[c.rarity].abbr+'</span>'
     +'<span class="pc-ovr">'+c.ovr+'</span>'
     // OVR の下にポジション。**サブが他にもあれば下段に「+」**だけ添える(数は詳細で見る)
@@ -145,7 +144,9 @@ function cardFace(c){
       '<div'+(c[k]>=STAT_MAX?' class="mx"':'')+'><span>'+STAT_LABEL[k]+'</span>'
       +'<b>'+c[k]+'</b></div>').join("")+'</div>'
     +'<div class="pc-name">'
-      +'<b>'+(own?'<i class="own">★</i>':'')+esc(shortName(c))+'</b>'
+      // **印を付けるのは借りている側**(→docs/06 §6.13)。
+      // 最終的にほとんどが自分のカードになるので、自分側に印を付けても意味を持たない
+      +'<b>'+esc(shortName(c))+loanTag(c)+'</b>'
       // ポジションは OVR の下へ移したので、名前帯は**クラブだけ**
       +'<span>'+esc(c.club||"—")+'</span>'
     +'</div>';
@@ -209,6 +210,12 @@ function skillNote(name){
   const body=what?(what+(fx.w?act+"、成功しやすい":"が成功しやすい")):"すべての判定に強い";
   return solo?solo+"／"+body:body;
 }
+
+/**
+ * 借りているカードの印(→docs/06 §6.13)。**印を付けるのは借りている側**。
+ * 最終的にはほとんどが自分のカードになるので、自分側に印を付けても意味を持たない。
+ */
+const loanTag=c=>isLoaned(c)?'<i class="loan">(CLUBS)</i>':"";
 
 /**
  * 段の名前を右側に縦に流す**半透明のデザイン文字**(→docs/06 §6.13)。
@@ -296,7 +303,7 @@ function renderCards(){
   });
   const list=all.filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter).sort((a,b)=>b.ovr-a.ovr);
   $("cardsCount").innerHTML="所持カード "+list.length+" / "+all.length
-    +"　<span class=\"own\">★</span> 自分のカード "+own+" 枚";
+    +"　<span class=\"loan\">(CLUBS)</span> クラブからの貸与 "+(all.length-own)+" 枚";
   $("cardsGrid").innerHTML=list.length?list.map(cardTile).join("")
     :'<div class="stub"><b>該当するカードがありません</b><span>パックは第4段で実装します</span></div>';
   wireCardTiles($("cardsGrid"));
@@ -386,8 +393,7 @@ function openSlot(ix){
           +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
           +'<div class="pk-ovr'+(sub?effClass(c,sub):"")+'">'
             +(sub?effOvr(c,sub):c.ovr)+'</div>'
-          +'<div class="pk-b"><b>'+(isLoaned(c)?"":'<i class="own">★</i>')
-            +esc(c.name)+'</b>'
+          +'<div class="pk-b"><b>'+esc(c.name)+loanTag(c)+'</b>'
             +'<span>'+c.subs.join(" / ")+'</span></div>'
           +'<div class="pk-r">'
             +(at>=0&&at!==ix?'<span class="pk-at">'+squadSlotLabel(at)+'</span>':'')+'</div>'
@@ -595,8 +601,8 @@ function openCard(x){
       +'<div class="cm-k">PROFILE</div>'
       +'<div class="cm-bio">'+esc(bioOf(c))+'</div>'
       +'<div class="cm-own">'+(isLoaned(c)
-        ? "クラブからの貸与 — 退任するとこのクラブに残ります"
-        : "<span class=\"own\">★</span> 自分のカード — 移籍しても連れて行けます")+'</div>'
+        ? "<span class=\"loan\">(CLUBS)</span> クラブからの貸与 — 退任するとこのクラブに残ります"
+        : "自分のカード — 移籍しても連れて行けます")+'</div>'
     +'</div>';
   bindSkillPop(c.skills);
   $("cardModalClose").onclick=closeCard;
@@ -640,7 +646,7 @@ function renderDeck(){
       // 大きく見えて「置き間違いのほうが強い」という逆の読みになる。
       +'<div class="sl-disc'+(c?effClass(c,sub):"")+'"'+(c?kitStyle(c):"")
         +'>'+(c?effOvr(c,sub):"+")
-        +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
+        +(c&&isLoaned(c)?'<span class="sl-loan">C</span>':'')+'</div>'
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
     +'</div>';
   }).join("");
@@ -657,7 +663,7 @@ function renderDeck(){
     return '<div class="bn'+(c?"":" empty")+'" data-slot="'
       +(TUNING.squad.starters+k)+'"'+(c?kitStyle(c):"")+'>'
       +'<div class="bn-ovr">'+(c?c.ovr:"+")
-        +(c&&!isLoaned(c)?'<span class="sl-own">★</span>':'')+'</div>'
+        +(c&&isLoaned(c)?'<span class="sl-loan">C</span>':'')+'</div>'
       +'<div class="bn-name">'+(c?esc(shortName(c)):"空き")+'</div>'
       +'<div class="bn-pos">'+(c?primarySub(c):"控え"+(k+1))+'</div></div>';
   }).join("");

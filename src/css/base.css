@@ -501,7 +501,8 @@ body{
   display:block; font:600 7.4cqw/1.35 var(--f-body); color:var(--ink);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.pc-name b .own{ font-style:normal; color:var(--ink) }
+/* 借りているカードの印。**名前より弱く**出す(名前を読む邪魔をしない) */
+.pc-name b .loan{ font-style:normal; font-size:.72em; opacity:.72; margin-left:.3em }
 .pc-name span{
   display:block; font:5.2cqw/1.4 var(--f-mono); color:var(--ink); opacity:.6;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -608,7 +609,9 @@ body{
 .cm-cap{ color:var(--text-mute); font-size:9px; letter-spacing:0 }
 .cm-bio{ margin-bottom:10px; font-size:12px; line-height:1.7; color:oklch(0.75 0.01 90) }
 .cm-own{ font-size:11px; line-height:1.7; color:var(--text-2) }
-.cm-own .own{ color:var(--accent) }
+.cm-own .loan{ color:var(--text-dim); font-size:.9em }
+/* 一覧の見出しに出す凡例。本文と同じ弱さで置く */
+#cardsCount .loan{ color:var(--text-dim) }
 .bars{ margin-bottom:16px }
 .bar{ display:flex; align-items:center; gap:8px; margin:7px 0 }
 .bar > span{ width:32px; font-size:10px; color:oklch(0.60 0.02 255) }
@@ -1010,8 +1013,9 @@ body{
   background:oklch(0 0 0 / .55); font-size:8px; color:#fff;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.sl-own{ position:absolute; top:-6px; right:-5px; font-size:10px; color:var(--accent);
-  text-shadow:0 0 3px oklch(0 0 0 / .8) }
+.sl-loan{ position:absolute; top:-5px; right:-4px;
+  font:700 8px/1 var(--f-head); color:var(--surface); background:var(--text-dim);
+  border-radius:3px; padding:1px 3px; }
 
 /* 枠のピッカー(→docs/06 §6.15)。適性の高い順に並ぶので、上から選べばよい。 */
 .picks{ display:flex; flex-direction:column; gap:6px }
@@ -1036,7 +1040,7 @@ body{
 .pk-b{ flex:1; min-width:0 }
 .pk-b b{ display:block; font-size:12px; color:var(--text);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.pk-b b .own{ font-style:normal; color:var(--accent) }
+.pk-b b .loan{ font-style:normal; font-size:.8em; color:var(--text-dim); margin-left:.3em }
 .pk-b span{ display:block; font:9px/1.5 var(--f-mono); color:var(--text-dim) }
 .pk-r{ flex:0 0 auto; display:flex; align-items:center; gap:6px }
 /* 他の枠にいる選手の印。選ぶとその枠と入れ替わる */
