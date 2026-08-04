@@ -201,6 +201,38 @@ const E = setup({ tmpName: "_tmp_integration.js" });
       "/ 万全", fresh.toFixed(2), "/ 消耗", tired.toFixed(2));
   }
 
+  // ---------- 試合の煽りは状況で変わる(→docs/06 §6.8) ----------
+  {
+    await E.newGame();
+    E.getS().coach = "テスト監督";
+    E.startTenure("sam-8");
+    // 表の形。**1行を1要素にした配列**で持つ(文字列に改行を書くとソースが壊れる)
+    for (const [id, h] of Object.entries(E.HYPE)) {
+      assert.ok(h.tag, id + " に局面の名前がある");
+      assert.ok(h.lines.length, id + " に候補がある");
+      for (const l of h.lines) {
+        assert.ok(Array.isArray(l), id + " の候補は配列");
+        assert.ok(l.length >= 1 && l.length <= 2, id + " は2行まで: " + l.length);
+        const LF = String.fromCharCode(10);
+        for (const t of l) assert.ok(t.indexOf(LF) < 0, id + " に改行を埋めない");
+      }
+    }
+    const W = E.getS().world, n = W.fixtures.length;
+    const at = md => { W.matchday = md; return E.hypeOf(E.myFixture()); };
+    assert.strictEqual(at(1).id, "opening", "第1節は開幕");
+    assert.strictEqual(at(n).id, "final", "最終節は最終節");
+    // 同じ節なら**毎回同じ文**(描画のたびに入れ替わると雑音になる)
+    const a = at(5), b = at(5);
+    assert.deepStrictEqual(a, b, "同じ節なら同じ煽り");
+    // 節を変えれば局面も文も動く
+    const ids = new Set();
+    for (let md = 1; md <= n; md++) ids.add(at(md).id);
+    assert.ok(ids.size >= 3, "節によって局面が変わる: " + [...ids].join(","));
+    W.matchday = 1;
+    console.log("煽りOK", Object.keys(E.HYPE).length, "局面 / 1シーズンで",
+      ids.size, "種:", [...ids].join(" "));
+  }
+
   E.deleteSave();
   assert.strictEqual(await E.hasSave(), false, "削除後はセーブが無い");
 

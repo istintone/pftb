@@ -88,7 +88,7 @@ function setup(opts = {}) {
   if (opts.transform) code = opts.transform(code);
   const extra = opts.exports ? "," + opts.exports : "";
   code += `\nmodule.exports={getS:()=>S,setS:v=>{S=v;},setM:v=>{_M=v;},newGame,loadGame,save,flushSave,hasSave,deleteSave,`
-        + `exportSave,importSave,exportSquad,show,scOrder,mFlip,mMine,vigorOf,goBack,toast,headUI,openContract,SCREENS,HELP,helpFor,SAVE_VER,`
+        + `exportSave,importSave,exportSquad,show,scOrder,mFlip,mMine,vigorOf,hypeOf,HYPE,goBack,toast,headUI,openContract,SCREENS,HELP,helpFor,SAVE_VER,`
         + `CLUBS,LEAGUES,NATIONS,NATION_IDS,FAMILY,GIVEN_BY_NATION,makeName,leagueById,nationById,nationBox,TUNING,RARITY,RAR_KEYS,RAR_DROPS,FORMATIONS,DEFAULT_FORM,refitSquad,clubById,clubsOf,clubRoster,clubPower,makeFixtures,`
         + `standings,rankOf,expectedRank,requiredFame,offersFor,startTenure,playMatchday,beginMyMatch,myFixtureOf,matchSeedOf,seasonOver,`
         + `judgeSeason,myFixture,squadCards,autoSquad,availableCards,cardById,squadPower,resolveMatch,simulateMatch,matchStats,matchRatings,matchRating,manOfTheMatch,minutesOf,playerOf,spKicker,pickCaptain,staminaOf,createMatch,stepMatch,finishMatch,orderMatch,matchOver,matchMin,matchClock,bestXI,formFor,matchSide,teamStrength,midPower,`

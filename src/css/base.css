@@ -1108,6 +1108,45 @@ body{
 .sb-tag{ flex:0 0 auto; font:700 8px/1 var(--f-head); letter-spacing:.5px;
   color:var(--text-mute); border:1px solid var(--line); border-radius:4px; padding:2px 4px }
 
+/* NEXT MATCH のタイル(→docs/06 §6.8)。モックの構成。
+   **ボタンを置かず、タイルごとタップ**して日程へ送る。 */
+.nx{
+  position:relative; overflow:hidden; margin-bottom:14px; cursor:pointer;
+  border-radius:14px; padding:20px 18px;
+  background:linear-gradient(135deg, oklch(0.22 0.03 255), oklch(0.17 0.02 255));
+  border:1px solid oklch(0.35 0.06 85);
+}
+.nx:active{ border-color:var(--accent-dim) }
+/* 右上の光。奥行きを出すだけの飾り */
+.nx::after{
+  content:""; position:absolute; top:-30px; right:-30px; width:120px; height:120px;
+  border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, oklch(0.55 0.12 85 / .25), transparent 70%);
+}
+.nx-md{ font:10px/1 var(--f-mono); letter-spacing:2px; color:oklch(0.75 0.13 85) }
+.nx-tag{
+  display:inline-block; margin-top:9px; padding:2px 7px; border-radius:4px;
+  font:600 9px/1.5 var(--f-head); letter-spacing:1px;
+  color:var(--accent-hi); background:oklch(0.30 0.06 85); border:1px solid var(--accent-dim);
+}
+.nx-hype{ font:600 21px/1.35 var(--f-head); color:var(--text); margin-top:7px }
+/* **VSを中心に左右を釣り合わせる**。flex で並べるとクラブ名の長さで中心がずれる */
+.nx-vs{
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px;
+  margin-top:13px;
+}
+.nx-vs b{ font:600 13px/1.35 var(--f-body); color:var(--text-2); min-width:0 }
+.nx-vs b:first-of-type{ text-align:right }
+.nx-vs b:last-of-type{ text-align:left }
+.nx-vs span{ font:700 12px/1 var(--f-head); letter-spacing:1px; color:var(--accent) }
+.nx-sub{ font-size:11px; color:var(--text-dim); margin-top:7px }
+.nx-go{
+  display:inline-flex; align-items:center; gap:6px; margin-top:14px;
+  padding:9px 18px; border-radius:8px;
+  background:var(--accent); color:var(--surface);
+  font:600 13px/1 var(--f-head); letter-spacing:.5px;
+}
+
 /* HOME の2枚タイル(→docs/06 §6.8)。試合の次に触る導線を並べる。 */
 .tiles{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px }
 .tile{ border-radius:12px; padding:14px; background:var(--panel);

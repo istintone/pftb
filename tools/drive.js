@@ -118,8 +118,24 @@ const STEPS = [
     await ctx.shot("04-home");
   }],
   ["HOME → 任期スケジュール → リーグ戦 → 試合", async ctx => {
-    ctx.log("次戦:", await ctx.js("document.querySelector('#homeNext .next-vs').textContent"));
-    await ctx.js("document.getElementById('btnPlay').click()");     // 直接は戦わずスケジュールへ
+    // NEXT MATCH のタイル(→docs/06 §6.8)。**ボタンは無く、タイルごとタップ**して日程へ
+    ctx.log("次戦:", await ctx.js(`(()=>{
+      const t=document.getElementById('nxTile');
+      if(!t)throw new Error('次戦のタイルが無い');
+      if(document.getElementById('btnPlay'))throw new Error('試合を進めるボタンが残っている');
+      const md=t.querySelector('.nx-md').textContent;
+      const tag=t.querySelector('.nx-tag').textContent;
+      const hype=t.querySelector('.nx-hype').textContent;
+      if(!/SEASON .* MATCHDAY/.test(md))throw new Error('節がタイルの中に無い: '+md);
+      if(!hype)throw new Error('煽りが出ていない');
+      // **VSが中心**にあること(クラブ名の長さで中心がずれない)
+      const vs=t.querySelector('.nx-vs'), sp=vs.querySelector('span');
+      const a=vs.getBoundingClientRect(), b=sp.getBoundingClientRect();
+      const off=Math.abs((b.left+b.width/2)-(a.left+a.width/2));
+      if(off>2)throw new Error('VSが中心にない: '+off.toFixed(1)+'px ずれ');
+      return md+' / ['+tag+'] '+hype.replace(/\s+/g,' ');
+    })()`));
+    await ctx.js("document.getElementById('nxTile').click()");       // 直接は戦わずスケジュールへ
     await ctx.wait(300);
     ctx.log("遷移先:", await ctx.screen(),
       "/ 大会数:", await ctx.js("document.querySelectorAll('#seasonComps [data-comp]').length"),
@@ -261,11 +277,13 @@ const STEPS = [
       const My=g(me), Op=g(op);
       // GK は全陣形で枠0。**自分のGKは下(y大)・相手のGKは上(y小)**でなければならない
       const gk=a=>+a.find(e=>e.dataset.ix==='0').dataset.y;
+      const sh=s2=>getComputedStyle(document.querySelector(
+        '#mSlots .mp[data-side="'+s2+'"] .mp-sh')).backgroundColor;
       if(gk(My)<50)throw new Error('自軍のGKが上にいる: y='+gk(My));
       if(gk(Op)>50)throw new Error('相手のGKが下にいる: y='+gk(Op));
       return '自軍('+me+') '+My.length+'人 GK y='+gk(My).toFixed(0)
         +' / 相手('+op+') '+Op.length+'人 GK y='+gk(Op).toFixed(0)
-        +' / 別の色?'+(My[0].style.background!==Op[0].style.background);
+        +' / 影の色が別?'+(sh(me)!==sh(op));
     })()`));
     // 選手が枠に張り付かず、かつ陣形が崩壊していないこと(演出の要 → docs/06 §6.18)
     ctx.log("  動き:", await ctx.js(`(()=>{
@@ -296,7 +314,8 @@ const STEPS = [
           const after=Math.hypot(o.x-bx,o.y-by);
           if(after<before-1)toward++;
         }
-        if(toward<3)throw new Error('誰もボールへ動いていない: '+toward+'人');
+        // 何人が詰めるかはボールの位置で変わる。**誰も動いていない**ことだけを弾く
+        if(toward<2)throw new Error('誰もボールへ動いていない: '+toward+'人');
       }
       // 点ではなく全身。**足元の影はチームカラー**で、両チームで色が違うこと
       const sh=s2=>getComputedStyle(document.querySelector(
@@ -872,7 +891,9 @@ const STEPS = [
     }
     await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
     await ctx.wait(200);
-    ctx.log("節:", await ctx.js("document.getElementById('homeSeason').textContent"));
+    // 全日程が終わると、次戦のタイルの代わりに「シーズンを終える」が出る
+    ctx.log("節:", await ctx.js(
+      "document.getElementById('homeNext').textContent.replace(/\s+/g,' ').slice(0,40)"));
     await ctx.shot("14-season-end");
     await ctx.js("document.getElementById('btnFinishSeason').click()");
     await ctx.wait(600);
@@ -885,7 +906,7 @@ const STEPS = [
     await ctx.wait(600);
     ctx.log("画面:", await ctx.screen(),
       "/ クラブ:", await ctx.js("document.getElementById('hdClubName').textContent"),
-      "/ 節:", await ctx.js("document.getElementById('homeSeason').textContent"));
+      "/ 節:", await ctx.js("document.querySelector('#homeNext .nx-md').textContent"));
     await ctx.shot("16-second-club");
   }],
   ["リロード → RETURN TO CAREER で再開", async ctx => {

@@ -252,28 +252,67 @@ function renderHome(){
   const start=squadCards().slice(0,TUNING.squad.starters);
   $("tileScoutSub").textContent=fmtNum(S.club?S.club.coins:0)+" コイン";
   $("tileDeckSub").textContent="総合力 "+squadPowerAt(squadCards(),S.form);
-  $("homeSeason").textContent="SEASON "+W.season+" · MATCHDAY "+String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0");
+  const md="SEASON "+W.season+" · MATCHDAY "
+    +String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0");
 
   const f=myFixture();
   if(seasonOver()){
-    $("homeNext").innerHTML='<div class="lg">今季の全日程が終了しました。'
+    $("homeNext").innerHTML='<div class="card"><div class="sect-t">NEXT MATCH</div>'
+      +'<div class="lg">今季の全日程が終了しました。'
       +(S.career.closing?'<br><b>任期の上限に達しています。ここで去就が決まります。</b>':'')+'</div>'
-      +'<button class="btn" id="btnFinishSeason" style="margin-top:10px">シーズンを終える</button>';
+      +'<button class="btn" id="btnFinishSeason" style="margin-top:10px">シーズンを終える</button></div>';
     $("btnFinishSeason").onclick=finishSeason;
   }else if(f){
     // 試合そのものはスケジュール画面(=クラブ進行の起点)から始める。
     // HOME は「監督のデバイス」であって、進行の操作盤ではない(→docs/06 §6.8)。
-    $("homeNext").innerHTML='<div class="next-vs"><b>'+esc(clubName(S.club.id))+'</b>'
-      +'<span class="vs">vs</span><b>'+esc(clubName(f.opp))+'</b></div>'
-      +'<div class="lg" style="margin:6px 0 10px">'+(f.home?"HOME":"AWAY")+' ／ 第'+W.matchday+'節</div>'
-      +'<button class="btn" id="btnPlay">試合を進める</button>';
-    $("btnPlay").onclick=()=>show("season");
+    // **ボタンは置かず、タイルごとタップ**して日程へ送る。
+    const h=hypeOf(f);
+    $("homeNext").innerHTML='<div class="nx" id="nxTile" role="button" tabindex="0">'
+      +'<div class="nx-md">'+md+'</div>'
+      +'<div class="nx-tag">'+esc(h.tag)+'</div>'
+      +'<div class="nx-hype">'+h.line.map(esc).join("<br>")+'</div>'
+      // **VSを中心に左右を釣り合わせる**(→docs/06 §6.8)
+      +'<div class="nx-vs"><b>'+esc(clubName(S.club.id))+'</b>'
+        +'<span>VS</span><b>'+esc(clubName(f.opp))+'</b></div>'
+      +'<div class="nx-sub">'+(f.home?"HOME":"AWAY")+' ／ 第'+W.matchday+'節</div>'
+      +'<div class="nx-go">日程を見る →</div>'
+    +'</div>';
+    $("nxTile").onclick=()=>show("season");
   }
   // 秘書: 次に何をすればよいかを示す(ナラティブ誘導)
   $("homeSec").innerHTML='<div class="bubble">'+esc(secretaryLine())+'</div>';
   // CLUB NEWS: クラブの今(一時的なコンディションの表示でもある)
   $("homeNews").innerHTML=clubNews().map(n=>'<div class="news">'+n+'</div>').join("");
 }
+/**
+ * 試合の煽り(→docs/06 §6.8)。**状況から1つ選ぶ**。
+ * 上から順に見て最初に当たったものを使う。同じ節なら毎回同じ文になる
+ * (煽りが毎描画で入れ替わると、読み物ではなく雑音になる)。
+ */
+function hypeOf(f){
+  const W=S.world, n=W.fixtures.length, md=Math.min(W.matchday,n);
+  const tbl=W.table, teams=Object.keys(tbl).length;
+  const me=rankOf(tbl,S.club.id), you=rankOf(tbl,f.opp);
+  const gMe=clubById(S.club.id).grade, gYou=clubById(f.opp).grade;
+  // 数節こなすまで順位は当てにならない。それまではクラブの格で見る
+  const byRank=md>=4;
+  const band=Math.max(2,Math.round(teams*0.25));
+  const hi=r=>r<=band, lo=r=>r>teams-band;
+
+  let id;
+  if(md===1)                                       id="opening";
+  else if(md===n)                                  id="final";
+  else if(md>=n-2&&byRank&&lo(me))                 id="survival";
+  else if(byRank&&hi(me)&&hi(you))                 id="summit";
+  else if(byRank?you<me-2:gYou>=gMe+3)             id="giant";
+  else if(byRank?you>me+2:gYou<=gMe-3)             id="favorite";
+  else if(Math.abs(gMe-gYou)<=1)                   id="rival";
+  else                                             id=md>n*0.7?"late":"generic";
+
+  const h=HYPE[id];
+  return { id, tag:h.tag, line:h.lines[hashStr(S.club.id+":"+W.season+":"+md)%h.lines.length] };
+}
+
 function secretaryLine(){
   if(seasonOver())return "監督、今季の全日程が終わりました。会長がお待ちです。";
   if(S.world.matchday===1)return "監督、就任おめでとうございます。まずは編成を確認してから初戦に臨みましょう。";
