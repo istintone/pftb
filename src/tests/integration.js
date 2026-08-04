@@ -179,6 +179,34 @@ const E = setup({ tmpName: "_tmp_integration.js" });
       s5.squad.slice(NX).filter(Boolean).length, "人を補充");
   }
 
+  // v11 → v12: OVR帯を組み直したので、手持ちカードを新しい帯へ写す(→docs/03 §3.27)
+  {
+    await E.newGame();
+    E.getS().coach = "テスト監督";
+    E.startTenure("sam-8");
+    const s11 = JSON.parse(JSON.stringify(E.getS()));
+    s11.v = 11;
+    // v11 相当の値(旧帯)に戻す。SPECIALS の頂点あたりを1枚置く
+    const old = { id: 99001, name: "旧 カード", sur: "カード", pos: "FW", subs: ["ST"],
+      rarity: "SPE", ovr: 98, age: 25, nation: "bra",
+      atk: 20, def: 9, pow: 19, tec: 17, spd: 20, sta: 13, skills: ["決定力"], club: "" };
+    s11.player.coll = [old];
+    await E.importSave(JSON.stringify(s11));
+    await E.loadGame();
+    const c = E.getS().player.coll[0];
+    assert.strictEqual(E.getS().v, E.SAVE_VER, "v11 が最新版へ移行される");
+    const band = E.RARITY.SPE.ovr;
+    assert.ok(c.ovr >= band[0] && c.ovr <= band[1] + 1,
+      "SPECIALS の新しい帯に収まる: " + c.ovr + " (" + band.join("〜") + ")");
+    assert.strictEqual(c.ovr, E.STAT_KEYS.reduce((s, k) => s + c[k], 0),
+      "OVR = 6能力の合計 が保たれる");
+    assert.ok(E.STAT_KEYS.every(k => c[k] <= E.STAT_MAX), "天井を超えない");
+    assert.strictEqual(c.rarity, "SPE", "段は変わらない");
+    assert.strictEqual(c.name, old.name, "選手そのものは変わらない");
+    console.log("移行OK v11 → v" + E.SAVE_VER + " OVR " + old.ovr + " → " + c.ovr,
+      "／ 能力", E.STAT_KEYS.map(k => c[k]).join("/"));
+  }
+
   // v5 → v6: セットプレーの担当指名を足す(未指名 = 自動選出と同じなので空で足すだけ)
   {
     await E.newGame();

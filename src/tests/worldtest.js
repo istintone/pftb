@@ -238,6 +238,48 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   }
   console.log("戦力の階段OK eng-1:", top, "> sam-24:", bottom);
 
+  // --- 能力は天井(20)に張り付かない(→docs/03 §3.27) ---
+  {
+    const K=E.STAT_KEYS, MAX=E.STAT_MAX;
+    // どの重みも 1.35 以下 / pow・tec・spd は 1.20 以下 / 各行の合計は 6.0
+    const W=E.STAT_W;
+    for(const pos of Object.keys(W)){
+      const w=W[pos];
+      assert.ok(Math.abs(w.reduce((s,v)=>s+v,0)-K.length)<1e-9, pos+" の重みの合計が6.0");
+      assert.ok(Math.max(...w)<=1.35, pos+" の主能力の重みが1.35以下: "+Math.max(...w));
+      // pow/tec/spd は**主能力でない限り**1.20まで(主能力より先に頭打ちにさせない)
+      const primary=w.indexOf(Math.max(...w));
+      ["pow","tec","spd"].forEach(k=>{
+        const i=K.indexOf(k);
+        if(i!==primary)assert.ok(w[i]<=1.20, pos+" の "+k+" が1.20以下: "+w[i]);
+      });
+      // 20 に届くのは LEGENDS の頂点あたり
+      assert.ok(Math.round(E.OVR_MAX/Math.max(...w))>=E.RARITY.WC.ovr[1],
+        pos+" は WORLD CLASS の帯では20に届かない");
+    }
+    // **とがり(最大能力−最小能力)が段を上がるほど大きくなる**。
+    // 途中で丸くなるなら、それは天井に当たっている印
+    const sharp=r=>{
+      const rng=E.mulberry32(31); let sum=0, pin=0, n=600;
+      for(let i=0;i<n;i++){
+        const c=E.makeCard(rng,["GK","DF","MF","FW"][i%4],{rarity:r});
+        const v=K.map(k=>c[k]);
+        sum+=Math.max(...v)-Math.min(...v);
+        pin+=v.filter(x=>x>=MAX).length;
+      }
+      return { sharp:sum/n, pin:pin/n };
+    };
+    const got=E.RAR_KEYS.map(r=>({ r, ...sharp(r) }));
+    for(let i=1;i<got.length;i++)
+      assert.ok(got[i].sharp>got[i-1].sharp,
+        got[i].r+" は "+got[i-1].r+" より尖っている: "
+        +got[i-1].sharp.toFixed(1)+" → "+got[i].sharp.toFixed(1));
+    assert.ok(got[0].pin<0.02, "STANDARD は天井に触れない");
+    assert.ok(got[3].pin<0.5, "WORLD CLASS でも天井は例外的: "+got[3].pin.toFixed(2));
+    console.log("  とがり:", got.map(g=>g.r+" "+g.sharp.toFixed(1)).join(" → "));
+    console.log("  20張り付き(6能力中):", got.map(g=>g.r+" "+g.pin.toFixed(2)).join(" / "));
+  }
+
   // --- 部ごとの編成の内訳(→docs/03 §3.25) ---
   {
     const share=(lgid,d)=>{

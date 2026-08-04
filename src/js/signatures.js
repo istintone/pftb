@@ -16,7 +16,7 @@ const SIGNATURES=[
     name:"C. ロナウド", short:"ロナウド",
     club:"マンチェスター・レッズ", nation:"por",
     pos:"FW", subs:["RWG","ST"], age:23,
-    atk:19, def:6, pow:18, tec:18, spd:20, sta:16,   // OVR = 97
+    atk:17, def:5, pow:16, tec:16, spd:18, sta:13,   // OVR = 85(WORLD CLASS の頂点)
     skills:["ドリブル突破","カットイン","決定力"],
   },
 ];

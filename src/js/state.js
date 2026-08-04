@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=11;
+const SAVE_VER=12;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -183,6 +183,24 @@ function migrate(){
   // 集めたカード・名声・実績は監督のものなので残す。
   // v10 → v11: リーグを3部制にした(→docs/03 §3.24)。旧8クラブはそのまま DIV1 なので
   // 任期は畳まず、**部の所属だけ足す**。進行中の日程も DIV1 の顔ぶれのまま噛み合う。
+  // v11 → v12: 能力の天井(20)に張り付かないよう OVR帯と重みを組み直した(→docs/03 §3.27)。
+  // 手持ちカードは**段ごとに新しい帯へ写し直し**、能力を配り直す(OVRの相対関係は保つ)。
+  if(S.v<12){
+    const OLD_BANDS={ STD:[54,72], REG:[68,86], SPE:[82,98], WC:[96,110], LEG:[100,116] };
+    const rescale=c=>{
+      const o=OLD_BANDS[c.rarity], n=RARITY[c.rarity]&&RARITY[c.rarity].ovr;
+      if(!o||!n||!c.pos)return c;
+      // 帯の外(クラブ補正ぶん)も比率のまま持ち越す
+      const ovr=clamp(Math.round(n[0]+(c.ovr-o[0])*((n[1]-n[0])/(o[1]-o[0]))),
+        STAT_KEYS.length,OVR_MAX);
+      const st=statsFor(mulberry32(hashStr("v12:"+c.id)>>>0),c.pos,ovr);
+      STAT_KEYS.forEach(k=>c[k]=st[k]);
+      c.ovr=calcOvr(c.pos,st);
+      return c;
+    };
+    (S.player&&S.player.coll||[]).forEach(rescale);
+    (S.club&&S.club.loan||[]).forEach(rescale);
+  }
   if(S.v<11&&S.world){
     if(S.world.div===undefined)S.world.div=S.club?clubById(S.club.id).div:3;
     if(!S.world.divs)S.world.divs=S.club?makeDivs(clubById(S.club.id).league):null;

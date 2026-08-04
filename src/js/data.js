@@ -85,18 +85,20 @@ function subGroup(sub){
 //   bg     背景画像のキー。**SPECIALS は REGULAR と同じ背景**を使い、差はCSSの発光で付ける
 //   holo   CSSで載せるホロ表現("sheen" 光沢 / "rainbow" 虹 / "gold" 金 / null なし)
 //          ホロを画像に焼き込むと質が落ちるため、**必ずCSS側で表現する**
+// OVR帯は**天井(20)に張り付かない範囲**に収めてある(→docs/03 §3.27)。
+// 主能力の重みは最大 1.35 なので、20 に届くのは OVR 89 から = LEGENDS の頂点だけ。
 const RARITY={
-  STD: { label:"STANDARD",    abbr:"ST", ovr:[54,72],   skills:1, w:62, real:false, bg:"std", holo:null,
+  STD: { label:"STANDARD",    abbr:"ST", ovr:[46,65],   skills:1, w:62, real:false, bg:"std", holo:null,
          note:"控え。クラブにはいるがレギュラーではない" },
-  REG: { label:"REGULAR",     abbr:"RG", ovr:[68,86],   skills:2, w:30, real:false, bg:"reg", holo:null,
+  REG: { label:"REGULAR",     abbr:"RG", ovr:[58,75],   skills:2, w:30, real:false, bg:"reg", holo:null,
          note:"スタメン。クラブのメイン選手" },
-  SPE: { label:"SPECIALS",    abbr:"SP", ovr:[82,98],   skills:3, w:8,  real:false, bg:"reg", holo:"sheen",
+  SPE: { label:"SPECIALS",    abbr:"SP", ovr:[68,80],   skills:3, w:8,  real:false, bg:"reg", holo:"sheen",
          note:"切り札。REGULAR と同じ地だが光る" },
   // w:0 = **既定の重みでは出ない段**。プロスカウトのように段を名指ししたパックからは出る
   // (→docs/03 §3.26)。実在選手そのものは SIGNATURES だけで、段は「強さと見た目の階級」
-  WC:  { label:"WORLD CLASS", abbr:"WC", ovr:[96,110],  skills:3, w:0,  real:true,  bg:"wc",  holo:"rainbow",
+  WC:  { label:"WORLD CLASS", abbr:"WC", ovr:[76,85],   skills:3, w:0,  real:true,  bg:"wc",  holo:"rainbow",
          note:"世界屈指。シルバー(Chrome)地に虹ホロ" },
-  LEG: { label:"LEGENDS",     abbr:"LE", ovr:[100,116], skills:4, w:0,  real:true,  bg:"leg", holo:"gold",
+  LEG: { label:"LEGENDS",     abbr:"LE", ovr:[82,90],   skills:4, w:0,  real:true,  bg:"leg", holo:"gold",
          note:"歴史に残る名選手。黒地に金縁" },
 };
 /** 背景画像の種類。SPECIALS が REGULAR を共有するので5段でも4枚で足りる。 */
@@ -731,7 +733,7 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:0.99, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
+  th:{ shot:1.00, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
   // セットプレー(→docs/07 §7.11)。**守備側が競り合いに勝った瞬間だけ**ファウルが起きる。
   //   foulK              … 守備チャンネルが持つ反則率に一括で掛ける倍率(→§7.12)
   //   foulBlock          … ブロックのあとのファウル率
@@ -756,9 +758,9 @@ const TUNING={
   // GKのセービング(def)は OVR80 あたりで 20 に張り付くのに、攻撃側は tec/spd が
   // 伸び続ける。GKの評価を pow/tec 寄りにし、枠内率の tec 依存も浅くしてある。
   shot:{ deadZone:0.25, minRange:0.04, rangePow:1.00,
-         gkDef:0.40, gkPow:0.28, gkTec:0.32,
+         gkDef:0.65, gkPow:0.20, gkTec:0.15,
          finStat:0.35, fkAccBase:0.62,
-         accBase:0.44, accTec:0.18, accRange:0.55, rebound:0.30,
+         accBase:0.30, accTec:0.45, accRange:0.55, rebound:0.30,
          reboundH:0.95, reboundMax:4 },  // 詰める位置(ゴール前) / 連続の上限(安全網)
   // 各スコアに乗る揺らぎ rr() = min + random×span
   rng:{ min:0.60, span:0.80 },
@@ -783,7 +785,7 @@ const TUNING={
   //   lane*     lane 規則ごとの左右のばらつき
   //   gainJitter 前進量のゆらぎ(±の割合)
   chain:{ maxLinks:4, shotBase:0.02, shotDepth:0.85, shotCurve:3.0, shotStep:0.06,
-          shotAtkLo:0.45,   // 撃つ判断に乗る「撃てる選手か」の下限(atk0でこの倍率)
+          shotAtkLo:0.30,   // 撃つ判断に乗る「撃てる選手か」の下限(atk0でこの倍率)
           sigmaH:0.20, sigmaX:0.26, recvAtk:1.60,
           laneTight:8, laneNormal:16, laneWide:34, gainK:1.00, gainJitter:0.5, toJitter:0.12,
           repeatW:0.30,     // 直前と同じチャンネルを選ぶ重み(同じ札の連発を避ける)
