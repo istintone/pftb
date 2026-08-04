@@ -524,11 +524,13 @@ body{
   background:linear-gradient(115deg, transparent 38%, oklch(0.95 0.02 90 / .40) 48%, transparent 58%);
   mix-blend-mode:screen; animation:holoSweep 4.5s ease-in-out infinite;
 }
+/* WORLD CLASS は虹の帯。**色を濃く**する(→docs/06 §6.13)。
+   color-dodge は上げすぎると白に飛ぶので、不透明度より**彩度**で寄せる。 */
 .holo-rainbow::after{
-  background:linear-gradient(115deg, transparent 20%,
-    oklch(0.70 0.20 20 / .40) 32%, oklch(0.78 0.18 90 / .40) 42%,
-    oklch(0.72 0.18 160 / .40) 52%, oklch(0.68 0.20 250 / .40) 62%,
-    oklch(0.70 0.20 320 / .40) 72%, transparent 84%);
+  background:linear-gradient(115deg, transparent 18%,
+    oklch(0.64 0.26 20 / .50) 31%, oklch(0.74 0.23 90 / .50) 42%,
+    oklch(0.66 0.24 160 / .50) 52%, oklch(0.60 0.26 250 / .50) 62%,
+    oklch(0.64 0.26 320 / .50) 73%, transparent 86%);
   mix-blend-mode:color-dodge; animation:holoSweep 5.5s ease-in-out infinite;
 }
 /* LEGENDS だけは**金の帯**。単色をぼかしただけだと「明るい所」にしか見えないので、
