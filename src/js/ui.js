@@ -817,11 +817,22 @@ function renderSeason(){
       +'<b>'+esc(lg.name)+'</b>'
       +'<div class="lg">'+r+'位 · 勝点'+pts(t)+'（'+played+'/'+W.fixtures.length+'節）</div></div>'
       +'<div class="cc-r">›</div></div>'
-    +'<div class="comp-card off" data-comp="cup">'
-      +'<div class="cc-l"><div class="cc-k">CUP</div>'
-      +'<b>大陸大会</b>'
-      +'<div class="lg">未開催（実装予定）</div></div>'
-      +'<div class="cc-r">›</div></div>';
+    +CUPS.map(cup=>{
+      const open=compsAvailable().includes("cup")&&cupOf()&&cupOf().id===cup.id;
+      const run=S.career.cup&&S.career.cup.id===cup.id;
+      const won=S.player.trophies.some(t=>t.id===cup.id);
+      const exp=S.club?S.club.exp:0;
+      // **なぜ出られないのか**を必ず書く。条件が見えないと待つ理由が分からない
+      const sub=open?"今節に開催中 ／ "+cupRoundName(cup,cupRound())
+        :exp<cup.needExp?"熟練度 "+fmtNum(exp)+" / "+fmtNum(cup.needExp)+"（参加条件）"
+        :run?"勝ち抜き中 ／ 次は "+cupRoundName(cup,S.career.cup.round)
+        :"次の開催は "+cup.every+"の倍数の節";
+      return '<div class="comp-card'+(open?"":" off")+'" data-comp="cup">'
+        +'<div class="cc-l"><div class="cc-k">CUP'+(won?' <i class="cc-t">🏆</i>':'')+'</div>'
+        +'<b>'+esc(cup.name)+'</b>'
+        +'<div class="lg">'+esc(sub)+'</div></div>'
+        +'<div class="cc-r">›</div></div>';
+    }).join("");
   $("seasonComps").querySelectorAll("[data-comp]").forEach(el=>{
     el.onclick=()=>{ _comp=el.dataset.comp; show("schedule",{push:1}); };
   });
@@ -930,11 +941,16 @@ function logRow(e){
   const h=handById(e.hand);
   const cls=e.res==="win"?"w":e.res==="draw"?"d":"l";
   const mark=e.res==="win"?"○":e.res==="draw"?"△":"●";
-  return '<div class="cal done">'
+  // カップは相手がクラブ一覧に居ないので、記録側が持っている名前をそのまま出す
+  const cup=e.comp==="cup";
+  const name=cup?e.oppName:clubName(e.opp);
+  const sub=cup?e.label+(e.champ?" ／ 優勝":"")
+            :"S"+e.season+" 第"+e.md+"節 ／ "+(e.home?"HOME":"AWAY");
+  return '<div class="cal done'+(e.champ?" champ":"")+'">'
     +'<span class="cal-n num">'+e.node+'</span>'
-    +'<span class="cal-h" title="'+(h?h.label:"")+'">'+(h?h.icon:"—")+'</span>'
-    +'<span class="cal-b"><b>'+esc(clubName(e.opp))+'</b>'
-    +'<span class="lg">S'+e.season+' 第'+e.md+'節 ／ '+(e.home?"HOME":"AWAY")+'</span></span>'
+    +'<span class="cal-h" title="'+(h?h.label:"")+'">'+(cup?"🏆":(h?h.icon:"—"))+'</span>'
+    +'<span class="cal-b"><b>'+esc(name)+'</b>'
+    +'<span class="lg">'+esc(sub)+'</span></span>'
     +'<span class="cal-s num '+cls+'">'+mark+' '+e.gf+'-'+e.ga+'</span></div>';
 }
 
@@ -953,9 +969,13 @@ function currentRow(){
     target='<div class="cal-target"><span class="cal-c" style="background:'+clubColor(f.opp)+'"></span>'
       +'<span class="cal-b"><b>'+esc(clubName(f.opp))+'</b>'
       +'<span class="lg">リーグ 第'+S.world.matchday+'節 ／ '+(f.home?"HOME":"AWAY")+'</span></span></div>';
-  else if(comp==="cup")
-    target='<div class="cal-target"><span class="cal-b"><b>'+esc(planned?planned.label:"カップ戦")+'</b>'
-      +'<span class="lg">カップ戦</span></span></div>';
+  else if(comp==="cup"){
+    const cf=cupFixtureOf();
+    target=cf?'<div class="cal-target"><span class="cal-c" style="background:'
+        +(cf.elite?"var(--rar-spe)":"var(--accent-dim)")+'"></span>'
+      +'<span class="cal-b"><b>'+esc(cf.side.name)+'</b>'
+      +'<span class="lg">'+esc(cf.label)+(cf.elite?' ／ 強豪':'')+'</span></span></div>':"";
+  }
 
   return '<div class="cal cur" id="calCur">'
     +'<div class="cal-cur-h"><span class="cal-n num">'+C.node+'</span>'
@@ -975,9 +995,17 @@ function currentRow(){
       +'<button class="compbtn'+(comp==="cup"?" on":"")+'" data-comp2="cup"'
         +(avail.includes("cup")?"":" disabled")+'>カップ戦</button>'
     +'</div>'
-    +(avail.includes("cup")?"":'<div class="lg hand-desc">カップ戦は未実装です（大陸大会は今後）</div>')
+    +(avail.includes("cup")?"":'<div class="lg hand-desc">'+esc(cupWhy())+'</div>')
     +target
     +'<button class="btn" id="calGo"'+(C.hand&&comp?"":" disabled")+'>試合開始</button></div>';
+}
+/** カップに出られない理由。**条件が見えないと待つ理由が分からない**。 */
+function cupWhy(){
+  const cup=CUPS[0], C=S.career, exp=S.club?S.club.exp:0;
+  if(exp<cup.needExp)
+    return cup.name+"は熟練度 "+fmtNum(cup.needExp)+" から参加できます（現在 "+fmtNum(exp)+"）。";
+  const next=(Math.floor(C.node/cup.every)+1)*cup.every;
+  return cup.name+"は"+cup.every+"の倍数の節に開催されます（次は第"+next+"節）。";
 }
 function wireCurrentRow(){
   document.querySelectorAll("#scr-season [data-hand]").forEach(b=>{
@@ -1042,6 +1070,12 @@ function renderClubhouse(){
     '<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'
     +(x.rank?x.rank+"位 ":"")+x.result+'</b></div>').join(""):'<div class="lg">まだ記録がありません</div>';
   const F={ training:"練習場", medical:"医療施設", stadium:"スタジアム", scouting:"スカウト網" };
+  // トロフィー(→docs/03 §3.23)。**初優勝だけが実績**になるので、並ぶと重みがある
+  const tr=S.player.trophies||[];
+  $("clubTrophies").innerHTML=tr.length
+    ?'<div class="trophies">'+tr.map(t=>'<div class="trophy"><i>🏆</i><div>'
+      +'<b>'+esc(t.name)+'</b><span>SEASON '+t.season+'</span></div></div>').join("")+'</div>'
+    :'<div class="lg">まだありません。カップ戦を制すると刻まれます。</div>';
   $("clubFac").innerHTML=Object.keys(F).map(k=>kv(F[k],"Lv."+S.club.fac[k])).join("")
     +'<div class="lg" style="margin-top:6px">投資は第4段で実装します。</div>';
 }

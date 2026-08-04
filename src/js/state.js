@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=7;
+const SAVE_VER=8;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -42,6 +42,8 @@ function defaultState(){
       // カップの連戦のように「この節はこの大会」と先に埋まるケースをここで表す。
       // 埋まっていない節は「未定」の枠として表示する(→docs/03 §3.2.3)。
       plan:{},
+      // 勝ち抜き中のカップ(→docs/03 §3.23)。{id, round} 。負けたら消す
+      cup:null,
       log:[],                       // 消化した節の記録(カレンダーの過去行になる)
     },
   };
@@ -164,6 +166,8 @@ function migrate(){
   if(S.v<6&&!S.kickers)S.kickers={ pk:null, fk:null, ck:null };
   // v6 → v7: キャプテンを足した(→docs/03 §3.20)。未指名は自動選出と同じ。
   if(S.v<7&&S.captain===undefined)S.captain=null;
+  // v7 → v8: カップ戦を足した(→docs/03 §3.23)。勝ち抜き中でない状態から始める。
+  if(S.v<8&&S.career&&S.career.cup===undefined)S.career.cup=null;
   S.v=SAVE_VER;
 }
 

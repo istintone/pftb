@@ -159,6 +159,23 @@ const STEPS = [
     await ctx.wait(250);
     ctx.log("カップ戦:", await ctx.js("document.getElementById('schedHead').textContent"));
     await ctx.shot("07-schedule-cup");
+    // カップ戦(→docs/03 §3.23)。**条件を満たすまでは出られず、理由が出る**
+    ctx.log("  カップ戦:", await ctx.js(`(()=>{
+      const cup=CUPS[0];
+      const card=document.querySelector('#seasonComps [data-comp="cup"]');
+      if(!card)throw new Error('カップの大会カードが無い');
+      const before=card.querySelector('.lg').textContent;
+      if(compsAvailable().includes('cup'))throw new Error('熟練度0で出られてしまう');
+      // 条件を満たすと選べるようになる
+      const exp=S.club.exp, node=S.career.node;
+      S.club.exp=cup.needExp; S.career.node=cup.every;
+      const ok=compsAvailable().includes('cup');
+      const f=cupFixtureOf();
+      S.club.exp=exp; S.career.node=node;
+      if(!ok)throw new Error('条件を満たしても出られない');
+      if(!f||!f.side||f.side.cards.length<11)throw new Error('組み合わせが作れない');
+      return '条件前「'+before+'」→ 満たすと '+f.label+' vs '+f.side.name;
+    })()`));
     await ctx.js("document.getElementById('hdBack').click()");
     await ctx.wait(300);
 
