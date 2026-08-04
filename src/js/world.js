@@ -897,7 +897,7 @@ function advanceNode(){
   }
   const closed=(c&&!c.done&&C.node>=cupLastNode())?closeCup():null;
   C.node++;
-  C.hand=null; C.comp=null;                                 // 次節はまた選び直す
+  C.hand=null; C.comp=null; C.chat=null;                    // 次節はまた選び直す
   checkTenureClosing();
   return closed;
 }

@@ -140,7 +140,7 @@ const STEPS = [
     ctx.log("遷移先:", await ctx.screen(),
       "/ 大会数:", await ctx.js("document.querySelectorAll('#seasonComps [data-comp]').length"),
       "/ 任期:", await ctx.js("document.querySelector('#tenureBar .num').textContent"),
-      "/ 打ち手:", await ctx.js("document.querySelectorAll('#seasonCal .hand').length"),
+      "/ 節タイル:", await ctx.js("!!document.getElementById('calCur')"),
       "/ カレンダー行:", await ctx.js("document.querySelectorAll('#seasonCal .cal').length"));
     await ctx.shot("05-season-hub");
 
@@ -181,10 +181,14 @@ const STEPS = [
     ctx.log("  エントリー:", await ctx.js(`(()=>{
       const cup=CUPS[0];
       S.club.exp=cup.needExp+400; S.career.node=cup.every; S.career.cup=null;
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
       renderSeason();
-      const hand=document.querySelector('#seasonCal .hand[data-hand="entry"]');
-      if(!hand)throw new Error('開催節なのにエントリーの打ち手が出ない');
-      hand.click();
+      // **エントリーはクラブチャットの中**(→docs/03 §3.29)
+      show('chat');
+      const yes=[...document.querySelectorAll('#chatAsk [data-pick]')].find(b=>b.dataset.pick==='yes');
+      if(!yes)throw new Error('チャットにエントリーの選択肢が出ない');
+      yes.click();
+      renderSeason();                       // 予定はカレンダー側に出るので描き直す
       const c=S.career.cup;
       if(!c)throw new Error('エントリーできない');
       if(S.career.node!==cup.every)throw new Error('エントリーで節が進んでしまう');
@@ -255,11 +259,78 @@ const STEPS = [
     await ctx.wait(300);
 
     // 試合は SEASON の任期カレンダーから始める(試合画面 → 再生 → 結果)
-    ctx.log("開始ボタン(打ち手なし):", await ctx.js("document.getElementById('calGo').disabled"));
-    await ctx.js(`document.querySelector('#seasonCal .hand[data-hand="train"]').click()`);
-    await ctx.wait(250);
-    ctx.log("打ち手を選んだ後:", await ctx.js("document.getElementById('calGo').disabled"));
-    await ctx.js("document.getElementById('calGo').click()");
+    // 節の進行は**クラブチャット**(→docs/03 §3.29)。秘書とのやり取りで打ち手まで決める
+    await ctx.js("S.career.chat=null; S.career.hand=null; S.career.comp=null; renderSeason()");
+    await ctx.js("document.getElementById('calCur').click()");
+    await ctx.wait(400);
+    ctx.log("クラブチャット:", await ctx.screen(),
+      "/", await ctx.js("document.getElementById('chatSub').textContent"),
+      "/ 発言", await ctx.js("document.querySelectorAll('#chatLog .ch-row').length"),
+      "/ 選択肢", await ctx.js("document.querySelectorAll('#chatAsk [data-pick]').length"));
+    await ctx.shot("05b-chat");
+    ctx.log("  秘書との段取り:", await ctx.js(`(()=>{
+      const pick=v=>{
+        const b=[...document.querySelectorAll('#chatAsk [data-pick]')]
+          .find(x=>v==null||x.dataset.pick===String(v))||document.querySelector('#chatAsk [data-pick]');
+        if(!b)throw new Error('選択肢が出ていない: step='+S.career.chat.step);
+        b.click(); return b.textContent;
+      };
+      const steps=[];
+      let guard=0;
+      while(S.career.chat.step&&S.career.chat.step!=='ready'&&guard++<8){
+        const st=S.career.chat.step;
+        steps.push(st+':'+pick(st==='hand'?'train':null).slice(0,10));
+      }
+      if(S.career.chat.step!=='ready')throw new Error('準備完了まで進まない');
+      if(!S.career.hand)throw new Error('打ち手が決まっていない');
+      if(!document.getElementById('chatGo'))throw new Error('試合へ向かうボタンが無い');
+      return steps.join(' → ')+' / 打ち手 '+S.career.hand;
+    })()`));
+    await ctx.wait(200);
+    await ctx.shot("05c-chat-ready");
+    // 交流と休息の分岐(→docs/03 §3.29)。交流は相方をもう1人選ぶ / 休息は選択肢なし
+    ctx.log("  交流と休息:", await ctx.js(`(()=>{
+      const run=hand=>{
+        S.career.chat=null; S.career.hand=null; S.career.comp=null;
+        renderChat();
+        const steps=[];
+        let guard=0;
+        while(S.career.chat.step&&S.career.chat.step!=='ready'&&guard++<8){
+          const st=S.career.chat.step;
+          const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+          const b=st==='cup'?bs.find(x=>x.dataset.pick==='no')
+            :st==='hand'?bs.find(x=>x.dataset.pick===hand):bs[0];
+          if(!b)throw new Error(hand+' の '+st+' で選択肢が出ない');
+          b.click(); renderChat();
+          steps.push(st);
+        }
+        if(S.career.chat.step!=='ready')throw new Error(hand+' が準備完了まで進まない');
+        return hand+'['+steps.join('>')+']';
+      };
+      const bond=run('bond'), rest=run('rest');
+      // 交流は who と who2 の2人、休息はどちらも聞かれない
+      if(!bond.includes('who>who2'))throw new Error('交流で相方を聞いていない: '+bond);
+      if(rest.includes('who'))throw new Error('休息で選手を聞いている: '+rest);
+      const sel=S.career.chat.sel;
+      if(sel.hand!=='rest')throw new Error('打ち手が反映されていない');
+      return bond+' / '+rest;
+    })()`));
+    await ctx.wait(200);
+    await ctx.shot("05d-chat-rest");
+    // 訓練に戻してから試合へ
+    await ctx.js(`(()=>{
+      S.career.chat=null; S.career.hand=null; S.career.comp=null; renderChat();
+      let guard=0;
+      while(S.career.chat.step&&S.career.chat.step!=='ready'&&guard++<8){
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        const st=S.career.chat.step;
+        const b=st==='cup'?bs.find(x=>x.dataset.pick==='no')
+          :st==='hand'?bs.find(x=>x.dataset.pick==='train'):bs[0];
+        b.click(); renderChat();
+      }
+    })()`);
+    await ctx.wait(200);
+    await ctx.js("document.getElementById('chatGo').click()");
     await ctx.wait(900);
     // キックオフのカットイン
     ctx.log("  キックオフ演出:", await ctx.js(
@@ -1036,11 +1107,23 @@ const STEPS = [
     for (let i = 0; i < 40; i++) {
       await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
       await ctx.wait(100);
-      const playable = await ctx.js("!!document.getElementById('calGo')");
+      const playable = await ctx.js("!!document.getElementById('calCur')");
       if (!playable) break;
-      await ctx.js("document.querySelector('#seasonCal .hand:not(.cup)').click()");
-      await ctx.wait(60);
-      await ctx.js("document.getElementById('calGo').click()");
+      // チャットを一気に進める(選択肢は先頭を選び、カップは見送る)
+      await ctx.js(`(()=>{
+        S.career.chat=null; show('chat');
+        let guard=0;
+        while(S.career.chat.step&&S.career.chat.step!=='ready'&&guard++<8){
+          const st=S.career.chat.step;
+          const want=st==='cup'?'no':null;
+          const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+          const b=(want&&bs.find(x=>x.dataset.pick===want))||bs[0];
+          if(!b)break;
+          b.click();
+        }
+      })()`);
+      await ctx.wait(80);
+      await ctx.js("(()=>{const g=document.getElementById('chatGo'); if(g)g.click();})()");
       await ctx.wait(150);
       // 試合画面を経由するので、スキップして結果まで進める
       await ctx.js("document.getElementById('mSkip').click()");

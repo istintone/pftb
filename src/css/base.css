@@ -1378,6 +1378,57 @@ body{
 .tbl tr.up td:first-child{ box-shadow:inset 3px 0 0 var(--accent) }
 .tbl tr.down td:first-child{ box-shadow:inset 3px 0 0 oklch(0.60 0.16 25) }
 #standNote{ margin-top:8px }
+/* クラブチャット(→docs/06 §6.23)。モックの秘書チャットを踏襲した吹き出し */
+.ch-head{
+  display:flex; align-items:center; gap:10px;
+  padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--line-2);
+}
+.ch-av{
+  width:42px; height:42px; border-radius:50%; flex-shrink:0; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  font:400 8px/1 var(--f-mono); letter-spacing:.5px;
+}
+.ch-av.sec{ background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300);
+  color:oklch(0.75 0.03 300) }
+.ch-av img{ width:150%; height:150%; object-fit:contain; object-position:center top }
+.ch-hn{ font:600 14px/1.2 var(--f-head); color:var(--text) }
+.ch-hs{ font-size:10px; color:var(--text-dim); margin-top:1px }
+.ch-day{
+  text-align:center; margin-bottom:14px;
+  font:400 9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-mute);
+}
+.ch-log{ display:flex; flex-direction:column; gap:10px }
+.ch-row{ display:flex; align-items:flex-end; gap:7px }
+.ch-row.me{ justify-content:flex-end }
+.ch-sm{ width:26px; height:26px; border-radius:50%; flex-shrink:0; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  font:400 6px/1 var(--f-mono); color:oklch(0.75 0.03 300);
+  background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300) }
+.ch-sm.pl{ background:var(--panel-2); border-color:var(--line) }
+.ch-sm img{ width:160%; height:160%; object-fit:contain; object-position:center top }
+.ch-b{
+  max-width:76%; padding:10px 12px; font-size:12px; line-height:1.65;
+  background:var(--panel); color:var(--text-2); border-radius:12px 12px 12px 4px;
+}
+.ch-row.me .ch-b{
+  background:oklch(0.32 0.06 85); color:oklch(0.96 0.01 90);
+  border-radius:12px 12px 4px 12px;
+}
+.ch-nm{ display:block; font:400 9px/1 var(--f-mono); color:var(--text-mute); margin-bottom:4px }
+/* 選択肢。**吹き出しの続きに見えるよう**下からせり出す */
+.ch-ask{ margin-top:16px; display:flex; flex-direction:column; gap:6px }
+.ch-q{ font-size:11px; color:var(--text-dim); margin-bottom:2px }
+.ch-op{
+  width:100%; text-align:left; padding:12px 14px; border-radius:10px; cursor:pointer;
+  background:var(--panel); border:1px solid var(--accent-dim); color:var(--text);
+  font:400 13px/1.3 var(--f-body);
+}
+.ch-op:active{ background:oklch(0.26 0.05 85) }
+.ch-op .ch-os{ display:block; font-size:10px; color:var(--text-dim); margin-top:3px }
+/* 選手を選ぶときだけ2列にして、名前とポジションを並べる */
+.ch-ask.grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px }
+.ch-ask.grid .ch-q{ grid-column:1 / -1 }
+.ch-ask.grid .ch-op{ padding:10px; font-size:12px }
 /* シーズン総括(→docs/03 §3.24) */
 .bd-move{
   display:flex; flex-direction:column; gap:3px;
@@ -1445,6 +1496,14 @@ body{
   background:oklch(0.24 0.04 85 / .30); border-color:var(--accent-dim);
 }
 .cal-cur-h{ display:flex; align-items:center; gap:10px; margin-bottom:10px }
+/* **タイルは入口だけ**(→docs/03 §3.29)。中身の操作はクラブチャットが持つ */
+.cal.cur{ cursor:pointer }
+.cal.cur .cal-r{ margin-left:auto; font-size:18px; color:var(--accent) }
+.cur-go{
+  margin-top:10px; padding:11px; text-align:center; border-radius:10px;
+  background:var(--accent); color:var(--bg);
+  font:600 13px/1 var(--f-head); letter-spacing:.5px;
+}
 .step-k{ margin:10px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
 .comps{ display:flex; gap:6px }
 .compbtn{

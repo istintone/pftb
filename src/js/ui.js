@@ -20,6 +20,7 @@ const SCREENS={
   contract:  { chrome:"bare" },
   offer:     { title:"OFFERS",    chrome:"back",  render:()=>renderOffers() },
   board:     { title:"REVIEW",    chrome:"back",  render:()=>renderBoard() },
+  chat:      { title:"CLUB",      under:"season", chrome:"back", render:()=>renderChat() },
   home:      { title:"HOME",      tab:"home",      chrome:"full", render:()=>renderHome() },
   cards:     { title:"CARDS",     tab:"cards",     chrome:"full", render:()=>renderCards() },
   deck:      { title:"DECK",      tab:"deck",      chrome:"full", render:()=>renderDeck() },
@@ -986,52 +987,29 @@ function logRow(e){
 }
 
 /**
- * 現在節のカード。1節は「打ち手を選ぶ → どの大会に出るかを選ぶ → 試合」の順で決める。
- * リーグの日程は節に固定されていないので、リーグを選んだ節に次の1試合を消化する。
+ * 現在節のタイル(→docs/03 §3.29)。**ここでは何も決めない。**
+ * タップするとクラブチャットが開き、そこで打ち手も大会も決まる。
+ * 節のカードに操作を詰め込むと、何をどこまで決めたのかが読み取れなくなっていた。
  */
 function currentRow(){
-  const C=S.career, avail=compsAvailable();
-  const planned=C.plan[C.node];
-  const f=myFixture();
-  const comp=C.comp||(avail.length===1?avail[0]:null);
-
-  let target="";
-  if(comp==="league"&&f)
-    target='<div class="cal-target"><span class="cal-c" style="background:'+clubColor(f.opp)+'"></span>'
-      +'<span class="cal-b"><b>'+esc(clubName(f.opp))+'</b>'
-      +'<span class="lg">リーグ 第'+S.world.matchday+'節 ／ '+(f.home?"HOME":"AWAY")+'</span></span></div>';
-  else if(comp==="cup"){
-    const cf=cupFixtureOf();
-    target=cf?'<div class="cal-target"><span class="cal-c" style="background:'
-        +(cf.elite?"var(--rar-spe)":"var(--accent-dim)")+'"></span>'
-      +'<span class="cal-b"><b>'+esc(cf.side.name)+'</b>'
-      +'<span class="lg">'+esc(cf.label)+(cf.elite?' ／ 強豪':'')+'</span></span></div>':"";
-  }
-
-  return '<div class="cal cur" id="calCur">'
+  const C=S.career, ch=C.chat;
+  const state=!ch?"クラブに集合しましょう"
+    :ch.step==="ready"?"準備完了 ／ 試合へ向かえます"
+    :"準備中 ／ 続きから話せます";
+  // 相手が決まっていれば出す。決まるのはチャットで大会を選んでから
+  const f=C.comp==="cup"?cupFixtureOf():null;
+  const m=C.comp==="league"?myFixture():null;
+  const foe=f?{ name:f.side.name, sub:f.label, col:f.elite?"var(--rar-spe)":"var(--accent-dim)" }
+    :m?{ name:clubName(m.opp), sub:"リーグ 第"+S.world.matchday+"節 ／ "+(m.home?"HOME":"AWAY"),
+         col:clubColor(m.opp) }:null;
+  return '<div class="cal cur" id="calCur" role="button" tabindex="0">'
     +'<div class="cal-cur-h"><span class="cal-n num">'+C.node+'</span>'
-    +'<span class="cal-b"><b>この節にすること</b>'
-    +(planned?'<span class="lg">予定が確定しています</span>':'<span class="lg">打ち手 → 出場する大会</span>')+'</span></div>'
-    // ① 打ち手
-    +'<div class="step-k">① 打ち手</div>'
-    // **エントリーは開催節にだけ現れる打ち手**(→docs/03 §3.23)
-    +'<div class="hands">'+HANDS.filter(h=>!h.cup||cupEnterable()||C.hand===h.id).map(h=>
-      '<button class="hand'+(C.hand===h.id?" on":"")+(h.cup?" cup":"")+'" data-hand="'+h.id+'">'
-      +'<span class="hd-i">'+h.icon+'</span><span class="hd-l">'+h.label+'</span></button>').join("")+'</div>'
-    +'<div class="lg hand-desc">'+(C.hand?esc(handById(C.hand).desc):"打ち手を選んでください")+'</div>'
-    // ② 出場する大会
-    +'<div class="step-k">② 出場する大会</div>'
-    +'<div class="comps">'
-      +'<button class="compbtn'+(comp==="league"?" on":"")+'" data-comp2="league"'
-        +(avail.includes("league")?"":" disabled")+'>リーグ戦</button>'
-      +'<button class="compbtn'+(comp==="cup"?" on":"")+'" data-comp2="cup"'
-        +(avail.includes("cup")?"":" disabled")+'>カップ戦</button>'
-    +'</div>'
-    +(avail.includes("cup")?"":'<div class="lg hand-desc">'+esc(cupWhy())+'</div>')
-    +(cupMustPlay()?'<div class="lg hand-desc"><b>'+esc(cupJoinedName())
-       +'を勝ち残っています。</b>この節はカップ戦のみで、辞退はできません。</div>':"")
-    +target
-    +'<button class="btn" id="calGo"'+(C.hand&&comp?"":" disabled")+'>試合開始</button></div>';
+    +'<span class="cal-b"><b>この節の準備</b><span class="lg">'+esc(state)+'</span></span>'
+    +'<span class="cal-r">›</span></div>'
+    +(foe?'<div class="cal-target"><span class="cal-c" style="background:'+foe.col+'"></span>'
+      +'<span class="cal-b"><b>'+esc(foe.name)+'</b>'
+      +'<span class="lg">'+esc(foe.sub)+'</span></span></div>':"")
+    +'<div class="cur-go">クラブチャットを開く</div></div>';
 }
 const cupJoinedName=()=>{ const c=cupJoined(); return c?c.name:"カップ戦"; };
 /** カップに出られない理由。**条件が見えないと待つ理由が分からない**。 */
@@ -1051,27 +1029,184 @@ function cupWhy(){
   return cup.name+"は"+cup.every+"の倍数の節に開催されます（次は第"+next+"節）。エントリーは打ち手から選びます。";
 }
 function wireCurrentRow(){
-  document.querySelectorAll("#scr-season [data-hand]").forEach(b=>{
-    b.onclick=()=>{
-      // **エントリーは打ち手であると同時に大会参加**。選んだ時点で節は進まない
-      if(b.dataset.hand==="entry"&&!S.career.cup){
-        const cup=cupEnterable();
-        if(!cup||!enterCup(cup.id)){ toast("いまはエントリーできません"); return; }
-        toast(cup.name+" にエントリーしました");
-      }
-      pickHand(b.dataset.hand); save(); renderSeason(); scrollToCurrent();
-    };
-  });
-  document.querySelectorAll("#scr-season [data-comp2]").forEach(b=>{
-    b.onclick=()=>{ if(pickComp(b.dataset.comp2)){ save(); renderSeason(); scrollToCurrent(); } };
-  });
-  const go=$("calGo");
-  if(go)go.onclick=()=>{
-    if(!S.career.hand){ toast("打ち手を選んでください"); return; }
-    if(!S.career.comp&&!pickComp("league")){ toast("出場する大会を選んでください"); return; }
-    startMatch();
-  };
+  const cur=$("calCur");
+  if(cur)cur.onclick=()=>show("chat",{push:1});
 }
+// ---------- クラブチャット(→docs/03 §3.29) ----------
+// **1節の準備をここで全部決める。** 秘書がカップ戦・打ち手・予定を順に確認し、
+// 最後に試合へ送り出す。選んだ内容は career.chat に残るので、
+// 途中で別の画面へ行って戻ってきても会話は続きから見える。
+const CHAT_STAGES=["cup","foe","hand","who","who2","menu","result","event","ready"];
+const chatLine=(a,seed)=>a[Math.abs(hashStr(seed))%a.length];
+const chatFill=(t,v)=>t.replace(/\{d\}/g,v.d||"").replace(/\{c\}/g,v.c||"")
+  .replace(/\{f\}/g,v.f||"").replace(/\{v\}/g,v.v||"").replace(/\{r\}/g,v.r||"")
+  .replace(/\{n\}/g,v.n||"").replace(/\{m\}/g,v.m||"");
+const chatSay=(w,t)=>S.career.chat.log.push({ w, t });
+/** 会話を始める(その節で最初に開いたとき)。 */
+function chatStart(){
+  const C=S.career;
+  C.chat={ log:[], i:0, step:null, sel:{} };
+  chatSay("sec",chatFill(chatLine(CHAT.open,"open:"+C.node),{ d:C.node }));
+  chatAdvance();
+}
+/** 入力が要る段まで進める。要らない段は台詞だけ積んで通り過ぎる。 */
+function chatAdvance(){
+  const ch=S.career.chat;
+  let guard=0;
+  while(guard++<20){
+    const st=CHAT_STAGES[ch.i];
+    if(!st){ ch.step=null; return; }
+    if(chatEnter(st)){ ch.step=st; return; }
+    ch.i++;
+  }
+  ch.step=null;
+}
+/** その段に入る。**入力が要るなら true**。 */
+function chatEnter(st){
+  const C=S.career, ch=C.chat, sel=ch.sel;
+  if(st==="cup"){
+    if(cupMustPlay()){ pickComp("cup"); return false; }   // 勝ち残り中は選ぶ余地がない
+    const cup=cupEnterable();
+    if(!cup)return false;
+    sel.cup=cup.id;
+    chatSay("sec",chatFill(CHAT.cupAsk,{ c:cup.name }));
+    return true;
+  }
+  if(st==="foe"){
+    if(!C.comp)pickComp("league");
+    const f=C.comp==="cup"?cupFixtureOf():null;
+    if(f)chatSay("sec",chatFill(CHAT.cupStay,
+      { c:cupJoinedName(), r:cupRoundName(cupJoined(),f.round), f:f.side.name }));
+    else{
+      const m=myFixture();
+      chatSay("sec",m?chatFill(CHAT.foeLeague,
+        { f:clubName(m.opp), v:m.home?"ホーム":"アウェイ" }):"今節のリーグ戦は組まれていません。");
+    }
+    return false;
+  }
+  if(st==="hand"){ chatSay("sec",CHAT.handAsk); return true; }
+  if(st==="who"){
+    if(sel.hand==="rest"){ chatSay("sec",CHAT.restSec); return false; }
+    chatSay("sec",CHAT.whoAsk);
+    return true;
+  }
+  if(st==="who2"){
+    if(sel.hand!=="bond")return false;
+    chatSay(sel.who,chatFill(chatLine(CHAT.callBond,"cb:"+C.node),{}));
+    return true;
+  }
+  if(st==="menu"){
+    if(sel.hand==="rest")return false;
+    if(sel.hand==="train")chatSay(sel.who,chatFill(chatLine(CHAT.callTrain,"ct:"+C.node),{}));
+    else chatSay(sel.who,chatFill(CHAT.bondAsk,{ m:shortOf(sel.who2) }));
+    return true;
+  }
+  if(st==="result"){
+    if(sel.hand==="rest")return false;
+    // **手応えはランダム**。効果そのものは後で決める(→docs/03 §3.29)
+    const T=TUNING.chat;
+    const r=mulberry32((S.world.seed^hashStr("chat:"+C.node+":"+sel.hand))>>>0)();
+    sel.res=r<T.great?"great":r<T.great+T.fail?"fail":"ok";
+    const key=sel.hand==="bond"
+      ?(sel.res==="great"?"bondGreat":sel.res==="fail"?"bondFail":"bondOk")
+      :(sel.res==="great"?"great":sel.res==="fail"?"fail":"ok");
+    chatSay(sel.who,chatFill(chatLine(CHAT[key],"res:"+C.node+sel.res),
+      { m:sel.who2?shortOf(sel.who2):"" }));
+    return false;
+  }
+  if(st==="event"){ chatSay("sec",CHAT.eventNone); return false; }
+  if(st==="ready"){ chatSay("sec",chatLine(CHAT.ready,"rd:"+C.node)); return true; }
+  return false;
+}
+/** 監督が選んだ。**選択肢の文言がそのまま監督の発言**になる。 */
+function chatPick(id,label){
+  const C=S.career, ch=C.chat, sel=ch.sel, st=ch.step;
+  chatSay("mgr",label);
+  if(st==="cup"){
+    if(id==="yes"){
+      const cup=cupEnterable();
+      if(cup&&enterCup(cup.id)){
+        const f=cupFixtureOf();
+        chatSay("sec",chatFill(CHAT.cupYes,{ f:f?f.side.name:"—" }));
+        pickHand("entry");                                 // 打ち手はエントリー(→§3.23)
+        ch.i=CHAT_STAGES.indexOf("event");                 // 打ち手は使い切った
+        ch.step=null; save(); chatAdvance(); return;
+      }
+    }
+    chatSay("sec",CHAT.cupNo);
+    pickComp("league");
+  }
+  else if(st==="hand"){ sel.hand=id; pickHand(id); }
+  else if(st==="who"){ sel.who=+id; }
+  else if(st==="who2"){ sel.who2=+id; }
+  else if(st==="menu"){ sel.menu=id; }
+  ch.i++; ch.step=null;
+  save(); chatAdvance();
+}
+/** いま出す選択肢。 */
+function chatOptions(){
+  const C=S.career, ch=C.chat, sel=ch.sel, st=ch&&ch.step;
+  if(st==="cup")return { q:"どうしますか", items:[
+    { id:"yes", label:"エントリーする", sub:"勝ち続ける限りリーグ戦は進められません" },
+    { id:"no",  label:"今節は見送る",   sub:"リーグ戦に集中します" }] };
+  if(st==="hand")return { q:"打ち手を選ぶ", items:HANDS.filter(h=>!h.cup)
+    .map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc })) };
+  if(st==="who"||st==="who2")return { q:st==="who"?"誰を呼びますか":"相方を選びますか",
+    grid:true, items:chatSquad(st==="who2"?sel.who:null)
+      .map(c=>({ id:String(c.id), label:shortName(c), sub:primarySub(c)+" ・ OVR "+c.ovr })) };
+  if(st==="menu")return sel.hand==="train"
+    ? { q:"メニューを指示する", items:TRAININGS.map(t=>({ id:t.id, label:t.label, sub:t.ask })) }
+    : { q:"何をさせますか", items:BONDS.map(b=>({ id:b.id, label:b.label })) };
+  return null;
+}
+/** 呼べる選手(先発11 + 控え)。except は相方選びで自分を外すため。 */
+function chatSquad(except){
+  return (S.squad||[]).map(id=>cardById(id)).filter(Boolean).filter(c=>c.id!==except);
+}
+const shortOf=id=>{ const c=cardById(id); return c?shortName(c):"—"; };
+/** 話し手のアイコン。選手は絵、秘書は SEC の丸。 */
+function chatAvatar(w){
+  if(w==="sec")return '<div class="ch-sm">SEC</div>';
+  const c=cardById(w);
+  const art=c&&artKeyOf(c);
+  const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_stand"];
+  return '<div class="ch-sm pl">'+(src?'<img src="'+src+'" alt="">':(c?esc(shortName(c)[0]):"?"))+'</div>';
+}
+function renderChat(){
+  const C=S.career;
+  if(!C.chat)chatStart();
+  const ch=C.chat;
+  $("chatClub").textContent=clubName(S.club.id);
+  $("chatSub").textContent="第"+C.node+"節の準備 ・ 秘書と選手";
+  $("chatDay").textContent="SEASON "+S.world.season+" ・ NODE "+C.node;
+  $("chatLog").innerHTML=ch.log.map(m=>{
+    if(m.w==="mgr")return '<div class="ch-row me"><div class="ch-b">'+esc(m.t)+'</div></div>';
+    const nm=m.w==="sec"?"秘書":shortOf(m.w);
+    return '<div class="ch-row">'+chatAvatar(m.w)
+      +'<div class="ch-b"><span class="ch-nm">'+esc(nm)+'</span>'+esc(m.t)+'</div></div>';
+  }).join("");
+  const o=chatOptions();
+  if(ch.step==="ready"){
+    $("chatAsk").className="ch-ask";
+    $("chatAsk").innerHTML='<button class="btn" id="chatGo">試合へ向かう</button>';
+    $("chatGo").onclick=()=>startMatch();
+  }else if(o){
+    $("chatAsk").className="ch-ask"+(o.grid?" grid":"");
+    $("chatAsk").innerHTML='<div class="ch-q">'+esc(o.q)+'</div>'
+      +o.items.map(it=>'<button class="ch-op" data-pick="'+esc(it.id)+'">'+esc(it.label)
+        +(it.sub?'<span class="ch-os">'+esc(it.sub)+'</span>':"")+'</button>').join("");
+    $("chatAsk").querySelectorAll("[data-pick]").forEach((el,i)=>{
+      el.onclick=()=>{ chatPick(o.items[i].id,o.items[i].label); renderChat(); chatBottom(); };
+    });
+  }else{ $("chatAsk").className="ch-ask"; $("chatAsk").innerHTML=""; }
+  chatBottom();
+}
+/** 会話は下が最新。**開いたら必ず最新まで送る**。 */
+function chatBottom(){
+  setTimeout(()=>{ const el=$("chatAsk"); if(el)try{ el.scrollIntoView({block:"end"}); }catch(e){} },20);
+}
+SCREENS.chat.after=chatBottom;
+
 /** 現在節が画面に入るまでスクロールする(96節あるので必須)。 */
 function scrollToCurrent(){
   const el=$("calCur"); if(!el)return;

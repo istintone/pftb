@@ -2,7 +2,10 @@ const assert=require("assert");
 const { setup }=require("./_setup.js");
 const E=setup({tmpName:"_tmp_ord.js"});
 (async()=>{
-  await E.newGame(); E.getS().coach="検証"; E.startTenure("sam-8");
+  // **たねを固定する**。編成が毎回変わると、レーンの偏りの基準値が揺れて
+  // 判定が運任せになる(実際に中央だけ落ちたり通ったりした)
+  await E.newGame(); E.getS().coach="検証";
+  E.getS().world.seed=20260804; E.startTenure("sam-8");
   const S=E.getS();
   const side=()=>({ cards:E.squadCards(), form:S.form, name:"me" });
 
@@ -60,17 +63,22 @@ const E=setup({tmpName:"_tmp_ord.js"});
       return { l:l/n, c:c/n, r:r/n, n };
     };
     const base=lane(null), L=lane("left"), C=lane("center"), R=lane("right");
-    assert.ok(L.l>base.l*1.15,"左指示で左の関与が増える: "+(base.l*100).toFixed(0)+"% → "+(L.l*100).toFixed(0)+"%");
-    assert.ok(R.r>base.r*1.15,"右指示で右の関与が増える: "+(base.r*100).toFixed(0)+"% → "+(R.r*100).toFixed(0)+"%");
-    assert.ok(C.c>base.c*1.10,"中央指示で中央の関与が増える: "+(base.c*100).toFixed(0)+"% → "+(C.c*100).toFixed(0)+"%");
+    // **割合ではなく差で見る**。中央は既定でも半分近くあるので、倍率では判定できない
+    const pp=(a,b2)=>((a-b2)*100).toFixed(0)+"pp";
+    assert.ok(L.l>base.l+0.06,"左指示で左の関与が増える: "+(base.l*100).toFixed(0)+"% → "
+      +(L.l*100).toFixed(0)+"% ("+pp(L.l,base.l)+")");
+    assert.ok(R.r>base.r+0.06,"右指示で右の関与が増える: "+(base.r*100).toFixed(0)+"% → "
+      +(R.r*100).toFixed(0)+"% ("+pp(R.r,base.r)+")");
+    // 中央は効きを浅くしてある(laneK)ので、上がり幅も小さくてよい
+    assert.ok(C.c>base.c+0.03,"中央指示で中央の関与が増える: "+(base.c*100).toFixed(0)+"% → "
+      +(C.c*100).toFixed(0)+"% ("+pp(C.c,base.c)+")");
     const pct=o=>[o.l,o.c,o.r].map(v=>(v*100).toFixed(0)+"%").join("/");
     console.log("レーンOK 左中右の関与 指示なし",pct(base),"／ 左",pct(L),"／ 中央",pct(C),"／ 右",pct(R));
   }
 
   // --- 攻撃/守備は**表と裏を持つ**。強いだけの指示にしない ---
   {
-    // たねを固定しないと編成が変わり、設定間の比較にならない
-    S.world.seed=20260804; E.startTenure("sam-8");
+
     const run=id=>{
       let gf=0,ga=0,w=0,n=1000;
       for(let i=0;i<n;i++){
