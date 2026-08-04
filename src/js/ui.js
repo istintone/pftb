@@ -818,16 +818,18 @@ function renderSeason(){
       +'<div class="lg">'+r+'位 · 勝点'+pts(t)+'（'+played+'/'+W.fixtures.length+'節）</div></div>'
       +'<div class="cc-r">›</div></div>'
     +CUPS.map(cup=>{
-      const open=compsAvailable().includes("cup")&&cupOf()&&cupOf().id===cup.id;
-      const run=S.career.cup&&S.career.cup.id===cup.id;
+      const j=(S.career.cup&&S.career.cup.id===cup.id)?S.career.cup:null;
       const won=S.player.trophies.some(t=>t.id===cup.id);
       const exp=S.club?S.club.exp:0;
-      // **なぜ出られないのか**を必ず書く。条件が見えないと待つ理由が分からない
-      const sub=open?"今節に開催中 ／ "+cupRoundName(cup,cupRound())
-        :exp<cup.needExp?"熟練度 "+fmtNum(exp)+" / "+fmtNum(cup.needExp)+"（参加条件）"
-        :run?"勝ち抜き中 ／ 次は "+cupRoundName(cup,S.career.cup.round)
-        :"次の開催は "+cup.every+"の倍数の節";
-      return '<div class="comp-card'+(open?"":" off")+'" data-comp="cup">'
+      // **エントリー中なら状態を、そうでなければ出られない理由を**書く
+      let sub;
+      if(j&&j.done)           sub="終了 ／ "+cupPlaceName(cup,j)+"（"+(j.win?"優勝":"優勝 "+j.champ)+"・+"+fmtNum(j.coin)+"）";
+      else if(j&&j.alive)     sub="エントリー中 ／ 次は "+cupRoundName(cup,j.round);
+      else if(j)              sub="敗退（"+cupPlaceName(cup,j)+"）／ 決勝は第"+cupLastNode()+"節";
+      else if(cupEnterable()) sub="今節にエントリーできます";
+      else if(exp<cup.needExp)sub="熟練度 "+fmtNum(exp)+" / "+fmtNum(cup.needExp)+"（参加条件）";
+      else                    sub="次の開催は "+cup.every+"の倍数の節";
+      return '<div class="comp-card'+(j?"":" off")+'" data-comp="cup">'
         +'<div class="cc-l"><div class="cc-k">CUP'+(won?' <i class="cc-t">🏆</i>':'')+'</div>'
         +'<b>'+esc(cup.name)+'</b>'
         +'<div class="lg">'+esc(sub)+'</div></div>'
@@ -875,17 +877,43 @@ function renderTenureCalendar(){
   // リーグの日程は節に固定しない(カップが割り込むため)。既に決まっている予定だけを
   // 枠に書き込み、それ以外は「未定」の空枠として先に見せる(→docs/03 §3.2.3)。
   for(let n=C.node+(C.over?0:1);n<=C.limit;n++){
-    const p=C.plan[n];
+    const p=C.plan[n], cu=cupCalNote(n);
     if(p)rows.push('<div class="cal fut planned"><span class="cal-n num">'+n+'</span>'
       +'<span class="cal-b"><b>'+esc(p.label)+'</b>'
       +'<span class="lg">'+(p.comp==="cup"?"カップ戦":"リーグ戦")+'（予定確定）</span></span>'
       +'<span class="cal-r">▣</span></div>');
+    // **カップの開催日は先に見せる**。エントリー後は大会の予定がそのまま並ぶ(→docs/03 §3.23)
+    else if(cu)rows.push('<div class="cal fut '+cu.cls+'"><span class="cal-n num">'+n+'</span>'
+      +'<span class="cal-h">🏆</span>'
+      +'<span class="cal-b"><b>'+esc(cu.label)+'</b>'
+      +'<span class="lg">'+esc(cu.sub)+'</span></span>'
+      +'<span class="cal-r">'+cu.mark+'</span></div>');
     else rows.push('<div class="cal none"><span class="cal-n num">'+n+'</span>'
       +'<span class="cal-b"><b>未定</b></span></div>');
   }
 
   $("seasonCal").innerHTML=rows.join("");
   wireCurrentRow();
+}
+/**
+ * その節にカップの予定があるか。エントリー中なら**大会の予定表がそのまま並ぶ**
+ * (決勝・準決勝…)。まだ入っていない大会は開催日だけを先に見せる(→docs/03 §3.23)。
+ */
+function cupCalNote(n){
+  const c=S.career.cup;
+  if(c&&!c.done){
+    const cup=cupById(c.id), i=cupNodes().indexOf(n);
+    if(i>=0)return { label:cup.name+" "+cupRoundName(cup,i+1),
+      sub:c.alive?"エントリー中の大会":"敗退のため不参加（進行は確認できます）",
+      cls:c.alive?"planned cup":"planned cup out", mark:c.alive?"▣":"—" };
+    return null;                                   // 大会中は次の開催日を出さない
+  }
+  for(const cup of CUPS){
+    if(!cupDay(cup,n))continue;
+    return { label:cup.name, sub:"開催予定（条件を満たせばエントリーできます）",
+      cls:"cup soon", mark:"◇" };
+  }
+  return null;
 }
 const seasonDivider=(season,clubId)=>
   '<div class="cal-div"><span>SEASON '+season+'</span><b>'+esc(clubName(clubId))+'</b></div>';
@@ -983,8 +1011,9 @@ function currentRow(){
     +(planned?'<span class="lg">予定が確定しています</span>':'<span class="lg">打ち手 → 出場する大会</span>')+'</span></div>'
     // ① 打ち手
     +'<div class="step-k">① 打ち手</div>'
-    +'<div class="hands">'+HANDS.map(h=>
-      '<button class="hand'+(C.hand===h.id?" on":"")+'" data-hand="'+h.id+'">'
+    // **エントリーは開催節にだけ現れる打ち手**(→docs/03 §3.23)
+    +'<div class="hands">'+HANDS.filter(h=>!h.cup||cupEnterable()||C.hand===h.id).map(h=>
+      '<button class="hand'+(C.hand===h.id?" on":"")+(h.cup?" cup":"")+'" data-hand="'+h.id+'">'
       +'<span class="hd-i">'+h.icon+'</span><span class="hd-l">'+h.label+'</span></button>').join("")+'</div>'
     +'<div class="lg hand-desc">'+(C.hand?esc(handById(C.hand).desc):"打ち手を選んでください")+'</div>'
     // ② 出場する大会
@@ -996,20 +1025,34 @@ function currentRow(){
         +(avail.includes("cup")?"":" disabled")+'>カップ戦</button>'
     +'</div>'
     +(avail.includes("cup")?"":'<div class="lg hand-desc">'+esc(cupWhy())+'</div>')
+    +(cupMustPlay()?'<div class="lg hand-desc"><b>'+esc(cupJoinedName())
+       +'を勝ち残っています。</b>この節はカップ戦のみで、辞退はできません。</div>':"")
     +target
     +'<button class="btn" id="calGo"'+(C.hand&&comp?"":" disabled")+'>試合開始</button></div>';
 }
+const cupJoinedName=()=>{ const c=cupJoined(); return c?c.name:"カップ戦"; };
 /** カップに出られない理由。**条件が見えないと待つ理由が分からない**。 */
 function cupWhy(){
   const cup=CUPS[0], C=S.career, exp=S.club?S.club.exp:0;
+  const j=C.cup;
+  if(j&&!j.done)
+    return cupJoinedName()+"が進行中です。大会が終わるまで次の大会にはエントリーできません。";
   if(exp<cup.needExp)
     return cup.name+"は熟練度 "+fmtNum(cup.needExp)+" から参加できます（現在 "+fmtNum(exp)+"）。";
   const next=(Math.floor(C.node/cup.every)+1)*cup.every;
-  return cup.name+"は"+cup.every+"の倍数の節に開催されます（次は第"+next+"節）。";
+  return cup.name+"は"+cup.every+"の倍数の節に開催されます（次は第"+next+"節）。エントリーは打ち手から選びます。";
 }
 function wireCurrentRow(){
   document.querySelectorAll("#scr-season [data-hand]").forEach(b=>{
-    b.onclick=()=>{ pickHand(b.dataset.hand); save(); renderSeason(); scrollToCurrent(); };
+    b.onclick=()=>{
+      // **エントリーは打ち手であると同時に大会参加**。選んだ時点で節は進まない
+      if(b.dataset.hand==="entry"&&!S.career.cup){
+        const cup=cupEnterable();
+        if(!cup||!enterCup(cup.id)){ toast("いまはエントリーできません"); return; }
+        toast(cup.name+" にエントリーしました");
+      }
+      pickHand(b.dataset.hand); save(); renderSeason(); scrollToCurrent();
+    };
   });
   document.querySelectorAll("#scr-season [data-comp2]").forEach(b=>{
     b.onclick=()=>{ if(pickComp(b.dataset.comp2)){ save(); renderSeason(); scrollToCurrent(); } };
@@ -1027,11 +1070,67 @@ function scrollToCurrent(){
   try{ el.scrollIntoView({block:"center"}); }catch(e){}
 }
 
+/**
+ * カップの日程(→docs/03 §3.23)。エントリーしていなければ開催日と条件だけ、
+ * エントリー後は**大会の予定表と勝ち上がり**、決着後は結果と賞金を見せる。
+ */
 function renderCupSchedule(){
-  $("schedHead").textContent="CONTINENTAL CUP · KNOCKOUT STAGE";
-  $("schedList").innerHTML='<div class="stub"><b>大陸大会</b>'
-    +'<span>各国の上位が集まるノックアウト方式。<br>まだ実装していません（→ docs/03 §3.8）</span></div>';
-  $("schedStand").innerHTML="";
+  const C=S.career, c=C.cup, cup=c?cupById(c.id):CUPS[0];
+  $("schedHead").textContent="KING'S CLUB CUP · KNOCKOUT STAGE";
+
+  if(!c){
+    const exp=S.club?S.club.exp:0, next=(Math.floor(C.node/cup.every)+1)*cup.every;
+    $("schedList").innerHTML='<div class="stub"><b>'+esc(cup.name)+'</b>'
+      +'<span>'+esc(cup.note)+'<br>次の開催は第'+next+'節。'
+      +(exp<cup.needExp?'熟練度が '+fmtNum(cup.needExp)+' に届けば':'開催節の打ち手から')
+      +'エントリーできます。</span></div>';
+    $("schedStand").innerHTML=cupInfoBox(cup,null);
+    return;
+  }
+
+  const rows=cupNodes().map((n,i)=>{
+    const e=C.log.find(x=>x.node===n&&x.comp==="cup"&&x.cup===cup.id);
+    const nm=cupRoundName(cup,i+1);
+    const next=c.alive&&!c.done&&!e&&n===C.node;
+    const skip=!e&&(!c.alive||c.done);
+    return '<div class="cal'+(e?" done":next?" next":"")+(e&&e.champ?" champ":"")+'">'
+      +'<span class="cal-n num">'+n+'</span>'
+      +'<span class="cal-b"><b>'+esc(nm)+'</b>'
+      +'<span class="lg">'+esc(e?e.oppName:skip?"不参加":"相手は当日に決まります")+'</span></span>'
+      +(e?'<span class="cal-s num '+(e.res==="win"?"w":"l")+'">'
+          +(e.res==="win"?"○":"●")+' '+e.gf+'-'+e.ga+'</span>'
+        :next?'<span class="cal-r next-lb">次戦</span>'
+             :'<span class="cal-r">'+(skip?"—":"予定")+'</span>')
+      +'</div>';
+  }).join("");
+
+  // 決着の帯。**賞金は大会が完了した節にまとめて入る**ので、ここに出るのも完了後
+  const head=c.done
+    ? '<div class="cup-res'+(c.win?" win":"")+'">'
+      +'<span class="eyebrow">RESULT</span>'
+      +'<b>'+esc(c.win?"優勝":"優勝 "+c.champ)+'</b>'
+      +'<span class="lg">'+(c.win?"":"自クラブ "+cupPlaceName(cup,c)+" ／ ")
+        +'賞金 +'+fmtNum(c.coin||0)+'</span></div>'
+    : '<div class="cup-res">'
+      +'<span class="eyebrow">'+(c.alive?"IN PROGRESS":"ELIMINATED")+'</span>'
+      +'<b>'+esc(c.alive?"次は "+cupRoundName(cup,c.round):cupPlaceName(cup,c)+"で敗退")+'</b>'
+      +'<span class="lg">'+(c.alive?"勝ち残っている間はリーグ戦を進められません"
+          :"第"+cupLastNode()+"節に大会が完了し、賞金が振り込まれます")+'</span></div>';
+
+  $("schedList").innerHTML=head+rows;
+  $("schedStand").innerHTML=cupInfoBox(cup,c);
+}
+/** 大会の要項(条件・賞金)。順位ごとの賞金は完了節にまとめて入る。 */
+function cupInfoBox(cup,c){
+  const names=cup.prize.map((_,i)=>i===0?"優勝":i===1?"準優勝":"ベスト"+Math.pow(2,i));
+  return '<div class="stand-h"><span class="sect-t">大会要項</span></div>'
+    +'<div class="stand-box cup-info">'
+    +kv("開催",cup.every+"の倍数の節")
+    +kv("参加条件","熟練度 "+fmtNum(cup.needExp))
+    +kv("方式",cup.rounds+"回戦（ノックアウト）")
+    +cup.prize.map((v,i)=>kv(names[i],"+"+fmtNum(v)+" コイン"
+      +(c&&c.done&&c.dist===i?"（受領）":""))).join("")
+    +'</div>';
 }
 /** 任期カレンダーを開いたら現在節へ寄せる(96節あるので必須)。 */
 SCREENS.season.after=()=>setTimeout(scrollToCurrent,30);

@@ -165,17 +165,60 @@ const STEPS = [
       const card=document.querySelector('#seasonComps [data-comp="cup"]');
       if(!card)throw new Error('カップの大会カードが無い');
       const before=card.querySelector('.lg').textContent;
-      if(compsAvailable().includes('cup'))throw new Error('熟練度0で出られてしまう');
-      // 条件を満たすと選べるようになる
-      const exp=S.club.exp, node=S.career.node;
-      S.club.exp=cup.needExp; S.career.node=cup.every;
-      const ok=compsAvailable().includes('cup');
-      const f=cupFixtureOf();
-      S.club.exp=exp; S.career.node=node;
-      if(!ok)throw new Error('条件を満たしても出られない');
-      if(!f||!f.side||f.side.cards.length<11)throw new Error('組み合わせが作れない');
-      return '条件前「'+before+'」→ 満たすと '+f.label+' vs '+f.side.name;
+      if(cupEnterable())throw new Error('熟練度0でエントリーできてしまう');
+      // **開催日は事前にカレンダーへ出す**(→docs/03 §3.23)
+      const soon=[...document.querySelectorAll('#seasonCal .cal.cup.soon .cal-n')].map(e=>+e.textContent);
+      if(!soon.length)throw new Error('開催予定がカレンダーに出ていない');
+      if(soon.some(n=>n%cup.every!==0))throw new Error('開催サイクル外に予定が出ている: '+soon);
+      return '条件前「'+before+'」 ／ 開催予定 '+soon.length+'節(第'+soon.slice(0,3).join('/')+'…)';
     })()`));
+    await ctx.js("document.getElementById('hdBack').click()");
+    await ctx.wait(300);
+
+    // --- カップの一巡を確かめる。**元の状態は最後に戻す**(以降の撮影に影響させない) ---
+    await ctx.js("window.__snap=JSON.stringify(S)");
+    ctx.log("  エントリー:", await ctx.js(`(()=>{
+      const cup=CUPS[0];
+      S.club.exp=cup.needExp+400; S.career.node=cup.every; S.career.cup=null;
+      renderSeason();
+      const hand=document.querySelector('#seasonCal .hand[data-hand="entry"]');
+      if(!hand)throw new Error('開催節なのにエントリーの打ち手が出ない');
+      hand.click();
+      const c=S.career.cup;
+      if(!c)throw new Error('エントリーできない');
+      if(S.career.node!==cup.every)throw new Error('エントリーで節が進んでしまう');
+      const rows=[...document.querySelectorAll('#seasonCal .cal.cup')].map(e=>e.querySelector('b').textContent);
+      if(rows.length!==cup.rounds-1)throw new Error('大会の予定が節に並ばない: '+rows.length);
+      return '節'+cup.every+'で '+cup.name+' へ ／ 予定: '+rows.join(' → ');
+    })()`));
+    await ctx.shot("07l-cup-entered");
+
+    // 大会の日程(勝ち残り中)
+    await ctx.js(`document.querySelector('#seasonComps [data-comp="cup"]').click()`);
+    await ctx.wait(300);
+    ctx.log("  大会の日程:", await ctx.js(`(()=>{
+      const n=document.querySelectorAll('#schedList .cal').length;
+      const st=document.querySelector('.cup-res b').textContent;
+      if(n!==CUPS[0].rounds)throw new Error('回戦の行が足りない: '+n);
+      return n+'行 ／ '+st;
+    })()`));
+    await ctx.shot("07m-cup-plan");
+
+    // 優勝して大会が締まったところ(**賞金は完了節に入る**)
+    ctx.log("  大会の決着:", await ctx.js(`(()=>{
+      const cup=CUPS[0], c=S.career.cup;
+      c.round=cup.rounds; S.career.node=cupLastNode();
+      const coin0=S.club.coins;
+      const closed=advanceNode();
+      if(!closed||!closed.win)throw new Error('優勝で締まらない');
+      renderSchedule();
+      return '優勝 '+S.career.cup.champ+' ／ 賞金 +'+(S.club.coins-coin0)
+        +' ／ 実績 '+S.player.trophies.length+'件';
+    })()`));
+    await ctx.shot("07n-cup-result");
+    await ctx.js("Object.assign(S,JSON.parse(window.__snap)); save(); renderSeason()");
+    await ctx.wait(200);
+
     await ctx.js("document.getElementById('hdBack').click()");
     await ctx.wait(300);
 

@@ -113,15 +113,27 @@ function runSeason(hand) {
   {
     const cup = E.CUPS[0];
     const S3 = E.getS(), C = S3.career;
-    const at = (node, exp) => { C.node = node; S3.club.exp = exp; return E.compsAvailable(); };
-    // **開催サイクルと参加条件の両方**を満たしたときだけ出られる
-    assert.ok(!at(cup.every - 1, cup.needExp + 500).includes("cup"), "開催節でなければ出られない");
-    assert.ok(!at(cup.every, cup.needExp - 1).includes("cup"), "熟練度が足りなければ出られない");
-    assert.ok(at(cup.every, cup.needExp).includes("cup"), "条件を満たせば出られる");
+    const at = (node, exp) => { C.cup = null; C.node = node; S3.club.exp = exp; return E.cupEnterable(); };
+    // **開催サイクルと参加条件の両方**を満たしたときだけエントリーできる
+    assert.ok(!at(cup.every - 1, cup.needExp + 500), "開催節でなければエントリーできない");
+    assert.ok(!at(cup.every, cup.needExp - 1), "熟練度が足りなければエントリーできない");
+    assert.ok(at(cup.every, cup.needExp), "条件を満たせばエントリーできる");
+    // エントリーする前は、開催節でもカップは選べない(**打ち手から入る**)
+    assert.ok(!E.compsAvailable().includes("cup"), "エントリー前はカップに出られない");
 
     // 回戦の呼び名は決勝から逆算する(rounds を変えても崩れない)
     assert.strictEqual(E.cupRoundName(cup, cup.rounds), "決勝", "最後は決勝");
     assert.strictEqual(E.cupRoundName(cup, cup.rounds - 1), "準決勝", "その前は準決勝");
+
+    // --- エントリー: **節は進まず**、大会の予定が節に並ぶ ---
+    const node0 = C.node;
+    assert.ok(E.enterCup(cup.id), "エントリーできる");
+    assert.strictEqual(C.node, node0, "エントリーしても節は進まない");
+    assert.deepStrictEqual(E.cupNodes(), [node0, node0 + 1, node0 + 2], "大会の予定が節に並ぶ");
+    assert.strictEqual(E.cupLastNode(), node0 + cup.rounds - 1, "決勝の節");
+    assert.ok(!E.cupEnterable(), "同時に複数の大会へはエントリーできない");
+    assert.deepStrictEqual(E.compsAvailable(), ["cup"], "勝ち残っている間はカップ一択");
+    assert.strictEqual(E.pickComp("league"), false, "辞退してリーグへは回れない");
 
     // 相手は**自クラブと同等かやや強い**
     const f = E.cupFixtureOf();
@@ -129,35 +141,61 @@ function runSeason(hand) {
     const mine = E.squadPower(E.squadCards().slice(0, E.TUNING.squad.starters));
     assert.ok(E.squadPower(f.side.cards) >= mine - 8, "相手が極端に弱くない");
 
-    // 勝てば次の回戦へ / 負ければ勝ち抜きは消える / リーグの日程は進まない
-    const md0 = S3.world.matchday, node0 = C.node;
+    // --- 1回戦: リーグの日程は進まない / 勝敗で勝ち残りが決まる ---
+    const md0 = S3.world.matchday;
     C.hand = "train"; C.comp = "cup";
     const r = E.playCupDay(null);
     assert.ok(r && r.my && r.my.cup === cup.id, "カップの結果が返る");
     assert.strictEqual(r.my.draw, false, "カップに引き分けは無い");
     assert.strictEqual(S3.world.matchday, md0, "リーグの節は進まない");
     assert.strictEqual(C.node, node0 + 1, "任期の節は進む");
-    if (r.my.win) assert.ok(C.cup && C.cup.round === 2, "勝てば次の回戦へ");
-    else assert.strictEqual(C.cup, null, "負ければ勝ち抜きは消える");
+    assert.ok(C.cup, "敗退しても大会は残る(進行を確認できる)");
+    if (r.my.win) assert.ok(C.cup.alive && C.cup.round === 2, "勝てば次の回戦へ");
+    else {
+      assert.ok(!C.cup.alive && C.cup.out === 1, "負ければ勝ち残りが消える");
+      assert.ok(E.compsAvailable().includes("league"), "敗退した翌節からリーグへ戻れる");
+      assert.ok(!E.cupEnterable(), "大会が終わるまで次の大会には入れない");
+    }
 
-    // 優勝すると賞金とトロフィー。**初優勝だけが実績**
-    C.node = cup.every; C.cup = { id: cup.id, round: cup.rounds };
-    const coin0 = S3.club.coins;
+    // --- 敗退したまま決勝の節を越えると、そこで大会が締まって賞金が入る ---
+    {
+      C.cup = { id: cup.id, node0: C.node - 1, round: 2, alive: false, out: 1,
+        champ: null, done: false };
+      C.node = E.cupLastNode();
+      const coin0 = S3.club.coins;
+      const closed = E.advanceNode();
+      assert.ok(closed && !closed.win, "決勝の節を越えたら大会が締まる");
+      assert.ok(C.cup.done, "大会は完了扱いになる");
+      assert.strictEqual(S3.club.coins - coin0, closed.coin, "順位の賞金は完了節に入る");
+      assert.ok(closed.coin > 0, "敗退でも賞品はある: " + closed.coin);
+      assert.strictEqual(S3.player.trophies.filter(t => t.id === cup.id).length, 0,
+        "優勝していなければ実績は付かない");
+    }
+
+    // --- 優勝: 賞金は最上位 / 実績は初優勝の1つだけ ---
     let champ = null;
+    const coin1 = S3.club.coins;
     for (let i = 0; i < 40 && !champ; i++) {
-      C.node = cup.every; C.cup = { id: cup.id, round: cup.rounds };
+      C.node = cup.every;
+      C.cup = { id: cup.id, node0: cup.every - cup.rounds + 1, round: cup.rounds,
+        alive: true, out: null, champ: null, done: false };
       C.hand = "train"; C.comp = "cup";
       S3.world.seed = (S3.world.seed + 7919) >>> 0;      // 勝つまでたねを変えて探す
       const x = E.playCupDay(null);
-      if (x && x.my.champ) champ = x;
+      if (x && x.cupClosed && x.cupClosed.win) champ = x;
     }
     assert.ok(champ, "決勝に勝てば優勝になる");
-    assert.ok(S3.club.coins >= coin0 + cup.coin, "賞金が入る: " + (S3.club.coins - coin0));
+    assert.strictEqual(champ.cupClosed.coin, cup.prize[0], "優勝の賞金");
+    assert.ok(S3.club.coins >= coin1 + cup.prize[0], "賞金が入る");
+    assert.ok(C.cup.win && C.cup.champ, "優勝クラブとして残る: " + C.cup.champ);
+    assert.strictEqual(E.cupPlaceName(cup, C.cup), "優勝", "成績の呼び名");
     assert.strictEqual(S3.player.trophies.filter(t => t.id === cup.id).length, 1,
       "トロフィーは初優勝の1つだけ");
-    assert.strictEqual(C.cup, null, "優勝したら勝ち抜きは畳む");
+    assert.ok(E.cupEnterable() || !E.cupDayNow, "完了後は次の大会へ入れる");
     console.log("カップ戦OK", cup.name, "／ 熟練度" + cup.needExp + "以上・"
-      + cup.every + "の倍数の節 ／ " + cup.rounds + "回戦 ／ 優勝で" + cup.coin + "コイン+トロフィー");
+      + cup.every + "の倍数の節にエントリー ／ " + cup.rounds + "回戦 ／ 賞金 "
+      + cup.prize.join("/") + " は完了節に入金");
+    C.cup = null;
   }
 
   // 全日程を消化したらリーグは選べなくなる
@@ -166,8 +204,11 @@ function runSeason(hand) {
   console.log("消化後OK 選べる大会:", JSON.stringify(E.compsAvailable()));
 
   // ---------- 打ち手は3種そろっている ----------
-  assert.strictEqual(E.HANDS.length, 3, "打ち手は3種(訓練/交流/休息)");
-  assert.deepStrictEqual(E.HANDS.map(h => h.id), ["train", "bond", "rest"], "IDが仕様どおり");
+  const norm = E.HANDS.filter(h => !h.cup);
+  assert.strictEqual(norm.length, 3, "常設の打ち手は3種(訓練/交流/休息)");
+  assert.deepStrictEqual(norm.map(h => h.id), ["train", "bond", "rest"], "IDが仕様どおり");
+  // **エントリーは開催節にだけ出る打ち手**。常設の打ち手と並べない
+  assert.strictEqual(E.HANDS.filter(h => h.cup).length, 1, "エントリーは大会用の打ち手");
   assert.strictEqual(E.pickHand("nope"), false, "存在しない打ち手は選べない");
   console.log("打ち手の定義OK", E.HANDS.map(h => h.icon + h.label).join(" / "));
 

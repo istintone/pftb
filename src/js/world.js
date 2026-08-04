@@ -394,34 +394,71 @@ function pickHand(id){
  * リーグを選んだ節に次の1試合を消化する(カップが割り込むため → docs/03 §3.2.3)。
  */
 function compsAvailable(){
+  // **勝ち残っている大会の日程はカップ一択**。リーグには出られず、辞退もできない
+  if(cupMustPlay())return ["cup"];
   const out=[];
   const planned=S.career.plan[S.career.node];
   if(planned)return [planned.comp];                          // 先に予定が埋まっている節は選べない
   if(!seasonOver())out.push("league");
-  if(cupOpen())out.push("cup");
   return out;
 }
 
-// ---------- カップ戦(→docs/03 §3.23) ----------
-// **参加条件を満たした節にだけ出られる。** リーグと同じ「1節=1試合」の枠を使い、
-// 1節で1回戦ぶんだけ勝ち上がる。負けたら勝ち抜きは消え、次の開催でまた1回戦から。
+function pickComp(id){
+  if(!compsAvailable().includes(id))return false;
+  S.career.comp=id;
+  return true;
+}
 
-/** 今節に出られるカップ。無ければ null。 */
-function cupOf(){
-  const C=S.career;
+// ---------- カップ戦(→docs/03 §3.23) ----------
+// **エントリーして大会ごと追う。** 開催節にエントリーすると、そこから rounds 節ぶんが
+// 大会の日程として押さえられる。勝ち続ける限りカップを優先し、リーグ戦には出られない。
+// 敗退したら次の節からリーグへ戻れるが、**大会が完了するまで次のカップには入れない**。
+
+/** 開催節か(任期の節で数える)。 */
+const cupDay=(cup,node)=>node%cup.every===0;
+/** いま参加中のカップの定義。 */
+const cupJoined=()=>S.career.cup?cupById(S.career.cup.id):null;
+/** 大会の日程(節番号の配列)。エントリーした節から rounds 節ぶん。 */
+function cupNodes(){
+  const c=S.career.cup; if(!c)return [];
+  const cup=cupById(c.id);
+  return Array.from({length:cup.rounds},(_,i)=>c.node0+i);
+}
+/** 大会が完了する節(決勝の節)。 */
+function cupLastNode(){
+  const n=cupNodes();
+  return n.length?n[n.length-1]:0;
+}
+/** その節はいま参加中の大会の日程か。 */
+const cupNodeNow=()=>cupNodes().includes(S.career.node);
+/** **勝ち残っていて、今節が大会の日程**か。この間はリーグに出られない。 */
+const cupMustPlay=()=>{
+  const c=S.career.cup;
+  return !!(c&&c.alive&&!c.done&&cupNodeNow());
+};
+/** 今節にエントリーできるカップ。無ければ null。 */
+function cupEnterable(){
+  if(S.career.cup)return null;                             // **同時に複数はエントリーできない**
+  if(S.career.plan[S.career.node])return null;             // 予定が埋まっている節は不可
   for(const cup of CUPS){
-    if(C.node%cup.every!==0)continue;                        // 開催サイクル(任期の節で数える)
-    if((S.club&&S.club.exp||0)<cup.needExp)continue;         // 参加条件(チーム熟練度)
+    if(!cupDay(cup,S.career.node))continue;                // 開催サイクル
+    if((S.club&&S.club.exp||0)<cup.needExp)continue;       // 参加条件(チーム熟練度)
     return cup;
   }
   return null;
 }
-const cupOpen=()=>!!cupOf();
-/** いま挑んでいる回戦。勝ち抜き中でなければ1回戦。 */
-function cupRound(){
-  const c=S.career.cup, cup=cupOf();
-  return (c&&cup&&c.id===cup.id)?c.round:1;
+/** エントリーする。**節はまだ進まない**(この節の1回戦をこれから戦う)。 */
+function enterCup(id){
+  const cup=cupEnterable();
+  if(!cup||(id&&cup.id!==id))return false;
+  S.career.cup={ id:cup.id, node0:S.career.node, round:1, alive:true,
+    out:null, champ:null, done:false };
+  S.career.comp="cup";
+  return true;
 }
+/** いま挑む回戦。敗退後は進まない。 */
+const cupRound=()=>S.career.cup?S.career.cup.round:1;
+
 /**
  * カップの相手。**自クラブと同等かやや強い**編成を、節ごとに決定的に作る。
  * ごくまれに**全員 SPECIALS** の強豪が現れる(勝てば手応えのある山場になる)。
@@ -442,16 +479,45 @@ function cupSide(cup,round){
 }
 /** カップの組み合わせ。相手はクラブ一覧に居ないので、ここで全部持つ。 */
 function cupFixtureOf(){
-  const cup=cupOf(); if(!cup)return null;
+  const cup=cupJoined(); if(!cup||!cupMustPlay())return null;
   const round=cupRound();
   const side=cupSide(cup,round);
   return { cup:cup.id, round, home:true, side,
     label:cup.name+" "+cupRoundName(cup,round), elite:side.elite };
 }
-function pickComp(id){
-  if(!compsAvailable().includes(id))return false;
-  S.career.comp=id;
-  return true;
+/** 大会の優勝クラブ名。自分が勝ち上がっていなければ、たねから決定的に選ぶ。 */
+function cupChampName(cup){
+  const c=S.career.cup;
+  const rng=mulberry32((S.world.seed^hashStr("champ:"+cup.id+":"+c.node0))>>>0);
+  return CUP_CLUBS[Math.floor(rng()*CUP_CLUBS.length)];
+}
+/**
+ * 大会を締める(→docs/03 §3.23)。**賞金はここでまとめて入金する**。
+ * 順位が決まった時点では払わない(4位が確定してもすぐには入らない)。
+ */
+function closeCup(){
+  const c=S.career.cup; if(!c||c.done)return null;
+  const cup=cupById(c.id);
+  const champ=c.alive?clubById(S.club.id).name:cupChampName(cup);
+  // 決勝からの距離で賞金を引く。優勝=0 / 決勝で敗退=1 / 準決勝で敗退=2 …
+  const dist=c.alive?0:Math.max(1,cup.rounds-c.out+1);
+  const coin=cup.prize[Math.min(dist,cup.prize.length-1)];
+  S.club.coins+=coin;
+  if(c.alive){
+    // 任期カレンダーの決勝の行に王冠を立てる
+    const last=[...S.career.log].reverse().find(e=>e.comp==="cup"&&e.cup===cup.id);
+    if(last)last.champ=true;
+    if(!S.player.trophies.some(t=>t.id===cup.id))
+      S.player.trophies.push({ id:cup.id, name:cup.trophy, season:S.world.season, node:S.career.node });
+  }
+  c.champ=champ; c.done=true; c.coin=coin; c.dist=dist; c.win=!!c.alive;
+  return { cup, champ, coin, dist, win:c.alive };
+}
+/** 大会での成績の呼び名。 */
+function cupPlaceName(cup,c){
+  if(c.alive)return "優勝";
+  const dist=cup.rounds-c.out+1;                            // 決勝で敗退=1
+  return dist===1?"準優勝":"ベスト"+Math.pow(2,dist);
 }
 
 /** 試合ごとのたね。**同じ節を何度解いても同じ結果**になる(→docs/07 §7.1)。 */
@@ -530,9 +596,7 @@ function playMatchday(done){
     opp:my?my.opp:null, home:my?my.home:null, gf:my?my.gf:null, ga:my?my.ga:null,
     res:my?(my.win?"win":my.draw?"draw":"lose"):null,
   });
-  S.career.node++;
-  S.career.hand=null; S.career.comp=null;                   // 次節はまた選び直す
-  checkTenureClosing();
+  out.cupClosed=advanceNode();     // 大会の最終節がリーグの節に重なることがある
   W.matchday++;
   return out;
 }
@@ -549,32 +613,36 @@ function playCupDay(done){
   const M=done||finishMatch(createMatch(matchSide(S.club.id),f.side,seed));
   if(!M.fixture)M.fixture={ h:S.club.id, a:null, cup:f.cup, round:f.round, label:f.label };
   const gf=M.home.score, ga=M.away.score;
-  // **カップに引き分けは無い**。同点なら回戦の重みで決める(たねが同じなら結果も同じ)
+  // **カップに引き分けは無い**。同点なら たね で決める(同じ節を何度解いても同じ結果)
   const win=gf>ga||(gf===ga&&mulberry32(seed>>>1)()<0.5);
-  const final=f.round>=cup.rounds;
-  const champ=win&&final;
+
+  const c=C.cup;
+  if(win)c.round++; else { c.alive=false; c.out=f.round; }
+  S.club.exp+=win?350:150;
 
   const out={ my:{ opp:null, oppName:f.side.name, home:true, gf, ga,
-    win, draw:false, cup:f.cup, round:f.round, label:f.label, champ }, others:[], M };
-
-  S.club.exp+=win?350:150;
-  if(champ){
-    S.club.coins+=cup.coin;
-    // **初優勝だけ実績になる**(2度目からは賞金だけ)
-    if(!S.player.trophies.some(t=>t.id===cup.id))
-      S.player.trophies.push({ id:cup.id, name:cup.trophy, season:W.season, node:C.node });
-  }
-  C.cup=win&&!final?{ id:cup.id, round:f.round+1 }:null;    // 負け or 優勝でリセット
+    win, draw:false, cup:f.cup, round:f.round, label:f.label }, others:[], M };
 
   C.log.push({
     node:C.node, season:W.season, clubId:S.club.id, hand:C.hand,
     comp:"cup", cup:cup.id, label:f.label, oppName:f.side.name,
-    gf, ga, res:win?"win":"lose", champ,
+    gf, ga, res:win?"win":"lose",
   });
-  C.node++;
-  C.hand=null; C.comp=null;
-  checkTenureClosing();
+  out.cupClosed=advanceNode();
   return out;
+}
+
+/**
+ * 節を1つ進める。**大会の最終節を越えたらそこで大会を締める**(→docs/03 §3.23)。
+ * 賞金はこのときにまとめて入る。負けて先に順位が決まっていても、入金はここ。
+ */
+function advanceNode(){
+  const C=S.career;
+  const closed=(C.cup&&!C.cup.done&&C.node>=cupLastNode())?closeCup():null;
+  C.node++;
+  C.hand=null; C.comp=null;                                 // 次節はまた選び直す
+  checkTenureClosing();
+  return closed;
 }
 
 const seasonOver=()=>S.world.matchday>(S.world.fixtures||[]).length;
