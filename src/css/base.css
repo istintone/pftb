@@ -387,10 +387,9 @@ body{
   --rar:var(--rar-std); --glow:oklch(0.60 0.01 255 / .30);
   --ink:oklch(0.95 0.01 90); --stat:oklch(0.95 0.01 90); --mx:oklch(0.62 0.23 27);
   --halo:oklch(0.11 0.02 255);
-  /* --lab 能力ラベル / --sub クラブ名。**明るい地の段(STANDARD/WORLD CLASS)では
-     薄めてはいけない**(白い地に白を混ぜることになり、読めなくなる) */
+  /* --lab 能力ラベル / --sub クラブ名。**明るい地の段(STANDARD/WORLD CLASS)だけ
+     上書きする**。暗い地の見え方は触らない(薄める前提で組んであるため) */
   --lab:color-mix(in oklch, var(--stat) 74%, var(--halo));
-  --sub:color-mix(in oklch, var(--ink) 58%, var(--halo));
   position:relative; aspect-ratio:360/525; cursor:pointer; overflow:hidden;
   border-radius:9px; background:var(--face) center/100% 100% no-repeat, oklch(0.19 0.02 255);
   box-shadow:0 0 12px var(--glow);
@@ -511,9 +510,12 @@ body{
 /* 借りているカードの印。**名前より弱く**出す(名前を読む邪魔をしない) */
 .pc-name b .loan{ font-style:normal; font-size:.72em; opacity:.72; margin-left:.3em }
 .pc-name span{
-  display:block; font:5.2cqw/1.4 var(--f-mono); color:var(--sub);
+  display:block; font:5.2cqw/1.4 var(--f-mono); color:var(--ink); opacity:.6;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+/* **明るい地の段だけ**、薄めずに暗い色を直に置く(白に白を混ぜると消えるため)。
+   暗い地は opacity で薄める従来のままにする。 */
+.pcard.r-std .pc-name span,.pcard.r-wc .pc-name span{ color:var(--sub); opacity:1 }
 
 /* -------------------------------------------------------------------------
    ホロ表現 — **画像に焼き込まず CSS で載せる**(→docs/06 §6.13)。
