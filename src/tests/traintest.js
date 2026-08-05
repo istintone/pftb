@@ -223,6 +223,104 @@ const E=setup({tmpName:"_tmp_train.js"});
     console.log("連携の任期リセットOK");
   }
 
+  // ---------- コンディション(→docs/03 §3.32) ----------
+  {
+    await E.newGame(); E.getS().coach="検証";
+    E.getS().world.seed=20260805; E.startTenure("sam-8");
+    const S5=E.getS(), C=E.TUNING.cond;
+
+    // 任期の頭は全員が普通
+    assert.strictEqual(E.COND_MAX,4,"段は0〜4");
+    for(const id of S5.squad.filter(Boolean))
+      assert.strictEqual(E.condOf(id),2,"新任の1節目は全員が普通");
+    assert.deepStrictEqual(S5.career.cond,{},"記録は空のまま(=普通)");
+
+    // 段ごとの倍率。2が等倍で、下は落ち、上は伸びる
+    assert.strictEqual(C.mul.length,5,"倍率は5段");
+    assert.strictEqual(E.condMul(2),1,"普通は等倍");
+    assert.ok(E.condMul(0)<E.condMul(1)&&E.condMul(1)<1,"ケガ<不調<普通");
+    assert.ok(1<E.condMul(3)&&E.condMul(3)<E.condMul(4),"普通<好調<絶好調");
+    // 倍率そのものは小さくても、判定が連鎖するので効きは大きい(下の勝率で見る)
+    assert.ok(E.condMul(0)<=E.condMul(1)-0.05,"ケガは不調よりはっきり落ちる: ×"+E.condMul(0));
+    // 上下は0〜4で止まる
+    const id0=S5.squad.find(Boolean);
+    E.condSet(id0,0); E.condMove(id0,-1);
+    assert.strictEqual(E.condOf(id0),0,"0より下がらない");
+    E.condSet(id0,4); E.condMove(id0,1);
+    assert.strictEqual(E.condOf(id0),4,"4より上がらない");
+    E.condSet(id0,2);
+    console.log("コンディションOK 倍率",C.mul.join(" / "),"／ 上下は0〜4で止まる");
+
+    // --- 試合のあとに動く。**採点で動く人 + 揺さぶり** ---
+    {
+      S5.career.cond={};
+      const side=()=>E.matchSide(S5.club.id);
+      const M=E.finishMatch(E.createMatch(side(),side(),4242));
+      const moved=E.condAfterMatch(M,"H",4242);
+      assert.ok(moved.length,"誰かは動く");
+      const shake=moved.filter(m=>m.by==="shake");
+      assert.ok(shake.length>=C.shakeLo&&shake.length<=C.shakeHi,
+        "揺さぶりは"+C.shakeLo+"〜"+C.shakeHi+"人: "+shake.length);
+      // 採点で動いた選手は、良ければ上・悪ければ下
+      const rows=E.matchRatings(M,"H");
+      for(const m of moved.filter(x=>x.by==="stat")){
+        const r=rows.find(x=>x.p.c.id===m.id);
+        assert.ok(r&&r.min,"出た選手だけが採点で動く");
+        assert.strictEqual(m.d,r.rating>=C.up?1:-1,"採点の向きと一致");
+      }
+      for(const id of Object.keys(S5.career.cond))
+        assert.ok(S5.career.cond[id]>=0&&S5.career.cond[id]<=4,"段は0〜4に収まる");
+      console.log("試合後の変化OK 採点で",moved.filter(m=>m.by==="stat").length,
+        "人 / 揺さぶりで",shake.length,"人");
+    }
+
+    // --- 相手クラブにも配られる。**強いクラブほど上に寄る** ---
+    {
+      const avg=id=>{
+        let s=0,n=400;
+        for(let i=0;i<n;i++)s+=E.condCpu(id,E.mulberry32(i+1));
+        return s/n;
+      };
+      const top=avg("eng-1"), low=avg("sam-24");
+      assert.ok(top>low,"格上のほうが調子がいい: "+top.toFixed(2)+" > "+low.toFixed(2));
+      assert.ok(top<=4&&low>=0,"段に収まる");
+      console.log("相手の調子OK プレミア首位",top.toFixed(2),"> カンピDIV3最下位",low.toFixed(2));
+    }
+
+    // --- 試合では素の能力に一様に掛かる ---
+    {
+      const mk=v=>{
+        const side=E.matchSide(S5.club.id);
+        side.cards=side.cards.map(c=>({ ...c, cond:v }));
+        return side;
+      };
+      const M=E.createMatch(mk(4),mk(2),9);
+      const a=M.home.players[0], b=M.away.players[0];
+      assert.ok(Math.abs(a.condK-C.mul[4])<1e-9,"絶好調の倍率が乗る");
+      assert.ok(Math.abs(b.condK-C.mul[2])<1e-9,"普通は等倍");
+      assert.ok(Math.abs(E.eff(a,"atk")/(a.c.atk*a.fit*a.stam)-C.mul[4])<1e-9,
+        "eff に一様に掛かる");
+      // 絶好調のチームのほうが勝ちやすい
+      let w=0,n=400;
+      for(let i=0;i<n;i++){ const r=E.resolveMatch(mk(4),mk(2),i+1); if(r.hg>r.ag)w++; }
+      const r2=w/n;
+      assert.ok(r2>0.40,"絶好調のほうが勝ち越す: "+(r2*100).toFixed(1)+"%");
+      // **効きすぎない**。1段の差で勝負が決まってしまうと、編成より運の話になる
+      let w0=0;
+      for(let i=0;i<400;i++){ const r=E.resolveMatch(mk(0),mk(2),i+1); if(r.hg>r.ag)w0++; }
+      assert.ok(w0/400<r2*0.5,"ケガだらけなら明確に不利: "+(w0/400*100).toFixed(1)+"%");
+      assert.ok(r2<0.70,"絶好調でも勝ちが決まるほどではない: "+(r2*100).toFixed(1)+"%");
+      console.log("試合への反映OK 絶好調 vs 普通",(r2*100).toFixed(1)+"%",
+        "／ ケガだらけ vs 普通",(w0/400*100).toFixed(1)+"%");
+    }
+
+    // --- 任期が明ければ消える ---
+    E.condSet(S5.squad.find(Boolean),4);
+    E.newTenure();
+    assert.deepStrictEqual(E.getS().career.cond,{},"任期が明けると全員が普通に戻る");
+    console.log("コンディションの任期リセットOK");
+  }
+
   // --- 覚醒も任期が明ければ消える ---
   E.newTenure();
   assert.strictEqual(E.trainStar(pid),0,"★も任期で消える");

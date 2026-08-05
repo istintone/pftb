@@ -351,14 +351,18 @@ function matchSide(clubId){
         const up=trainUps(c.id), bond={};
         for(const o of ids)if(o!==c.id){ const v=bondOf(c.id,o); if(v)bond[o]=v; }
         const has=Object.keys(bond).length;
-        return (up||has)?{ ...c, ...(up?{ up }:{}), ...(has?{ bond }:{}) }:c;
+        return { ...c, cond:condOf(c.id), ...(up?{ up }:{}), ...(has?{ bond }:{}) };
       }),
       form:S.form, name:club.name,
       kickers:S.kickers, captain:S.captain, order:S.order };
   }
   const roster=clubRoster(S.world.seed,clubId);
   const form=formFor(clubId);
-  return { cards:bestXI(roster,form), form, name:club.name };
+  // 相手にもコンディションを配る(→docs/03 §3.32)。節ごとに変わり、格で上に寄る
+  const rng=mulberry32((S.world.seed^hashStr("cond:"+clubId+":"+S.world.season
+    +":"+S.career.node))>>>0);
+  const cards=bestXI(roster,form).map(c=>({ ...c, cond:condCpu(clubId,rng) }));
+  return { cards, form, name:club.name };
 }
 /** クラブの陣形。クラブIDから決定的に選ぶ(クラブごとに一貫した色になる)。 */
 // 陣形は名簿から決まる = 世界のたねが変わらない限り不変。毎回引き直すと重いので覚えておく。
@@ -645,6 +649,58 @@ function bondPairs(ids){
 function bondTier(sum){
   const B=TUNING.bond;
   return sum>B.t3?3:sum>B.t2?2:sum>B.t1?1:0;
+}
+
+// ---------- コンディション(→docs/03 §3.32) ----------
+// **隠しパラメータ。** 0=ケガ / 1=不調 / 2=普通 / 3=好調 / 4=絶好調。
+// 任期の頭は全員が普通で、節ごとに動く。career を畳めば消える。
+const COND_MAX=4;
+const condOf=id=>{ const v=(S.career.cond||{})[id]; return v==null?2:v; };
+const condMul=v=>TUNING.cond.mul[clamp(v==null?2:v,0,COND_MAX)];
+function condSet(id,v){
+  if(!S.career.cond)S.career.cond={};
+  return S.career.cond[id]=clamp(v,0,COND_MAX);
+}
+const condMove=(id,d)=>condSet(id,condOf(id)+d);
+/**
+ * 試合のあとの上下(→docs/03 §3.32)。
+ *   ① **出た選手は採点で動く**。良ければ上がり、悪ければ下がる(普通なら動かない)
+ *   ② 加えて**2〜3人がランダムに上下**する。全員が絶好調に揃わないための揺さぶり
+ * 節と試合のたねで決まるので、同じ試合を解き直しても同じ結果になる。
+ */
+function condAfterMatch(M,side,seed){
+  const C=TUNING.cond;
+  const rows=matchRatings(M,side);
+  const moved=[];
+  for(const r of rows){
+    if(!r.min)continue;                                    // 出ていない選手は採点で動かない
+    const d=r.rating>=C.up?1:r.rating<=C.dn?-1:0;
+    if(d){ condMove(r.p.c.id,d); moved.push({ id:r.p.c.id, d, by:"stat" }); }
+  }
+  // **揺さぶり**。編成の16人から数人を選んで上下させる
+  const rng=mulberry32((seed^hashStr("cond:"+S.career.node))>>>0);
+  const pool=(S.squad||[]).filter(x=>x!=null);
+  const n=Math.min(pool.length,rri(rng,C.shakeLo,C.shakeHi));
+  const used=new Set();
+  for(let i=0;i<n&&pool.length;i++){
+    let id, guard=0;
+    do{ id=pool[Math.floor(rng()*pool.length)]; }while(used.has(id)&&guard++<20);
+    used.add(id);
+    // **普通へ戻る力を持たせる**。純粋な上下だと端(ケガ/絶好調)に溜まっていく
+    const pUp=clamp(0.5+(2-condOf(id))*C.pull,0.05,0.95);
+    const d=rng()<pUp?1:-1;
+    condMove(id,d); moved.push({ id, d, by:"shake" });
+  }
+  return moved;
+}
+/**
+ * 相手クラブのコンディション(→docs/03 §3.32)。**たねから決定的に**配る。
+ * 強いクラブほど上に寄るので、格上との対戦は素の力以上に重く感じる。
+ */
+function condCpu(clubId,rng){
+  const b=clubBias(clubById(clubId))*TUNING.cond.cpuBias;
+  // 三角分布(2つの一様乱数の和)で中央に寄せ、クラブの格ぶんだけずらす
+  return clamp(Math.round(2+(rng()+rng()-1)*1.9+b),0,COND_MAX);
 }
 
 /** 今節の打ち手を選ぶ。選ぶまで試合には進めない(→§3.2.3)。 */
@@ -959,6 +1015,7 @@ function playMatchday(done){
       S.club.exp+=gf>ga?350:gf===ga?220:150;              // チーム熟練度(→§3.7)
       S.club.eval=chairmanEval();
       bondMatch();                                         // 連携(→§3.31)。一戦ごとに積む
+      condAfterMatch(out.M,home?"H":"A",seed);             // 出来(→§3.32)
     }else out.others.push({ h:m.h, a:m.a, hg, ag });
   });
 
@@ -994,6 +1051,7 @@ function playCupDay(done){
   cupResolveRound(C.cup,f.round,{ gf, ga, win });
   S.club.exp+=win?350:150;
   bondMatch();                                             // カップも1試合(→§3.31)
+  condAfterMatch(M,"H",seed);                              // 出来(→§3.32)。カップは常にホーム
 
   const out={ my:{ opp:null, oppName:f.side.name, home:true, gf, ga,
     win, draw:false, cup:f.cup, round:f.round, label:f.label }, others:[], M };

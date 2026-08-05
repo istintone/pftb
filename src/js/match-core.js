@@ -58,10 +58,11 @@ const skK=(p,key)=>(p&&p.sk&&p.sk.k[key])||1;
  *
  * **覚醒の裏パラだけは素の能力に足す**(→docs/03 §3.30)。カードの表示は変えず、
  * 試合のときだけ効く。上限20を超えることがあるが、いまは許容している。
+ * **コンディション**(→§3.32)は全能力に一様に掛かる(その日の出来なので偏らせない)。
  */
 function eff(p,k){
   const up=(p.c.up&&p.c.up[k])||0;
-  return (p.c[k]+up)*p.fit*p.stam*((p.ordM&&p.ordM[k])||1);
+  return (p.c[k]+up)*p.fit*p.stam*(p.condK||1)*((p.ordM&&p.ordM[k])||1);
 }
 
 // ---------- スタミナ ----------
@@ -149,9 +150,10 @@ function buildTeam(cards,form,name,side,kickers,captain,order){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
     p.y0=p.y; p.ordM=null;                      // y0 = 采配で動かす前の縦位置
+    p.condK=condMul(p.c.cond);                  // その日の出来(→docs/03 §3.32)
     p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
       pass:0, passOk:0, duelW:0, duelL:0 }; });
-  bench.forEach(p=>{ p.side=side; p.stam=1; p.sk=skillsOf(p.c); });
+  bench.forEach(p=>{ p.side=side; p.stam=1; p.sk=skillsOf(p.c); p.condK=condMul(p.c.cond); });
   const cap=pickCaptain(xi,captain);
   if(cap)cap.captain=true;
   // kickers … {pk,fk,ck} のカードID。自クラブは編成で指名し、CPUは自動選出に任せる
@@ -756,6 +758,7 @@ function applyOrders(M,t){
       // 入る選手は**万全**で入る(出場時間も関与回数も0から)。これが交代の価値。
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
         x:out.x, y:out.y, y0:out.y0, ordM:out.ordM,      // 采配は枠側の属性なので引き継ぐ
+        condK:condMul(inc.c.cond),                        // 出来は入る選手のもの
         ix:out.ix, side, enter:t.min, stam:1, sk:inc.sk,
         stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
           pass:0, passOk:0, duelW:0, duelL:0 } };
