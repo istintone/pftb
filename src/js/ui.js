@@ -676,6 +676,26 @@ function kitStyle(c){
   return ' style="--kit:'+clubColor(S.club?S.club.id:"")+';--rar:var(--rar-'
     +c.rarity.toLowerCase()+')"';
 }
+/** プレー絵(→docs/03 §3.19)。無ければ null。 */
+const playArt=c=>{
+  const art=c&&artKeyOf(c);
+  return (art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_play"])||null;
+};
+/**
+ * 編成画面に置く選手の姿(→docs/06 §6.15)。**丸の代わりに立ち絵**を出す。
+ * 足元にチームカラーの影を敷いて、ピッチ上の見え方(→§6.17)と揃える。
+ */
+function figHtml(c,cls,extra){
+  const src=playArt(c);
+  return '<div class="fig '+cls+'"'+(c?kitStyle(c):"")+'>'
+    +'<i class="fig-sh"></i>'
+    +(src?'<img src="'+src+'" alt="">':'<i class="fig-dot"></i>')
+    +(extra||"")
+  +'</div>';
+}
+/** 覚醒の★(→docs/03 §3.30)。名前の下に置く。 */
+const starRow=c=>{ const n=c?trainStar(c.id):0;
+  return n?'<div class="fig-star">'+"★".repeat(n)+'</div>':""; };
 function renderDeck(){
   const slots=FORMATIONS[S.form], cards=squadCards();
   const start=cards.slice(0,TUNING.squad.starters);
@@ -694,12 +714,12 @@ function renderDeck(){
     return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
       +' data-slot="'+i+'"'+(c?' data-card="'+c.id+'"':'')+'>'
       +'<div class="sl-pos'+(c?" fit-"+fitTier(c,sub):"")+'">'+sub+'</div>'
-      // 丸の中は**適性を掛けた実効値**。素のOVRを出すと、50%の選手のほうが
+      // **立ち絵の右下に実効値**を出す。素のOVRを出すと、50%の選手のほうが
       // 大きく見えて「置き間違いのほうが強い」という逆の読みになる。
-      +'<div class="sl-disc'+(c?effClass(c,sub):"")+'"'+(c?kitStyle(c):"")
-        +'>'+(c?effOvr(c,sub):"+")
-        +(c&&isLoaned(c)?'<span class="sl-loan">C</span>':'')+'</div>'
+      +figHtml(c,"sl-fig",
+        '<b class="sl-ovr'+(c?effClass(c,sub):"")+'">'+(c?effOvr(c,sub):"+")+'</b>')
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
+      +starRow(c)
     +'</div>';
   }).join("");
   // 枠をタップしたら**その枠に入れる選手を選ぶ**。カード詳細はピッカーの中から開く。
@@ -714,9 +734,10 @@ function renderDeck(){
     const c=cards[TUNING.squad.starters+k];
     return '<div class="bn'+(c?"":" empty")+'" data-slot="'
       +(TUNING.squad.starters+k)+'"'+(c?kitStyle(c):"")+'>'
-      +'<div class="bn-ovr">'+(c?c.ovr:"+")
-        +(c&&isLoaned(c)?'<span class="sl-loan">C</span>':'')+'</div>'
+      +figHtml(c,"bn-fig")
+      +'<div class="bn-ovr">'+(c?c.ovr:"+")+'</div>'
       +'<div class="bn-name">'+(c?esc(shortName(c)):"空き")+'</div>'
+      +starRow(c)
       +'<div class="bn-pos">'+(c?primarySub(c):"控え"+(k+1))+'</div></div>';
   }).join("");
   $("deckBench").querySelectorAll(".bn").forEach(el=>{
@@ -729,8 +750,8 @@ function renderDeck(){
     const on=named&&start.some(c=>c&&c.id===named.id);   // 先発に居ないと務まらない
     const c=on?named:autoCaptain(start);
     $("deckCaptain").innerHTML='<div class="cap'+(on?"":" auto")+'"'+(c?kitStyle(c):"")+'>'
-      +'<div class="cap-band">CAP</div>'
-      +'<div class="cap-b"><div class="cap-nm">'+(c?esc(c.name):"—")+'</div>'
+      +figHtml(c,"cap-fig")+'<div class="cap-band">CAP</div>'
+      +'<div class="cap-b"><div class="cap-nm">'+(c?esc(c.name)+'<i class="awk">'+starOf(c)+'</i>':"—")+'</div>'
         +'<div class="cap-sub">'+(on?"指名":"自動")+"　スタミナの減りが "
         +Math.round((1-TUNING.fatigue.capMul)*100)+"% 緩やか</div></div>"
       +'<div class="cap-go">›</div>'
@@ -748,7 +769,9 @@ function renderDeck(){
     const c=on?named:autoKicker(start,k);
     return '<div class="kk'+(on?"":" auto")+'" data-kick="'+k+'"'+(c?kitStyle(c):"")+'>'
       +'<div class="kk-t">'+label+'</div>'
+      +figHtml(c,"kk-fig")
       +'<div class="kk-nm">'+(c?esc(shortName(c)):"—")+'</div>'
+      +starRow(c)
       +'<div class="kk-sub">'+(on?note:"自動")+'</div>'
     +'</div>';
   }).join("");

@@ -884,19 +884,53 @@ const STEPS = [
           "/ 重複なし:", await ctx.js(
             "(()=>{const a=S.squad.filter(Boolean);return a.length===new Set(a).size})()"));
         if (!box.endsWith("1.333")) throw new Error("ピッチの縦横比が 3:4 ではない: " + box);
-        // 丸の数字は**適性を掛けた実効値**。素のOVRだと不一致の選手のほうが大きく見える
+        // 数値は**適性を掛けた実効値**。素のOVRだと不一致の選手のほうが大きく見える
         const disc = await ctx.js(`(()=>{
           const slots=FORMATIONS[S.form], cards=squadCards();
           return slots.map(([sub],i)=>{ const c=cards[i]; if(!c)return null;
-            const shown=+document.querySelector('#deckSlots .slot[data-slot="'+i+'"] .sl-disc').textContent
-              .replace(/[^0-9]/g,'');
+            const el=document.querySelector('#deckSlots .slot[data-slot="'+i+'"]');
+            const shown=+el.querySelector('.sl-ovr').textContent.replace(/[^0-9]/g,'');
+            // **丸ではなく立ち絵**(→docs/06 §6.15)。貸与の C は編成では出さない
+            const fig=el.querySelector('.sl-fig img');
+            if(!fig)throw new Error('立ち絵が出ていない: 枠'+i);
+            if(el.querySelector('.sl-loan'))throw new Error('貸与のCが残っている: 枠'+i);
             return { ok: shown===Math.round(c.ovr*slotFit(c,sub)), raw:c.ovr, shown };
           }).filter(Boolean);
         })()`);
         const bad = disc.filter(d => !d.ok);
-        ctx.log("  丸の数字:", disc.map(d => d.raw + "→" + d.shown).join(" "),
+        ctx.log("  枠の数値:", disc.map(d => d.raw + "→" + d.shown).join(" "),
           "/ 実効値になっている:", bad.length === 0);
-        if (bad.length) throw new Error("丸の数字が実効値でない: " + JSON.stringify(bad));
+        if (bad.length) throw new Error("枠の数値が実効値でない: " + JSON.stringify(bad));
+        // 控え・キャプテン・セットプレー担当も立ち絵(→docs/06 §6.15)
+        ctx.log("  立ち絵:", await ctx.js(`(()=>{
+          const n=s=>document.querySelectorAll(s).length;
+          const bn=n('#deckBench .bn:not(.empty) .bn-fig img');
+          const cap=n('#deckCaptain .cap-fig img'), kk=n('#deckKickers .kk-fig img');
+          if(!bn)throw new Error('控えが立ち絵でない');
+          if(!cap)throw new Error('キャプテンが立ち絵でない');
+          if(kk!==3)throw new Error('セットプレー担当が立ち絵でない: '+kk);
+          return '控え'+bn+'人 / CAP'+cap+' / キッカー'+kk;
+        })()`));
+        // 控え・CAP・キッカーは画面の下側にあるので、送って撮る
+        await ctx.js("document.getElementById('appBody').scrollTop=99999");
+        await ctx.wait(250);
+        await ctx.shot("10i-deck-bench");
+        await ctx.js("document.getElementById('appBody').scrollTop=0");
+        await ctx.wait(150);
+        // 覚醒の★は名前の下に出る
+        ctx.log("  ★の位置:", await ctx.js(`(()=>{
+          const id=S.squad.find(Boolean);
+          trainAwake(id,'atk'); trainAwake(id,'tec'); renderDeck();
+          const slot=[...document.querySelectorAll('#deckSlots .slot')]
+            .find(e=>+e.dataset.card===id);
+          const st=slot&&slot.querySelector('.fig-star');
+          if(!st)throw new Error('★が出ていない');
+          const nm=slot.querySelector('.sl-name');
+          if(nm.compareDocumentPosition(st)!==Node.DOCUMENT_POSITION_FOLLOWING)
+            throw new Error('★が名前の下にない');
+          S.career.train={}; renderDeck();
+          return '名前の下に '+st.textContent;
+        })()`));
         // 控えの枠もタップで差し替えられる(交代要員を選ぶため)
         await ctx.js(`(()=>{ const e=document.querySelector('#deckBench .bn');
           if(!e)throw new Error('控え枠が無い'); e.click(); })()`);
