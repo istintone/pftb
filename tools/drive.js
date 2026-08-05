@@ -331,6 +331,72 @@ const STEPS = [
     })()`));
     await ctx.wait(200);
     await ctx.shot("05d-chat-rest");
+    // 覚醒イベント(→docs/03 §3.30)。経験点を積んでから呼ぶと2択になる
+    ctx.log("  覚醒:", await ctx.js(`(()=>{
+      const G=TUNING.train, id=S.squad.find(Boolean);
+      S.career.train={}; trainAdd(id,'tec',G.need);
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      renderChat();
+      const pick=want=>{
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        const b=(want&&bs.find(x=>x.dataset.pick===want))||bs[0];
+        if(!b)throw new Error('選択肢が無い: '+S.career.chat.step);
+        b.click(); renderChat(); return b;
+      };
+      // **選手を選ぶ段まで進める**(カップの開催節かどうかで段の数が変わる)
+      let guard=0;
+      while(S.career.chat.step&&S.career.chat.step!=='who'&&guard++<6){
+        const st=S.career.chat.step;
+        pick(st==='cup'?'no':st==='hand'?'train':null);
+      }
+      if(S.career.chat.step!=='who')throw new Error('選手を選ぶ段に来ない: '+S.career.chat.step);
+      // 覚醒する選手は一覧で「覚醒」と分かる
+      const row=[...document.querySelectorAll('#chatAsk [data-pick]')]
+        .find(b=>b.dataset.pick===String(id));
+      if(!row)throw new Error('選手一覧に居ない');
+      if(!row.textContent.includes('覚醒'))throw new Error('一覧で覚醒が分からない');
+      row.click(); renderChat();
+      // 通常のメニューではなく2択が出る
+      const opts=[...document.querySelectorAll('#chatAsk [data-pick]')];
+      if(opts.length!==AWAKES.length)
+        throw new Error('覚醒の2択ではない: '+opts.length+'択');
+      if(!S.career.chat.log.some(m=>m.t===CHAT.awakeAsk))
+        throw new Error('覚醒の台詞が出ていない');
+      const star0=trainStar(id), exp0=trainExp(id,'tec');
+      opts[0].click(); renderChat();
+      const res=S.career.chat.sel.res;
+      if(res==='awake'){
+        if(trainStar(id)!==star0+1)throw new Error('★が増えていない');
+        if(trainUp(id,'tec')!==1)throw new Error('裏パラが上がっていない');
+        if(trainExp(id,'tec')!==0)throw new Error('経験点が戻っていない');
+      }else{
+        if(trainStar(id)!==star0)throw new Error('失敗なのに★が増えた');
+        if(trainExp(id,'tec')!==exp0)throw new Error('失敗で経験点が消えた');
+      }
+      return (res==='awake'?'成功 ★'+trainStar(id)+' / TEC裏+'+trainUp(id,'tec')
+        :'失敗 経験点 '+trainExp(id,'tec')+' を保留')+' ／ '+opts.length+'択';
+    })()`));
+    await ctx.wait(200);
+    await ctx.shot("05e-chat-awake");
+    // ★はカードの名前の右に出る。**表示の数値は変えない**(→docs/03 §3.30)
+    ctx.log("  覚醒の★:", await ctx.js(`(()=>{
+      const id=S.squad.find(Boolean), c=cardById(id);
+      const tec0=c.tec;
+      trainAwake(id,'tec'); trainAwake(id,'atk');
+      openCard(cardById(id));
+      const nm=document.querySelector('.pc-name .awk');
+      const star=nm?nm.textContent:'';
+      if(star.length!==trainStar(id))throw new Error('★の数が合わない: "'+star+'"');
+      const box=document.querySelector('.cm-awk');
+      if(!box)throw new Error('覚醒の内訳が出ていない');
+      if(cardById(id).tec!==tec0)throw new Error('カードの数値が変わっている');
+      const shown=[...document.querySelectorAll('.bars .bar')]
+        .find(b=>b.textContent.indexOf('TEC')===0);
+      S.career.train={};
+      return '★'+star.length+' ／ 表示 '+tec0+' のまま ／ '+box.textContent.trim();
+    })()`));
+    await ctx.js("(()=>{S.career.chat=null;show('season');})()");
+    await ctx.wait(200);
     // 訓練に戻してから試合へ
     await ctx.js(`(()=>{
       S.career.chat=null; S.career.hand=null; S.career.comp=null; renderChat();

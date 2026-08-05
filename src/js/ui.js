@@ -149,7 +149,7 @@ function cardFace(c){
     +'<div class="pc-name">'
       // **印を付けるのは借りている側**(→docs/06 §6.13)。
       // 最終的にほとんどが自分のカードになるので、自分側に印を付けても意味を持たない
-      +'<b>'+esc(shortName(c))+loanTag(c)+'</b>'
+      +'<b>'+esc(shortName(c))+'<i class="awk">'+starOf(c)+'</i>'+loanTag(c)+'</b>'
       // ポジションは OVR の下へ移したので、名前帯は**クラブだけ**
       +'<span>'+esc(c.club||"—")+'</span>'
     +'</div>';
@@ -219,6 +219,8 @@ function skillNote(name){
  * 最終的にはほとんどが自分のカードになるので、自分側に印を付けても意味を持たない。
  */
 const loanTag=c=>isLoaned(c)?'<i class="loan">(CLUBS)</i>':"";
+/** 覚醒の★(→docs/03 §3.30)。名前の右に付く。任期が明ければ消える。 */
+const starOf=c=>{ const n=trainStar(c.id); return n?"★".repeat(n):""; };
 
 /**
  * 段の名前を右側に縦に流す**半透明のデザイン文字**(→docs/06 §6.13)。
@@ -436,7 +438,7 @@ function openSlot(ix){
           +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
           +'<div class="pk-ovr'+(sub?effClass(c,sub):"")+'">'
             +(sub?effOvr(c,sub):c.ovr)+'</div>'
-          +'<div class="pk-b"><b>'+esc(c.name)+loanTag(c)+'</b>'
+          +'<div class="pk-b"><b>'+esc(c.name)+'<i class="awk">'+starOf(c)+'</i>'+loanTag(c)+'</b>'
             +'<span>'+c.subs.join(" / ")+'</span></div>'
           +'<div class="pk-r">'
             +(at>=0&&at!==ix?'<span class="pk-at">'+squadSlotLabel(at)+'</span>':'')+'</div>'
@@ -1107,12 +1109,32 @@ function chatEnter(st){
   }
   if(st==="menu"){
     if(sel.hand==="rest")return false;
+    // **経験点が貯まっていれば覚醒イベント**(→docs/03 §3.30)。通常のメニューは出ない
+    if(sel.awake){ chatSay(sel.who,CHAT.awakeAsk); return true; }
     if(sel.hand==="train")chatSay(sel.who,chatFill(chatLine(CHAT.callTrain,"ct:"+C.node),{}));
     else chatSay(sel.who,chatFill(CHAT.bondAsk,{ m:shortOf(sel.who2) }));
     return true;
   }
   if(st==="result"){
     if(sel.hand==="rest")return false;
+    if(sel.awake){
+      // 当たりは**その場でたねから決める**(選び直しで引き直せないよう節と選手で固定)
+      const win=mulberry32((S.world.seed^hashStr("awake:"+C.node+":"+sel.who))>>>0)()<0.5
+        ?AWAKES[0].id:AWAKES[1].id;
+      const G=TUNING.train, k=sel.awake;
+      sel.res=sel.menu===win?"awake":"keep";
+      if(sel.res==="awake"){
+        const r=trainAwake(sel.who,k);
+        chatSay(sel.who,CHAT.awakeOk);
+        chatSay("sec",chatFill(CHAT.awakeSec,
+          { s:STAT_LABEL[k], k:String(r.star), x:String(G.maxStar) }));
+      }else{
+        chatSay(sel.who,CHAT.awakeNg);
+        chatSay("sec",chatFill(CHAT.awakeKeep,
+          { s:STAT_LABEL[k], e:String(trainExp(sel.who,k)) }));
+      }
+      return false;
+    }
     // **手応えはランダム**(→docs/03 §3.29)
     const T=TUNING.chat, rng=mulberry32((S.world.seed^hashStr("chat:"+C.node+":"+sel.hand))>>>0);
     const r=rng();
@@ -1123,7 +1145,7 @@ function chatEnter(st){
     chatSay(sel.who,chatFill(chatLine(CHAT[key],"res:"+C.node+sel.res),
       { m:sel.who2?shortOf(sel.who2):"" }));
     // **訓練は経験点になる**(→docs/03 §3.30)。失敗は0
-    if(sel.hand==="train"&&sel.menu){
+    if(sel.hand==="train"&&sel.menu&&!sel.awake){
       const G=TUNING.train, t=trainById(sel.menu);
       const gain=sel.res==="great"?rri(rng,G.greatLo,G.greatHi)
         :sel.res==="ok"?rri(rng,G.okLo,G.okHi):0;
@@ -1157,7 +1179,11 @@ function chatPick(id,label){
     pickComp("league");
   }
   else if(st==="hand"){ sel.hand=id; pickHand(id); }
-  else if(st==="who"){ sel.who=+id; }
+  else if(st==="who"){
+    sel.who=+id;
+    // **選んだ時点で覚醒するかが決まる**(→docs/03 §3.30)
+    sel.awake=sel.hand==="train"?trainReady(sel.who):null;
+  }
   else if(st==="who2"){ sel.who2=+id; }
   else if(st==="menu"){ sel.menu=id; }
   ch.i++; ch.step=null;
@@ -1173,10 +1199,15 @@ function chatOptions(){
     items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc })) };
   if(st==="who"||st==="who2")return { q:st==="who"?"誰を呼びますか":"相方を選びますか",
     grid:true, items:chatSquad(st==="who2"?sel.who:null)
-      .map(c=>({ id:String(c.id), label:shortName(c), sub:primarySub(c)+" ・ OVR "+c.ovr })) };
-  if(st==="menu")return sel.hand==="train"
-    ? { q:"メニューを指示する", items:TRAININGS.map(t=>({ id:t.id, label:t.label, sub:t.ask })) }
-    : { q:"何をさせますか", items:BONDS.map(b=>({ id:b.id, label:b.label })) };
+      .map(c=>({ id:String(c.id), label:shortName(c)+starOf(c),
+        sub:primarySub(c)+" ・ OVR "+c.ovr+(trainReady(c.id)?" ・ 覚醒":"") })) };
+  if(st==="menu"){
+    if(sel.awake)return { q:"どう声をかけますか",
+      items:AWAKES.map(a=>({ id:a.id, label:a.label })) };
+    return sel.hand==="train"
+      ? { q:"メニューを指示する", items:TRAININGS.map(t=>({ id:t.id, label:t.label, sub:t.ask })) }
+      : { q:"何をさせますか", items:BONDS.map(b=>({ id:b.id, label:b.label })) };
+  }
   return null;
 }
 /** 呼べる選手(先発11 + 控え)。except は相方選びで自分を外すため。 */

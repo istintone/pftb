@@ -345,7 +345,9 @@ function startTenure(clubId){
 function matchSide(clubId){
   const club=clubById(clubId);
   if(S.club&&clubId===S.club.id)
-    return { cards:squadCards(), form:S.form, name:club.name,
+    // 覚醒の裏パラを持たせる(→docs/03 §3.30)。**カードは書き換えず写しに載せる**
+    return { cards:squadCards().map(c=>{ const up=trainUps(c.id); return up?{ ...c, up }:c; }),
+      form:S.form, name:club.name,
       kickers:S.kickers, captain:S.captain, order:S.order };
   const roster=clubRoster(S.world.seed,clubId);
   const form=formFor(clubId);
@@ -550,6 +552,31 @@ function trainUps(id){
   const up={};
   for(const k of STAT_KEYS)if(r.up[k])up[k]=r.up[k];
   return Object.keys(up).length?up:null;
+}
+/**
+ * 覚醒できる能力(→docs/03 §3.30)。経験点が need 以上でいちばん多いもの。
+ * ★が上限に達していたら、もう起きない。
+ */
+function trainReady(id){
+  const r=trainRec(id), G=TUNING.train;
+  if(!r||(r.star||0)>=G.maxStar)return null;
+  let best=null;
+  for(const k of STAT_KEYS){
+    const e=r.exp[k]||0;
+    if(e>=G.need&&(best===null||e>r.exp[best]))best=k;
+  }
+  return best;
+}
+/**
+ * 覚醒に成功した。★が1つ増え、その能力の裏パラが +1。
+ * **消費した能力の経験点だけ**を0に戻す(他の能力はそのまま残る)。
+ */
+function trainAwake(id,k){
+  const r=trainMake(id);
+  r.up[k]=(r.up[k]||0)+1;
+  r.star=(r.star||0)+1;
+  r.exp[k]=0;
+  return r;
 }
 /** 経験点を足す。**訓練の成果はここだけで動く**。 */
 function trainAdd(id,k,n){

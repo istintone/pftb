@@ -1385,6 +1385,8 @@ body{
   background:oklch(0.72 0.14 150);
 }
 .bar b em{ font-style:normal; margin-left:4px; font-size:10px; color:oklch(0.72 0.14 150) }
+/* 覚醒の★(→docs/03 §3.30)。名前の右に小さく光らせる */
+.awk{ font-style:normal; margin-left:3px; font-size:.72em; color:var(--accent); letter-spacing:-1px }
 .cm-awk{
   margin-top:8px; padding:8px 10px; border-radius:8px;
   background:oklch(0.24 0.05 85 / .35); border:1px solid var(--accent-dim);
