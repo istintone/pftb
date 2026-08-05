@@ -331,6 +331,40 @@ const STEPS = [
     })()`));
     await ctx.wait(200);
     await ctx.shot("05d-chat-rest");
+    // ケガと休息(→docs/03 §3.32)。治療中なら CLUB NEWS と秘書が知らせる
+    ctx.log("  ケガと休息:", await ctx.js(`(()=>{
+      const id=S.squad.find(Boolean), C=TUNING.cond;
+      S.career.cond={}; S.career.hurt={};
+      const left=condInjure(id,mulberry32(7));
+      if(condOf(id)!==0)throw new Error('ケガの段にならない');
+      // CLUB NEWS に「治療中」が出る
+      show('home');
+      const news=document.getElementById('homeNews').textContent;
+      if(!news.includes('治療中'))throw new Error('CLUB NEWS に治療中が出ない');
+      if(!news.includes(left+'節'))throw new Error('回復までの節数が出ない: '+news.slice(0,40));
+      // 秘書が休息を促す
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      show('chat');
+      let g=0;
+      while(S.career.chat.step&&S.career.chat.step!=='hand'&&g++<4){
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        ((bs.find(x=>x.dataset.pick==='no'))||bs[0]).click(); renderChat();
+      }
+      if(!S.career.chat.log.some(m=>m.t.includes('治療中')))
+        throw new Error('秘書が休息を促していない');
+      // 休息するとケガが治る
+      document.querySelector('#chatAsk [data-pick="rest"]').click(); renderChat();
+      if(condOf(id)!==1)throw new Error('休息でケガが1段よくならない: '+condOf(id));
+      if(hurtList().length)throw new Error('治療中から外れていない');
+      // 差し込みの取りこぼしが無いこと(実際に {h} が残っていた)
+      const bad=S.career.chat.log.find(m=>/\{[a-z]\}/.test(m.t));
+      if(bad)throw new Error('置き換え漏れ: '+bad.t);
+      S.career.cond={}; S.career.hurt={};
+      return '治療'+left+'節 → CLUB NEWS と秘書が知らせ、休息で復帰';
+    })()`));
+    await ctx.wait(200);
+    await ctx.shot("05g-chat-rest-heal");
+
     // 覚醒イベント(→docs/03 §3.30)。経験点を積んでから呼ぶと2択になる
     ctx.log("  覚醒:", await ctx.js(`(()=>{
       const G=TUNING.train, id=S.squad.find(Boolean);

@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=17;
+const SAVE_VER=18;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -55,6 +55,9 @@ function defaultState(){
       // コンディション(→docs/03 §3.32)。{ "<カードID>": 0..4 }。
       // **無ければ2(普通)**。任期の頭は全員が普通から始まる。
       cond:{},
+      // 治療中(→docs/03 §3.32)。{ "<カードID>": 残りの節数 }。
+      // 節が進むたびに減り、0になると普通へ戻る。休息でも治せる。
+      hurt:{},
       comp:null,                    // 今節に出る大会("league" / "cup")
       // 先に決まっている予定。node番号 → {comp,label}。
       // カップの連戦のように「この節はこの大会」と先に埋まるケースをここで表す。
@@ -231,6 +234,8 @@ function migrate(){
   if(S.v<16&&S.career&&!S.career.bond)S.career.bond={};
   // v16 → v17: コンディションを足した(→docs/03 §3.32)。空 = 全員が普通。
   if(S.v<17&&S.career&&!S.career.cond)S.career.cond={};
+  // v17 → v18: ケガの治療を足した(→docs/03 §3.32)。
+  if(S.v<18&&S.career&&!S.career.hurt)S.career.hurt={};
   S.v=SAVE_VER;
 }
 

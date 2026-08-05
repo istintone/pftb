@@ -329,11 +329,17 @@ function secretaryLine(){
 function clubNews(){
   const r=rankOf(S.world.table,S.club.id), t=S.world.table[S.club.id];
   const lg=leagueById(clubById(S.club.id).league);
-  return [
+  // 治療中の選手は**まっさきに**知らせる(→docs/03 §3.32)。休息を促す唯一の手掛かり
+  const hurt=hurtList().map(h=>{
+    const c=cardById(h.id);
+    return '<b class="news-x">'+esc(shortName(c))+'</b> は現在治療中　回復まで <b>'
+      +h.left+'節</b>';
+  });
+  return hurt.concat([
     "今季の目標は<b>"+S.club.expect+"位以内</b>。現在 <b>"+r+"位</b>（"+t.w+"勝"+t.d+"分"+t.l+"敗）",
     lg.name+"は<b>"+lg.style+"</b>のチームが多い。",
     "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ 会長の評価 "+evalLabel(S.club.eval),
-  ];
+  ]);
 }
 const evalLabel=v=>v>=75?"良好":v>=45?"普通":v>=TUNING.eval.floorDismiss?"不満":"危機的";
 
@@ -1101,7 +1107,8 @@ const chatLine=(a,seed)=>a[Math.abs(hashStr(seed))%a.length];
 const chatFill=(t,v)=>t.replace(/\{d\}/g,v.d||"").replace(/\{c\}/g,v.c||"")
   .replace(/\{f\}/g,v.f||"").replace(/\{v\}/g,v.v||"").replace(/\{r\}/g,v.r||"")
   .replace(/\{n\}/g,v.n||"").replace(/\{m\}/g,v.m||"")
-  .replace(/\{s\}/g,v.s||"").replace(/\{g\}/g,v.g||"").replace(/\{e\}/g,v.e||"");
+  .replace(/\{s\}/g,v.s||"").replace(/\{g\}/g,v.g||"").replace(/\{e\}/g,v.e||"")
+  .replace(/\{h\}/g,v.h||"");
 const chatSay=(w,t)=>S.career.chat.log.push({ w, t });
 /** 会話を始める(その節で最初に開いたとき)。 */
 function chatStart(){
@@ -1145,9 +1152,23 @@ function chatEnter(st){
     }
     return false;
   }
-  if(st==="hand"){ chatSay("sec",CHAT.handAsk); return true; }
+  if(st==="hand"){
+    // 治療中の選手が居れば**休息を促す**(→docs/03 §3.32)
+    const h=hurtList();
+    if(h.length)chatSay("sec",chatFill(CHAT.restUrge,
+      { n:shortOf(h[0].id), g:String(h.length) }));
+    chatSay("sec",CHAT.handAsk);
+    return true;
+  }
   if(st==="who"){
-    if(sel.hand==="rest"){ chatSay("sec",CHAT.restSec); return false; }
+    if(sel.hand==="rest"){
+      // **休息は0〜2の選手を1段よくする**(→docs/03 §3.32)。ケガも治る
+      const done=restAll(), healed=done.filter(x=>x.from===0).length;
+      chatSay("sec",CHAT.restSec);
+      chatSay("sec",chatFill(done.length?(healed?CHAT.restHeal:CHAT.restDone)
+        :CHAT.restNone,{ g:String(done.length), h:String(healed) }));
+      return false;
+    }
     chatSay("sec",CHAT.whoAsk);
     return true;
   }

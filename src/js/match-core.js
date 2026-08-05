@@ -854,6 +854,12 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
     if(!ok){
       carrier.stat.duelL++; if(marker)marker.stat.duelW++;
       // **止めた瞬間だけがファウルの入口**(→docs/07 §7.11)。
+      // **ケガはここで起きる**(→docs/03 §3.32)。マッチアップに負けた瞬間だけで、
+      // 荒い手ほど確率が高い(守備チャンネルの反則率にそのまま比例させる)。
+      if(marker&&rng()<dch.foul*TUNING.cond.hurtK)
+        push({ side:T.side, type:"injury", by:carrier.c.id, vs:marker.c.id,
+          dch:dch.id, dlabel:dch.label,
+          h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
       // 反則率は**守備側が選んだ手**が持つ(削りにいけば高く、間合いを取れば低い)
       const foul=marker?rollFoul(rng,h,dch.foul):null;
       if(foul)return giveFoul(M,rng,push,T,D,foul,marker,carrier,h,x,from,att,min);

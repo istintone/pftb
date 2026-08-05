@@ -1426,6 +1426,7 @@ body{
 /* 覚醒の★(→docs/03 §3.30)。**文字としての★**なので色は周りに合わせる
    (カードでは名前と同じ色、一覧では白のまま)。 */
 .awk{ font-style:normal; margin-left:3px; font-size:.78em; color:inherit; letter-spacing:-1px }
+.news-x{ color:oklch(0.72 0.15 25) }      /* 治療中の選手名 */
 .cm-awk{
   margin-top:8px; padding:8px 10px; border-radius:8px;
   background:oklch(0.24 0.05 85 / .35); border:1px solid var(--accent-dim);

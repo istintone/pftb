@@ -325,6 +325,59 @@ const E=setup({tmpName:"_tmp_train.js"});
         "／ ケガだらけ vs 普通",(w0/400*100).toFixed(1)+"%");
     }
 
+    // --- ケガ: 治療中は節でカウントダウンし、0で自然回復 ---
+    {
+      S5.career.cond={}; S5.career.hurt={};
+      const id=S5.squad.find(Boolean);
+      const left=E.condInjure(id,E.mulberry32(7));
+      assert.ok(left>=C.healLo&&left<=C.healHi,"治療は"+C.healLo+"〜"+C.healHi+"節: "+left);
+      assert.strictEqual(E.condOf(id),E.COND_HURT,"ケガの段になる");
+      assert.strictEqual(E.hurtList().length,1,"治療中の一覧に出る");
+      // **節の進行では治らない**。残りが減るだけ
+      for(let i=1;i<left;i++){
+        E.hurtTick();
+        assert.strictEqual(E.condOf(id),E.COND_HURT,"途中では治らない("+i+"節目)");
+        assert.strictEqual(E.hurtList()[0].left,left-i,"残りが減る");
+      }
+      E.hurtTick();
+      assert.strictEqual(E.condOf(id),2,"残りが尽きたら普通に戻る");
+      assert.strictEqual(E.hurtList().length,0,"一覧から消える");
+      console.log("治療OK",left,"節でカウントダウンし、自然回復");
+    }
+
+    // --- ケガは試合のマッチアップで起きる(非常にごくまれ) ---
+    {
+      S5.career.cond={}; S5.career.hurt={};
+      const side=()=>E.matchSide(S5.club.id);
+      let ev=0,n=300;
+      for(let i=0;i<n;i++){
+        const M=E.finishMatch(E.createMatch(side(),side(),i+1));
+        ev+=M.events.filter(e=>e.type==="injury"&&e.side==="H").length;
+      }
+      const per=ev/n;
+      assert.ok(per>0,"ケガは起きる");
+      assert.ok(per<0.30,"起きすぎない: 1試合あたり "+per.toFixed(3));
+      console.log("ケガの発生OK 1試合",per.toFixed(3),"件 ／ 14節で",(per*14).toFixed(1),"人");
+    }
+
+    // --- 休息: 0〜2を1段よくする。ケガも治る / 好調以上は動かない ---
+    {
+      S5.career.cond={}; S5.career.hurt={};
+      const sq=S5.squad.filter(Boolean);
+      E.condInjure(sq[0],E.mulberry32(3));
+      E.condSet(sq[1],1); E.condSet(sq[2],2);
+      E.condSet(sq[3],3); E.condSet(sq[4],4);
+      const done=E.restAll();
+      assert.strictEqual(E.condOf(sq[0]),1,"ケガが1段よくなる");
+      assert.strictEqual(E.hurtList().length,0,"治療中から外れる");
+      assert.strictEqual(E.condOf(sq[1]),2,"不調 → 普通");
+      assert.strictEqual(E.condOf(sq[2]),3,"普通 → 好調");
+      assert.strictEqual(E.condOf(sq[3]),3,"好調は動かない");
+      assert.strictEqual(E.condOf(sq[4]),4,"絶好調も動かない");
+      assert.ok(!done.some(x=>x.to>C.restTo),"休息では絶好調にならない");
+      console.log("休息OK",done.length,"人が1段よくなり、ケガも治る(好調以上は動かない)");
+    }
+
     // --- 任期が明ければ消える ---
     E.condSet(S5.squad.find(Boolean),4);
     E.newTenure();

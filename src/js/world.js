@@ -672,8 +672,60 @@ function condMove(id,d){
   if(cur===COND_HURT)return cur;
   return condSet(id,clamp(cur+d,COND_MIN,COND_MAX));
 }
-/** ケガをさせる(イベント用の入口)。**ここだけが0にできる**。 */
-const condInjure=id=>condSet(id,COND_HURT);
+/**
+ * ケガをさせる(→docs/03 §3.32)。**ここだけが0にできる**。
+ * 治療にかかる節数(2〜5)を持たせ、節が進むたびに減らす。
+ */
+function condInjure(id,rng){
+  const C=TUNING.cond;
+  if(!S.career.hurt)S.career.hurt={};
+  condSet(id,COND_HURT);
+  S.career.hurt[id]=rri(rng||mulberry32((S.world.seed^hashStr("heal:"+id+":"+S.career.node))>>>0),
+    C.healLo,C.healHi);
+  return S.career.hurt[id];
+}
+/** 治療中の選手と残りの節数。CLUB NEWS と秘書の催促に使う。 */
+const hurtList=()=>Object.keys(S.career.hurt||{})
+  .map(id=>({ id:+id, left:S.career.hurt[id] }))
+  .filter(x=>cardById(x.id));
+/**
+ * 節が進んだときの治療の進み(→docs/03 §3.32)。
+ * 残りが0になったら**自然回復して普通に戻る**。
+ */
+function hurtTick(){
+  const H=S.career.hurt; if(!H)return [];
+  const healed=[];
+  for(const id of Object.keys(H)){
+    H[id]--;
+    if(H[id]<=0){ delete H[id]; condSet(+id,2); healed.push(+id); }
+  }
+  return healed;
+}
+/** 試合で出たケガを取り込む(→docs/03 §3.32)。**自分の選手だけ**。 */
+function applyInjuries(M,side){
+  const out=[];
+  for(const e of M.events){
+    if(e.type!=="injury"||e.side!==side)continue;
+    if(!cardById(e.by))continue;                           // 貸与でも手持ちでもない選手は無視
+    out.push({ id:e.by, left:condInjure(e.by) });
+  }
+  return out;
+}
+/**
+ * 休息(→docs/03 §3.32)。**0〜2の選手を1段よくする**。ケガも治る。
+ * 成長は無いが、崩れた調子を立て直す打ち手。
+ */
+function restAll(){
+  const C=TUNING.cond, out=[];
+  for(const id of (S.squad||[]).filter(x=>x!=null)){
+    const cur=condOf(id);
+    if(cur>=C.restTo)continue;                             // 好調より上には引き上げない
+    if(cur===COND_HURT&&S.career.hurt)delete S.career.hurt[id];
+    condSet(id,cur+1);
+    out.push({ id, from:cur, to:cur+1 });
+  }
+  return out;
+}
 /**
  * 試合のあとの上下(→docs/03 §3.32)。
  *   ① **出た選手は採点で動く**。良ければ上がり、悪ければ下がる(普通なら動かない)
@@ -1032,6 +1084,7 @@ function playMatchday(done){
       S.club.eval=chairmanEval();
       bondMatch();                                         // 連携(→§3.31)。一戦ごとに積む
       condAfterMatch(out.M,home?"H":"A",seed);             // 出来(→§3.32)
+      out.hurt=applyInjuries(out.M,home?"H":"A");          // ケガ(→§3.32)
     }else out.others.push({ h:m.h, a:m.a, hg, ag });
   });
 
@@ -1070,7 +1123,8 @@ function playCupDay(done){
   condAfterMatch(M,"H",seed);                              // 出来(→§3.32)。カップは常にホーム
 
   const out={ my:{ opp:null, oppName:f.side.name, home:true, gf, ga,
-    win, draw:false, cup:f.cup, round:f.round, label:f.label }, others:[], M };
+    win, draw:false, cup:f.cup, round:f.round, label:f.label }, others:[], M,
+    hurt:applyInjuries(M,"H") };
 
   C.log.push({
     node:C.node, season:W.season, clubId:S.club.id, hand:C.hand,
@@ -1094,6 +1148,7 @@ function advanceNode(){
   }
   const closed=(c&&!c.done&&C.node>=cupLastNode())?closeCup():null;
   C.node++;
+  hurtTick();                                               // 治療が1節ぶん進む(→§3.32)
   C.hand=null; C.comp=null; C.chat=null;                    // 次節はまた選び直す
   checkTenureClosing();
   return closed;
