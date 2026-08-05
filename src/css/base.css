@@ -639,9 +639,9 @@ body{
 .bars{ margin-bottom:16px }
 .bar{ display:flex; align-items:center; gap:8px; margin:7px 0 }
 .bar > span{ width:32px; font-size:10px; color:oklch(0.60 0.02 255) }
-.bar .tr{ flex:1; height:6px; border-radius:3px; overflow:hidden; background:oklch(0.28 0.02 255) }
+.bar .tr{ position:relative; flex:1; height:6px; border-radius:3px; overflow:hidden; background:oklch(0.28 0.02 255) }
 .bar i{ display:block; height:100%; background:var(--accent) }
-.bar b{ width:22px; text-align:right; font:400 10px/1 var(--f-mono); color:var(--text-2) }
+.bar b{ min-width:22px; text-align:right; font:400 10px/1 var(--f-mono); color:var(--text-2) }
 .skills{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px }
 .skill{ padding:5px 10px; border-radius:10px; background:oklch(0.24 0.03 255);
   border:1px solid oklch(0.35 0.03 255); font-size:10px; color:oklch(0.85 0.01 90) }
@@ -1378,6 +1378,18 @@ body{
 .tbl tr.up td:first-child{ box-shadow:inset 3px 0 0 var(--accent) }
 .tbl tr.down td:first-child{ box-shadow:inset 3px 0 0 oklch(0.60 0.16 25) }
 #standNote{ margin-top:8px }
+/* 訓練の経験点(→docs/03 §3.30)。能力バーの上に細い線で重ね、数値の右に +N を添える */
+/* 経験点はバーの中に**下敷きの線**として重ねる(トラックは overflow:hidden) */
+.bar .tr u{
+  position:absolute; left:0; bottom:0; height:2px;
+  background:oklch(0.72 0.14 150);
+}
+.bar b em{ font-style:normal; margin-left:4px; font-size:10px; color:oklch(0.72 0.14 150) }
+.cm-awk{
+  margin-top:8px; padding:8px 10px; border-radius:8px;
+  background:oklch(0.24 0.05 85 / .35); border:1px solid var(--accent-dim);
+  font-size:11px; color:var(--accent);
+}
 /* クラブチャット(→docs/06 §6.23)。モックの秘書チャットを踏襲した吹き出し */
 .ch-head{
   display:flex; align-items:center; gap:10px;

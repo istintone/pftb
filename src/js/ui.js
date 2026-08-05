@@ -629,10 +629,17 @@ function openCard(x){
         +'<div><span>得意ポジション</span><b>'+c.subs.join(" / ")+'</b></div>'
       +'</div>'
       +'<div class="cm-k">ABILITY <span class="cm-cap">/ '+STAT_MAX+'</span></div>'
-      +'<div class="bars">'+STAT_KEYS.map(k=>
-        '<div class="bar"><span>'+STAT_LABEL[k]+'</span>'
-        +'<div class="tr"><i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i></div>'
-        +'<b>'+c[k]+'</b></div>').join("")+'</div>'
+      // 訓練の経験点(→docs/03 §3.30)。**任期のあいだだけ**なので、能力の隣に小さく添える
+      +'<div class="bars">'+STAT_KEYS.map(k=>{
+        const ex=trainExp(c.id,k), need=TUNING.train.need;
+        return '<div class="bar"><span>'+STAT_LABEL[k]+'</span>'
+        +'<div class="tr"><i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i>'
+        +(ex?'<u style="width:'+Math.min(100,Math.round(ex/need*100))+'%"></u>':"")+'</div>'
+        +'<b>'+c[k]+(ex?'<em>+'+ex+'</em>':"")+'</b></div>';
+      }).join("")+'</div>'
+      +(trainStar(c.id)?'<div class="cm-awk">覚醒 '+"★".repeat(trainStar(c.id))
+        +' ／ '+STAT_KEYS.filter(k=>trainUp(c.id,k)).map(k=>STAT_LABEL[k]+" +"+trainUp(c.id,k)).join(" ")
+        +'</div>':"")
       +'<div class="cm-k">SKILLS</div>'
       // 効果は**タップで浮かせる**(→docs/03 §3.21)。常に添えると説明が4行並んで、
       // 肝心の「何を持っているか」が読み取れなくなる
@@ -1042,7 +1049,8 @@ const CHAT_STAGES=["cup","foe","hand","who","who2","menu","result","event","read
 const chatLine=(a,seed)=>a[Math.abs(hashStr(seed))%a.length];
 const chatFill=(t,v)=>t.replace(/\{d\}/g,v.d||"").replace(/\{c\}/g,v.c||"")
   .replace(/\{f\}/g,v.f||"").replace(/\{v\}/g,v.v||"").replace(/\{r\}/g,v.r||"")
-  .replace(/\{n\}/g,v.n||"").replace(/\{m\}/g,v.m||"");
+  .replace(/\{n\}/g,v.n||"").replace(/\{m\}/g,v.m||"")
+  .replace(/\{s\}/g,v.s||"").replace(/\{g\}/g,v.g||"").replace(/\{e\}/g,v.e||"");
 const chatSay=(w,t)=>S.career.chat.log.push({ w, t });
 /** 会話を始める(その節で最初に開いたとき)。 */
 function chatStart(){
@@ -1105,15 +1113,25 @@ function chatEnter(st){
   }
   if(st==="result"){
     if(sel.hand==="rest")return false;
-    // **手応えはランダム**。効果そのものは後で決める(→docs/03 §3.29)
-    const T=TUNING.chat;
-    const r=mulberry32((S.world.seed^hashStr("chat:"+C.node+":"+sel.hand))>>>0)();
+    // **手応えはランダム**(→docs/03 §3.29)
+    const T=TUNING.chat, rng=mulberry32((S.world.seed^hashStr("chat:"+C.node+":"+sel.hand))>>>0);
+    const r=rng();
     sel.res=r<T.great?"great":r<T.great+T.fail?"fail":"ok";
     const key=sel.hand==="bond"
       ?(sel.res==="great"?"bondGreat":sel.res==="fail"?"bondFail":"bondOk")
       :(sel.res==="great"?"great":sel.res==="fail"?"fail":"ok");
     chatSay(sel.who,chatFill(chatLine(CHAT[key],"res:"+C.node+sel.res),
       { m:sel.who2?shortOf(sel.who2):"" }));
+    // **訓練は経験点になる**(→docs/03 §3.30)。失敗は0
+    if(sel.hand==="train"&&sel.menu){
+      const G=TUNING.train, t=trainById(sel.menu);
+      const gain=sel.res==="great"?rri(rng,G.greatLo,G.greatHi)
+        :sel.res==="ok"?rri(rng,G.okLo,G.okHi):0;
+      const total=gain?trainAdd(sel.who,t.stat,gain):trainExp(sel.who,t.stat);
+      sel.gain=gain;
+      chatSay("sec",chatFill(CHAT.expGot,{ s:t.stat.toUpperCase(),
+        g:(gain?"+"+gain:"±0"), e:total+" / "+G.need }));
+    }
     return false;
   }
   if(st==="event"){ chatSay("sec",CHAT.eventNone); return false; }
@@ -1210,6 +1228,7 @@ function renderChat(){
         +(it.sub?'<span class="ch-os">'+esc(it.sub)+'</span>':"")+'</button>').join("");
     $("chatAsk").querySelectorAll("[data-pick]").forEach((el,i)=>{
       el.onclick=()=>{ chatPick(o.items[i].id,o.items[i].label); renderChat(); chatBottom(); };
+      el.dataset.i=i;
     });
   }else{ $("chatAsk").className="ch-ask"; $("chatAsk").innerHTML=""; }
   chatBottom();

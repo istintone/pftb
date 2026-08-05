@@ -277,7 +277,8 @@ const STEPS = [
         const b=[...document.querySelectorAll('#chatAsk [data-pick]')]
           .find(x=>v==null||x.dataset.pick===String(v))||document.querySelector('#chatAsk [data-pick]');
         if(!b)throw new Error('選択肢が出ていない: step='+S.career.chat.step);
-        b.click(); return b.textContent;
+        try{ b.click(); }catch(e){ throw new Error('選択で例外: '+e.message); }
+        return b.textContent;
       };
       const steps=[];
       let guard=0;
@@ -288,7 +289,16 @@ const STEPS = [
       if(S.career.chat.step!=='ready')throw new Error('準備完了まで進まない');
       if(!S.career.hand)throw new Error('打ち手が決まっていない');
       if(!document.getElementById('chatGo'))throw new Error('試合へ向かうボタンが無い');
-      return steps.join(' → ')+' / 打ち手 '+S.career.hand;
+      // **訓練は経験点になる**(→docs/03 §3.30)
+      const sel=S.career.chat.sel, t=trainById(sel.menu);
+      const got=trainExp(sel.who,t.stat);
+      if(sel.res!=='fail'&&!got)throw new Error('成功したのに経験点が入っていない');
+      if(sel.res==='fail'&&sel.gain)throw new Error('失敗なのに経験点が入っている');
+      const G=TUNING.train;
+      if(sel.gain&&(sel.gain<G.okLo||sel.gain>G.greatHi))
+        throw new Error('経験点の幅が定義外: '+sel.gain);
+      return steps.join(' → ')+' / 打ち手 '+S.career.hand
+        +' / '+t.stat.toUpperCase()+' '+sel.res+' +'+(sel.gain||0)+'(累計'+got+')';
     })()`));
     await ctx.wait(200);
     await ctx.shot("05c-chat-ready");

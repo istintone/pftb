@@ -526,6 +526,39 @@ function judgeTenure(rank){
   return { extended:false };
 }
 
+// ---------- 訓練(→docs/03 §3.30) ----------
+// **任期のあいだだけ選手が伸びる。** 記録は career.train に置くので、任期が明けて
+// career を畳めば自動で消える(カード自体には何も書かない)。
+//   exp  … 能力ごとの経験点。10 貯まると覚醒のチャンスが来る
+//   up   … 覚醒で得た裏パラ。カードの表示は変えず、試合の素の能力に足す
+//   star … 覚醒した回数(=カード名の右の★)。maxStar で打ち止め
+const trainRec=id=>(S.career.train||{})[id]||null;
+/** 記録を用意して返す(書き込み用)。 */
+function trainMake(id){
+  if(!S.career.train)S.career.train={};
+  let r=S.career.train[id];
+  if(!r)r=S.career.train[id]={ exp:{}, up:{}, star:0 };
+  return r;
+}
+const trainExp=(id,k)=>{ const r=trainRec(id); return (r&&r.exp[k])||0; };
+const trainUp=(id,k)=>{ const r=trainRec(id); return (r&&r.up[k])||0; };
+const trainStar=id=>{ const r=trainRec(id); return (r&&r.star)||0; };
+/** 裏パラをまとめて引く(試合に渡すため)。何も無ければ null。 */
+function trainUps(id){
+  const r=trainRec(id);
+  if(!r||!r.star)return null;
+  const up={};
+  for(const k of STAT_KEYS)if(r.up[k])up[k]=r.up[k];
+  return Object.keys(up).length?up:null;
+}
+/** 経験点を足す。**訓練の成果はここだけで動く**。 */
+function trainAdd(id,k,n){
+  if(!n||!STAT_KEYS.includes(k))return 0;
+  const r=trainMake(id);
+  r.exp[k]=(r.exp[k]||0)+n;
+  return r.exp[k];
+}
+
 /** 今節の打ち手を選ぶ。選ぶまで試合には進めない(→§3.2.3)。 */
 function pickHand(id){
   if(!handById(id))return false;

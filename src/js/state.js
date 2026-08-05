@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=14;
+const SAVE_VER=15;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -46,6 +46,9 @@ function defaultState(){
       // クラブチャット(→docs/03 §3.29)。**節ごとに畳む**ので、節が進めば消える。
       // { log:[{w,t}], i:段の位置, step:入力待ちの段, sel:{選んだもの} }
       chat:null,
+      // 訓練の成果(→docs/03 §3.30)。**任期のあいだだけ**。career ごと畳まれるので、
+      // 次の任期では自動で消える。{ "<カードID>": { exp:{atk..}, up:{atk..}, star:0 } }
+      train:{},
       comp:null,                    // 今節に出る大会("league" / "cup")
       // 先に決まっている予定。node番号 → {comp,label}。
       // カップの連戦のように「この節はこの大会」と先に埋まるケースをここで表す。
@@ -216,6 +219,8 @@ function migrate(){
   // v13 → v14: 節の進行をクラブチャットに移した(→docs/03 §3.29)。
   // 途中の会話は持ち越せないので畳む(打ち手と大会の選択はそのまま残る)。
   if(S.v<14&&S.career&&S.career.chat===undefined)S.career.chat=null;
+  // v14 → v15: 訓練の経験点を足した(→docs/03 §3.30)。空から始める。
+  if(S.v<15&&S.career&&!S.career.train)S.career.train={};
   S.v=SAVE_VER;
 }
 
