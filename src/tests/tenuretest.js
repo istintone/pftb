@@ -162,6 +162,18 @@ function runSeason(hand) {
     const r = E.playCupDay(null);
     assert.ok(r && r.my && r.my.cup === cup.id, "カップの結果が返る");
     assert.strictEqual(r.my.draw, false, "カップに引き分けは無い");
+    // **並んだらPK戦で決める**(→docs/03 §3.33)。裏で決めない
+    if (r.my.gf === r.my.ga) {
+      assert.ok(r.M.pso, "同点ならPK戦がある");
+      assert.notStrictEqual(r.M.pso.hg, r.M.pso.ag, "PK戦は必ず決着する");
+      assert.strictEqual(r.my.win, r.M.pso.win === "H", "PK戦の結果が勝敗になる");
+      assert.ok(r.my.pso, "結果にPKのスコアが載る");
+      const kicks = r.M.events.filter(e => e.type === "pso");
+      assert.ok(kicks.length >= 2, "1本ずつ記録されている: " + kicks.length);
+      assert.ok(r.M.events.some(e => e.type === "psoEnd"), "決着の記録がある");
+    } else {
+      assert.ok(!r.M.pso, "決着していればPK戦は無い");
+    }
     assert.strictEqual(S3.world.matchday, md0, "リーグの節は進まない");
     assert.strictEqual(C.node, node0 + 1, "任期の節は進む");
     assert.ok(C.cup, "敗退しても大会は残る(進行を確認できる)");

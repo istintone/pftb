@@ -1057,6 +1057,31 @@ body{
   font:9px/1 var(--f-mono); color:oklch(1 0 0 / .62) }
 .fit-chip i{ font-style:normal }
 .fit-chip .pk-ovr{ flex:none; font:700 12px/1 var(--f-head); color:#fff }
+/* PK戦(→docs/06 §6.24)。1本ずつ積み上げて、最後に決着を出す */
+.pso{
+  margin-top:10px; padding:10px 12px; border-radius:10px;
+  background:var(--panel); border:1px solid var(--accent-dim);
+}
+.pso-t{ font:600 10px/1 var(--f-head); letter-spacing:2px; color:var(--accent);
+  margin-bottom:8px }
+.pso-rows{ max-height:132px; overflow-y:auto; display:flex; flex-direction:column; gap:3px }
+.pso-r{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-dim) }
+.pso-r.me{ color:var(--text) }
+.pso-n{ width:16px; font:400 10px/1 var(--f-mono); color:var(--text-mute) }
+/* 印は**成否だけ**を表す(どちらの蹴りかは 自/相 のタグで示す) */
+.pso-w{ width:14px; text-align:center; font-size:9px; color:var(--text-mute) }
+.pso-r.me .pso-w{ color:var(--accent) }
+.pso-m{ width:14px; text-align:center; color:oklch(0.62 0.16 25) }
+.pso-m.ok{ color:oklch(0.72 0.14 150) }
+.pso-p{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.pso-s{ font:400 11px/1 var(--f-mono); color:var(--text-2) }
+.pso-sum{
+  display:flex; align-items:baseline; justify-content:space-between;
+  margin-top:8px; padding-top:8px; border-top:1px solid var(--line);
+}
+.pso-sum b{ font:600 15px/1 var(--f-head) }
+.pso-sum b.w{ color:var(--accent) } .pso-sum b.l{ color:oklch(0.68 0.15 25) }
+.pso-sum .num{ font-size:14px; color:var(--text-2) }
 /* 連携の線(→docs/03 §3.31)。**選手の後ろ**に敷き、太さで段を示す。
    非等方に伸ばす箱なので、線幅は non-scaling-stroke で px 固定にする。 */
 /* **width/height を明示する。** svg は置換要素なので、position:absolute + inset:0

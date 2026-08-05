@@ -945,8 +945,9 @@ function cupResolveRound(c,round,mine){
       const me=i===c.slot;
       const gi=me?mine.gf:mine.ga, gj=me?mine.ga:mine.gf;
       const w=mine.win?c.slot:(me?j:i);
-      const rng=mulberry32((S.world.seed^hashStr("mypk:"+c.id+":"+c.node0+":"+round))>>>0);
-      return { i, j, gi, gj, w, pk:gi===gj?cupPk(rng,w===i):null };
+      const ps=mine.pso?(me?mine.pso.hg+"-"+mine.pso.ag:mine.pso.ag+"-"+mine.pso.hg):null;
+      return { i, j, gi, gj, w,
+        pk:gi===gj?ps:null };
     }
     return cupSimMatch(c,i,j,round);
   });
@@ -1041,7 +1042,7 @@ function beginMyMatch(){
     const f=cupFixtureOf(); if(!f)return null;
     const seed=(S.world.seed^hashStr("cup:"+f.cup+":"+S.world.season+":"+S.career.node))>>>0;
     // カップは**常にホーム扱い**。中立地なので有利不利を作らない
-    const M=createMatch(matchSide(S.club.id),f.side,seed);
+    const M=createMatch(matchSide(S.club.id),f.side,seed,{ ko:true });
     M.fixture={ h:S.club.id, a:null, cup:f.cup, round:f.round, label:f.label };
     M.away.name=f.side.name;
     return M;
@@ -1119,20 +1120,22 @@ function playCupDay(done){
   const f=cupFixtureOf(); if(!f)return null;
   const cup=cupById(f.cup);
   const seed=(W.seed^hashStr("cup:"+f.cup+":"+W.season+":"+C.node))>>>0;
-  const M=done||finishMatch(createMatch(matchSide(S.club.id),f.side,seed));
+  const M=done||finishMatch(createMatch(matchSide(S.club.id),f.side,seed,{ ko:true }));
   if(!M.fixture)M.fixture={ h:S.club.id, a:null, cup:f.cup, round:f.round, label:f.label };
   const gf=M.home.score, ga=M.away.score;
-  // **カップに引き分けは無い**。同点なら たね で決める(同じ節を何度解いても同じ結果)
-  const win=gf>ga||(gf===ga&&mulberry32(seed>>>1)()<0.5);
+  // **カップに引き分けは無い**。並んだらPK戦で決める(→docs/03 §3.33)
+  const win=gf>ga||(gf===ga&&M.pso&&M.pso.win==="H");
+  const pso=M.pso||null;
 
   // **結果は組み合わせ表に書き込む**。勝ち残りは表から読み直す
-  cupResolveRound(C.cup,f.round,{ gf, ga, win });
+  cupResolveRound(C.cup,f.round,{ gf, ga, win, pso });
   S.club.exp+=win?350:150;
   bondMatch();                                             // カップも1試合(→§3.31)
   condAfterMatch(M,"H",seed);                              // 出来(→§3.32)。カップは常にホーム
 
   const out={ my:{ opp:null, oppName:f.side.name, home:true, gf, ga,
-    win, draw:false, cup:f.cup, round:f.round, label:f.label }, others:[], M,
+    win, draw:false, cup:f.cup, round:f.round, label:f.label,
+    pso:pso?{ gf:pso.hg, ga:pso.ag }:null }, others:[], M,
     hurt:applyInjuries(M,"H") };
 
   C.log.push({

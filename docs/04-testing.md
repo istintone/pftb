@@ -19,6 +19,7 @@
 | `careertest.js` | 複数シーズンを回して**評価が期待との差に対して対称**か、名声・任期・試合結果の分布が妥当か | バランス変更時 |
 | `ordtest.js` | 采配(→docs/03 §3.28)。陣形の上下・能力の見返り・レーンの偏り・**表と裏があるか** | 采配やチャンネルを触ったとき |
 | `traintest.js` | 育成(→docs/03 §3.30 / §3.31)。経験点・覚醒・裏パラ・連携・**任期で消えるか** | 訓練や交流を触ったとき |
+| `psotest.js` | PK戦(→docs/03 §3.33)。決定率・交互に蹴る・途中経過・**必ず決着するか** | PK戦やカップを触ったとき |
 
 > **画面レジストリ整合**は `SCREENS` のキーと `index.html` の `id="scr-*"` が1対1であること、
 > タブが5つでそれぞれ同名画面を指していること、`under` が実在するタブを指していることを検査する。
@@ -29,7 +30,7 @@
 
 ```bash
 cd src/tests
-for t in integration hangtest worldtest careertest tenuretest ordtest traintest; do
+for t in integration hangtest worldtest careertest tenuretest ordtest traintest psotest; do
   echo -n "$t: "; node $t.js >/dev/null 2>&1 && echo OK || echo FAIL
 done
 ```
@@ -38,7 +39,7 @@ PowerShell の場合:
 
 ```powershell
 cd src\tests
-foreach ($t in @("integration","hangtest","worldtest","careertest","tenuretest","ordtest","traintest")) {
+foreach ($t in @("integration","hangtest","worldtest","careertest","tenuretest","ordtest","traintest","psotest")) {
   node "$t.js" *> $null; if ($?) { "$t : OK" } else { "$t : FAIL" }
 }
 ```

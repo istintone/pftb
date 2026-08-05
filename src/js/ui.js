@@ -2130,6 +2130,8 @@ function mTick(){
   };
   next();
 }
+function mReset(){ const b=$("psoBox"); if(b){ b.hidden=true; $("psoRows").innerHTML="";
+  $("psoSum").innerHTML=""; } clearTimeout(_psoTimer); _psoTimer=null; }
 function mFinish(){
   clearTimeout(_mTimer); _mTimer=null;
   // **必ずここで試合を締める**。再生ループは matchOver で抜けるので stepMatch を
@@ -2142,6 +2144,48 @@ function mFinish(){
   $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=true;
   closeSub(); $("subTab").classList.add("off");   // 終わったら交代はできない
   closeOrd(); $("ordTab").classList.add("off");   // 指示も同じ
+  // **並んだままならPK戦**(→docs/03 §3.33)。決着まで1本ずつ見せる
+  if(_M.pso)psoShow();
+}
+
+// ---------- PK戦(→docs/03 §3.33) ----------
+// 引き分けたノックアウトは**その場で決着を見せる**。裏で決めてしまうと、
+// 「なぜ勝ったのか / 負けたのか」が結果画面の数字だけになる。
+let _psoTimer=null;
+function psoShow(){
+  const kicks=_M.events.filter(e=>e.type==="pso");
+  const mine=mMine();
+  $("mClock").textContent="PK戦";
+  $("psoBox").hidden=false;
+  $("psoTitle").textContent="PENALTY SHOOT-OUT";
+  // **開いたら見える位置へ送る**。実況の下に出るので、放っておくと画面外
+  setTimeout(()=>{ try{ $("psoBox").scrollIntoView({block:"center"}); }catch(e){} },30);
+  $("psoRows").innerHTML="";
+  $("mDone").style.display="none";
+  let i=0;
+  const step=()=>{
+    if(i>=kicks.length){
+      const p=_M.pso, w=p.win===mine;
+      $("psoSum").innerHTML='<b class="'+(w?"w":"l")+'">'+(w?"勝ち抜け":"敗退")+'</b>'
+        +'<span class="num">PK '+(mine==="H"?p.hg+" - "+p.ag:p.ag+" - "+p.hg)+'</span>';
+      $("mSc").textContent=mScore(_M.home.score,_M.away.score);
+      $("mDone").style.display="";
+      return;
+    }
+    const e=kicks[i++];
+    const p=playerOf(_M,e.side,e.by);
+    // **印は成否、タグはどちらの蹴りか**。色で両方を表すと読み違える
+    $("psoRows").insertAdjacentHTML("beforeend",
+      '<div class="pso-r'+(e.side===mine?" me":"")+'">'
+      +'<span class="pso-n num">'+e.n+'</span>'
+      +'<span class="pso-w">'+(e.side===mine?"自":"相")+'</span>'
+      +'<span class="pso-m'+(e.ok?" ok":"")+'">'+(e.ok?"●":"×")+'</span>'
+      +'<span class="pso-p">'+esc(p?shortName(p.c):"—")+'</span>'
+      +'<span class="pso-s num">'+(mine==="H"?e.hg+"-"+e.ag:e.ag+"-"+e.hg)+'</span></div>');
+    const box=$("psoRows"); box.scrollTop=box.scrollHeight;
+    _psoTimer=setTimeout(step,TUNING.ui.tickMs/_mSpeed/2.2);
+  };
+  step();
 }
 // ---------- 選手交代(→docs/06 §6.21) ----------
 // **開くと試合が止まる。** 走らせたまま選ばせると、決めている間に局面が進んで
@@ -2315,6 +2359,7 @@ function mSkip(){
 function startMatch(){
   _M=beginMyMatch();
   _mBall=[50,50]; _mPhase=0; _mRestart=true;
+  mReset();                                   // 前の試合のPK戦が残らないように
   if(!_M){ toast("試合を開始できません"); return; }
   _mSpeed=1; _mPaused=false;
   // **左が自分・右が相手**。ピッチの下が自分なのに、名前だけホーム基準だと読み替えになる
@@ -2348,13 +2393,20 @@ function doMatchday(){
 function renderResult(){
   const o=_lastResult; if(!o||!o.my){ show("home"); return; }
   const m=o.my, M=o.M;
-  $("resultHead").textContent="FULL TIME";
+  $("resultHead").textContent=m.cup?(m.label||"CUP"):"FULL TIME";
+  // **カップの相手はクラブ一覧に居ない**。記録側が持っている名前を使う
+  // (clubName(null) をそのまま出していて "null" と表示されていた)
+  const foe=m.cup?(m.oppName||"—"):clubName(m.opp);
   $("rsScore").innerHTML='<b>'+esc(clubName(S.club.id))+'</b>'
     +'<span class="num">'+m.gf+' - '+m.ga+'</span>'
-    +'<b>'+esc(clubName(m.opp))+'</b>';
-  $("rsVerdict").textContent=m.win?"勝利":m.draw?"引き分け":"敗戦";
-  $("rsReward").innerHTML='<span>+'+fmtNum(m.win?TUNING.reward.win:m.draw?TUNING.reward.draw:TUNING.reward.lose)
-    +' コイン</span><span>+'+(m.win?350:m.draw?220:150)+' EXP</span>';
+    +'<b>'+esc(foe)+'</b>';
+  // PK戦で決まったなら、そのスコアを添える(→docs/03 §3.33)
+  $("rsVerdict").textContent=(m.win?"勝利":m.draw?"引き分け":"敗戦")
+    +(m.pso?"　PK "+m.pso.gf+"-"+m.pso.ga:"");
+  $("rsReward").innerHTML=m.cup
+    ?'<span>'+esc(m.label||"カップ戦")+'</span><span>+'+(m.win?350:150)+' EXP</span>'
+    :'<span>+'+fmtNum(m.win?TUNING.reward.win:m.draw?TUNING.reward.draw:TUNING.reward.lose)
+      +' コイン</span><span>+'+(m.win?350:m.draw?220:150)+' EXP</span>';
   $("rsOthers").innerHTML=o.others.map(x=>'<div class="fx"><span class="nm">'+esc(clubName(x.h))+'</span>'
     +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
     +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("")||'<div class="lg">なし</div>';

@@ -227,6 +227,45 @@ const STEPS = [
     await ctx.shot("07m-cup-plan");
 
     // 1回戦を戦うと**TBDが次の回戦ぶんだけ埋まる**
+    // PK戦(→docs/03 §3.33)。引き分けたノックアウトはその場で決着を見せる
+    ctx.log("  PK戦:", await ctx.js(`(()=>{
+      // 引き分けになるたねを探して、その試合を画面に載せる
+      const side=()=>matchSide(S.club.id);
+      let seed=null;
+      for(let i=1;i<200&&seed===null;i++){
+        const M=finishMatch(createMatch(side(),side(),i,{ko:true}));
+        if(M.pso)seed=i;
+      }
+      if(!seed)throw new Error('引き分けるたねが見つからない');
+      _M=finishMatch(createMatch(side(),side(),seed,{ko:true}));
+      _M.fixture={ h:S.club.id, a:null, cup:'kings', round:1, label:'テスト' };
+      show('match'); mReset(); mFinish();
+      const rows=document.querySelectorAll('#psoRows .pso-r');
+      if(document.getElementById('psoBox').hidden)throw new Error('PK戦の欄が出ない');
+      window.__psoWait=_M.events.filter(e=>e.type==='pso').length;
+      return 'PK '+_M.pso.hg+'-'+_M.pso.ag+' / '+window.__psoWait+'本を1本ずつ表示';
+    })()`));
+    // 本数は毎回変わる(サドンデスもある)ので、**出そろうまで待つ**
+    for (let i = 0; i < 40; i++) {
+      // 決着の帯が出るのは**最後の1本のさらに次のコマ**なので、そこまで待つ
+      const done = await ctx.js("!!document.getElementById('psoSum').textContent.trim()");
+      if (done) break;
+      await ctx.wait(700);
+    }
+    await ctx.wait(300);
+    ctx.log("  PK戦の決着:", await ctx.js(`(()=>{
+      const rows=document.querySelectorAll('#psoRows .pso-r').length;
+      const sum=document.getElementById('psoSum').textContent.trim();
+      if(rows!==window.__psoWait)throw new Error('全部出ていない: '+rows+'/'+window.__psoWait);
+      if(!sum)throw new Error('決着が出ていない');
+      if(document.getElementById('mDone').style.display==='none')
+        throw new Error('結果へ進めない');
+      return rows+'本 → '+sum.replace(/\s+/g,' ');
+    })()`));
+    await ctx.shot("07o-pso");
+    await ctx.js("(()=>{mReset();show('season');})()");
+    await ctx.wait(200);
+
     ctx.log("  1回戦のあと:", await ctx.js(`(()=>{
       const c=S.career.cup;
       const before=document.querySelectorAll('#schedList .br-row.tbd').length;

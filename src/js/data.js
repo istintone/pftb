@@ -911,6 +911,10 @@ const TUNING={
   //   ckOnBlock/ckOnSave … ブロック・セーブがコーナーに逃げる割合
   //   maxSp              … 1回の攻撃で連鎖できるセットプレーの上限(CK→CK の暴走止め)
   //   fkH                … この高さ未満のファウルは蹴らない(カードだけ引いて攻撃終了)
+  // PK戦(→docs/03 §3.33)。ノックアウトの引き分けはここで決める。
+  //   rounds … 先攻後攻で蹴る本数 / suddenMax … サドンデスの上限(安全網)
+  //   h      … 判定に使う位置(通常のPKと同じ)
+  pso:{ rounds:5, suddenMax:15 },
   sp:{ foulK:1.00, foulBlock:0.055, boxH:0.92, fkH:0.50,
        pkH:0.97,
        fkDirectH:0.62, fkDirect:0.55, fkCrossH:0.62, restartGain:0.14,

@@ -704,7 +704,7 @@ function matchClock(rng){
 // 「同じ試合・同じ流れで、采配だけが違いを生む」というA/Bが成立する。
 
 /** 試合の状態を作る。ここではまだ1ティックも解かない。 */
-function createMatch(home,away,seed){
+function createMatch(home,away,seed,opts){
   const s=seed>>>0;
   const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain,home.order);
   const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain,away.order);
@@ -713,6 +713,7 @@ function createMatch(home,away,seed){
     clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定
     events:[], orders:{ H:[], A:[] }, subs:{ H:0, A:0 }, over:false,
     mom:kickoffMom(H,A),                                     // 勢い(-1..+1、+がホーム)
+    ko:!!(opts&&opts.ko),                                    // ノックアウト(→§3.33)
   };
   M.events.push({ min:0, half:1, at:false, side:null, type:"kickoff",
     home:H.name, away:A.name, ticks:M.clock.length, mom:Math.round(M.mom*100)/100 });
@@ -967,7 +968,74 @@ function finishTick(M){
   const e={ min:90, half:2, at:false, side:null, type:"fulltime",
     hg:M.home.score, ag:M.away.score };
   M.events.push(e);
-  return [e];
+  const out=[e];
+  // **ノックアウトで並んだら、その場でPK戦**(→docs/03 §3.33)
+  if(M.ko&&M.home.score===M.away.score)out.push(...shootout(M));
+  return out;
+}
+/**
+ * PK戦(→docs/03 §3.33)。**5本ずつ蹴って、決まらなければサドンデス**。
+ * 決着が付いた時点で打ち切る(残りは蹴らない)ので、4-1 で5本目は無い。
+ * 判定は試合中のPKと同じ(枠に飛ぶか → GKと勝負)。
+ */
+function shootout(M){
+  const P=TUNING.pso, SP=TUNING.sp, fin=SET_FINISH.pk;
+  const rng=mulberry32((M.seed^hashStr("pso"))>>>0);
+  const order={ H:psoOrder(M.home), A:psoOrder(M.away) };
+  const gk={ H:pickGK(M.home), A:pickGK(M.away) };
+  const sc={ H:0, A:0 };
+  const evs=[];
+  const kick=(side,n)=>{
+    const T=side==="H"?M.home:M.away, D=side==="H"?M.away:M.home;
+    const list=order[side];
+    const p=list[(n-1)%list.length];
+    // resolveShot は**true が得点**(→shoot と同じ向き)。ここを反転させると
+    // 「GKが止めたときだけ入る」になり、PK戦が 0-1 のような点になる
+    const ok=onTarget(rng,p,SP.pkH,fin)&&resolveShot(rng,p,gk[D.side],SP.pkH,fin);
+    if(ok)sc[side]++;
+    const e={ min:90, half:2, at:false, side, type:"pso", n,
+      by:p.c.id, gk:gk[D.side].c.id, ok, hg:sc.H, ag:sc.A };
+    M.events.push(e); evs.push(e);
+    return ok;
+  };
+  // **決着が付いたら打ち切る**。残り本数で逆転できないなら、そこで終わり
+  // n本目を蹴り終えた時点で、残り本数を数えて逆転できるかを見る
+  //   Hのn本目のあと … H は n本、A は n-1本 蹴っている
+  //   Aのn本目のあと … どちらも n本
+  const decided=(n,turn)=>{
+    const leftH=Math.max(0,P.rounds-n);
+    const leftA=Math.max(0,P.rounds-(turn==="H"?n-1:n));
+    return sc.H>sc.A+leftA||sc.A>sc.H+leftH;
+  };
+  let done=false;
+  for(let n=1;n<=P.rounds&&!done;n++){
+    kick("H",n); if(decided(n,"H")){ done=true; break; }
+    kick("A",n); if(decided(n,"A")){ done=true; break; }
+  }
+  // サドンデス: 1本ずつ蹴って、差がついた組で終わり
+  for(let n=P.rounds+1;!done&&n<=P.suddenMax;n++){
+    kick("H",n); kick("A",n);
+    if(sc.H!==sc.A)done=true;
+  }
+  // 上限まで並んだまま(実測で1%未満)は、たねで決める。**必ず決着させる**
+  const win=sc.H!==sc.A?(sc.H>sc.A?"H":"A"):(rng()<0.5?"H":"A");
+  M.pso={ hg:sc.H, ag:sc.A, win, capped:sc.H===sc.A };
+  const end={ min:90, half:2, at:false, side:null, type:"psoEnd",
+    hg:sc.H, ag:sc.A, win:M.pso.win, capped:M.pso.capped };
+  M.events.push(end); evs.push(end);
+  return evs;
+}
+/** PK戦の蹴る順。**指名したPKキッカーが1番手**、あとは決定力と技術の順。 */
+function psoOrder(T){
+  const out=T.players.filter(p=>p.role!=="GK");
+  const w=p=>p.c.atk*1.2+p.c.tec;
+  const list=out.slice().sort((a,b)=>w(b)-w(a));
+  const named=T.kickers&&T.kickers.pk;
+  if(named){
+    const i=list.findIndex(p=>p.c.id===named);
+    if(i>0)list.unshift(list.splice(i,1)[0]);
+  }
+  return list.length?list:T.players;
 }
 /** 残りのティックを一気に解く。スキップ / 自動消化 / CPU同士の試合はこれ。 */
 function finishMatch(M){
