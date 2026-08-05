@@ -828,7 +828,10 @@ const cupMustPlay=()=>{
 };
 /** 今節にエントリーできるカップ。無ければ null。 */
 function cupEnterable(){
-  if(S.career.cup)return null;                             // **同時に複数はエントリーできない**
+  // **同時に複数はエントリーできない**。ただし塞ぐのは**進行中のあいだだけ**。
+  // 終わった大会の記録は結果を見せるために残すので、done を見ないと
+  // 一度出たら二度と出られなくなる(実際にそうなった)。
+  if(S.career.cup&&!S.career.cup.done)return null;
   if(S.career.plan[S.career.node])return null;             // 予定が埋まっている節は不可
   // 同じ節に2つ重なったら**格の高いほう**(賞金の大きいほう)を出す
   const open=CUPS.filter(cup=>cupOpen(cup)&&cupDay(cup,S.career.node));
@@ -1056,7 +1059,13 @@ function beginMyMatch(){
 function playMatchday(done){
   if(!S.career.hand)return null;                            // 打ち手が未選択なら進めない
   if(!S.career.comp&&!pickComp("league"))return null;       // 大会が未選択なら進めない
-  if(S.career.comp==="cup")return playCupDay(done);         // カップはリーグの日程を進めない
+  // カップはリーグの日程を進めない。**大会が無いのに comp が cup のまま**だと
+  // 何度呼んでも進まなくなるので、その場合はリーグに戻す
+  if(S.career.comp==="cup"){
+    if(cupFixtureOf())return playCupDay(done);
+    S.career.comp=null;
+    if(!pickComp("league"))return null;
+  }
   const W=S.world, md=W.matchday, round=(W.fixtures||[])[md-1]||[];
   const out={ my:null, others:[], M:null };
 

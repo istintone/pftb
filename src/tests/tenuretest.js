@@ -215,7 +215,17 @@ function runSeason(hand) {
     assert.strictEqual(E.cupPlaceName(cup, C.cup), "優勝", "成績の呼び名");
     assert.strictEqual(S3.player.trophies.filter(t => t.id === cup.id).length, 1,
       "トロフィーは初優勝の1つだけ");
-    assert.ok(E.cupEnterable() || !E.cupDayNow, "完了後は次の大会へ入れる");
+    // **終わった大会は次の開催を塞がない**(記録は結果を見せるために残る)
+    assert.ok(C.cup.done, "大会は完了している");
+    C.node = cup.every * 2; S3.club.exp = cup.needExp + 500;
+    const again = E.cupEnterable();
+    assert.ok(again, "完了後の開催節にはまた出られる");
+    assert.strictEqual(again.id, cup.id, "同じ大会にもう一度エントリーできる");
+    assert.ok(E.enterCup(again.id), "実際に入れる");
+    assert.ok(!C.cup.done, "新しい大会として始まる");
+    assert.strictEqual(C.cup.node0, C.node, "エントリーした節から始まる");
+    console.log("再エントリーOK 完了した大会は次の開催を塞がない");
+    C.comp = null;                      // enterCup が立てた出場先を戻す
     console.log("カップ戦OK", cup.name, "／ 熟練度" + cup.needExp + "以上・"
       + cup.every + "の倍数の節にエントリー ／ " + cup.rounds + "回戦 ／ 賞金 "
       + cup.prize.join("/") + " は完了節に入金");
