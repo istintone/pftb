@@ -1197,10 +1197,12 @@ function chatOptions(){
     { id:"no",  label:"今節は見送る",   sub:"リーグ戦に集中します" }] };
   if(st==="hand")return { q:"打ち手を選ぶ",
     items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc })) };
+  // **★とチャンスを一覧に並べる**(→docs/03 §3.30)。誰を伸ばしてきたかが選ぶ前に分かる
   if(st==="who"||st==="who2")return { q:st==="who"?"誰を呼びますか":"相方を選びますか",
     grid:true, items:chatSquad(st==="who2"?sel.who:null)
-      .map(c=>({ id:String(c.id), label:shortName(c)+starOf(c),
-        sub:primarySub(c)+" ・ OVR "+c.ovr+(trainReady(c.id)?" ・ 覚醒":"") })) };
+      .map(c=>({ id:String(c.id), label:shortName(c), say:shortName(c),
+        star:trainStar(c.id), hot:st==="who"&&sel.hand==="train"&&!!trainReady(c.id),
+        sub:primarySub(c)+" ・ OVR "+c.ovr })) };
   if(st==="menu"){
     if(sel.awake)return { q:"どう声をかけますか",
       items:AWAKES.map(a=>({ id:a.id, label:a.label })) };
@@ -1255,10 +1257,15 @@ function renderChat(){
   }else if(o){
     $("chatAsk").className="ch-ask"+(o.grid?" grid":"");
     $("chatAsk").innerHTML='<div class="ch-q">'+esc(o.q)+'</div>'
-      +o.items.map(it=>'<button class="ch-op" data-pick="'+esc(it.id)+'">'+esc(it.label)
+      +o.items.map(it=>'<button class="ch-op'+(it.hot?" hot":"")+'" data-pick="'+esc(it.id)+'">'
+        +esc(it.label)
+        +(it.star?'<i class="awk">'+"★".repeat(it.star)+'</i>':"")
+        +(it.hot?'<i class="ch-hot">覚醒</i>':"")
         +(it.sub?'<span class="ch-os">'+esc(it.sub)+'</span>':"")+'</button>').join("");
     $("chatAsk").querySelectorAll("[data-pick]").forEach((el,i)=>{
-      el.onclick=()=>{ chatPick(o.items[i].id,o.items[i].label); renderChat(); chatBottom(); };
+      // 監督の発言は**名前だけ**。★は一覧の情報であって、口には出さない
+      el.onclick=()=>{ chatPick(o.items[i].id,o.items[i].say||o.items[i].label);
+        renderChat(); chatBottom(); };
       el.dataset.i=i;
     });
   }else{ $("chatAsk").className="ch-ask"; $("chatAsk").innerHTML=""; }

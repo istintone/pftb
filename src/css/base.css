@@ -1462,6 +1462,12 @@ body{
 }
 .ch-op:active{ background:oklch(0.26 0.05 85) }
 .ch-op .ch-os{ display:block; font-size:10px; color:var(--text-dim); margin-top:3px }
+/* 覚醒できる選手は**枠ごと光らせる**。★は名前の右に並べる(→docs/03 §3.30) */
+.ch-op.hot{ border-color:var(--accent); background:oklch(0.24 0.05 85 / .35) }
+.ch-op .ch-hot{
+  float:right; font-style:normal; padding:2px 6px; border-radius:99px;
+  background:var(--accent); color:var(--bg); font:600 9px/1.4 var(--f-head); letter-spacing:.5px;
+}
 /* 選手を選ぶときだけ2列にして、名前とポジションを並べる */
 .ch-ask.grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px }
 .ch-ask.grid .ch-q{ grid-column:1 / -1 }

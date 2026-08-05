@@ -351,11 +351,24 @@ const STEPS = [
       }
       if(S.career.chat.step!=='who')throw new Error('選手を選ぶ段に来ない: '+S.career.chat.step);
       // 覚醒する選手は一覧で「覚醒」と分かる
-      const row=[...document.querySelectorAll('#chatAsk [data-pick]')]
-        .find(b=>b.dataset.pick===String(id));
+      // **一覧に★とチャンスが並ぶ**(→docs/03 §3.30)
+      const other=S.squad.filter(Boolean).find(x=>x!==id);
+      if(other)trainAwake(other,'pow');            // ★を持つ選手を1人作る
+      renderChat();
+      const rows=[...document.querySelectorAll('#chatAsk [data-pick]')];
+      const row=rows.find(b=>b.dataset.pick===String(id));
       if(!row)throw new Error('選手一覧に居ない');
-      if(!row.textContent.includes('覚醒'))throw new Error('一覧で覚醒が分からない');
+      if(!row.classList.contains('hot'))throw new Error('覚醒できる選手が目立たない');
+      if(!row.querySelector('.ch-hot'))throw new Error('一覧で覚醒が分からない');
+      const starRow=rows.find(b=>b.dataset.pick===String(other));
+      if(other&&(!starRow||!starRow.querySelector('.awk')))
+        throw new Error('一覧に★が並んでいない');
+      window.__whoList='★あり '+(starRow?starRow.querySelector('.awk').textContent:'-')
+        +' / 覚醒 '+rows.filter(b=>b.classList.contains('hot')).length+'人';
       row.click(); renderChat();
+      // 監督の発言は名前だけ(★は口に出さない)
+      const said=S.career.chat.log.filter(m=>m.w==='mgr').pop();
+      if(said&&said.t.includes('★'))throw new Error('★まで発言している: '+said.t);
       // 通常のメニューではなく2択が出る
       const opts=[...document.querySelectorAll('#chatAsk [data-pick]')];
       if(opts.length!==AWAKES.length)
@@ -374,10 +387,29 @@ const STEPS = [
         if(trainExp(id,'tec')!==exp0)throw new Error('失敗で経験点が消えた');
       }
       return (res==='awake'?'成功 ★'+trainStar(id)+' / TEC裏+'+trainUp(id,'tec')
-        :'失敗 経験点 '+trainExp(id,'tec')+' を保留')+' ／ '+opts.length+'択';
+        :'失敗 経験点 '+trainExp(id,'tec')+' を保留')+' ／ '+opts.length+'択'
+        +' ／ 一覧 '+window.__whoList;
     })()`));
     await ctx.wait(200);
     await ctx.shot("05e-chat-awake");
+    // 選手を選ぶ一覧(★と覚醒が並ぶ)
+    await ctx.js(`(()=>{
+      const G=TUNING.train, id=S.squad.find(Boolean);
+      const other=S.squad.filter(Boolean).find(x=>x!==id);
+      S.career.train={}; trainAdd(id,'tec',G.need);
+      if(other){ trainAwake(other,'pow'); trainAwake(other,'atk'); }
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      renderChat();
+      let g=0;
+      while(S.career.chat.step&&S.career.chat.step!=='who'&&g++<6){
+        const st=S.career.chat.step;
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        const want=st==='cup'?'no':st==='hand'?'train':null;
+        ((want&&bs.find(x=>x.dataset.pick===want))||bs[0]).click(); renderChat();
+      }
+    })()`);
+    await ctx.wait(250);
+    await ctx.shot("05f-chat-who");
     // ★はカードの名前の右に出る。**表示の数値は変えない**(→docs/03 §3.30)
     ctx.log("  覚醒の★:", await ctx.js(`(()=>{
       const id=S.squad.find(Boolean), c=cardById(id);
