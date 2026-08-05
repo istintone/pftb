@@ -1004,6 +1004,10 @@ function startNextSeason(){
   // 昇格したのに下の部の顔ぶれのままだと、上がった手応えが出ない
   let rebuilt=false;
   if(S.club.div0!==W.div){
+    // **入れ替わる選手の訓練の記録は捨てる**(→docs/03 §3.30)。
+    // 貸与のカードIDはクラブごとに固定なので、残すと別人に★が引き継がれてしまう。
+    // 手持ちカードは同じ選手のままなので触らない。
+    (S.club.loan||[]).forEach(c=>{ if(S.career.train)delete S.career.train[c.id]; });
     S.club.loan=clubRoster(W.seed,S.club.id);                // 貸与の顔ぶれが入れ替わる
     S.club.div0=W.div;
     S.form=bestFormFor(availableCards());
