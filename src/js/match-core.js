@@ -510,6 +510,15 @@ function pickOriginCh(rng,p,lastCh,stray){
     return w*skW(p,"origin",ch);
   });
 }
+/**
+ * 連携がパスに掛ける倍率(→docs/03 §3.31)。**2人の合計**で段が上がる。
+ * 連携の値はカードの写しに載せて渡す(エンジンはセーブを見ない)。
+ */
+function bondK(a,b){
+  if(!a||!b||!a.c.bond)return 1;
+  const B=TUNING.bond, sum=(a.c.bond[b.c.id]||0)*2;
+  return sum>B.t3?B.k3:sum>B.t2?B.k2:sum>B.t1?B.k1:1;
+}
 /** 選手の枠(元の立ち位置)から、いまボールがある場所までの離れ具合(0..1)。 */
 function strayOf(p,h,x){
   const dh=Math.abs(h-heightOf(p)), dx=Math.abs(x-p.x)/100;
@@ -576,10 +585,11 @@ function pickCounterCh(rng,p){
  *   守備側 … def を主軸に、**自分が選んだ守備チャンネルの能力**を副次で足す。
  *            思い切った手ほど強い(k)が、そのぶん反則になりやすい(foul)。
  */
-function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX){
+function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX,bk){
   const M=TUNING.matchup;
+  // **連携はパス系にだけ効く**(→docs/03 §3.31)。渡す相手が決まっている手だから
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
-    *ch.risk*TUNING.atk.originK*skS(atk,"origin",ch)*rr(rng);
+    *ch.risk*TUNING.atk.originK*skS(atk,"origin",ch)*(bk||1)*rr(rng);
   // **一発(long)はGKの飛び出しで摘まれる**。マーカーではなくGKが持つスキル
   const gkStop=ch.to!=null?skK(pickGK(D),"longStop"):1;
   const dSc=(eff(df,"def")*M.defW+eff(df,dch.stat)*(1-M.defW))
@@ -823,7 +833,11 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
     // **守備側も自分の手を選ぶ**(→docs/07 §7.12)。選んだ手が強さと反則率の両方を決める
     const dch=marker?pickCounterCh(rng,marker):null;
     carrier.stat.inv++; if(marker)marker.stat.inv++;
-    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x):true;
+    // **パスは渡す相手を先に決める**(→docs/03 §3.31)。誰に出すかが決まらないと
+    // 連携が判定に乗らない。撃つかどうかの判断だけは、収めたあとに回す(→§7.9)
+    const tg=ballTarget(rng,h,x,ch);
+    const recv=ch.kind==="pass"?receiverAt(rng,T,tg,carrier):null;
+    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x,bondK(carrier,recv)):true;
     carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
       by:carrier.c.id, sub:carrier.sub, ch:ch.id, label:ch.label, kind:ch.kind,
@@ -846,16 +860,14 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
     if(ch.kind==="pass")carrier.stat.passOk++;
     addMom(M,T.side,F.duelWon);
 
-    const tg=ballTarget(rng,h,x,ch);
     if(ch.kind==="shot")return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att,null,min);
 
-    // **まずボールを誰が収めたかを決める**。撃つかどうかはそのあと。
+    // **ボールを収めたのは上で決めた受け手**。撃つかどうかの判断はこのあと。
     // 順番を逆にすると、スルーパスを出した本人がその球を自分で撃つことになる。
     let next=carrier, nextAssist=assist, nextLast=null;
     if(ch.kind==="carry"){
       nextLast=ch.id;                                       // 自分が次の起点になる
     }else{                                                  // パス系 → 行き先に近い味方へ
-      const recv=receiverAt(rng,T,tg,carrier);
       if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att,null,min);
       next=recv; nextAssist=carrier;
     }

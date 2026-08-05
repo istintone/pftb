@@ -343,11 +343,19 @@ function startTenure(clubId){
  */
 function matchSide(clubId){
   const club=clubById(clubId);
-  if(S.club&&clubId===S.club.id)
-    // 覚醒の裏パラを持たせる(→docs/03 §3.30)。**カードは書き換えず写しに載せる**
-    return { cards:squadCards().map(c=>{ const up=trainUps(c.id); return up?{ ...c, up }:c; }),
+  if(S.club&&clubId===S.club.id){
+    // 覚醒の裏パラと連携を持たせる(→docs/03 §3.30 / §3.31)。
+    // **カードは書き換えず写しに載せる**
+    const ids=(S.squad||[]).filter(x=>x!=null);
+    return { cards:squadCards().map(c=>{
+        const up=trainUps(c.id), bond={};
+        for(const o of ids)if(o!==c.id){ const v=bondOf(c.id,o); if(v)bond[o]=v; }
+        const has=Object.keys(bond).length;
+        return (up||has)?{ ...c, ...(up?{ up }:{}), ...(has?{ bond }:{}) }:c;
+      }),
       form:S.form, name:club.name,
       kickers:S.kickers, captain:S.captain, order:S.order };
+  }
   const roster=clubRoster(S.world.seed,clubId);
   const form=formFor(clubId);
   return { cards:bestXI(roster,form), form, name:club.name };
@@ -583,6 +591,60 @@ function trainAdd(id,k,n){
   const r=trainMake(id);
   r.exp[k]=(r.exp[k]||0)+n;
   return r.exp[k];
+}
+
+// ---------- 連携(→docs/03 §3.31) ----------
+// **2人の組ごと**に積み上がる値。任期のあいだだけで、career を畳めば消える。
+// 組み合わせの数だけあるので、**順序を持たない1つのキー**にまとめて持つ。
+const bondKey=(a,b)=>a<b?a+":"+b:b+":"+a;
+const bondOf=(a,b)=>(S.career.bond||{})[bondKey(a,b)]||0;
+/** その2人のあいだの合計(**お互いが持つぶん** = 組の値×2)。しきい値はこれで見る。 */
+const bondSum=(a,b)=>bondOf(a,b)*2;
+function bondAdd(a,b,n){
+  if(!n||a===b)return 0;
+  if(!S.career.bond)S.career.bond={};
+  const k=bondKey(a,b);
+  return S.career.bond[k]=(S.career.bond[k]||0)+n;
+}
+/** その選手が持つ連携をすべて捨てる(編成から外れたとき)。 */
+function bondDrop(id){
+  const B=S.career.bond; if(!B)return 0;
+  let n=0;
+  for(const k of Object.keys(B))
+    if(k.split(":").some(x=>+x===id)){ delete B[k]; n++; }
+  return n;
+}
+/** その選手が値を持っている相手の数(確認ダイアログに出す)。 */
+const bondTies=id=>Object.keys(S.career.bond||{})
+  .filter(k=>k.split(":").some(x=>+x===id)&&S.career.bond[k]>0).length;
+/**
+ * 1試合ぶんの積み上げ(→docs/03 §3.31)。**編成の16人の総当たり**に入る。
+ * 国籍が同じ / コンビネーションのクラブが同じ なら、そのぶん厚くなる(最大3)。
+ */
+function bondMatch(){
+  const B=TUNING.bond.match;
+  const list=(S.squad||[]).map(id=>cardById(id)).filter(Boolean);
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+    const a=list[i], b=list[j];
+    bondAdd(a.id,b.id,B.base
+      +(a.nation&&a.nation===b.nation?B.nation:0)
+      +(a.club&&a.club===b.club?B.club:0));
+  }
+  return list.length;
+}
+/** その選手が持つ連携の一覧(編成画面の線に使う)。 */
+function bondPairs(ids){
+  const out=[];
+  for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){
+    const v=bondSum(ids[i],ids[j]);
+    if(v>TUNING.bond.t1)out.push({ a:i, b:j, sum:v, tier:bondTier(v) });
+  }
+  return out;
+}
+/** しきい値の段(0=なし / 1..3)。 */
+function bondTier(sum){
+  const B=TUNING.bond;
+  return sum>B.t3?3:sum>B.t2?2:sum>B.t1?1:0;
 }
 
 /** 今節の打ち手を選ぶ。選ぶまで試合には進めない(→§3.2.3)。 */
@@ -896,6 +958,7 @@ function playMatchday(done){
       S.club.coins+=gf>ga?TUNING.reward.win:gf===ga?TUNING.reward.draw:TUNING.reward.lose;
       S.club.exp+=gf>ga?350:gf===ga?220:150;              // チーム熟練度(→§3.7)
       S.club.eval=chairmanEval();
+      bondMatch();                                         // 連携(→§3.31)。一戦ごとに積む
     }else out.others.push({ h:m.h, a:m.a, hg, ag });
   });
 
@@ -930,6 +993,7 @@ function playCupDay(done){
   // **結果は組み合わせ表に書き込む**。勝ち残りは表から読み直す
   cupResolveRound(C.cup,f.round,{ gf, ga, win });
   S.club.exp+=win?350:150;
+  bondMatch();                                             // カップも1試合(→§3.31)
 
   const out={ my:{ opp:null, oppName:f.side.name, home:true, gf, ga,
     win, draw:false, cup:f.cup, round:f.round, label:f.label }, others:[], M };

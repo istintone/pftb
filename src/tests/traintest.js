@@ -127,6 +127,102 @@ const E=setup({tmpName:"_tmp_train.js"});
     console.log("昇降格OK",who,"はそのまま ／ ★も経験点も引き継ぐ");
   }
 
+  // ---------- 連携(→docs/03 §3.31) ----------
+  {
+    await E.newGame(); E.getS().coach="検証";
+    E.getS().world.seed=20260805; E.startTenure("sam-8");
+    const S4=E.getS(), B=E.TUNING.bond;
+    const sq=S4.squad.filter(Boolean);
+    const [a1,b1]=sq;
+
+    // 組は順序を持たない / 合計は組の値の2倍
+    assert.strictEqual(E.bondKey(a1,b1),E.bondKey(b1,a1),"キーは順序を持たない");
+    assert.strictEqual(E.bondOf(a1,b1),0,"任期の頭は0");
+    E.bondAdd(a1,b1,4); E.bondAdd(b1,a1,3);
+    assert.strictEqual(E.bondOf(a1,b1),7,"どちらから足しても同じ組に入る");
+    assert.strictEqual(E.bondSum(a1,b1),14,"合計はお互いのぶん(=組の値×2)");
+    assert.strictEqual(E.bondAdd(a1,a1,5),0,"自分自身とは組まない");
+
+    // --- 試合: 全員と +1、国籍が同じなら +1、コンビが同じなら +1(最大3) ---
+    S4.career.bond={};
+    E.bondMatch();
+    const card=id=>E.cardById(id);
+    let seen={ 1:0, 2:0, 3:0 };
+    for(let i=0;i<sq.length;i++)for(let j=i+1;j<sq.length;j++){
+      const x=card(sq[i]), y=card(sq[j]);
+      const want=B.match.base
+        +(x.nation===y.nation?B.match.nation:0)
+        +(x.club&&x.club===y.club?B.match.club:0);
+      assert.strictEqual(E.bondOf(sq[i],sq[j]),want,
+        "1試合ぶんが定義どおり: "+x.name+" × "+y.name);
+      seen[want]=(seen[want]||0)+1;
+    }
+    assert.ok(seen[1]||seen[2]||seen[3],"組が数えられている");
+    assert.ok(!Object.keys(seen).some(k=>+k>3),"上限は3");
+    console.log("試合の連携OK +1のみ",seen[1]||0,"組 / +2",seen[2]||0,"組 / +3",seen[3]||0,"組");
+
+    // --- 交流: 手応えぶんが**両者の組**に入る ---
+    S4.career.bond={};
+    E.bondAdd(a1,b1,B.great);
+    assert.strictEqual(E.bondOf(a1,b1),B.great,"大成功 +"+B.great);
+    E.bondAdd(a1,b1,B.ok);
+    assert.strictEqual(E.bondOf(a1,b1),B.great+B.ok,"成功 +"+B.ok);
+    E.bondAdd(a1,b1,B.fail);
+    assert.strictEqual(E.bondOf(a1,b1),B.great+B.ok,"失敗は増えない");
+
+    // --- 編成から外れたら、その選手の連携だけ消える ---
+    const other=[sq[2],sq[3]];
+    E.bondAdd(other[0],other[1],20);
+    const ties=E.bondTies(a1);
+    assert.ok(ties>0,"外す選手は連携を持っている: "+ties+"人");
+    E.bondDrop(a1);
+    assert.strictEqual(E.bondOf(a1,b1),0,"外れた選手の連携は消える");
+    assert.strictEqual(E.bondOf(other[0],other[1]),20,"関係のない組は残る");
+    console.log("リセットOK",ties,"人ぶんを捨て、他の組は残る");
+
+    // --- しきい値の段 ---
+    assert.strictEqual(E.bondTier(B.t1),0,"しきい値ちょうどではまだ上がらない");
+    assert.strictEqual(E.bondTier(B.t1+1),1,"t1 を超えて1段");
+    assert.strictEqual(E.bondTier(B.t2+1),2,"t2 を超えて2段");
+    assert.strictEqual(E.bondTier(B.t3+1),3,"t3 を超えて3段");
+
+    // --- パスの成功率が上がる(段が上がるほど) ---
+    {
+      const mk=v=>{
+        const side=E.matchSide(S4.club.id);
+        side.cards=side.cards.map(c=>({ ...c, bond:null }));
+        if(v){ const ids=side.cards.map(c=>c.id);
+          side.cards=side.cards.map(c=>{
+            const bond={}; ids.forEach(o=>{ if(o!==c.id)bond[o]=v; });
+            return { ...c, bond };
+          }); }
+        return side;
+      };
+      const rate=v=>{
+        let ok=0,n=0;
+        for(let i=0;i<60;i++){
+          const M=E.finishMatch(E.createMatch(mk(v),mk(0),i+1));
+          for(const e of M.events)
+            if(e.side==="H"&&e.kind==="pass"){ n++; if(e.ok)ok++; }
+        }
+        return ok/n;
+      };
+      const r0=rate(0), r3=rate(Math.ceil((B.t3+2)/2));
+      assert.ok(r3>r0,"連携が高いほどパスが通る: "
+        +(r0*100).toFixed(1)+"% → "+(r3*100).toFixed(1)+"%");
+      const up=(r3/r0-1)*100;
+      assert.ok(up<25,"上がりすぎない: +"+up.toFixed(1)+"%");
+      console.log("パスへの効きOK",(r0*100).toFixed(1)+"% → "+(r3*100).toFixed(1)+"%",
+        "(+"+up.toFixed(1)+"%) ／ 倍率 ×"+B.k3);
+    }
+
+    // --- 任期が明ければ消える ---
+    E.bondAdd(sq[4],sq[5],30);
+    E.newTenure();
+    assert.deepStrictEqual(E.getS().career.bond,{},"任期が明けると連携も消える");
+    console.log("連携の任期リセットOK");
+  }
+
   // --- 覚醒も任期が明ければ消える ---
   E.newTenure();
   assert.strictEqual(E.trainStar(pid),0,"★も任期で消える");

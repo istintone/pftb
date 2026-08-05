@@ -460,6 +460,16 @@ const closeSlot=()=>{ $("slotModal").classList.remove("on"); _slotIx=-1; };
 
 /** 枠に選手を入れる。他の枠にいた選手なら**その枠と入れ替える**。 */
 function setSlot(ix,cardId){
+  // **編成から外れる選手の連携は捨てる**(→docs/03 §3.31)。
+  // 積み上げたものが消えるので、消える前に必ず確認する。
+  const out=S.squad[ix];
+  const gone=out!=null&&cardId!==out&&(cardId==null||S.squad.indexOf(cardId)<0);
+  if(gone){
+    const n=bondTies(out), c=cardById(out);
+    if(n&&!confirm((c?shortName(c):"この選手")+" を編成から外します。"
+      +n+"人ぶんの連携がリセットされますが、よろしいですか?"))return;
+    if(n)bondDrop(out);
+  }
   if(cardId!=null){
     const at=S.squad.indexOf(cardId);
     if(at>=0&&at!==ix)S.squad[at]=S.squad[ix];   // 入れ替え(空きが出ない)
@@ -722,6 +732,19 @@ function renderDeck(){
       +starRow(c)
     +'</div>';
   }).join("");
+  // 連携の線(→docs/03 §3.31)。**しきい値を超えた組だけ**を白い線で結ぶ。
+  // 太さが段。誰と誰が噛み合っているかを、盤面の上でそのまま見せる(WCCF踏襲)。
+  {
+    const N=TUNING.squad.starters, ln=[];
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+      const a=cards[i], b=cards[j];
+      if(!a||!b)continue;
+      const t=bondTier(bondSum(a.id,b.id));
+      if(t)ln.push('<line x1="'+slots[i][1]+'" y1="'+slots[i][2]+'"'
+        +' x2="'+slots[j][1]+'" y2="'+slots[j][2]+'" class="lk t'+t+'"/>');
+    }
+    $("deckLinks").innerHTML=ln.join("");
+  }
   // 枠をタップしたら**その枠に入れる選手を選ぶ**。カード詳細はピッカーの中から開く。
   $("deckSlots").querySelectorAll(".slot").forEach(el=>{
     el.onclick=()=>openSlot(Number(el.dataset.slot));
@@ -1165,6 +1188,13 @@ function chatEnter(st){
       :(sel.res==="great"?"great":sel.res==="fail"?"fail":"ok");
     chatSay(sel.who,chatFill(chatLine(CHAT[key],"res:"+C.node+sel.res),
       { m:sel.who2?shortOf(sel.who2):"" }));
+    // **交流は連携になる**(→docs/03 §3.31)。両者に同じだけ入る
+    if(sel.hand==="bond"&&sel.who&&sel.who2){
+      const B=TUNING.bond;
+      const g=sel.res==="great"?B.great:sel.res==="ok"?B.ok:B.fail;
+      sel.gain=g;
+      if(g)bondAdd(sel.who,sel.who2,g);
+    }
     // **訓練は経験点になる**(→docs/03 §3.30)。失敗は0
     if(sel.hand==="train"&&sel.menu&&!sel.awake){
       const G=TUNING.train, t=trainById(sel.menu);

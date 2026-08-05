@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=15;
+const SAVE_VER=16;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -49,6 +49,9 @@ function defaultState(){
       // 訓練の成果(→docs/03 §3.30)。**任期のあいだだけ**。career ごと畳まれるので、
       // 次の任期では自動で消える。{ "<カードID>": { exp:{atk..}, up:{atk..}, star:0 } }
       train:{},
+      // 連携(→docs/03 §3.31)。{ "<小さいID>:<大きいID>": 値 }。
+      // **編成から外れた選手の分は捨てる**ので、いま組んでいる16人ぶんだけが残る。
+      bond:{},
       comp:null,                    // 今節に出る大会("league" / "cup")
       // 先に決まっている予定。node番号 → {comp,label}。
       // カップの連戦のように「この節はこの大会」と先に埋まるケースをここで表す。
@@ -221,6 +224,8 @@ function migrate(){
   if(S.v<14&&S.career&&S.career.chat===undefined)S.career.chat=null;
   // v14 → v15: 訓練の経験点を足した(→docs/03 §3.30)。空から始める。
   if(S.v<15&&S.career&&!S.career.train)S.career.train={};
+  // v15 → v16: 連携を足した(→docs/03 §3.31)。空から始める。
+  if(S.v<16&&S.career&&!S.career.bond)S.career.bond={};
   S.v=SAVE_VER;
 }
 

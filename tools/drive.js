@@ -911,6 +911,29 @@ const STEPS = [
           if(kk!==3)throw new Error('セットプレー担当が立ち絵でない: '+kk);
           return '控え'+bn+'人 / CAP'+cap+' / キッカー'+kk;
         })()`));
+        // 連携の線(→docs/03 §3.31)。**しきい値を超えた組だけ**が結ばれる
+        ctx.log("  連携の線:", await ctx.js(`(()=>{
+          const B=TUNING.bond, ids=S.squad.slice(0,TUNING.squad.starters).filter(Boolean);
+          S.career.bond={};
+          renderDeck();
+          if(document.querySelectorAll('#deckLinks line').length)
+            throw new Error('連携が無いのに線が出ている');
+          // 3組だけ、段をずらして結ぶ
+          bondAdd(ids[0],ids[1],Math.ceil((B.t1+2)/2));
+          bondAdd(ids[2],ids[3],Math.ceil((B.t2+2)/2));
+          bondAdd(ids[4],ids[5],Math.ceil((B.t3+2)/2));
+          renderDeck();
+          const cls=[...document.querySelectorAll('#deckLinks line')]
+            .map(e=>e.getAttribute('class')).sort();
+          if(cls.length!==3)throw new Error('線の数が合わない: '+cls.length);
+          if(cls.join(',')!=='lk t1,lk t2,lk t3')throw new Error('太さの段が違う: '+cls);
+          const w=cls.map(c=>getComputedStyle(
+            document.querySelector('#deckLinks .'+c.split(' ')[1])).strokeWidth);
+          return '3本 / 太さ '+w.join(' < ');
+        })()`));
+        await ctx.wait(200);
+        await ctx.shot("10j-deck-links");
+        await ctx.js("(()=>{S.career.bond={};renderDeck();})()");
         // 控え・CAP・キッカーは画面の下側にあるので、送って撮る
         await ctx.js("document.getElementById('appBody').scrollTop=99999");
         await ctx.wait(250);

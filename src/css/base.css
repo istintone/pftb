@@ -1035,7 +1035,7 @@ body{
 .pt-tag.home{ bottom:3.8cqw; color:var(--accent-hi) }
 
 /* 選手 — 丸に OVR、その下に名前。枠線の色がレアリティ、地色がクラブカラー。 */
-.pt-slots{ position:absolute; inset:0 }
+.pt-slots{ position:absolute; inset:0; z-index:2 }
 .slot{
   position:absolute; transform:translate(-50%,-50%); cursor:pointer;
   display:flex; flex-direction:column; align-items:center; gap:2px;
@@ -1057,6 +1057,13 @@ body{
   font:9px/1 var(--f-mono); color:oklch(1 0 0 / .62) }
 .fit-chip i{ font-style:normal }
 .fit-chip .pk-ovr{ flex:none; font:700 12px/1 var(--f-head); color:#fff }
+/* 連携の線(→docs/03 §3.31)。**選手の後ろ**に敷き、太さで段を示す。
+   非等方に伸ばす箱なので、線幅は non-scaling-stroke で px 固定にする。 */
+.pt-links{ position:absolute; inset:0; z-index:1; pointer-events:none }
+.pt-links line{ stroke:#fff; vector-effect:non-scaling-stroke; stroke-linecap:round }
+.pt-links .t1{ stroke-width:1;   opacity:.26 }
+.pt-links .t2{ stroke-width:1.8; opacity:.42 }
+.pt-links .t3{ stroke-width:2.8; opacity:.60 }
 /* 編成に置く選手の姿(→docs/06 §6.15)。**丸ではなく立ち絵**。
    足元にチームカラーの影を敷いて、ピッチ上の見え方(→§6.17)と揃える。 */
 .fig{ position:relative; display:block }
