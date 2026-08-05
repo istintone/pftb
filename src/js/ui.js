@@ -278,7 +278,8 @@ function renderHome(){
       +'<div class="nx-vs"><b>'+esc(clubName(S.club.id))+'</b>'
         +'<span>VS</span><b>'+esc(clubName(f.opp))+'</b></div>'
       +'<div class="nx-sub">'+(f.home?"HOME":"AWAY")+' ／ 第'+W.matchday+'節</div>'
-      +'<div class="nx-go">日程を見る →</div>'
+      // **ボタンは置かない**。タイルごとリンクなので、行き先を右下に一言添えるだけ
+      +'<div class="nx-go">&gt; See Schedule</div>'
     +'</div>';
     $("nxTile").onclick=()=>show("season");
   }
@@ -1002,6 +1003,7 @@ function currentRow(){
   const foe=f?{ name:f.side.name, sub:f.label, col:f.elite?"var(--rar-spe)":"var(--accent-dim)" }
     :m?{ name:clubName(m.opp), sub:"リーグ 第"+S.world.matchday+"節 ／ "+(m.home?"HOME":"AWAY"),
          col:clubColor(m.opp) }:null;
+  // **タイルごとリンク**。ボタンは置かず、行き先を一言だけ添える(→docs/06 §6.8)
   return '<div class="cal cur" id="calCur" role="button" tabindex="0">'
     +'<div class="cal-cur-h"><span class="cal-n num">'+C.node+'</span>'
     +'<span class="cal-b"><b>この節の準備</b><span class="lg">'+esc(state)+'</span></span>'
@@ -1009,7 +1011,7 @@ function currentRow(){
     +(foe?'<div class="cal-target"><span class="cal-c" style="background:'+foe.col+'"></span>'
       +'<span class="cal-b"><b>'+esc(foe.name)+'</b>'
       +'<span class="lg">'+esc(foe.sub)+'</span></span></div>':"")
-    +'<div class="cur-go">クラブチャットを開く</div></div>';
+    +'<div class="cur-go">第'+C.node+'節を開始する</div></div>';
 }
 const cupJoinedName=()=>{ const c=cupJoined(); return c?c.name:"カップ戦"; };
 /** カップに出られない理由。**条件が見えないと待つ理由が分からない**。 */

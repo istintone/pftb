@@ -1183,11 +1183,11 @@ body{
 .nx-vs b:last-of-type{ text-align:left }
 .nx-vs span{ font:700 12px/1 var(--f-head); letter-spacing:1px; color:var(--accent) }
 .nx-sub{ font-size:11px; color:var(--text-dim); margin-top:7px }
+/* **タイルごとリンクなのでボタンは置かない**(→docs/06 §6.8)。
+   行き先を右下に文字だけ添えて、押せる面はタイル全体にする。 */
 .nx-go{
-  display:inline-flex; align-items:center; gap:6px; margin-top:14px;
-  padding:9px 18px; border-radius:8px;
-  background:var(--accent); color:var(--surface);
-  font:600 13px/1 var(--f-head); letter-spacing:.5px;
+  margin-top:14px; text-align:right;
+  color:var(--accent); font:600 12px/1 var(--f-head); letter-spacing:1px;
 }
 
 /* HOME の2枚タイル(→docs/06 §6.8)。試合の次に触る導線を並べる。 */
@@ -1523,9 +1523,8 @@ body{
 .cal.cur{ cursor:pointer }
 .cal.cur .cal-r{ margin-left:auto; font-size:18px; color:var(--accent) }
 .cur-go{
-  margin-top:10px; padding:11px; text-align:center; border-radius:10px;
-  background:var(--accent); color:var(--bg);
-  font:600 13px/1 var(--f-head); letter-spacing:.5px;
+  margin-top:10px; text-align:right;
+  color:var(--accent); font:600 13px/1 var(--f-head); letter-spacing:1px;
 }
 .step-k{ margin:10px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
 .comps{ display:flex; gap:6px }
