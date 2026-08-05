@@ -959,6 +959,23 @@ const STEPS = [
         await ctx.wait(200);
         await ctx.shot("10j-deck-links");
         await ctx.js("(()=>{S.career.bond={};renderDeck();})()");
+        // 控えは**5枠が画面幅に収まる**(→docs/06 §6.15)
+        ctx.log("  控えの並び:", await ctx.js(`(()=>{
+          const wrap=document.getElementById('deckBench');
+          const r=wrap.getBoundingClientRect();
+          const bs=[...wrap.querySelectorAll('.bn')];
+          if(bs.length!==TUNING.squad.bench)throw new Error('控えの枠が5つでない');
+          if(wrap.scrollWidth>Math.ceil(r.width)+1)
+            throw new Error('横にはみ出している: '+wrap.scrollWidth+' > '+Math.round(r.width));
+          const last=bs[bs.length-1].getBoundingClientRect();
+          if(last.right>r.right+1)throw new Error('5人目が枠の外に出ている');
+          // ピッチのすぐ下に居ること
+          const pitch=document.getElementById('deckPitch').getBoundingClientRect();
+          const row=[...document.querySelectorAll('#scr-deck .row')][0].getBoundingClientRect();
+          if(!(r.top>pitch.bottom&&r.top<row.top))
+            throw new Error('控えがピッチの直下にない');
+          return bs.length+'枠 / 幅 '+Math.round(r.width)+'px に収まる / ピッチ直下';
+        })()`));
         // 控え・CAP・キッカーは画面の下側にあるので、送って撮る
         await ctx.js("document.getElementById('appBody').scrollTop=99999");
         await ctx.wait(250);
