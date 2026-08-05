@@ -1385,8 +1385,9 @@ body{
   background:oklch(0.72 0.14 150);
 }
 .bar b em{ font-style:normal; margin-left:4px; font-size:10px; color:oklch(0.72 0.14 150) }
-/* 覚醒の★(→docs/03 §3.30)。名前の右に小さく光らせる */
-.awk{ font-style:normal; margin-left:3px; font-size:.72em; color:var(--accent); letter-spacing:-1px }
+/* 覚醒の★(→docs/03 §3.30)。**文字としての★**なので色は周りに合わせる
+   (カードでは名前と同じ色、一覧では白のまま)。 */
+.awk{ font-style:normal; margin-left:3px; font-size:.78em; color:inherit; letter-spacing:-1px }
 .cm-awk{
   margin-top:8px; padding:8px 10px; border-radius:8px;
   background:oklch(0.24 0.05 85 / .35); border:1px solid var(--accent-dim);
@@ -1462,12 +1463,20 @@ body{
 }
 .ch-op:active{ background:oklch(0.26 0.05 85) }
 .ch-op .ch-os{ display:block; font-size:10px; color:var(--text-dim); margin-top:3px }
-/* 覚醒できる選手は**枠ごと光らせる**。★は名前の右に並べる(→docs/03 §3.30) */
-.ch-op.hot{ border-color:var(--accent); background:oklch(0.24 0.05 85 / .35) }
-.ch-op .ch-hot{
-  float:right; font-style:normal; padding:2px 6px; border-radius:99px;
-  background:var(--accent); color:var(--bg); font:600 9px/1.4 var(--f-head); letter-spacing:.5px;
+/* **覚醒の合図は枠の光だけ**(→docs/03 §3.30)。「覚醒」と書くと種明かしになる */
+.ch-op.hot{ border-color:var(--accent); animation:awkGlow 1.8s ease-in-out infinite }
+@keyframes awkGlow{
+  0%,100%{ box-shadow:0 0 6px 0 oklch(0.78 0.14 85 / .22);
+           background:oklch(0.24 0.04 85 / .28) }
+  50%    { box-shadow:0 0 20px 3px oklch(0.80 0.15 85 / .62);
+           background:oklch(0.30 0.07 85 / .55) }
 }
+/* 止まっていても分かるよう、常時ぶんの光は残す */
+@media (prefers-reduced-motion:reduce){ .ch-op.hot{ animation:none;
+  box-shadow:0 0 16px 2px oklch(0.80 0.15 85 / .50);
+  background:oklch(0.28 0.06 85 / .45) } }
+/* 段のタグ(カード見本と同じ)。名前の前に置く */
+.ch-op .gl-abbr{ margin-right:7px; vertical-align:1px }
 /* 選手を選ぶときだけ2列にして、名前とポジションを並べる */
 .ch-ask.grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px }
 .ch-ask.grid .ch-q{ grid-column:1 / -1 }

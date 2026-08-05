@@ -358,8 +358,10 @@ const STEPS = [
       const rows=[...document.querySelectorAll('#chatAsk [data-pick]')];
       const row=rows.find(b=>b.dataset.pick===String(id));
       if(!row)throw new Error('選手一覧に居ない');
-      if(!row.classList.contains('hot'))throw new Error('覚醒できる選手が目立たない');
-      if(!row.querySelector('.ch-hot'))throw new Error('一覧で覚醒が分からない');
+      // **合図は枠の光だけ**(文字では書かない → docs/03 §3.30)
+      if(!row.classList.contains('hot'))throw new Error('覚醒できる選手の枠が光らない');
+      if(row.textContent.includes('覚醒'))throw new Error('「覚醒」と書いてしまっている');
+      if(!row.querySelector('.gl-abbr'))throw new Error('段のタグが無い');
       const starRow=rows.find(b=>b.dataset.pick===String(other));
       if(other&&(!starRow||!starRow.querySelector('.awk')))
         throw new Error('一覧に★が並んでいない');

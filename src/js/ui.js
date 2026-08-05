@@ -1121,17 +1121,15 @@ function chatEnter(st){
       // 当たりは**その場でたねから決める**(選び直しで引き直せないよう節と選手で固定)
       const win=mulberry32((S.world.seed^hashStr("awake:"+C.node+":"+sel.who))>>>0)()<0.5
         ?AWAKES[0].id:AWAKES[1].id;
-      const G=TUNING.train, k=sel.awake;
+      const k=sel.awake;
       sel.res=sel.menu===win?"awake":"keep";
       if(sel.res==="awake"){
-        const r=trainAwake(sel.who,k);
+        trainAwake(sel.who,k);
         chatSay(sel.who,CHAT.awakeOk);
-        chatSay("sec",chatFill(CHAT.awakeSec,
-          { s:STAT_LABEL[k], k:String(r.star), x:String(G.maxStar) }));
+        chatSay("sec",chatLine(CHAT.awakeSec,"aw:"+C.node));
       }else{
         chatSay(sel.who,CHAT.awakeNg);
-        chatSay("sec",chatFill(CHAT.awakeKeep,
-          { s:STAT_LABEL[k], e:String(trainExp(sel.who,k)) }));
+        chatSay("sec",chatLine(CHAT.awakeKeep,"ak:"+C.node));
       }
       return false;
     }
@@ -1149,10 +1147,11 @@ function chatEnter(st){
       const G=TUNING.train, t=trainById(sel.menu);
       const gain=sel.res==="great"?rri(rng,G.greatLo,G.greatHi)
         :sel.res==="ok"?rri(rng,G.okLo,G.okHi):0;
-      const total=gain?trainAdd(sel.who,t.stat,gain):trainExp(sel.who,t.stat);
+      trainAdd(sel.who,t.stat,gain);
       sel.gain=gain;
-      chatSay("sec",chatFill(CHAT.expGot,{ s:t.stat.toUpperCase(),
-        g:(gain?"+"+gain:"±0"), e:total+" / "+G.need }));
+      // **数字は言わない**。積み上がりはカード詳細で見られる(→docs/03 §3.30)
+      chatSay("sec",chatLine(CHAT[sel.res==="great"?"expGreat":sel.res==="ok"?"expOk":"expFail"],
+        "ex:"+C.node+sel.res));
     }
     return false;
   }
@@ -1201,7 +1200,9 @@ function chatOptions(){
   if(st==="who"||st==="who2")return { q:st==="who"?"誰を呼びますか":"相方を選びますか",
     grid:true, items:chatSquad(st==="who2"?sel.who:null)
       .map(c=>({ id:String(c.id), label:shortName(c), say:shortName(c),
-        star:trainStar(c.id), hot:st==="who"&&sel.hand==="train"&&!!trainReady(c.id),
+        star:trainStar(c.id), rar:c.rarity,
+        // **覚醒できる選手は枠が光る**。文字で「覚醒」とは書かない(→docs/03 §3.30)
+        hot:st==="who"&&sel.hand==="train"&&!!trainReady(c.id),
         sub:primarySub(c)+" ・ OVR "+c.ovr })) };
   if(st==="menu"){
     if(sel.awake)return { q:"どう声をかけますか",
@@ -1258,9 +1259,9 @@ function renderChat(){
     $("chatAsk").className="ch-ask"+(o.grid?" grid":"");
     $("chatAsk").innerHTML='<div class="ch-q">'+esc(o.q)+'</div>'
       +o.items.map(it=>'<button class="ch-op'+(it.hot?" hot":"")+'" data-pick="'+esc(it.id)+'">'
+        +(it.rar?'<b class="gl-abbr r-'+it.rar.toLowerCase()+'">'+RARITY[it.rar].abbr+'</b>':"")
         +esc(it.label)
         +(it.star?'<i class="awk">'+"★".repeat(it.star)+'</i>':"")
-        +(it.hot?'<i class="ch-hot">覚醒</i>':"")
         +(it.sub?'<span class="ch-os">'+esc(it.sub)+'</span>':"")+'</button>').join("");
     $("chatAsk").querySelectorAll("[data-pick]").forEach((el,i)=>{
       // 監督の発言は**名前だけ**。★は一覧の情報であって、口には出さない
