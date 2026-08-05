@@ -521,7 +521,8 @@ function setCaptain(cardId){ S.captain=cardId; save(); closeSlot(); renderDeck()
 
 // ---------- セットプレー担当(→docs/06 §6.15 / docs/07 §7.11) ----------
 // 蹴る種類ごとに見る能力が違う。**指名は先発にしか効かない**(蹴る人が居ないため)。
-const SP_KINDS=[["pk","PK","指名"],["fk","FK","指名"],["ck","CK","指名"]];
+const SP_KINDS=[["pk","PK","ペナルティキック"],["fk","FK","フリーキック"],
+                ["ck","CK","コーナーキック"]];
 const SP_WEIGHT={ pk:c=>c.atk*1.2+c.tec, fk:c=>c.tec*1.2+c.atk*0.8, ck:c=>c.pow+c.atk*0.6 };
 /** 指名が無いときに蹴る選手。**エンジンの spKicker と同じ式**で選ぶ。 */
 function autoKicker(start,kind){
@@ -772,7 +773,7 @@ function renderDeck(){
     const named=cardById(S.captain);
     const on=named&&start.some(c=>c&&c.id===named.id);   // 先発に居ないと務まらない
     const c=on?named:autoCaptain(start);
-    $("deckCaptain").innerHTML='<div class="cap'+(on?"":" auto")+'"'+(c?kitStyle(c):"")+'>'
+    $("deckCaptain").innerHTML='<div class="ptile cap'+(on?"":" auto")+'"'+(c?kitStyle(c):"")+'>'
       +figHtml(c,"cap-fig")+'<div class="cap-band">CAP</div>'
       +'<div class="cap-b"><div class="cap-nm">'+(c?esc(c.name)+'<i class="awk">'+starOf(c)+'</i>':"—")+'</div>'
         +'<div class="cap-sub">'+(on?"指名":"自動")+"　スタミナの減りが "
@@ -790,12 +791,14 @@ function renderDeck(){
     const named=cardById(S.kickers&&S.kickers[k]);
     const on=named&&start.some(c=>c&&c.id===named.id);   // 先発に居ないと蹴れない
     const c=on?named:autoKicker(start,k);
-    return '<div class="kk'+(on?"":" auto")+'" data-kick="'+k+'"'+(c?kitStyle(c):"")+'>'
-      +'<div class="kk-t">'+label+'</div>'
-      +figHtml(c,"kk-fig")
-      +'<div class="kk-nm">'+(c?esc(shortName(c)):"—")+'</div>'
-      +starRow(c)
-      +'<div class="kk-sub">'+(on?note:"自動")+'</div>'
+    // **キャプテンと同じタイル**にそろえる(→docs/06 §6.15)。
+    // 同じ「1人を指名する枠」なのに形が違うと、別の機能に見える
+    return '<div class="ptile kk'+(on?"":" auto")+'" data-kick="'+k+'"'+(c?kitStyle(c):"")+'>'
+      +figHtml(c,"cap-fig")+'<div class="cap-band">'+label+'</div>'
+      +'<div class="cap-b"><div class="cap-nm">'
+        +(c?esc(c.name)+'<i class="awk">'+starOf(c)+'</i>':"—")+'</div>'
+        +'<div class="cap-sub">'+(on?"指名":"自動")+'　'+note+'</div></div>'
+      +'<div class="cap-go">›</div>'
     +'</div>';
   }).join("");
   $("deckKickers").querySelectorAll("[data-kick]").forEach(el=>{

@@ -1258,8 +1258,9 @@ body{
 .scout-open .pcard:nth-child(3){ animation-delay:.56s }
 @keyframes pkPop{ from{ transform:scale(.7) rotate(-6deg); opacity:0 } to{ transform:none; opacity:1 } }
 
-/* キャプテン(→docs/06 §6.15)。1枠だけなので横長にして、効果まで見せる。 */
-.cap{
+/* **1人を指名する枠は同じタイル**(→docs/06 §6.15)。
+   キャプテンもセットプレー担当も、やることは「誰に任せるか」で同じ。 */
+.ptile{
   display:flex; align-items:center; gap:10px; margin-top:8px; padding:9px 11px;
   border-radius:9px; background:var(--panel); border:1px solid var(--line); cursor:pointer;
 }
@@ -1278,16 +1279,9 @@ body{
 .cap-sub{ font-size:10px; color:var(--text-dim); margin-top:2px }
 .cap-go{ flex:0 0 auto; color:var(--text-dim); font-size:16px }
 
-/* セットプレー担当(→docs/06 §6.15)。3枠を横並びで、蹴る種類ごとに1枠。 */
-.kickers{ display:flex; gap:8px; margin-top:8px }
-.kk{ flex:1; min-width:0; padding:8px 6px; text-align:center; cursor:pointer;
-  border-radius:8px; background:var(--panel); border:1px solid var(--line) }
-.kk-t{ font:700 9px/1 var(--f-head); letter-spacing:1px; color:var(--accent); margin-bottom:2px }
-.kk-fig{ width:100%; height:52px; margin-bottom:2px }
-.kk-nm{ font-size:11px; color:oklch(0.88 0.01 90);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.kk-sub{ font-size:8px; color:oklch(0.55 0.02 255); margin-top:2px }
-.kk.auto .kk-nm{ color:oklch(0.62 0.02 255) }
+/* セットプレー担当(→docs/06 §6.15)。蹴る種類ごとに1枠を**縦に積む**。 */
+.kickers{ margin-top:8px }
+.kk.auto .cap-nm{ color:oklch(0.70 0.02 255) }
 
 /* 控えは**5枠を画面幅に収める**(→docs/06 §6.15)。
    横スクロールだと5人目が切れて、チーム全体を一目で掴めない。 */

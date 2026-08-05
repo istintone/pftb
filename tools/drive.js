@@ -785,7 +785,7 @@ const STEPS = [
     })()`));
     await ctx.shot("13e-captain");
     ctx.log("担当枠:", await ctx.js(
-      `[...document.querySelectorAll('#deckKickers .kk')].map(k=>k.querySelector('.kk-t').textContent+':'+k.querySelector('.kk-nm').textContent+'('+k.querySelector('.kk-sub').textContent+')').join(' / ')`));
+      `[...document.querySelectorAll('#deckKickers .kk')].map(k=>k.querySelector('.cap-band').textContent+':'+k.querySelector('.cap-nm').textContent+'('+k.querySelector('.cap-sub').textContent.trim()+')').join(' / ')`));
     await ctx.shot("13a-kickers");
     // FK の担当を指名 → 表示が「自動」から「指名」に変わる
     await ctx.js("document.querySelector('#deckKickers [data-kick=\"fk\"]').click()");
@@ -797,7 +797,7 @@ const STEPS = [
       const k=document.querySelector('#deckKickers [data-kick="fk"]');
       if(k.classList.contains('auto'))throw new Error('指名しても自動のままになっている');
       if(S.kickers.fk==null)throw new Error('指名がセーブに入っていない');
-      return k.querySelector('.kk-nm').textContent+' / '+k.querySelector('.kk-sub').textContent;
+      return k.querySelector('.cap-nm').textContent+' / '+k.querySelector('.cap-sub').textContent.trim();
     })()`));
   }],
   ["スカウト(コインでパックを引く)", async ctx => {
@@ -905,11 +905,14 @@ const STEPS = [
         ctx.log("  立ち絵:", await ctx.js(`(()=>{
           const n=s=>document.querySelectorAll(s).length;
           const bn=n('#deckBench .bn:not(.empty) .bn-fig img');
-          const cap=n('#deckCaptain .cap-fig img'), kk=n('#deckKickers .kk-fig img');
+          const cap=n('#deckCaptain .cap-fig img'), kk=n('#deckKickers .cap-fig img');
           if(!bn)throw new Error('控えが立ち絵でない');
           if(!cap)throw new Error('キャプテンが立ち絵でない');
           if(kk!==3)throw new Error('セットプレー担当が立ち絵でない: '+kk);
-          return '控え'+bn+'人 / CAP'+cap+' / キッカー'+kk;
+          // **キャプテンと同じタイル**であること(→docs/06 §6.15)
+          if(n('#deckKickers .ptile')!==3)throw new Error('タイル型になっていない');
+          if(!n('#deckCaptain .ptile'))throw new Error('キャプテンがタイルでない');
+          return '控え'+bn+'人 / CAP'+cap+' / キッカー'+kk+' / 同じタイル';
         })()`));
         // 連携の線(→docs/03 §3.31)。**しきい値を超えた組だけ**が結ばれる
         ctx.log("  連携の線:", await ctx.js(`(()=>{
