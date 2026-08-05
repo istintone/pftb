@@ -654,14 +654,26 @@ function bondTier(sum){
 // ---------- コンディション(→docs/03 §3.32) ----------
 // **隠しパラメータ。** 0=ケガ / 1=不調 / 2=普通 / 3=好調 / 4=絶好調。
 // 任期の頭は全員が普通で、節ごとに動く。career を畳めば消える。
-const COND_MAX=4;
+// **普段の上下は 1〜4**。0(ケガ)はケガのイベントでしか起きず、休息でしか治らない。
+const COND_MAX=4, COND_MIN=1, COND_HURT=0;
 const condOf=id=>{ const v=(S.career.cond||{})[id]; return v==null?2:v; };
-const condMul=v=>TUNING.cond.mul[clamp(v==null?2:v,0,COND_MAX)];
+const condMul=v=>TUNING.cond.mul[clamp(v==null?2:v,COND_HURT,COND_MAX)];
+const condHurt=id=>condOf(id)===COND_HURT;
 function condSet(id,v){
   if(!S.career.cond)S.career.cond={};
-  return S.career.cond[id]=clamp(v,0,COND_MAX);
+  return S.career.cond[id]=clamp(v,COND_HURT,COND_MAX);
 }
-const condMove=(id,d)=>condSet(id,condOf(id)+d);
+/**
+ * 普段の上下(→docs/03 §3.32)。**ケガの選手は動かない**(休息でしか治らない)し、
+ * 普段の上下でケガになることもない。0 に落とせるのはケガのイベントだけ。
+ */
+function condMove(id,d){
+  const cur=condOf(id);
+  if(cur===COND_HURT)return cur;
+  return condSet(id,clamp(cur+d,COND_MIN,COND_MAX));
+}
+/** ケガをさせる(イベント用の入口)。**ここだけが0にできる**。 */
+const condInjure=id=>condSet(id,COND_HURT);
 /**
  * 試合のあとの上下(→docs/03 §3.32)。
  *   ① **出た選手は採点で動く**。良ければ上がり、悪ければ下がる(普通なら動かない)
@@ -673,9 +685,11 @@ function condAfterMatch(M,side,seed){
   const rows=matchRatings(M,side);
   const moved=[];
   for(const r of rows){
-    if(!r.min)continue;                                    // 出ていない選手は採点で動かない
+    if(!r.min||condHurt(r.p.c.id))continue;                // 出ていない/ケガの選手は動かない
     const d=r.rating>=C.up?1:r.rating<=C.dn?-1:0;
-    if(d){ condMove(r.p.c.id,d); moved.push({ id:r.p.c.id, d, by:"stat" }); }
+    if(!d)continue;
+    const before=condOf(r.p.c.id);
+    if(condMove(r.p.c.id,d)!==before)moved.push({ id:r.p.c.id, d, by:"stat" });
   }
   // **揺さぶり**。編成の16人から数人を選んで上下させる
   const rng=mulberry32((seed^hashStr("cond:"+S.career.node))>>>0);
@@ -686,7 +700,8 @@ function condAfterMatch(M,side,seed){
     let id, guard=0;
     do{ id=pool[Math.floor(rng()*pool.length)]; }while(used.has(id)&&guard++<20);
     used.add(id);
-    // **普通へ戻る力を持たせる**。純粋な上下だと端(ケガ/絶好調)に溜まっていく
+    if(condHurt(id))continue;                              // ケガは揺さぶりでも動かない
+    // **普通へ戻る力を持たせる**。純粋な上下だと端に溜まっていく
     const pUp=clamp(0.5+(2-condOf(id))*C.pull,0.05,0.95);
     const d=rng()<pUp?1:-1;
     condMove(id,d); moved.push({ id, d, by:"shake" });
@@ -700,7 +715,8 @@ function condAfterMatch(M,side,seed){
 function condCpu(clubId,rng){
   const b=clubBias(clubById(clubId))*TUNING.cond.cpuBias;
   // 三角分布(2つの一様乱数の和)で中央に寄せ、クラブの格ぶんだけずらす
-  return clamp(Math.round(2+(rng()+rng()-1)*1.9+b),0,COND_MAX);
+  // 相手も普段の範囲(1〜4)。ケガはイベントの話なので、たねからは配らない
+  return clamp(Math.round(2+(rng()+rng()-1)*1.9+b),COND_MIN,COND_MAX);
 }
 
 /** 今節の打ち手を選ぶ。選ぶまで試合には進めない(→§3.2.3)。 */

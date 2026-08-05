@@ -242,14 +242,22 @@ const E=setup({tmpName:"_tmp_train.js"});
     assert.ok(1<E.condMul(3)&&E.condMul(3)<E.condMul(4),"普通<好調<絶好調");
     // 倍率そのものは小さくても、判定が連鎖するので効きは大きい(下の勝率で見る)
     assert.ok(E.condMul(0)<=E.condMul(1)-0.05,"ケガは不調よりはっきり落ちる: ×"+E.condMul(0));
-    // 上下は0〜4で止まる
+    // **普段の上下は1〜4**。0(ケガ)はイベントでしか起きない
     const id0=S5.squad.find(Boolean);
-    E.condSet(id0,0); E.condMove(id0,-1);
-    assert.strictEqual(E.condOf(id0),0,"0より下がらない");
+    E.condSet(id0,1); E.condMove(id0,-1);
+    assert.strictEqual(E.condOf(id0),E.COND_MIN,"普段の上下では1より下がらない");
+    assert.ok(!E.condHurt(id0),"普段の上下ではケガにならない");
     E.condSet(id0,4); E.condMove(id0,1);
     assert.strictEqual(E.condOf(id0),4,"4より上がらない");
+    // ケガはイベントの入口からだけ。**普段の上下では治らない**
+    E.condInjure(id0);
+    assert.strictEqual(E.condOf(id0),E.COND_HURT,"ケガにできる");
+    assert.ok(E.condHurt(id0),"ケガと判定される");
+    E.condMove(id0,1);
+    assert.strictEqual(E.condOf(id0),E.COND_HURT,"普段の上下では治らない(休息で治す)");
     E.condSet(id0,2);
-    console.log("コンディションOK 倍率",C.mul.join(" / "),"／ 上下は0〜4で止まる");
+    console.log("コンディションOK 倍率",C.mul.join(" / "),
+      "／ 普段は"+E.COND_MIN+"〜"+E.COND_MAX+" ／ 0はケガのイベントのみ");
 
     // --- 試合のあとに動く。**採点で動く人 + 揺さぶり** ---
     {
@@ -258,6 +266,7 @@ const E=setup({tmpName:"_tmp_train.js"});
       const M=E.finishMatch(E.createMatch(side(),side(),4242));
       const moved=E.condAfterMatch(M,"H",4242);
       assert.ok(moved.length,"誰かは動く");
+      assert.ok(moved.some(m=>m.by==="stat"),"採点でも動く(clamp で全部止まっていない)");
       const shake=moved.filter(m=>m.by==="shake");
       assert.ok(shake.length>=C.shakeLo&&shake.length<=C.shakeHi,
         "揺さぶりは"+C.shakeLo+"〜"+C.shakeHi+"人: "+shake.length);
@@ -269,7 +278,8 @@ const E=setup({tmpName:"_tmp_train.js"});
         assert.strictEqual(m.d,r.rating>=C.up?1:-1,"採点の向きと一致");
       }
       for(const id of Object.keys(S5.career.cond))
-        assert.ok(S5.career.cond[id]>=0&&S5.career.cond[id]<=4,"段は0〜4に収まる");
+        assert.ok(S5.career.cond[id]>=E.COND_MIN&&S5.career.cond[id]<=E.COND_MAX,
+          "試合のあとの段は"+E.COND_MIN+"〜"+E.COND_MAX+"に収まる(ケガにはならない)");
       console.log("試合後の変化OK 採点で",moved.filter(m=>m.by==="stat").length,
         "人 / 揺さぶりで",shake.length,"人");
     }
@@ -283,7 +293,7 @@ const E=setup({tmpName:"_tmp_train.js"});
       };
       const top=avg("eng-1"), low=avg("sam-24");
       assert.ok(top>low,"格上のほうが調子がいい: "+top.toFixed(2)+" > "+low.toFixed(2));
-      assert.ok(top<=4&&low>=0,"段に収まる");
+      assert.ok(top<=E.COND_MAX&&low>=E.COND_MIN,"相手にもケガは配らない(1〜4)");
       console.log("相手の調子OK プレミア首位",top.toFixed(2),"> カンピDIV3最下位",low.toFixed(2));
     }
 
@@ -306,6 +316,7 @@ const E=setup({tmpName:"_tmp_train.js"});
       const r2=w/n;
       assert.ok(r2>0.40,"絶好調のほうが勝ち越す: "+(r2*100).toFixed(1)+"%");
       // **効きすぎない**。1段の差で勝負が決まってしまうと、編成より運の話になる
+      // (0=ケガはイベントでしか起きないが、起きたときの重さはここで見る)
       let w0=0;
       for(let i=0;i<400;i++){ const r=E.resolveMatch(mk(0),mk(2),i+1); if(r.hg>r.ag)w0++; }
       assert.ok(w0/400<r2*0.5,"ケガだらけなら明確に不利: "+(w0/400*100).toFixed(1)+"%");
