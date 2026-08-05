@@ -1521,6 +1521,8 @@ body{
   background:var(--surface); border:1px dashed var(--line);
 }
 .bd-say .eyebrow{ display:block; margin-bottom:4px; color:var(--text-mute) }
+/* HELPタブが右端に浮くので、右寄せの数字を少し内側に寄せる */
+#boardBox{ padding-right:26px }
 .bd-say b{ font:400 13px/1.7 var(--f-body); color:var(--text-2) }
 /* 組み合わせ表(→docs/03 §3.23)。回戦ごとに束ね、決まった枠だけ明るくする */
 .br-r{ margin-bottom:18px }

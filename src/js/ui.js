@@ -2377,16 +2377,19 @@ function renderBoard(){
     +kv("順位",j.rank+"位（期待 "+r.expect+"位）")
     +kv("会長の評価",evalLabel(j.eval)+"（"+Math.round(j.eval)+"）")
     +kv("名声",(j.fameGain>=0?"+":"")+fmtNum(j.fameGain)+" ／ 通算 "+fmtNum(S.player.fame))
+    // **昇格の賞金は補強の元手**(→docs/03 §3.24)。内訳を見せて、次の一手に繋げる
+    +kv("賞金","+"+fmtNum(j.coin||0)+" コイン"
+      +(m.promoted?"（昇格 +"+fmtNum(TUNING.reward.season.promote)+"）":"")
+      +(j.rank===1?"（優勝 +"+fmtNum(TUNING.reward.season.champ)+"）":""))
+    +kv("所持コイン",fmtNum(S.club.coins))
     +kv("任期",tenure)
     +(S.career.over?'<div class="lg" style="margin-top:10px">任期が明けました。次のクラブを選べます。</div>':"");
   $("boardGo").textContent=S.career.over?"キャリアを振り返る":divName(m.to)+" を始める";
   $("boardGo").onclick=async()=>{
     if(S.career.over){ show("career"); return; }
-    const r=startNextSeason();
+    startNextSeason();
     await save(); headUI(); show("home");
     toast("SEASON "+S.world.season+" ／ "+divName(S.world.div)+" が始まりました");
-    // **部が変わるとクラブが編成を入れ替える**(→docs/03 §3.25)
-    if(r&&r.rebuilt)toast("クラブが"+divName(S.world.div)+"向けに編成を入れ替えました");
   };
 }
 /** 任期終了 = キャリア1周の終わり。積み上げたものを見せて次の周へ送り出す。 */

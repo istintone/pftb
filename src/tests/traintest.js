@@ -98,41 +98,33 @@ const E=setup({tmpName:"_tmp_train.js"});
     console.log("2択OK",E.AWAKES.map(a=>a.label).join(" / "),"／ 当たり",(r*100).toFixed(1)+"%");
   }
 
-  // --- 昇降格で選手が入れ替わったら、その選手の記録も消える ---
-  // **貸与のカードIDはクラブごとに固定**なので、消さないと別人に★が引き継がれる
+  // --- 昇降格しても選手は替わらないので、★は任期のあいだ残る ---
+  // **貸与の顔ぶれを任期中に入れ替えない**(→docs/03 §3.24)ので、
+  // カードIDが使い回されて別人に★が付く問題も起きない
   {
     await E.newGame(); E.getS().coach="検証";
     E.getS().world.seed=20260805; E.startTenure("sam-8");
     const S3=E.getS();
-    // 後ろのほうのカードを使う。先頭は段が変わっても名前が同じになりうる
-    // (名前を引く順が段より前なので、内訳が変わっても最初の1人は一致する)
     const pick=S3.club.loan[10], loanId=pick.id, who=pick.name;
-    const fp=()=>E.getS().club.loan.map(c=>c.rarity+":"+c.name).join(",");
-    const fp0=fp();
-    // 手持ちカードにも記録を付けて、こちらは残ることを確かめる
-    const mine=S3.player.coll[0];
     E.trainAdd(loanId,"atk",8); E.trainAwake(loanId,"tec");
-    if(mine)E.trainAdd(mine.id,"atk",6);
     assert.strictEqual(E.trainStar(loanId),1,"貸与の選手に★が付いている");
 
     S3.world.matchday=E.TUNING.league.rounds+1;      // 全日程を消化した扱い
     const j=E.judgeSeason();
-    // 必ず部が変わるようにする。**所属の配列も動かす**(名簿の内訳はここを見る)
+    // 必ず部が変わるようにする。**所属の配列も動かす**
     if(j.move.move===0){
       const from=S3.world.div, to=from===1?2:from-1;
       S3.world.divs[from-1]=S3.world.divs[from-1].filter(id=>id!==S3.club.id);
       S3.world.divs[to-1]=S3.world.divs[to-1].concat(S3.club.id);
       S3.world.div=to;
     }
-    const r=E.startNextSeason();
-    assert.ok(r.rebuilt,"部が変わったので編成を入れ替えた");
+    E.startNextSeason();
     const now=E.getS().club.loan.find(c=>c.id===loanId);
-    assert.ok(now,"同じIDのカードが再利用されている(だから消す必要がある)");
-    assert.notStrictEqual(fp(),fp0,"名簿の中身は入れ替わっている");
-    assert.strictEqual(E.trainStar(loanId),0,"**別人に★が引き継がれない**");
-    assert.strictEqual(E.trainExp(loanId,"atk"),0,"経験点も引き継がれない");
-    if(mine)assert.strictEqual(E.trainExp(mine.id,"atk"),6,"手持ちカードの記録は残る");
-    console.log("入れ替えOK",who,"→",now.name,"／ ★も経験点も引き継がない / 手持ちは残る");
+    assert.ok(now,"同じ選手が残っている");
+    assert.strictEqual(now.name,who,"部が変わっても顔ぶれは同じ: "+now.name);
+    assert.strictEqual(E.trainStar(loanId),1,"★は任期のあいだ残る");
+    assert.strictEqual(E.trainExp(loanId,"atk"),8,"経験点も残る");
+    console.log("昇降格OK",who,"はそのまま ／ ★も経験点も引き継ぐ");
   }
 
   // --- 覚醒も任期が明ければ消える ---

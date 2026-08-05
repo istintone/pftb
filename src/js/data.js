@@ -811,7 +811,11 @@ const TUNING={
   //   none どちらも不一致 = ほぼ機能しない
   fit:{ sub:1.00, main:0.75, none:0.50 },
   // 収入(→docs/03 §3.5)。数値は暫定。
-  reward:{ win:900, draw:400, lose:120, rankBase:2500, titleBonus:6000 },
+  //   win/draw/lose … 1試合ごと
+  //   season … シーズン末の賞金(→docs/03 §3.24)。**昇格に厚く積む**ので、
+  //            上がった季はプロスカウト(12,000)に手が届く
+  reward:{ win:900, draw:400, lose:120,
+           season:{ base:1500, perRank:350, champ:2000, promote:8000, relegate:0 } },
   // スカウト(→docs/03 §3.22)。**コインで引く**。1シーズンの稼ぎは
   // 勝ち星しだいで概ね 8,000〜14,000 コインなので、通常なら4〜7回、重点なら2〜3回。
   //   cards … 1回で出る枚数 / floor … 必ず1枚はこの段以上

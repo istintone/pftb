@@ -322,7 +322,6 @@ function startTenure(clubId){
     exp:0,                                                   // チーム熟練度(→§3.7)
     eval:TUNING.eval.start,                                  // 会長の評価
     loan:clubRoster(seed,clubId),                            // 任期中だけ借りる所属選手
-    div0:clubById(clubId).div,                               // 貸与を組んだときの部
     expect:0,
   };
   S.world.table=emptyTable(league);
@@ -987,11 +986,17 @@ function judgeSeason(){
     shrunk=before-S.career.limit;
     checkTenureClosing();
   }
+  // **シーズン末の賞金**(→docs/03 §3.24)。昇格に厚く積み、補強の元手にする
+  const R=TUNING.reward.season, n=TUNING.league.clubs;
+  const coin=R.base+R.perRank*(n-rank)
+    +(rank===1?R.champ:0)
+    +(move.promoted?R.promote:0)+(move.relegated?R.relegate:0);
+  S.club.coins+=coin;
   const h=S.player.history[S.player.history.length-1];
   if(h){ h.rank=rank; h.result=move.promoted?"昇格":move.relegated?"降格":"残留"; }
   // 大会が決着したこの時点で、任期の去就も決まる(→§3.2.3)
   const tenure=judgeTenure(rank);
-  return { rank, diff, fameGain, move, poor, shrunk, tenure, eval:S.club.eval };
+  return { rank, diff, fameGain, move, poor, shrunk, tenure, coin, eval:S.club.eval };
 }
 /**
  * 次のシーズンを始める。**同じクラブのまま、決まった部で組み直す**。
@@ -1002,18 +1007,9 @@ function startNextSeason(){
   W.season++;
   // **部が変われば、クラブも編成を入れ替える**(→docs/03 §3.25)。
   // 昇格したのに下の部の顔ぶれのままだと、上がった手応えが出ない
-  let rebuilt=false;
-  if(S.club.div0!==W.div){
-    // **入れ替わる選手の訓練の記録は捨てる**(→docs/03 §3.30)。
-    // 貸与のカードIDはクラブごとに固定なので、残すと別人に★が引き継がれてしまう。
-    // 手持ちカードは同じ選手のままなので触らない。
-    (S.club.loan||[]).forEach(c=>{ if(S.career.train)delete S.career.train[c.id]; });
-    S.club.loan=clubRoster(W.seed,S.club.id);                // 貸与の顔ぶれが入れ替わる
-    S.club.div0=W.div;
-    S.form=bestFormFor(availableCards());
-    S.squad=autoSquad();                                     // 居ない選手を残さない
-    rebuilt=true;
-  }
+  // **貸与の顔ぶれは任期のあいだ変えない**(→docs/03 §3.24)。
+  // 昇降格のたびに選手が入れ替わると、育てた実感も訓練の★も毎季リセットされてしまう。
+  // 上の部で戦う戦力は、賞金で補強して自分で作る。
   const league=divClubs();
   const rng=mulberry32((W.seed^hashStr(S.club.id+":"+W.season+":d"+W.div))>>>0);
   W.table=emptyTable(league);
@@ -1022,5 +1018,4 @@ function startNextSeason(){
   W.matchday=1;
   S.club.expect=expectedRank(W.seed,S.club.id,squadPower(squadCards().slice(0,TUNING.squad.starters)));
   S.player.history.push({ season:W.season, clubId:S.club.id, div:W.div, result:"在任" });
-  return { rebuilt };
 }

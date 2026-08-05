@@ -82,20 +82,25 @@ const E = setup({ tmpName: "_tmp_integration.js" });
     fameBefore, "→", S.player.fame, "/", S.player.history[0].result,
     "DIV" + j.move.from + "→DIV" + j.move.to);
 
-  // 次のシーズンは同じクラブのまま、新しい部で組み直す。
-  // **部が変わればクラブも編成を入れ替える**(→docs/03 §3.25)
-  // IDはクラブごとに決まった帯から採るので、**中身(段と名前)**で見る
-  const loanOf = () => S.club.loan.map(c => c.rarity + ":" + c.name).join(",");
-  const loan0 = loanOf();
-  const r = E.startNextSeason();
-  if (j.move.move !== 0) {
-    assert.ok(r.rebuilt, "部が変わったら編成を入れ替える");
-    assert.notStrictEqual(loanOf(), loan0, "貸与の顔ぶれが変わる");
-    assert.strictEqual(S.squad.filter(Boolean).length, NX + NB, "編成が組み直される");
-    assert.ok(S.squad.filter(Boolean).every(id => E.cardById(id)), "居ない選手が残らない");
-  } else {
-    assert.ok(!r.rebuilt, "残留なら編成はそのまま");
+  // シーズン末の賞金(→docs/03 §3.24)。**昇格に厚く積む**ので補強の元手になる
+  {
+    const R = E.TUNING.reward.season, n = E.TUNING.league.clubs;
+    const want = R.base + R.perRank * (n - j.rank)
+      + (j.rank === 1 ? R.champ : 0)
+      + (j.move.promoted ? R.promote : 0) + (j.move.relegated ? R.relegate : 0);
+    assert.strictEqual(j.coin, want, "賞金が定義どおり");
+    assert.ok(j.coin > 0, "順位にかかわらず賞金は出る");
+    if (j.move.promoted) assert.ok(j.coin >= R.promote, "昇格なら昇格ぶんが乗る");
+    console.log("シーズン賞金OK", j.rank + "位", j.move.promoted ? "昇格" : "", "+" + j.coin);
   }
+
+  // 次のシーズンは同じクラブのまま、新しい部で組み直す。
+  // **貸与の顔ぶれは任期のあいだ変えない**(→docs/03 §3.24)
+  const loanOf = () => S.club.loan.map(c => c.rarity + ":" + c.name).join(",");
+  const loan0 = loanOf(), squad0 = S.squad.join(",");
+  E.startNextSeason();
+  assert.strictEqual(loanOf(), loan0, "部が変わっても貸与の顔ぶれは変わらない");
+  assert.strictEqual(S.squad.join(","), squad0, "編成も引き継ぐ");
   assert.strictEqual(S.world.matchday, 1, "節が1に戻る");
   assert.strictEqual(S.world.fixtures.length, E.TUNING.league.rounds, "日程が組み直される");
   assert.ok(E.myFixture(), "新シーズンの初戦がある");
