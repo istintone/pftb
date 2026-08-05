@@ -288,6 +288,13 @@ const STEPS = [
       }
       if(S.career.chat.step!=='ready')throw new Error('準備完了まで進まない');
       if(!S.career.hand)throw new Error('打ち手が決まっていない');
+      // **差し込みの取りこぼしが無いこと**(実際に「{t} をやろう。」が出ていた)
+      const leak=S.career.chat.log.find(m=>/\{\w+\}/.test(m.t));
+      if(leak)throw new Error('置き換え漏れ: '+leak.t);
+      // **監督は単語で返さない**。文になっているか
+      const said=S.career.chat.log.filter(m=>m.w==='mgr');
+      const word=said.find(m=>!/[。！？]$/.test(m.t));
+      if(word)throw new Error('監督が単語で返している: '+word.t);
       if(!document.getElementById('chatGo'))throw new Error('試合へ向かうボタンが無い');
       // **訓練は経験点になる**(→docs/03 §3.30)
       const sel=S.career.chat.sel, t=trainById(sel.menu);

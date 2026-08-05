@@ -1104,17 +1104,21 @@ function wireCurrentRow(){
 // 途中で別の画面へ行って戻ってきても会話は続きから見える。
 const CHAT_STAGES=["cup","foe","hand","who","who2","menu","result","event","ready"];
 const chatLine=(a,seed)=>a[Math.abs(hashStr(seed))%a.length];
-const chatFill=(t,v)=>t.replace(/\{d\}/g,v.d||"").replace(/\{c\}/g,v.c||"")
-  .replace(/\{f\}/g,v.f||"").replace(/\{v\}/g,v.v||"").replace(/\{r\}/g,v.r||"")
-  .replace(/\{n\}/g,v.n||"").replace(/\{m\}/g,v.m||"")
-  .replace(/\{s\}/g,v.s||"").replace(/\{g\}/g,v.g||"").replace(/\{e\}/g,v.e||"")
-  .replace(/\{h\}/g,v.h||"");
+/** 台詞を1つ選んで差し込む。**配列でも文字列でも同じように書ける**。 */
+const chatText=(v,seed,vars)=>chatFill(Array.isArray(v)?chatLine(v,seed):v,vars||{});
+/**
+ * 台詞の差し込み。**{x} をまとめて置き換える**(→docs/06 §6.23)。
+ * 名前を1つずつ列挙していたときは、足した差し込みを書き忘れて
+ * 「{t} をやろう。」がそのまま画面に出た。ここで総なめにする。
+ */
+const chatFill=(t,v)=>String(t).replace(/\{(\w+)\}/g,(m,k)=>
+  (v&&v[k]!=null&&v[k]!=="")?v[k]:"");
 const chatSay=(w,t)=>S.career.chat.log.push({ w, t });
 /** 会話を始める(その節で最初に開いたとき)。 */
 function chatStart(){
   const C=S.career;
   C.chat={ log:[], i:0, step:null, sel:{} };
-  chatSay("sec",chatFill(chatLine(CHAT.open,"open:"+C.node),{ d:C.node }));
+  chatSay("sec",chatText(CHAT.open,"open:"+C.node,{ d:C.node }));
   chatAdvance();
 }
 /** 入力が要る段まで進める。要らない段は台詞だけ積んで通り過ぎる。 */
@@ -1137,17 +1141,17 @@ function chatEnter(st){
     const cup=cupEnterable();
     if(!cup)return false;
     sel.cup=cup.id;
-    chatSay("sec",chatFill(CHAT.cupAsk,{ c:cup.name }));
+    chatSay("sec",chatText(CHAT.cupAsk,"cupAsk:"+C.node,{ c:cup.name }));
     return true;
   }
   if(st==="foe"){
     if(!C.comp)pickComp("league");
     const f=C.comp==="cup"?cupFixtureOf():null;
-    if(f)chatSay("sec",chatFill(CHAT.cupStay,
+    if(f)chatSay("sec",chatText(CHAT.cupStay,"cupStay:"+C.node,
       { c:cupJoinedName(), r:cupRoundName(cupJoined(),f.round), f:f.side.name }));
     else{
       const m=myFixture();
-      chatSay("sec",m?chatFill(CHAT.foeLeague,
+      chatSay("sec",m?chatText(CHAT.foeLeague,"foe:"+C.node,
         { f:clubName(m.opp), v:m.home?"ホーム":"アウェイ" }):"今節のリーグ戦は組まれていません。");
     }
     return false;
@@ -1155,34 +1159,34 @@ function chatEnter(st){
   if(st==="hand"){
     // 治療中の選手が居れば**休息を促す**(→docs/03 §3.32)
     const h=hurtList();
-    if(h.length)chatSay("sec",chatFill(CHAT.restUrge,
+    if(h.length)chatSay("sec",chatText(CHAT.restUrge,"urge:"+C.node,
       { n:shortOf(h[0].id), g:String(h.length) }));
-    chatSay("sec",CHAT.handAsk);
+    chatSay("sec",chatText(CHAT.handAsk,"hand:"+C.node));
     return true;
   }
   if(st==="who"){
     if(sel.hand==="rest"){
       // **休息は0〜2の選手を1段よくする**(→docs/03 §3.32)。ケガも治る
       const done=restAll(), healed=done.filter(x=>x.from===0).length;
-      chatSay("sec",CHAT.restSec);
-      chatSay("sec",chatFill(done.length?(healed?CHAT.restHeal:CHAT.restDone)
-        :CHAT.restNone,{ g:String(done.length), h:String(healed) }));
+      chatSay("sec",chatText(CHAT.restSec,"rest:"+C.node));
+      chatSay("sec",chatText(done.length?(healed?CHAT.restHeal:CHAT.restDone):CHAT.restNone,
+        "restR:"+C.node,{ g:String(done.length), h:String(healed) }));
       return false;
     }
-    chatSay("sec",CHAT.whoAsk);
+    chatSay("sec",chatText(CHAT.whoAsk,"who:"+C.node));
     return true;
   }
   if(st==="who2"){
     if(sel.hand!=="bond")return false;
-    chatSay(sel.who,chatFill(chatLine(CHAT.callBond,"cb:"+C.node),{}));
+    chatSay(sel.who,chatText(CHAT.callBond,"cb:"+C.node));
     return true;
   }
   if(st==="menu"){
     if(sel.hand==="rest")return false;
     // **経験点が貯まっていれば覚醒イベント**(→docs/03 §3.30)。通常のメニューは出ない
     if(sel.awake){ chatSay(sel.who,CHAT.awakeAsk); return true; }
-    if(sel.hand==="train")chatSay(sel.who,chatFill(chatLine(CHAT.callTrain,"ct:"+C.node),{}));
-    else chatSay(sel.who,chatFill(CHAT.bondAsk,{ m:shortOf(sel.who2) }));
+    if(sel.hand==="train")chatSay(sel.who,chatText(CHAT.callTrain,"ct:"+C.node));
+    else chatSay(sel.who,chatText(CHAT.bondAsk,"ba:"+C.node,{ m:shortOf(sel.who2) }));
     return true;
   }
   if(st==="result"){
@@ -1196,10 +1200,10 @@ function chatEnter(st){
       if(sel.res==="awake"){
         trainAwake(sel.who,k);
         chatSay(sel.who,CHAT.awakeOk);
-        chatSay("sec",chatLine(CHAT.awakeSec,"aw:"+C.node));
+        chatSay("sec",chatText(CHAT.awakeSec,"aw:"+C.node));
       }else{
         chatSay(sel.who,CHAT.awakeNg);
-        chatSay("sec",chatLine(CHAT.awakeKeep,"ak:"+C.node));
+        chatSay("sec",chatText(CHAT.awakeKeep,"ak:"+C.node));
       }
       return false;
     }
@@ -1210,7 +1214,7 @@ function chatEnter(st){
     const key=sel.hand==="bond"
       ?(sel.res==="great"?"bondGreat":sel.res==="fail"?"bondFail":"bondOk")
       :(sel.res==="great"?"great":sel.res==="fail"?"fail":"ok");
-    chatSay(sel.who,chatFill(chatLine(CHAT[key],"res:"+C.node+sel.res),
+    chatSay(sel.who,chatText(CHAT[key],"res:"+C.node+sel.res,
       { m:sel.who2?shortOf(sel.who2):"" }));
     // **交流は連携になる**(→docs/03 §3.31)。両者に同じだけ入る
     if(sel.hand==="bond"&&sel.who&&sel.who2){
@@ -1227,13 +1231,13 @@ function chatEnter(st){
       trainAdd(sel.who,t.stat,gain);
       sel.gain=gain;
       // **数字は言わない**。積み上がりはカード詳細で見られる(→docs/03 §3.30)
-      chatSay("sec",chatLine(CHAT[sel.res==="great"?"expGreat":sel.res==="ok"?"expOk":"expFail"],
+      chatSay("sec",chatText(CHAT[sel.res==="great"?"expGreat":sel.res==="ok"?"expOk":"expFail"],
         "ex:"+C.node+sel.res));
     }
     return false;
   }
-  if(st==="event"){ chatSay("sec",CHAT.eventNone); return false; }
-  if(st==="ready"){ chatSay("sec",chatLine(CHAT.ready,"rd:"+C.node)); return true; }
+  if(st==="event"){ chatSay("sec",chatText(CHAT.eventNone,"ev:"+C.node)); return false; }
+  if(st==="ready"){ chatSay("sec",chatText(CHAT.ready,"rd:"+C.node)); return true; }
   return false;
 }
 /** 監督が選んだ。**選択肢の文言がそのまま監督の発言**になる。 */
@@ -1247,11 +1251,11 @@ function chatPick(id,label){
         // **エントリーは手続きだけ**。打ち手は別に選ぶ(→docs/03 §3.23)。
         // 1回戦の節だけ選手を呼べないと、会話が飛ばされたようにしか読めない
         const f=cupFixtureOf();
-        chatSay("sec",chatFill(CHAT.cupYes,{ f:f?f.side.name:"—" }));
+        chatSay("sec",chatText(CHAT.cupYes,"cupYes:"+C.node,{ f:f?f.side.name:"—" }));
         ch.i++; ch.step=null; save(); chatAdvance(); return;
       }
     }
-    chatSay("sec",CHAT.cupNo);
+    chatSay("sec",chatText(CHAT.cupNo,"cupNo:"+C.node));
     pickComp("league");
   }
   else if(st==="hand"){ sel.hand=id; pickHand(id); }
@@ -1268,25 +1272,35 @@ function chatPick(id,label){
 /** いま出す選択肢。 */
 function chatOptions(){
   const C=S.career, ch=C.chat, sel=ch.sel, st=ch&&ch.step;
+  // **監督は単語で返さない**(→docs/06 §6.23)。選択肢は短く、発言は文にする
+  const N=C.node;
   if(st==="cup")return { q:"どうしますか", items:[
-    { id:"yes", label:"エントリーする", sub:"勝ち続ける限りリーグ戦は進められません" },
-    { id:"no",  label:"今節は見送る",   sub:"リーグ戦に集中します" }] };
+    { id:"yes", label:"エントリーする", say:chatText(CHAT.sayCupYes,"sy:"+N),
+      sub:"勝ち続ける限りリーグ戦は進められません" },
+    { id:"no",  label:"今節は見送る",   say:chatText(CHAT.sayCupNo,"sn:"+N),
+      sub:"リーグ戦に集中します" }] };
   if(st==="hand")return { q:"打ち手を選ぶ",
-    items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc })) };
+    items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc,
+      say:chatText(CHAT[h.id==="train"?"sayTrain":h.id==="bond"?"sayBond":"sayRest"],
+        "sh:"+N+h.id) })) };
   // **★とチャンスを一覧に並べる**(→docs/03 §3.30)。誰を伸ばしてきたかが選ぶ前に分かる
   if(st==="who"||st==="who2")return { q:st==="who"?"誰を呼びますか":"相方を選びますか",
     grid:true, items:chatSquad(st==="who2"?sel.who:null)
-      .map(c=>({ id:String(c.id), label:shortName(c), say:shortName(c),
-        star:trainStar(c.id), rar:c.rarity,
+      .map(c=>({ id:String(c.id), label:shortName(c), rar:c.rarity,
+        say:chatText(st==="who"?CHAT.sayWho:CHAT.sayWho2,"sw:"+N+c.id,
+          { n:shortName(c), m:shortName(c) }),
+        star:trainStar(c.id),
         // **覚醒できる選手は枠が光る**。文字で「覚醒」とは書かない(→docs/03 §3.30)
         hot:st==="who"&&sel.hand==="train"&&!!trainReady(c.id),
         sub:primarySub(c)+" ・ OVR "+c.ovr })) };
   if(st==="menu"){
     if(sel.awake)return { q:"どう声をかけますか",
-      items:AWAKES.map(a=>({ id:a.id, label:a.label })) };
+      items:AWAKES.map(a=>({ id:a.id, label:a.label, say:a.label+"。" })) };
     return sel.hand==="train"
-      ? { q:"メニューを指示する", items:TRAININGS.map(t=>({ id:t.id, label:t.label, sub:t.ask })) }
-      : { q:"何をさせますか", items:BONDS.map(b=>({ id:b.id, label:b.label })) };
+      ? { q:"メニューを指示する", items:TRAININGS.map(t=>({ id:t.id, label:t.label, sub:t.ask,
+          say:chatText(CHAT.sayMenu,"sm:"+N+t.id,{ t:t.label }) })) }
+      : { q:"何をさせますか", items:BONDS.map(b=>({ id:b.id, label:b.label,
+          say:b.label+"。" })) };
   }
   return null;
 }
