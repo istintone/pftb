@@ -1164,13 +1164,21 @@ function chatSquad(except){
   return (S.squad||[]).map(id=>cardById(id)).filter(Boolean).filter(c=>c.id!==except);
 }
 const shortOf=id=>{ const c=cardById(id); return c?shortName(c):"—"; };
-/** 話し手のアイコン。選手は絵、秘書は SEC の丸。 */
-function chatAvatar(w){
-  if(w==="sec")return '<div class="ch-sm">SEC</div>';
+/**
+ * 話し手のアイコン(→docs/06 §6.23)。**秘書も監督も選手と同じ丸**。
+ * 秘書と監督の絵はまだ無いので、シルエットのプレースホルダーを出す。
+ * `src/assets/faces/sec.png` / `mgr.png` を置けば**そのまま差し替わる**
+ * (絵を足すのに JS を触らない。選手の絵と同じ考え方 →docs/03 §3.19)。
+ */
+function chatAvatar(w,cls){
+  const box=(kind,src)=>'<div class="'+(cls||"ch-sm")+' '+kind+'">'
+    +(src?'<img src="'+src+'" alt="">':'<i class="ch-ph"></i>')+'</div>';
+  const F=(window.ASSETS&&window.ASSETS.faces)||{};
+  if(w==="sec")return box("sec",F.sec);
+  if(w==="mgr")return box("mgr",F.mgr);
   const c=cardById(w);
   const art=c&&artKeyOf(c);
-  const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_stand"];
-  return '<div class="ch-sm pl">'+(src?'<img src="'+src+'" alt="">':(c?esc(shortName(c)[0]):"?"))+'</div>';
+  return box("pl",art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_stand"]);
 }
 function renderChat(){
   const C=S.career;
@@ -1179,8 +1187,11 @@ function renderChat(){
   $("chatClub").textContent=clubName(S.club.id);
   $("chatSub").textContent="第"+C.node+"節の準備 ・ 秘書と選手";
   $("chatDay").textContent="SEASON "+S.world.season+" ・ NODE "+C.node;
+  $("chatAv").innerHTML=chatAvatar("sec","ch-av-in");
   $("chatLog").innerHTML=ch.log.map(m=>{
-    if(m.w==="mgr")return '<div class="ch-row me"><div class="ch-b">'+esc(m.t)+'</div></div>';
+    // 監督は**右に丸**。左右で誰の発言かが形だけで分かる
+    if(m.w==="mgr")return '<div class="ch-row me"><div class="ch-b">'+esc(m.t)+'</div>'
+      +chatAvatar("mgr")+'</div>';
     const nm=m.w==="sec"?"秘書":shortOf(m.w);
     return '<div class="ch-row">'+chatAvatar(m.w)
       +'<div class="ch-b"><span class="ch-nm">'+esc(nm)+'</span>'+esc(m.t)+'</div></div>';

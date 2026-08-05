@@ -1383,13 +1383,8 @@ body{
   display:flex; align-items:center; gap:10px;
   padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--line-2);
 }
-.ch-av{
-  width:42px; height:42px; border-radius:50%; flex-shrink:0; overflow:hidden;
-  display:flex; align-items:center; justify-content:center;
-  font:400 8px/1 var(--f-mono); letter-spacing:.5px;
-}
-.ch-av.sec{ background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300);
-  color:oklch(0.75 0.03 300) }
+.ch-av{ width:54px; height:54px; flex-shrink:0 }
+.ch-av-in{ width:100%; height:100% }
 
 .ch-hn{ font:600 14px/1.2 var(--f-head); color:var(--text) }
 .ch-hs{ font-size:10px; color:var(--text-dim); margin-top:1px }
@@ -1399,26 +1394,43 @@ body{
 }
 .ch-log{ display:flex; flex-direction:column; gap:10px }
 .ch-row{ display:flex; align-items:flex-end; gap:7px }
-.ch-row.me{ justify-content:flex-end }
-.ch-sm{ width:26px; height:26px; border-radius:50%; flex-shrink:0; overflow:hidden;
-  display:flex; align-items:center; justify-content:center;
-  font:400 6px/1 var(--f-mono); color:oklch(0.75 0.03 300);
-  background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300) }
-.ch-sm.pl{ background:var(--panel-2); border-color:var(--line) }
+/* 監督の丸は右端に来るので、HELPタブに隠れないぶんだけ内側へ寄せる */
+.ch-row.me{ justify-content:flex-end; padding-right:30px }
+/* **顔の丸は3者とも同じ形**(→docs/06 §6.23)。色だけで役割を分ける */
+.ch-sm, .ch-av-in{
+  width:36px; height:36px; border-radius:50%; flex-shrink:0; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.ch-sm.sec, .ch-av-in.sec{ background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300);
+  color:oklch(0.62 0.06 300) }
+.ch-sm.mgr{ background:oklch(0.30 0.05 85); border:1px solid var(--accent-dim);
+  color:oklch(0.62 0.09 85) }
+.ch-sm.pl{ background:var(--panel-2); border:1px solid var(--line); color:var(--text-mute) }
+/* 絵が無い間のシルエット。**丸に対する割合で描く**ので大きさを変えても崩れない */
+.ch-ph{ position:absolute; inset:0; overflow:hidden }
+.ch-ph::before{
+  content:""; position:absolute; left:50%; top:20%;
+  width:34%; height:34%; border-radius:50%; background:currentColor;
+  transform:translateX(-50%);
+}
+.ch-ph::after{
+  content:""; position:absolute; left:50%; top:60%;
+  width:66%; height:52%; border-radius:50% 50% 0 0; background:currentColor;
+  transform:translateX(-50%);
+}
 /* **顔を大きく見せる**(→docs/06 §6.23)。素材は全身の立ち絵(420×500)なので、
    そのまま丸に収めると腹のあたりが中心に来て顔が潰れる。
-   図の上から約4割 = 頭〜胸 だけが丸に入るよう、拡大して上端に寄せる。
-     幅200% … 丸の直径の2倍まで拡大(=図の高さの約43%が見える)
-     -51.7% … 立ち絵の重心が中央よりわずかに右にあるぶんの補正
-     -3.6%  … 頭のてっぺんが丸の上端にちょうど乗る位置 */
-.ch-av, .ch-sm{ position:relative }
-.ch-av img, .ch-sm img{
+   図の上から約3割強 = 頭〜肩 だけが丸に入るよう、拡大して上端に寄せる。
+     幅264% … 丸の直径の2.6倍まで拡大(=図の高さの約34%が見える)
+     -52.4% … 立ち絵の重心が中央よりわずかに右にあるぶんの補正
+     -4.55% … 頭のてっぺんが丸の上端にちょうど乗る位置 */
+.ch-sm img, .ch-av-in img{
   position:absolute; left:50%; top:0;
-  width:200%; height:auto; max-width:none;
-  transform:translate(-51.7%,-3.6%);
+  width:264%; height:auto; max-width:none;
+  transform:translate(-52.4%,-4.55%);
 }
 .ch-b{
-  max-width:76%; padding:10px 12px; font-size:12px; line-height:1.65;
+  max-width:74%; padding:10px 12px; font-size:12px; line-height:1.65;
   background:var(--panel); color:var(--text-2); border-radius:12px 12px 12px 4px;
 }
 .ch-row.me .ch-b{
