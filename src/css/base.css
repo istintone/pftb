@@ -1088,21 +1088,28 @@ body{
 .fig-star{ font-size:9px; line-height:1; color:#fff; letter-spacing:-1px; margin-top:1px }
 /* ピッチの枠。**元の丸と同じ背丈に収める**(→docs/06 §6.15)。
    陣形の座標は丸の大きさを前提に決まっているので、背が伸びると枠同士が重なる。 */
-.sl-fig{ width:34px; height:34px }
-.sl-fig img{ bottom:2%; height:124% }            /* 小さい枠では膝下を切って顔を大きく */
+.sl-fig{ width:46px; height:46px }
+.sl-fig img{ bottom:2%; height:118% }
 .slot.empty .sl-fig .fig-dot{ background:oklch(0 0 0 / .35); border-style:dashed }
-/* 実効値は**絵の右下に重ねる**。行を足すと枠が縦に伸びてしまう */
+/* 実効値は**絵の右肩に重ねる**。行を足すと枠が縦に伸び、足元に置くと名前とぶつかる */
 .sl-ovr{
-  position:absolute; right:-6px; bottom:-2px; padding:0 3px; border-radius:4px;
-  background:oklch(0 0 0 / .72); font:700 10px/1.4 var(--f-head); color:#fff;
+  position:absolute; right:-7px; top:-1px; padding:0 3px; border-radius:4px;
+  background:oklch(0 0 0 / .78); font:700 11px/1.4 var(--f-head); color:#fff;
   text-shadow:0 1px 2px oklch(0 0 0 / .6);
 }
 .slot{ position:absolute }
 .sl-fig{ position:relative }
+/* 名前と★は**流し込まず絵の足元に重ねる**。行として積むと枠が縦に伸び、
+   陣形によっては枠同士が重なる(実測で16陣形中50か所)。 */
 .sl-name{
+  position:absolute; left:50%; bottom:0; transform:translateX(-50%); z-index:2;
   max-width:56px; padding:1px 4px; border-radius:3px;
-  background:oklch(0 0 0 / .55); font-size:8px; color:#fff;
+  background:oklch(0 0 0 / .62); font-size:8px; color:#fff;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.slot .fig-star{
+  position:absolute; left:50%; bottom:-11px; transform:translateX(-50%); z-index:2;
+  text-shadow:0 1px 3px oklch(0 0 0 / .9);
 }
 
 /* 枠のピッカー(→docs/06 §6.15)。適性の高い順に並ぶので、上から選べばよい。 */
