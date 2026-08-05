@@ -188,6 +188,10 @@ const STEPS = [
       const yes=[...document.querySelectorAll('#chatAsk [data-pick]')].find(b=>b.dataset.pick==='yes');
       if(!yes)throw new Error('チャットにエントリーの選択肢が出ない');
       yes.click();
+      // **エントリーしても打ち手は別に選ぶ**(→docs/03 §3.23)。会話が飛ばない
+      if(S.career.chat.step!=='hand')
+        throw new Error('エントリーの後に打ち手を聞いていない: '+S.career.chat.step);
+      if(S.career.hand)throw new Error('エントリーが打ち手を埋めている: '+S.career.hand);
       renderSeason();                       // 予定はカレンダー側に出るので描き直す
       const c=S.career.cup;
       if(!c)throw new Error('エントリーできない');

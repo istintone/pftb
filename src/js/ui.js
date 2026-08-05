@@ -1128,11 +1128,11 @@ function chatPick(id,label){
     if(id==="yes"){
       const cup=cupEnterable();
       if(cup&&enterCup(cup.id)){
+        // **エントリーは手続きだけ**。打ち手は別に選ぶ(→docs/03 §3.23)。
+        // 1回戦の節だけ選手を呼べないと、会話が飛ばされたようにしか読めない
         const f=cupFixtureOf();
         chatSay("sec",chatFill(CHAT.cupYes,{ f:f?f.side.name:"—" }));
-        pickHand("entry");                                 // 打ち手はエントリー(→§3.23)
-        ch.i=CHAT_STAGES.indexOf("event");                 // 打ち手は使い切った
-        ch.step=null; save(); chatAdvance(); return;
+        ch.i++; ch.step=null; save(); chatAdvance(); return;
       }
     }
     chatSay("sec",CHAT.cupNo);
@@ -1151,8 +1151,8 @@ function chatOptions(){
   if(st==="cup")return { q:"どうしますか", items:[
     { id:"yes", label:"エントリーする", sub:"勝ち続ける限りリーグ戦は進められません" },
     { id:"no",  label:"今節は見送る",   sub:"リーグ戦に集中します" }] };
-  if(st==="hand")return { q:"打ち手を選ぶ", items:HANDS.filter(h=>!h.cup)
-    .map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc })) };
+  if(st==="hand")return { q:"打ち手を選ぶ",
+    items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc })) };
   if(st==="who"||st==="who2")return { q:st==="who"?"誰を呼びますか":"相方を選びますか",
     grid:true, items:chatSquad(st==="who2"?sel.who:null)
       .map(c=>({ id:String(c.id), label:shortName(c), sub:primarySub(c)+" ・ OVR "+c.ovr })) };

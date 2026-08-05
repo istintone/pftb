@@ -256,12 +256,12 @@ function runSeason(hand) {
   assert.ok(!E.compsAvailable().includes("league"), "リーグを消化しきったら選べない");
   console.log("消化後OK 選べる大会:", JSON.stringify(E.compsAvailable()));
 
-  // ---------- 打ち手は3種そろっている ----------
-  const norm = E.HANDS.filter(h => !h.cup);
-  assert.strictEqual(norm.length, 3, "常設の打ち手は3種(訓練/交流/休息)");
-  assert.deepStrictEqual(norm.map(h => h.id), ["train", "bond", "rest"], "IDが仕様どおり");
-  // **エントリーは開催節にだけ出る打ち手**。常設の打ち手と並べない
-  assert.strictEqual(E.HANDS.filter(h => h.cup).length, 1, "エントリーは大会用の打ち手");
+  // ---------- 打ち手は3種だけ ----------
+  // **カップのエントリーは打ち手ではない**(手続きだけ → docs/03 §3.23)。
+  // 打ち手にすると、エントリーした節だけ選手を呼べなくなる
+  assert.strictEqual(E.HANDS.length, 3, "打ち手は3種(訓練/交流/休息)");
+  assert.deepStrictEqual(E.HANDS.map(h => h.id), ["train", "bond", "rest"], "IDが仕様どおり");
+  assert.ok(!E.HANDS.some(h => h.cup), "エントリーは打ち手に混ざらない");
   assert.strictEqual(E.pickHand("nope"), false, "存在しない打ち手は選べない");
   console.log("打ち手の定義OK", E.HANDS.map(h => h.icon + h.label).join(" / "));
 
