@@ -929,7 +929,32 @@ const STEPS = [
           if(cls.join(',')!=='lk t1,lk t2,lk t3')throw new Error('太さの段が違う: '+cls);
           const w=cls.map(c=>getComputedStyle(
             document.querySelector('#deckLinks .'+c.split(' ')[1])).strokeWidth);
-          return '3本 / 太さ '+w.join(' < ');
+          // **線の端が本当にその選手の上にあるか**を実測する
+          const at=k=>{
+            const el=document.querySelector('#deckSlots .slot[data-slot="'+k+'"]');
+            const r=el.getBoundingClientRect();
+            return { x:r.left+r.width/2, y:r.top+r.height/2 };
+          };
+          const svg=document.getElementById('deckLinks');
+          const sr=svg.getBoundingClientRect();
+          const pt=(vx,vy)=>({ x:sr.left+sr.width*vx/100, y:sr.top+sr.height*vy/100 });
+          const want=[[0,1],[2,3],[4,5]];
+          const lines=[...svg.querySelectorAll('line')];
+          const bad=[];
+          want.forEach(([i,j])=>{
+            const A=at(i), Bp=at(j);
+            const hit=lines.find(l=>{
+              const p1=pt(+l.getAttribute('x1'),+l.getAttribute('y1'));
+              const p2=pt(+l.getAttribute('x2'),+l.getAttribute('y2'));
+              const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+              return (d(p1,A)<14&&d(p2,Bp)<14)||(d(p1,Bp)<14&&d(p2,A)<14);
+            });
+            if(!hit)bad.push(i+'-'+j);
+          });
+          if(bad.length)throw new Error('線が選手を結んでいない: '+bad.join(' ')
+            +' / 枠の中心 '+want.map(([i])=>Math.round(at(i).x)+','+Math.round(at(i).y)).join(' ')
+            +' / 線の端 '+lines.map(l=>l.getAttribute('x1')+','+l.getAttribute('y1')).join(' '));
+          return '3本 / 太さ '+w.join(' < ')+' / 端点が枠の中心に一致';
         })()`));
         await ctx.wait(200);
         await ctx.shot("10j-deck-links");

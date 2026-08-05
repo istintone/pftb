@@ -1059,7 +1059,10 @@ body{
 .fit-chip .pk-ovr{ flex:none; font:700 12px/1 var(--f-head); color:#fff }
 /* 連携の線(→docs/03 §3.31)。**選手の後ろ**に敷き、太さで段を示す。
    非等方に伸ばす箱なので、線幅は non-scaling-stroke で px 固定にする。 */
-.pt-links{ position:absolute; inset:0; z-index:1; pointer-events:none }
+/* **width/height を明示する。** svg は置換要素なので、position:absolute + inset:0
+   だけでは伸びず、既定の 300×150 のまま左上に置かれる(線がずれた原因)。 */
+.pt-links{ position:absolute; inset:0; width:100%; height:100%;
+  z-index:1; pointer-events:none }
 .pt-links line{ stroke:#fff; vector-effect:non-scaling-stroke; stroke-linecap:round }
 .pt-links .t1{ stroke-width:1;   opacity:.26 }
 .pt-links .t2{ stroke-width:1.8; opacity:.42 }
