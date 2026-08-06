@@ -635,7 +635,10 @@ function setForm(f){
 function openCard(x){
   const c=(x&&typeof x==="object")?x:cardById(x); if(!c)return;
   const nation=nationById(c.nation);
-  $("cardModalBody").className="cm-sheet "+rarClass(c);
+  // **シートにホロは掛けない**(→docs/06 §6.13)。段の色は縁と光だけで示す。
+  // ホロを全面に掛けると、WORLD CLASS の虹が能力バーや文字の上を流れて読めない。
+  // カードそのもの(下の .cm-card)は今までどおりホロを持つ。
+  $("cardModalBody").className="cm-sheet r-"+c.rarity.toLowerCase();
   $("cardModalBody").innerHTML=
     '<button class="cm-x" id="cardModalClose" aria-label="閉じる">×</button>'
     // 上半分は一覧と同じカードそのもの(同じ部品を大きく見せる)
@@ -648,14 +651,18 @@ function openCard(x){
         +'<div><span>得意ポジション</span><b>'+c.subs.join(" / ")+'</b></div>'
       +'</div>'
       +'<div class="cm-k">ABILITY <span class="cm-cap">/ '+STAT_MAX+'</span></div>'
-      // 訓練の経験点(→docs/03 §3.30)。**任期のあいだだけ**なので、能力の隣に小さく添える
+      // 訓練の経験点(→docs/03 §3.30)は**線だけ**で見せる。数字を「20 +9」と並べると
+      // 能力に足されているように読めるが、経験点は覚醒の材料であって能力ではない。
       +'<div class="bars">'+STAT_KEYS.map(k=>{
         const ex=trainExp(c.id,k), need=TUNING.train.need;
         return '<div class="bar"><span>'+STAT_LABEL[k]+'</span>'
         +'<div class="tr"><i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i>'
         +(ex?'<u style="width:'+Math.min(100,Math.round(ex/need*100))+'%"></u>':"")+'</div>'
-        +'<b>'+c[k]+(ex?'<em>+'+ex+'</em>':"")+'</b></div>';
+        +'<b>'+c[k]+'</b></div>';
       }).join("")+'</div>'
+      +(STAT_KEYS.some(k=>trainExp(c.id,k))
+        ?'<div class="cm-note">下の細い線は訓練の経験点。'
+          +'いっぱいになると覚醒のチャンスが来ます</div>':"")
       +(trainStar(c.id)?'<div class="cm-awk">覚醒 '+"★".repeat(trainStar(c.id))
         +' ／ '+STAT_KEYS.filter(k=>trainUp(c.id,k)).map(k=>STAT_LABEL[k]+" +"+trainUp(c.id,k)).join(" ")
         +'</div>':"")

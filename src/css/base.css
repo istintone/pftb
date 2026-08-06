@@ -1447,7 +1447,7 @@ body{
   position:absolute; left:0; bottom:0; height:2px;
   background:oklch(0.72 0.14 150);
 }
-.bar b em{ font-style:normal; margin-left:4px; font-size:10px; color:oklch(0.72 0.14 150) }
+.cm-note{ margin-top:-6px; margin-bottom:12px; font-size:10px; color:oklch(0.68 0.12 150) }
 /* 覚醒の★(→docs/03 §3.30)。**文字としての★**なので色は周りに合わせる
    (カードでは名前と同じ色、一覧では白のまま)。 */
 .awk{ font-style:normal; margin-left:3px; font-size:.78em; color:inherit; letter-spacing:-1px }

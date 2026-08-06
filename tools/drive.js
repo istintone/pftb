@@ -1282,6 +1282,30 @@ const STEPS = [
           return ([...new Set(g.map(e=>e.textContent))].join(' / ')||'ホロの段が無い')
             +' / '+g.length+'枚 / 選手z='+za+' 文字z='+zs;
         })()`));
+        // 経験点は**線だけ**で見せる(→docs/03 §3.30)。数字を並べると能力に
+        // 足されているように読める
+        ctx.log("  経験点の見え方:", await ctx.js(`(()=>{
+          const id=S.player.coll[0]&&S.player.coll[0].id;
+          if(!id)throw new Error('手持ちカードが無い');
+          S.career.train={}; trainAdd(id,'tec',9);
+          openCard(cardById(id));
+          const body=document.getElementById('cardModalBody');
+          if(body.className.indexOf('holo')>=0)
+            throw new Error('詳細シートにホロが掛かっている: '+body.className);
+          if(body.querySelector('.bar b em'))throw new Error('能力の隣に +N が出ている');
+          const u=body.querySelector('.bar .tr u');
+          if(!u)throw new Error('経験点の線が出ていない');
+          const tec=[...body.querySelectorAll('.bar')].find(b=>b.textContent.indexOf('TEC')===0);
+          const num=tec.querySelector('b').textContent.trim();
+          if(num!==String(cardById(id).tec))
+            throw new Error('能力欄に余計な文字がある: "'+num+'"');
+          if(!body.querySelector('.cm-note'))throw new Error('線の説明が無い');
+          const w=u.style.width;
+          document.getElementById('cardModalClose').click();
+          S.career.train={};
+          return '線のみ('+w+') / 数字は '+num+'(経験点9は数字にしない)';
+        })()`));
+        await ctx.wait(200);
         // 通常のカードでも詳細が開くこと
         await ctx.js("document.querySelector('#cardsGrid [data-card]').click()");
         await ctx.wait(300);
