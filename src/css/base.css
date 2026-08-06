@@ -1455,13 +1455,14 @@ body{
 @media (prefers-reduced-motion:reduce){
   .bar .tr.rdy{ animation:none; box-shadow:0 0 10px 1px oklch(0.82 0.18 150 / .60) }
 }
-/* 覚醒の★(→docs/03 §3.30)は**バーに重ねて**左から並べる。
+/* 覚醒の★(→docs/03 §3.30)は**バーに重ねて右端から**埋まっていく。
    ★のために桁を空けると、持っていない能力の行に空白ばかりが並んで目立つ。
-   重ねるぶん下地(金の能力・緑の経験点)の色が変わるので、色は白に固定して影で浮かせる。 */
+   右から来るのは、経験点の緑が左から伸びてくるのと**ぶつからない**から。
+   色は経験点と同じ緑。塗りが★まで届いたら、その能力を伸ばし切ったという話になる。 */
 .bar .trw s{
-  position:absolute; left:3px; top:50%; transform:translateY(-50%);
+  position:absolute; right:3px; top:50%; transform:translateY(-50%);
   text-decoration:none; font-size:9px; line-height:1; letter-spacing:0;
-  color:oklch(0.99 0 0); text-shadow:0 1px 2px oklch(0.15 0.02 255 / .95);
+  color:oklch(0.78 0.17 150); text-shadow:0 1px 2px oklch(0.15 0.02 255 / .95);
   pointer-events:none;
 }
 /* 覚醒の★(→docs/03 §3.30)。**文字としての★**なので色は周りに合わせる
