@@ -1510,6 +1510,49 @@ const STEPS = [
     await ctx.js("document.getElementById('appBody').scrollTop = 0");
     await ctx.wait(150);
   }],
+  ["HELPの文言を全画面ぶん検算", async ctx => {
+    // **説明が仕様とずれるのは静かな不具合**。数字はすべて TUNING から引かせ、
+    // 生の値が紛れ込んでいないか・組み立てが壊れていないかをここで見張る
+    ctx.log("HELP:", await ctx.js(`(()=>{
+      const out=[], bad=[];
+      for(const id of Object.keys(SCREENS)){
+        const h=helpFor(id);
+        if(h==null)continue;
+        // テンプレートリテラルの中なので、バックスラッシュを使う正規表現は書かない
+        // (\/ や \[ がリテラル側で食われて、評価時に壊れた正規表現になる)
+        const has=w=>h.indexOf(w)>=0;
+        const cnt=w=>h.split(w).length-1;
+        if(!h.trim())bad.push(id+': 空');
+        if(has('undefined')||has('NaN')||has('[object'))bad.push(id+': 値が壊れている');
+        if(has('{'))bad.push(id+': 差し込みが残っている');
+        if(cnt('<b>')!==cnt('</b>'))bad.push(id+': <b> が閉じていない');
+        if(cnt('<span')!==cnt('</span>'))bad.push(id+': <span> が閉じていない');
+        if(cnt('<div')!==cnt('</div>'))bad.push(id+': <div> が閉じていない');
+        const txt=h.split('<').map((x,i)=>i?x.slice(x.indexOf('>')+1):x).join('');
+        out.push(id+'('+txt.length+'字)');
+      }
+      if(bad.length)throw new Error(bad.join(' / '));
+      return out.length+'画面 … '+out.join(' ');
+    })()`));
+    // **廃止した仕組みが説明に残っていないこと**。実装より説明のほうが腐りやすい
+    ctx.log("  古い言葉が残っていないか:", await ctx.js(`(()=>{
+      const gone=['会長','期待順位','任期が削られ','短縮','リセットされます','チケットを払って'];
+      const hit=[];
+      for(const id of Object.keys(SCREENS)){
+        const h=helpFor(id); if(h==null)continue;
+        gone.forEach(w=>{ if(h.indexOf(w)>=0)hit.push(id+': "'+w+'"'); });
+      }
+      if(hit.length)throw new Error('廃止した言葉が残っている ／ '+hit.join(' / '));
+      return gone.length+'語すべて掃除済み';
+    })()`));
+    // 実際に開いて描けること(HTMLとして壊れていないか)
+    await ctx.js(`(()=>{show('deck');openHelp();})()`);
+    await ctx.wait(400);
+    await ctx.shot("11c-help-deck");
+    await ctx.js("closeHelp()");
+    await ctx.js(`(()=>{show('board');})()`);
+    await ctx.wait(200);
+  }],
   ["サブ画面と戻る", async ctx => {
     await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
     await ctx.wait(200);

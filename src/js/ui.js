@@ -397,8 +397,8 @@ function wireCardTiles(root){
   });
 }
 // ---------- GALLERY(カード見本) ----------
-// WORLD CLASS / LEGENDS は実在選手の段でパックからは出ないため、
-// 通常のプレーでは見る手段が無い。見本としてここで全段を並べる(→docs/03 §3.13)。
+// LEGENDS は実在選手の段でパックからは出ず、WORLD CLASS もプロスカウト(→§3.26)から
+// まれに出るだけ。通常のプレーでは見る手段が乏しいので、見本を並べる(→docs/03 §3.13)。
 let _gallery=null;
 function galleryCards(){
   if(_gallery)return _gallery;
