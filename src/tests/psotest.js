@@ -5,10 +5,14 @@ const E=setup({tmpName:"_tmp_pso.js"});
   await E.newGame(); E.getS().coach="検証";
   E.getS().world.seed=20260805; E.startTenure("sam-8");
   const S=E.getS(), P=E.TUNING.pso;
+  // **相手を毎回変える**。同じクラブ同士で回すと GK が1人に固定され、
+  // 決定率が「その1枚が何を引いたか」で決まってしまう(実際に隠れていた → docs/08 §8.6)
   const side=()=>E.matchSide(S.club.id);
+  const foe=i=>{ const r=E.clubRoster(20260805,"esp-"+(1+i%8));
+    return { cards:E.bestXI(r,"4-4-2"), form:"4-4-2", name:"foe" }; };
   let drawn=0, ko=0, sudden=0, maxN=0, conv=0, kicksAll=0;
   for(let i=0;i<400;i++){
-    const M=E.finishMatch(E.createMatch(side(),side(),i+1,{ko:true}));
+    const M=E.finishMatch(E.createMatch(side(),foe(i),i+1,{ko:true}));
     if(M.home.score!==M.away.score){ assert.ok(!M.pso,"決着した試合にPK戦は無い"); continue; }
     drawn++; ko++;
     assert.ok(M.pso,"同点ならPK戦がある");

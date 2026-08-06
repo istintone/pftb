@@ -195,7 +195,8 @@ function midPower(T){
   let s=0;
   T.players.forEach(p=>{
     const w=p.role==="MF"?M.mf:M.other;
-    s+=(eff(p,"tec")*M.tec+eff(p,"spd")*M.spd+eff(p,"sta")*M.sta)*w;
+    // スキルの掛かり先(→docs/08 §8.2)。中盤の押し合いに関与する強さ
+    s+=(eff(p,"tec")*M.tec+eff(p,"spd")*M.spd+eff(p,"sta")*M.sta)*w*skK(p,"mid");
   });
   return s;
 }
@@ -237,7 +238,8 @@ function nearOf(h){
 function resolveBlock(rng,atk,df,D,fin,h,x){
   const aSc=(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
   // 人数を割いていればコースも消える(→§7.14)
-  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*coverOf(D,h,x)*rr(rng);
+  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*coverOf(D,h,x)
+    *skK(df,"block")*rr(rng);
   // blk が大きい手ほど当たらない(コースを狙う / GKと一対一 など)
   return dSc>aSc*TUNING.th.block*(fin&&fin.blk||1);
 }
@@ -260,13 +262,13 @@ function finishScore(atk,fin){
   const w=fin.w!=null?fin.w:TUNING.shot.finStat;
   return eff(atk,"atk")*(1-w)+eff(atk,fin.stat)*w;
 }
-/** 枠に飛ぶか。**技術と距離**で決まる。GKは関与しない。 */
-function onTarget(rng,atk,h,fin){
+/** 枠に飛ぶか。**技術と距離**で決まる。GKは角度を消すぶんだけ関与する。 */
+function onTarget(rng,atk,gk,h,fin){
   const S=TUNING.shot;
   if(fin&&fin.fixAcc!=null)return rng()<fin.fixAcc;          // PK/ヘディングは位置が決まっている
   if(fin&&fin.tecAcc)                                        // 直接FKは距離より技術
     return rng()<S.fkAccBase*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
-  const acc=(fin?fin.acc||1:1)*skK(atk,"onTarget");
+  const acc=(fin?fin.acc||1:1)*skK(atk,"onTarget")/skK(gk,"offTarget");
   return rng()<acc*(S.accBase+eff(atk,"tec")/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
 }
 /**
@@ -281,7 +283,7 @@ function resolveShot(rng,atk,gk,h,fin){
   const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)
     *skS(atk,"finish",fin)*(pk?skK(atk,"pkKick"):1)*rr(rng);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)
-    *skK(gk,"gk")*(pk?skK(gk,"pkGk"):1)*rr(rng);
+    *skK(gk,"gk")*skS(gk,"gkFin",fin)*(pk?skK(gk,"pkGk"):1)*rr(rng);
   return sSc>gSc*TUNING.th.shot;
 }
 // ---------- セットプレー(→docs/07 §7.11) ----------
@@ -563,7 +565,8 @@ function coverOf(D,h,x){
     const dh=(heightOf(q)-th)/C.covH, dx=((q.x-tx)/100)/C.covX;
     n+=Math.exp(-(dh*dh+dx*dx))*q.stam*skK(q,"cover");      // 消耗した選手は寄せきれない
   }
-  return 1+Math.max(0,n-C.covBase)*C.covK;
+  // **支援のぶんだけ**に掛ける。素の1に掛けると「誰も居なくても厚い」になってしまう
+  return 1+Math.max(0,n-C.covBase)*C.covK*skK(pickGK(D),"marshal");
 }
 /**
  * 守備のチャンネルを選ぶ(→docs/07 §7.12)。攻撃側とまったく同じ形で、
@@ -857,12 +860,14 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
       // **止めた瞬間だけがファウルの入口**(→docs/07 §7.11)。
       // **ケガはここで起きる**(→docs/03 §3.32)。マッチアップに負けた瞬間だけで、
       // 荒い手ほど確率が高い(守備チャンネルの反則率にそのまま比例させる)。
-      if(marker&&rng()<dch.foul*TUNING.cond.hurtK)
+      // **綺麗に止める選手はファウルもケガも起こしにくい**(→docs/08 §8.6②)
+      const clean=marker?skK(marker,"clean"):1;
+      if(marker&&rng()<dch.foul*clean*TUNING.cond.hurtK)
         push({ side:T.side, type:"injury", by:carrier.c.id, vs:marker.c.id,
           dch:dch.id, dlabel:dch.label,
           h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
       // 反則率は**守備側が選んだ手**が持つ(削りにいけば高く、間合いを取れば低い)
-      const foul=marker?rollFoul(rng,h,dch.foul):null;
+      const foul=marker?rollFoul(rng,h,dch.foul*clean):null;
       if(foul)return giveFoul(M,rng,push,T,D,foul,marker,carrier,h,x,from,att,min);
       addMom(M,D.side,F.duelLost); return M.events.slice(from);
     }
@@ -923,7 +928,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
     return M.events.slice(from);
   }
   // ② 枠外 — 技術と距離。GKは関与しない。セットプレーは種類ごとに精度が決まっている
-  if(!onTarget(rng,shooter,tg.h,fin)){
+  if(!onTarget(rng,shooter,gk,tg.h,fin)){
     addMom(M,D.side,F.miss);
     push(Object.assign({ type:"miss" },base));
     return M.events.slice(from);
@@ -991,7 +996,7 @@ function shootout(M){
     const p=list[(n-1)%list.length];
     // resolveShot は**true が得点**(→shoot と同じ向き)。ここを反転させると
     // 「GKが止めたときだけ入る」になり、PK戦が 0-1 のような点になる
-    const ok=onTarget(rng,p,SP.pkH,fin)&&resolveShot(rng,p,gk[D.side],SP.pkH,fin);
+    const ok=onTarget(rng,p,gk[D.side],SP.pkH,fin)&&resolveShot(rng,p,gk[D.side],SP.pkH,fin);
     if(ok)sc[side]++;
     const e={ min:90, half:2, at:false, side, type:"pso", n,
       by:p.c.id, gk:gk[D.side].c.id, ok, hg:sc.H, ag:sc.A };
