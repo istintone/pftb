@@ -1431,8 +1431,52 @@ const STEPS = [
   ["サブ画面と戻る", async ctx => {
     await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
     await ctx.wait(200);
+    // 右端の柱(→docs/06 §6.16)。契約と日程はSEASONにいる間だけ生える
+    ctx.log("  右端の柱:", await ctx.js(`(()=>{
+      const on=[...document.querySelectorAll('#sideTabs > div')]
+        .filter(t=>!t.classList.contains('off')).map(t=>t.textContent);
+      if(on.join('/')!=='契約/日程/HELP')throw new Error('柱の並びが違う: '+on.join('/'));
+      return on.join(' → ');
+    })()`));
+    await ctx.js("document.getElementById('contractTab').click()");
+    await ctx.wait(400);
+    ctx.log("  契約タブ:", await ctx.js(`(()=>{
+      if(!document.getElementById('sideDrawer').classList.contains('on'))
+        throw new Error('引き出しが開かない');
+      if(document.getElementById('seasonComps').hidden===false)
+        throw new Error('契約なのに大会が出ている');
+      return document.getElementById('sideTitle').textContent
+        +' / '+document.querySelectorAll('#seasonBox .kv').length+'項目';
+    })()`));
+    await ctx.shot("12c-tab-contract");
+    // 別のタブを押したら中身が入れ替わる(いったん閉じなくてよい)
+    await ctx.js("document.getElementById('compTab').click()");
+    await ctx.wait(400);
+    ctx.log("  日程タブ:", await ctx.js(`(()=>{
+      if(document.getElementById('seasonBox').hidden===false)
+        throw new Error('大会なのに契約が出ている');
+      return document.getElementById('sideTitle').textContent
+        +' / '+document.querySelectorAll('#seasonComps [data-comp]').length+'件';
+    })()`));
+    await ctx.shot("12d-tab-comps");
+    // **進行バーは上に貼り付く**。記録をどこまで送っても任期の現在地が見えている
+    ctx.log("  進行バーの追従:", await ctx.js(`(()=>{
+      const body=document.getElementById('appBody'), bar=document.getElementById('tenureBar');
+      const top0=bar.getBoundingClientRect().top;
+      body.scrollTop=600;
+      const top1=bar.getBoundingClientRect().top;
+      const headBottom=document.getElementById('appHead').getBoundingClientRect().bottom;
+      if(top1<headBottom-1)throw new Error('進行バーがヘッダーの下に隠れた');
+      if(top1>top0+1)throw new Error('進行バーが動いていない(貼り付いていない?)');
+      return '600px送って '+Math.round(top0)+'px → '+Math.round(top1)+'px で止まる';
+    })()`));
+    await ctx.shot("12e-sticky-bar");
+    await ctx.js("document.getElementById('appBody').scrollTop=0");
+    await ctx.wait(200);
     await ctx.js(`document.querySelector('#seasonComps [data-comp="league"]').click()`);
     await ctx.wait(300);
+    if(await ctx.js("document.getElementById('sideDrawer').classList.contains('on')"))
+      throw new Error('画面が変わったのに引き出しが開いたまま');
     ctx.log("画面:", await ctx.screen(),
       "/ 戻るボタン:", await ctx.js("!document.getElementById('hdBack').classList.contains('off')"),
       "/ 親タブ点灯:", await ctx.js(`document.querySelector('#tabs button[data-s="season"]').classList.contains('on')`));

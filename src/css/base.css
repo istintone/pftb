@@ -136,6 +136,13 @@ body{
 .screen{ display:none }
 .screen.on{ display:block }
 .pad{ padding:16px 18px 24px }
+/* 画面上部に貼り付く帯。スクロール容器は #appBody なので、その中なら sticky が効く。
+   左右は .pad の余白ぶん食い出させて、下を流れる内容が横から覗かないようにする。 */
+.stick-top{
+  position:sticky; top:0; z-index:20;
+  margin:0 -18px 14px; padding:10px 18px 12px;
+  background:var(--surface); border-bottom:1px solid var(--line-2);
+}
 
 /* =========================================================================
    共通部品
@@ -887,8 +894,15 @@ body{
    閉じている間はタブごと枠の中に収まり、外へはみ出さない。
    ========================================================================= */
 /* タブは**右端**に貼る。左端だと戻る操作(左からのスワイプ)と手が当たる。 */
-#helpTab{
+/* 右端のタブは**1本の柱**にまとめる(→docs/06 §6.16)。柱ごと中央に置いてあるので、
+   出ているタブが1枚でも3枚でも重心が動かない。並びは上から 契約 / 日程 / HELP。 */
+#sideTabs{
   position:absolute; right:0; top:56%; transform:translateY(-50%); z-index:48;
+  display:flex; flex-direction:column; align-items:flex-end; gap:6px;
+  pointer-events:none;                /* 隙間は下の画面に触らせる */
+}
+#helpTab,.side-tab{
+  position:relative; pointer-events:auto;
   writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
   padding:12px 5px; border-radius:9px 0 0 9px;
   border:1px solid var(--accent-dim); border-right:none;
@@ -896,8 +910,10 @@ body{
   color:var(--accent-hi); font:600 10px/1 var(--f-head); letter-spacing:2px;
   box-shadow:-2px 0 12px oklch(0 0 0 / .5);
 }
-#helpTab:active{ background:oklch(0.30 0.05 85) }
-#helpTab.off{ display:none }        /* 止めてはいけない画面では出さない */
+#helpTab:active,.side-tab:active{ background:oklch(0.30 0.05 85) }
+#helpTab.off,.side-tab.off{ display:none }   /* 止めてはいけない画面では出さない */
+/* 日本語のタブは 10px だと潰れるので、文字だけ少し大きくする */
+.side-tab{ font-size:11px; letter-spacing:3px }
 
 /* 交代タブ(→docs/06 §6.21)。HELP と同じ形で、**試合中だけ**右端に出す。
    HELP は試合画面に出ないので、同じ位置を使ってよい。 */
@@ -959,12 +975,12 @@ body{
   margin:0 -4px; padding:0 4px }
 .sb-list::-webkit-scrollbar{ display:none }
 
-#helpDrawer{
+#helpDrawer,#sideDrawer{
   position:absolute; right:0; top:56%; z-index:70; width:min(86%,320px);
   transform:translate(105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
   pointer-events:none; max-height:74%;   /* % は #app の高さ基準(絶対配置なので) */
 }
-#helpDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
+#helpDrawer.on,#sideDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
 .hd-in{
   position:relative; max-height:100%; overflow-y:auto; scrollbar-width:none;
   padding:14px 16px 16px 34px; border-radius:12px 0 0 12px;
@@ -975,6 +991,9 @@ body{
 .hd-t{ font:600 12px/1 var(--f-head); letter-spacing:1.5px; text-transform:uppercase;
   color:var(--accent); margin-bottom:8px }
 .hd-b{ font-size:11px; line-height:1.85; color:var(--text-2) }
+/* 契約/日程の引き出しは**画面の部品をそのまま**入れるので、行間は素のままにする */
+.sd-b{ color:var(--text-2) }
+.sd-b .comp-card:last-child{ margin-bottom:0 }
 .hd-b b{ color:var(--text) }
 .hd-x{
   position:absolute; top:8px; left:8px; width:24px; height:24px; cursor:pointer;

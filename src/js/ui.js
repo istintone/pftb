@@ -61,6 +61,10 @@ function show(id,opts){
   // 画面が変わったら必ず閉じる(前の画面の説明が残らないように)。
   closeHelp();
   $("helpTab").classList.toggle("off",helpFor(id)==null);
+  // 契約と日程はSEASONの中身なので、SEASONにいる間だけ柱に生やす(→docs/06 §6.16)
+  closeSide();
+  $("contractTab").classList.toggle("off",id!=="season");
+  $("compTab").classList.toggle("off",id!=="season");
   // 交代タブは**試合中だけ**。他の画面に出しても押せることが無い
   $("subTab").classList.toggle("off",id!=="match");
   $("ordTab").classList.toggle("off",id!=="match");
@@ -83,6 +87,25 @@ function closeHelp(){
   $("helpDrawer").setAttribute("aria-hidden","true");
 }
 const helpOpen=()=>$("helpDrawer").classList.contains("on");
+/**
+ * 右端の柱から開く引き出し(→docs/06 §6.16)。契約と日程は同じ引き出しを使い分ける。
+ * **中身は renderSeason が書いたものをそのまま出す**ので、ここでは見せ方だけを切り替える。
+ */
+let _side=null;
+function openSide(kind){
+  _side=kind;
+  $("sideTitle").textContent=kind==="contract"?"契約":"エントリー中の大会";
+  $("seasonBox").hidden=kind!=="contract";
+  $("seasonComps").hidden=kind!=="comp";
+  $("sideDrawer").classList.add("on");
+  $("sideDrawer").setAttribute("aria-hidden","false");
+}
+function closeSide(){
+  _side=null;
+  $("sideDrawer").classList.remove("on");
+  $("sideDrawer").setAttribute("aria-hidden","true");
+}
+const sideOpen=()=>$("sideDrawer").classList.contains("on");
 function goBack(){ show(_back.pop()||"home"); }
 
 let _toastTimer=null;
@@ -874,8 +897,9 @@ function renderSeason(){
   const W=S.world, club=clubById(S.club.id), lg=leagueById(club.league);
   const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
   $("seasonHead").textContent="SEASON "+W.season+" · 任期スケジュール";
-  $("seasonBox").innerHTML='<div class="sect-t">契約</div>'
-    +kv("クラブ",esc(club.name)+"（格★"+club.grade+"）")
+  // 見出しは引き出しの上に出るので、中では繰り返さない
+  $("seasonBox").innerHTML=
+    kv("クラブ",esc(club.name)+"（格★"+club.grade+"）")
     +kv("いまの舞台",lg.name+" "+divName(W.div))
     +kv("期待順位",S.club.expect+"位")
     +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
@@ -2618,11 +2642,17 @@ $("slotModal").onclick=e=>{ if(e.target===$("slotModal"))closeSlot(); };
 $("formModal").onclick=e=>{ if(e.target===$("formModal"))closeForm(); };
 $("helpTab").onclick=e=>{ e.stopPropagation(); helpOpen()?closeHelp():openHelp(); };
 $("helpClose").onclick=e=>{ e.stopPropagation(); closeHelp(); };
+// 同じタブをもう一度押したら閉じる。別のタブなら中身を入れ替えて開いたままにする
+$("contractTab").onclick=e=>{ e.stopPropagation(); closeHelp();
+  (sideOpen()&&_side==="contract")?closeSide():openSide("contract"); };
+$("compTab").onclick=e=>{ e.stopPropagation(); closeHelp();
+  (sideOpen()&&_side==="comp")?closeSide():openSide("comp"); };
+$("sideClose").onclick=e=>{ e.stopPropagation(); closeSide(); };
 // 外側のどこかを触ったら閉じる(閉じるボタンを探さなくてよいように)
 document.addEventListener("click",e=>{
-  if(!helpOpen())return;
-  if(e.target.closest&&(e.target.closest("#helpDrawer")||e.target.closest("#helpTab")))return;
-  closeHelp();
+  const near=s=>e.target.closest&&e.target.closest(s);
+  if(helpOpen()&&!near("#helpDrawer")&&!near("#helpTab"))closeHelp();
+  if(sideOpen()&&!near("#sideDrawer")&&!near("#sideTabs"))closeSide();
 });
 $("btnGallery").onclick=()=>show("gallery",{push:1});
 $("tileScout").onclick=()=>{ _scoutGot=null; show("gacha",{push:1}); };
