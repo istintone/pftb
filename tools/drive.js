@@ -346,6 +346,23 @@ const STEPS = [
       "/", await ctx.js("document.getElementById('chatSub').textContent"),
       "/ 発言", await ctx.js("document.querySelectorAll('#chatLog .ch-row').length"),
       "/ 選択肢", await ctx.js("document.querySelectorAll('#chatAsk [data-pick]').length"));
+    // 相手の見立て(→docs/03 §3.35)。**打ち手を聞かれる前**に、並び・注目選手・戦力差を言う
+    ctx.log("  相手の見立て:", await ctx.js(`(()=>{
+      const rows=[...document.querySelectorAll('#chatLog .ch-row')].map(r=>r.textContent);
+      const side=cpuSquad(myFixture().opp), b=foeBrief(side);
+      const scout=rows.find(t=>t.indexOf(b.n)>=0&&t.indexOf(b.t)>=0);
+      if(!scout)throw new Error('見立てが出ていない');
+      if(scout.indexOf(b.f)<0)throw new Error('陣形を言っていない');
+      const gap=rows.find(t=>CHAT.foeGap[b.gap].some(x=>t.indexOf(x)>=0));
+      if(!gap)throw new Error('戦力差を言っていない: '+b.gap);
+      // **数字は出さない**。陣形の名前(4-4-2 など)以外に数字があってはいけない
+      const rest=scout.split(b.f).join('')+gap;
+      if(/[0-9０-９]/.test(rest))throw new Error('数字を読み上げている: '+rest);
+      // 打ち手を聞かれるより前に言っていること
+      const ih=rows.findIndex(t=>CHAT.handAsk.some(x=>t.indexOf(x)>=0));
+      if(ih>=0&&rows.indexOf(gap)>ih)throw new Error('打ち手のあとに見立てが来ている');
+      return scout.replace('秘書','').trim()+' ／ '+gap.replace('秘書','').trim();
+    })()`));
     await ctx.shot("05b-chat");
     ctx.log("  秘書との段取り:", await ctx.js(`(()=>{
       const pick=v=>{

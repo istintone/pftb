@@ -872,6 +872,24 @@ function renderDeck(){
 // 触れるのは選手のカード詳細だけで、並べ替えはできない。
 let _foe=null;                 // { kind:"club"|"cup", … } 見ている相手
 let _foeCards=[];              // 描画したカードの実体(相手のIDでは cardById が引けない)
+/**
+ * 相手の見立て(→docs/03 §3.35)。**秘書は数字を読み上げない。**
+ * 口にするのは「並び」「注目選手」「戦力差」の3つだけで、能力値は下見の画面で見てもらう。
+ * 数字を喋らせると、会話ではなくスカウティングレポートの読み上げになる。
+ */
+function foeBrief(side){
+  const start=(side.cards||[]).slice(0,TUNING.squad.starters).filter(Boolean);
+  if(!start.length)return null;
+  const key=start.reduce((b,c)=>c.ovr>b.ovr?c:b,start[0]);
+  // その選手の**らしさ** = いちばん高い能力。これも言葉に落とす(→data.js STAT_TRAIT)
+  const tk=STAT_KEYS.reduce((b,k)=>key[k]>key[b]?k:b,STAT_KEYS[0]);
+  // 戦力差は**編成込み**で比べる。素の平均だと枠の噛み合いが落ちて、
+  // 実際に戦った感触とずれる(→docs/06 §6.15)
+  const d=squadPowerAt(squadCards(),S.form)-squadPowerAt(side.cards,side.form);
+  const G=TUNING.brief;
+  return { f:side.form, p:key.pos, n:shortName(key), t:STAT_TRAIT[tk],
+    gap:d>=G.big?"up2":d>=G.small?"up":d<=-G.big?"dn2":d<=-G.small?"dn":"even" };
+}
 /** 対戦表から相手を開く。spec は renderFoe がそのまま解釈する。 */
 function openFoe(spec){ _foe=spec; show("foe",{push:1}); }
 /** 対戦表の行に下見のリンクを掛ける。自クラブの行は対象外(自分は編成画面で見る)。 */
@@ -1257,12 +1275,23 @@ function chatEnter(st){
   if(st==="foe"){
     if(!C.comp)pickComp("league");
     const f=C.comp==="cup"?cupFixtureOf():null;
-    if(f)chatSay("sec",chatText(CHAT.cupStay,"cupStay:"+C.node,
-      { c:cupJoinedName(), r:cupRoundName(cupJoined(),f.round), f:f.side.name }));
-    else{
+    let side=null;
+    if(f){
+      chatSay("sec",chatText(CHAT.cupStay,"cupStay:"+C.node,
+        { c:cupJoinedName(), r:cupRoundName(cupJoined(),f.round), f:f.side.name }));
+      side=f.side;
+    }else{
       const m=myFixture();
       chatSay("sec",m?chatText(CHAT.foeLeague,"foe:"+C.node,
         { f:clubName(m.opp), v:m.home?"ホーム":"アウェイ" }):"今節のリーグ戦は組まれていません。");
+      if(m)side=cpuSquad(m.opp);
+    }
+    // **相手の見立て**(→docs/03 §3.35)。カップはエントリーの答えで相手が変わるので、
+    // 大会が決まったこの位置でしか言えない。
+    const b=side&&foeBrief(side);
+    if(b){
+      chatSay("sec",chatText(CHAT.foeScout,"scout:"+C.node,b));
+      chatSay("sec",chatText(CHAT.foeGap[b.gap],"gap:"+C.node));
     }
     return false;
   }
