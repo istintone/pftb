@@ -1409,7 +1409,8 @@ function renderCupSchedule(){
       +'<span class="eyebrow">RESULT</span>'
       +'<b>'+esc(c.win?"優勝":"優勝 "+c.champ)+'</b>'
       +'<span class="lg">'+(c.win?"":"自クラブ "+cupPlaceName(cup,c)+" ／ ")
-        +'賞金 +'+fmtNum(c.coin||0)+'</span></div>'
+        +'賞金 +'+fmtNum(c.coin||0)
+        +(c.fame?' ／ 名声 +'+fmtNum(c.fame):"")+'</span></div>'
     : '<div class="cup-res">'
       +'<span class="eyebrow">'+(c.alive?"IN PROGRESS":"ELIMINATED")+'</span>'
       +'<b>'+esc(c.alive?"次は "+cupRoundName(cup,c.round):cupPlaceName(cup,c)+"で敗退")+'</b>'
@@ -1459,6 +1460,7 @@ function cupInfoBox(cup,c){
     +kv("参加条件","熟練度 "+fmtNum(cup.needExp)+(cup.needDiv?" ／ "+divName(cup.needDiv):""))
     +kv("方式",cup.rounds+"回戦（ノックアウト）")
     +cup.prize.map((v,i)=>kv(names[i],"+"+fmtNum(v)+" コイン"
+      +((cup.fame&&cup.fame[i])?" ／ 名声 +"+fmtNum(cup.fame[i]):"")
       +(c&&c.done&&c.dist===i?"（受領）":""))).join("")
     +'</div>';
 }
@@ -2384,6 +2386,10 @@ function doMatchday(){
   const out=playMatchday(done);          // 試合の中身(out.M)は playMatchday が入れる
   _M=null; _lastResult=out;
   save(); headUI(); show("result");
+  // **大会の完了はここでしか分からない**。賞金と名声はこの節に入る(→§3.23 / §3.9)
+  const cc=out&&out.cupClosed;
+  if(cc)toast(cc.cup.name+" 終了　優勝 "+(cc.win?"自クラブ":cc.champ)
+    +"　+"+fmtNum(cc.coin)+"コイン"+(cc.fame?"　名声 +"+fmtNum(cc.fame):""));
 }
 /**
  * 試合結果(→docs/06 §6.20)。モックの構成に準拠:

@@ -288,11 +288,17 @@ const STEPS = [
       S.career.node=cupLastNode();
       cupResolveRound(c,cup.rounds,{gf:1,ga:0,win:true});
       const coin0=S.club.coins;
+      const fame0=S.player.fame;
       const closed=advanceNode();
       if(!closed||!closed.win)throw new Error('優勝で締まらない');
+      // **賞金も名声も完了節に入る**(→docs/03 §3.9)
+      if(closed.fame!==cup.fame[0])throw new Error('優勝の名声が入らない: '+closed.fame);
+      if(S.player.fame-fame0!==closed.fame)throw new Error('名声が反映されていない');
       renderSchedule();
+      const box=document.querySelector('.cup-res .lg').textContent;
+      if(!box.includes('名声'))throw new Error('結果に名声が出ていない: '+box);
       return '優勝 '+S.career.cup.champ+' ／ 賞金 +'+(S.club.coins-coin0)
-        +' ／ 実績 '+S.player.trophies.length+'件';
+        +' ／ 名声 +'+closed.fame+' ／ 実績 '+S.player.trophies.length+'件';
     })()`));
     await ctx.shot("07n-cup-result");
     await ctx.js("Object.assign(S,JSON.parse(window.__snap)); save(); renderSeason()");

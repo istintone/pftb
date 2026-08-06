@@ -201,6 +201,9 @@ function runSeason(hand) {
       assert.ok(closed && !closed.win, "決勝の節を越えたら大会が締まる");
       assert.ok(C.cup.done, "大会は完了扱いになる");
       assert.strictEqual(S3.club.coins - coin0, closed.coin, "順位の賞金は完了節に入る");
+      // **名声も完了節に入る**(→docs/03 §3.9)
+      assert.strictEqual(closed.fame, cup.fame[closed.dist], "順位ぶんの名声が付く");
+      assert.ok(closed.fame > 0, "敗退でも名声は増える: " + closed.fame);
       assert.ok(closed.coin > 0, "敗退でも賞品はある: " + closed.coin);
       assert.strictEqual(S3.player.trophies.filter(t => t.id === cup.id).length, 0,
         "優勝していなければ実績は付かない");
@@ -222,6 +225,9 @@ function runSeason(hand) {
     }
     assert.ok(champ, "決勝に勝てば優勝になる");
     assert.strictEqual(champ.cupClosed.coin, cup.prize[0], "優勝の賞金");
+    assert.strictEqual(champ.cupClosed.fame, cup.fame[0], "優勝の名声");
+    assert.ok(cup.fame[0] > cup.fame[1] && cup.fame[1] > cup.fame[3],
+      "勝ち上がるほど名声が増える: " + cup.fame.join(" > "));
     assert.ok(S3.club.coins >= coin1 + cup.prize[0], "賞金が入る");
     assert.ok(C.cup.win && C.cup.champ, "優勝クラブとして残る: " + C.cup.champ);
     assert.strictEqual(E.cupPlaceName(cup, C.cup), "優勝", "成績の呼び名");
@@ -238,6 +244,7 @@ function runSeason(hand) {
     assert.strictEqual(C.cup.node0, C.node, "エントリーした節から始まる");
     console.log("再エントリーOK 完了した大会は次の開催を塞がない");
     C.comp = null;                      // enterCup が立てた出場先を戻す
+    console.log("  名声:", cup.fame.join(" / "), "(優勝/準優勝/ベスト4/ベスト8)");
     console.log("カップ戦OK", cup.name, "／ 熟練度" + cup.needExp + "以上・"
       + cup.every + "の倍数の節にエントリー ／ " + cup.rounds + "回戦 ／ 賞金 "
       + cup.prize.join("/") + " は完了節に入金");
@@ -267,6 +274,10 @@ function runSeason(hand) {
       assert.ok(!n("STD"), "STANDARD は居ない");
       assert.ok((elite.WC || 0) > n("WC"), "強豪(★)はさらに WC が厚い");
       console.log("  大陸カップの相手:", JSON.stringify(plan), "／ ★", JSON.stringify(elite));
+      // **格の高い大会ほど名声が大きい**
+      const kings = E.CUPS.find(c => c.id === "kings");
+      assert.ok(conti.fame[0] > kings.fame[0],
+        "大陸のほうが名声が大きい: " + kings.fame[0] + " → " + conti.fame[0]);
     }
     S4.world.div = 3; S4.club.exp = 0; S4.career.node = 1;
     console.log("大会の解禁OK", conti.name, "は " + E.divName(conti.needDiv)

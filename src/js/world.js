@@ -1004,6 +1004,9 @@ function closeCup(){
   const dist=win?0:Math.max(1,cup.rounds-(c.out||1)+1);
   const coin=cup.prize[Math.min(dist,cup.prize.length-1)];
   S.club.coins+=coin;
+  // **名声も完了節に入る**(→docs/03 §3.9)。カップを勝ち上がるほど次の就任先が開く
+  const fame=(cup.fame||[])[Math.min(dist,(cup.fame||[]).length-1)]||0;
+  S.player.fame=Math.max(0,S.player.fame+fame);
   if(win){
     // 任期カレンダーの決勝の行に王冠を立てる
     const last=[...S.career.log].reverse().find(e=>e.comp==="cup"&&e.cup===cup.id);
@@ -1011,8 +1014,8 @@ function closeCup(){
     if(!S.player.trophies.some(t=>t.id===cup.id))
       S.player.trophies.push({ id:cup.id, name:cup.trophy, season:S.world.season, node:S.career.node });
   }
-  c.champ=champ; c.done=true; c.coin=coin; c.dist=dist; c.win=win;
-  return { cup, champ, coin, dist, win };
+  c.champ=champ; c.done=true; c.coin=coin; c.dist=dist; c.win=win; c.fame=fame;
+  return { cup, champ, coin, fame, dist, win };
 }
 /** 大会での成績の呼び名。 */
 function cupPlaceName(cup,c){
