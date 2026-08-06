@@ -1299,7 +1299,7 @@ const STEPS = [
           const u=body.querySelector('.bar .tr u');
           if(!u)throw new Error('経験点の塗りが出ていない');
           if(u.style.width!=='90%')throw new Error('経験点9/10が90%になっていない: '+u.style.width);
-          if(!body.querySelector('.bar .tr em'))throw new Error('10目盛りが無い');
+          if(body.querySelector('.bar .tr em'))throw new Error('目盛りが残っている');
           const num=bar().querySelector('b').textContent.trim();
           if(num!==String(cardById(id).tec))
             throw new Error('能力欄に余計な文字がある: "'+num+'"');
@@ -1315,10 +1315,11 @@ const STEPS = [
           trainAwake(id,'tec'); trainAwake(id,'tec'); openCard(cardById(id));
           const st=bar().querySelector('s');
           if(!st||st.textContent!=='★★')throw new Error('★がバーの右に出ていない: '+(st&&st.textContent));
+          // **★のために桁を空けない**。覚醒していない能力の行には要素ごと出ない
           const atk=[...body.querySelectorAll('.bar')].find(b=>b.textContent.indexOf('ATK')===0);
-          if(!atk.querySelector('s'))throw new Error('★の枠が段で揃っていない');
-          if(atk.querySelector('s').textContent!=='')throw new Error('覚醒していない能力に★が出ている');
-          return '9点=90%塗り / 満タンで発光 / ★★はTECの右だけ';
+          if(atk.querySelector('s'))throw new Error('覚醒していない能力に★の枠が出ている');
+          if(getComputedStyle(st).position!=='absolute')throw new Error('★がバーに重なっていない');
+          return '9点=90%塗り / 満タンで発光 / ★★はTECのバーの上だけ';
         })()`));
         // **目で見る**: 塗りかけ・満タンの発光・★の並びが1枚に収まった状態を撮る
         await ctx.js(`(()=>{

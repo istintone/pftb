@@ -652,18 +652,18 @@ function openCard(x){
       +'</div>'
       +'<div class="cm-k">ABILITY <span class="cm-cap">/ '+STAT_MAX+'</span></div>'
       // 訓練の経験点(→docs/03 §3.30)は**バーそのものを左から緑に塗って**見せる。
-      // トラックは 10 目盛りに割ってあり、ぜんぶ緑になった=経験点が満ちた=覚醒できる。
-      // 説明文はいらない(添え書きが要る時点で見せ方が負けている)。
-      // 覚醒した回数は**バーの右に★**として伸びる。20 のバーの先に★が3つ並べば 23。
-      +'<div class="bars'+(trainStar(c.id)?' has-awk':'')+'">'+STAT_KEYS.map(k=>{
-        const ex=trainExp(c.id,k), need=TUNING.train.need;
+      // ぜんぶ緑になった=経験点が満ちた=覚醒できる。説明文はいらない。
+      // 覚醒した回数は★で、**バーに重ねて**左から並べる(★のために桁を空けない)。
+      +'<div class="bars">'+STAT_KEYS.map(k=>{
+        const ex=trainExp(c.id,k), need=TUNING.train.need, up=trainUp(c.id,k);
         return '<div class="bar"><span>'+STAT_LABEL[k]+'</span>'
-        +'<div class="tr'+(ex>=need?' rdy':'')+'">'
-          +'<i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i>'
-          +(ex?'<u style="width:'+Math.min(100,Math.round(ex/need*100))+'%"></u>':"")
-          +'<em></em>'   // 10目盛り。経験点がどこまで来たかを数えられるようにする
+        +'<div class="trw">'
+          +'<div class="tr'+(ex>=need?' rdy':'')+'">'
+            +'<i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i>'
+            +(ex?'<u style="width:'+Math.min(100,Math.round(ex/need*100))+'%"></u>':"")
+          +'</div>'
+          +(up?'<s>'+"★".repeat(up)+'</s>':"")
         +'</div>'
-        +(trainStar(c.id)?'<s>'+"★".repeat(trainUp(c.id,k))+'</s>':"")
         +'<b>'+c[k]+'</b></div>';
       }).join("")+'</div>'
       +'<div class="cm-k">SKILLS</div>'

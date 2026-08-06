@@ -639,8 +639,8 @@ body{
 .bars{ margin-bottom:16px }
 .bar{ display:flex; align-items:center; gap:8px; margin:7px 0 }
 .bar > span{ width:32px; font-size:10px; color:oklch(0.60 0.02 255) }
-/* 目盛りを刻むので 6px では潰れる。8px あれば 10 分割が数えられる */
-.bar .tr{ position:relative; flex:1; height:8px; border-radius:4px; overflow:hidden; background:oklch(0.28 0.02 255) }
+.bar .trw{ position:relative; flex:1; display:flex }
+.bar .tr{ position:relative; flex:1; height:6px; border-radius:3px; overflow:hidden; background:oklch(0.28 0.02 255) }
 .bar i{ display:block; height:100%; background:var(--accent) }
 .bar b{ min-width:22px; text-align:right; font:400 10px/1 var(--f-mono); color:var(--text-2) }
 .skills{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px }
@@ -1443,15 +1443,9 @@ body{
 .tbl tr.down td:first-child{ box-shadow:inset 3px 0 0 oklch(0.60 0.16 25) }
 #standNote{ margin-top:8px }
 /* 訓練の経験点(→docs/03 §3.30)。**バーそのものを左から緑に塗る**。
-   トラックは 10 目盛りに割ってあるので、いくつ塗れたか=経験点がそのまま読める。
-   細い線＋添え書きでやっていた頃は、説明を書かないと伝わらなかった。 */
+   目盛りは刻まない。ひと続きの帯が左端から右端へ伸びるほうが、
+   ブロックに割られた帯より「どこまで来たか」が直感的に読める。 */
 .bar .tr u{ position:absolute; inset:0 auto 0 0; background:oklch(0.70 0.16 150) }
-/* 10目盛り。塗りの上に敷いて、どこまで来たかを数えられるようにする */
-.bar .tr em{
-  position:absolute; inset:0; pointer-events:none;
-  background:repeating-linear-gradient(90deg,
-    transparent 0 calc(10% - 1px), oklch(0.16 0.02 255 / .9) calc(10% - 1px) 10%);
-}
 /* **満タン=覚醒できる合図**。文字では言わず、緑の発光だけで知らせる(チャットの枠と同じ光) */
 .bar .tr.rdy{ animation:barRdy 1.8s ease-in-out infinite }
 @keyframes barRdy{
@@ -1461,12 +1455,14 @@ body{
 @media (prefers-reduced-motion:reduce){
   .bar .tr.rdy{ animation:none; box-shadow:0 0 10px 1px oklch(0.82 0.18 150 / .60) }
 }
-/* 覚醒の★はバーの**続き**として右に伸びる(→docs/03 §3.30)。
-   幅を固定して段を揃えるのは、★の無い能力との差が「増えた分」に見えるようにするため。
-   ★を1つも持たないカードでは枠ごと出さない(空白だけが並ぶので)。 */
-.bars.has-awk .bar s{
-  flex:0 0 44px; text-decoration:none;
-  font-size:10px; line-height:1; letter-spacing:-1px; color:var(--rar);
+/* 覚醒の★(→docs/03 §3.30)は**バーに重ねて**左から並べる。
+   ★のために桁を空けると、持っていない能力の行に空白ばかりが並んで目立つ。
+   重ねるぶん下地(金の能力・緑の経験点)の色が変わるので、色は白に固定して影で浮かせる。 */
+.bar .trw s{
+  position:absolute; left:3px; top:50%; transform:translateY(-50%);
+  text-decoration:none; font-size:9px; line-height:1; letter-spacing:0;
+  color:oklch(0.99 0 0); text-shadow:0 1px 2px oklch(0.15 0.02 255 / .95);
+  pointer-events:none;
 }
 /* 覚醒の★(→docs/03 §3.30)。**文字としての★**なので色は周りに合わせる
    (カードでは名前と同じ色、一覧では白のまま)。 */
