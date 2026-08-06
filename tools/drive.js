@@ -548,6 +548,56 @@ const STEPS = [
     })()`));
     await ctx.wait(200);
     await ctx.shot("05e-chat-awake");
+    // 連携の覚醒(→docs/03 §3.31)。**しきい値を超えた組だけ**が挑め、外しても積み上げは残る
+    ctx.log("  連携の覚醒:", await ctx.js(`(()=>{
+      const B=TUNING.bond;
+      const a=S.squad[0], b=S.squad[1];
+      S.career.bondGold={}; S.career.bond[bondKey(a,b)]=B.t4/2+1;   // 挑める状態にする
+      if(!bondCanAwake(a,b))throw new Error('挑める状態にならない');
+      S.career.chat=null; S.career.hand=null; renderChat();
+      const pick=t=>{ const o=[...document.querySelectorAll('#chatAsk [data-pick]')]
+        .find(e=>e.textContent.indexOf(t)>=0); if(!o)throw new Error('選べない: '+t);
+        o.click(); renderChat(); };
+      pick('交流');
+      // 呼ぶ側の一覧で**覚醒できる相手が居る選手だけ**が光る
+      const hot=[...document.querySelectorAll('#chatAsk [data-pick]')]
+        .filter(e=>e.classList.contains('hot')).length;
+      if(!hot)throw new Error('呼ぶ側が光っていない');
+      pick(shortName(cardById(a)));
+      pick(shortName(cardById(b)));
+      // 通常のメニューではなく2択が出る
+      const opts=[...document.querySelectorAll('#chatAsk [data-pick]')];
+      if(opts.length!==BOND_AWAKES.length)throw new Error('覚醒の2択ではない: '+opts.length);
+      const sum0=bondSum(a,b);
+      opts[0].click(); renderChat();
+      const res=S.career.chat.sel.res;
+      if(res==='awake'){
+        if(!bondIsGold(a,b))throw new Error('成功なのに黄金線でない');
+      }else{
+        if(bondIsGold(a,b))throw new Error('失敗なのに黄金線になった');
+        if(bondSum(a,b)!==sum0)throw new Error('失敗で積み上げが消えた');
+        if(!bondCanAwake(a,b))throw new Error('失敗したらもう挑めない');
+      }
+      // 差し込みが残っていないこと
+      const said=S.career.chat.log.map(m=>m.t).join(' ');
+      if(said.indexOf('{')>=0)throw new Error('差し込みが残っている');
+      return (res==='awake'?'成功 → 黄金線 ×'+B.k4:'失敗 → 積み上げ '+sum0+' は保留')
+        +' ／ 光った選手 '+hot+'人';
+    })()`));
+    await ctx.shot("05h-chat-bond-awake");
+    // 黄金線が編成画面に出る
+    ctx.log("  黄金線:", await ctx.js(`(()=>{
+      const a=S.squad[0], b=S.squad[1];
+      bondAwake(a,b); show('deck');
+      const gold=document.querySelectorAll('#deckLinks .t4').length;
+      if(!gold)throw new Error('黄金線が引かれない');
+      const st=getComputedStyle(document.querySelector('#deckLinks .t4')).stroke;
+      return gold+'本 / stroke '+st;
+    })()`));
+    await ctx.wait(300);
+    await ctx.shot("05i-deck-gold-link");
+    await ctx.js("(()=>{S.career.bondGold={};S.career.chat=null;S.career.hand=null;show('season');})()");
+    await ctx.wait(200);
     // 選手を選ぶ一覧(★と覚醒が並ぶ)
     await ctx.js(`(()=>{
       const G=TUNING.train, id=S.squad.find(Boolean);

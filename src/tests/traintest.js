@@ -186,6 +186,35 @@ const E=setup({tmpName:"_tmp_train.js"});
     assert.ok(E.bondOf(a1,b1)>kept,"戻せば続きから積み上がる");
     console.log("連携の維持OK 外す→凍結("+kept+") / 戻す→"+E.bondOf(a1,b1)+" と続きから");
 
+    // --- 連携の覚醒(→docs/03 §3.31) ---
+    // **積み上げの続きではなく1回きりの節目。** 挑めるのはしきい値を超えた組だけで、
+    // 外しても積み上げは消えない(次の交流でまた挑める)。
+    {
+      const c=sq[4], d=sq[5];
+      S4.career.bondGold={};
+      S4.career.bond[E.bondKey(c,d)]=0;                 // 前の検証ぶんを落とす
+      E.bondAdd(c,d,B.t4/2);                            // 合計 = ちょうど t4
+      assert.strictEqual(E.bondSum(c,d),B.t4,"合計がしきい値ちょうど");
+      assert.ok(!E.bondCanAwake(c,d),"しきい値ちょうどでは挑めない");
+      E.bondAdd(c,d,1);
+      assert.ok(E.bondCanAwake(c,d),"超えれば挑める");
+      assert.ok(E.bondReadyWith(c),"呼ぶ側の一覧が光る");
+      assert.strictEqual(E.bondTier(E.bondSum(c,d)),3,"覚醒前は最上段(3)どまり");
+      E.bondAwake(c,d);
+      assert.ok(E.bondIsGold(c,d),"覚醒した組は黄金線");
+      assert.ok(E.bondIsGold(d,c),"順序を持たない");
+      assert.strictEqual(E.bondTier(E.bondSum(c,d),true),4,"黄金線は段4");
+      assert.ok(!E.bondCanAwake(c,d),"二度は覚醒しない");
+      // 試合には**印として**渡る。値ではなく黄金線そのものが倍率を決める
+      const side=E.matchSide(S4.club.id);
+      const cc=side.cards.find(x=>x.id===c);
+      assert.ok(cc.gold&&cc.gold[d],"黄金線が試合に渡る");
+      assert.ok(B.k4>B.k3,"黄金線の倍率は最上段より上");
+      console.log("連携の覚醒OK しきい値"+B.t4+"超で挑戦 ／ 成功で黄金線 ×"+B.k4
+        +"(最上段 ×"+B.k3+") ／ 二度は起きない");
+      S4.career.bondGold={};
+    }
+
     // --- しきい値の段 ---
     assert.strictEqual(E.bondTier(B.t1),0,"しきい値ちょうどではまだ上がらない");
     assert.strictEqual(E.bondTier(B.t1+1),1,"t1 を超えて1段");

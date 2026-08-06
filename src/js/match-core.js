@@ -544,8 +544,12 @@ function pickOriginCh(rng,p,lastCh,stray){
  * 連携の値はカードの写しに載せて渡す(エンジンはセーブを見ない)。
  */
 function bondK(a,b){
-  if(!a||!b||!a.c.bond)return 1;
-  const B=TUNING.bond, sum=(a.c.bond[b.c.id]||0)*2;
+  if(!a||!b)return 1;
+  const B=TUNING.bond;
+  // **黄金線は値ではなく印**(→docs/03 §3.31)。覚醒した組は積み上げに関わらず最上段
+  if(a.c.gold&&a.c.gold[b.c.id])return B.k4;
+  if(!a.c.bond)return 1;
+  const sum=(a.c.bond[b.c.id]||0)*2;
   return sum>B.t3?B.k3:sum>B.t2?B.k2:sum>B.t1?B.k1:1;
 }
 /** 選手の枠(元の立ち位置)から、いまボールがある場所までの離れ具合(0..1)。 */

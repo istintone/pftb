@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=19;
+const SAVE_VER=20;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -57,6 +57,9 @@ function defaultState(){
       // 連携(→docs/03 §3.31)。{ "<小さいID>:<大きいID>": 値 }。
       // **編成から外れた選手の分は捨てる**ので、いま組んでいる16人ぶんだけが残る。
       bond:{},
+      // 覚醒した組(→docs/03 §3.31)。{ "<小さいID>:<大きいID>": true }。
+      // **黄金線**になり、パスの倍率が1段上がる。連携と同じく任期が明ければ消える。
+      bondGold:{},
       // コンディション(→docs/03 §3.32)。{ "<カードID>": 0..4 }。
       // **無ければ2(普通)**。任期の頭は全員が普通から始まる。
       cond:{},
@@ -249,6 +252,8 @@ function migrate(){
     S.career.tenureDone=S.career.node>=TUNING.tenure.extendAt;
     if(S.club&&!S.club.evLog)S.club.evLog={};
   }
+  // v19 → v20: 連携に覚醒を足した(→docs/03 §3.31)。既存の任期には黄金線を持たせない。
+  if(S.v<20&&!S.career.bondGold)S.career.bondGold={};
   S.v=SAVE_VER;
 }
 

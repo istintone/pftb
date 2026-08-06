@@ -1112,6 +1112,10 @@ body{
 .pt-links .t1{ stroke-width:1;   opacity:.26 }
 .pt-links .t2{ stroke-width:1.8; opacity:.42 }
 .pt-links .t3{ stroke-width:2.8; opacity:.60 }
+/* 黄金線(→docs/03 §3.31)。覚醒した組だけ。**色で段の外に出す** —
+   太さの延長にすると「もう1段太いだけ」に見えて、1回きりの節目だと分からない */
+.pt-links .t4{ stroke:oklch(0.85 0.16 88); stroke-width:3.2; opacity:.95;
+  filter:drop-shadow(0 0 3px oklch(0.80 0.17 85 / .85)) }
 /* 編成に置く選手の姿(→docs/06 §6.15)。**丸ではなく立ち絵**。
    足元にチームカラーの影を敷いて、ピッチ上の見え方(→§6.17)と揃える。 */
 .fig{ position:relative; display:block }

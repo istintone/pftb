@@ -825,7 +825,7 @@ function renderDeck(){
     for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
       const a=cards[i], b=cards[j];
       if(!a||!b)continue;
-      const t=bondTier(bondSum(a.id,b.id));
+      const t=bondTier(bondSum(a.id,b.id),bondIsGold(a.id,b.id));
       if(t)ln.push('<line x1="'+slots[i][1]+'" y1="'+slots[i][2]+'"'
         +' x2="'+slots[j][1]+'" y2="'+slots[j][2]+'" class="lk t'+t+'"/>');
     }
@@ -1335,6 +1335,11 @@ function chatEnter(st){
     if(sel.hand==="rest")return false;
     // **経験点が貯まっていれば覚醒イベント**(→docs/03 §3.30)。通常のメニューは出ない
     if(sel.awake){ chatSay(sel.who,CHAT.awakeAsk); return true; }
+    // **連携も覚醒する**(→docs/03 §3.31)。合計がしきい値を超えた組だけ
+    if(sel.bawake){
+      chatSay(sel.who,chatText(CHAT.bondAwakeAsk,"bw:"+C.node,{ m:shortOf(sel.who2) }));
+      return true;
+    }
     if(sel.hand==="train")chatSay(sel.who,chatText(CHAT.callTrain,"ct:"+C.node));
     else chatSay(sel.who,chatText(CHAT.bondAsk,"ba:"+C.node,{ m:shortOf(sel.who2) }));
     return true;
@@ -1354,6 +1359,22 @@ function chatEnter(st){
       }else{
         chatSay(sel.who,CHAT.awakeNg);
         chatSay("sec",chatText(CHAT.awakeKeep,"ak:"+C.node));
+      }
+      return false;
+    }
+    if(sel.bawake){
+      // 当たりは**その場でたねから決める**(能力の覚醒と同じ形 → §3.30)
+      const win=mulberry32((S.world.seed^hashStr("bawake:"+C.node+":"+sel.who+":"+sel.who2))>>>0)()<0.5
+        ?BOND_AWAKES[0].id:BOND_AWAKES[1].id;
+      sel.res=sel.menu===win?"awake":"keep";
+      const m={ m:shortOf(sel.who2) };
+      if(sel.res==="awake"){
+        bondAwake(sel.who,sel.who2);
+        chatSay(sel.who,chatText(CHAT.bondAwakeOk,"bo:"+C.node,m));
+        chatSay("sec",chatText(CHAT.bondAwakeSec,"bs:"+C.node));
+      }else{
+        chatSay(sel.who,chatText(CHAT.bondAwakeNg,"bn:"+C.node,m));
+        chatSay("sec",chatText(CHAT.bondAwakeKeep,"bk:"+C.node));
       }
       return false;
     }
@@ -1414,7 +1435,11 @@ function chatPick(id,label){
     // **選んだ時点で覚醒するかが決まる**(→docs/03 §3.30)
     sel.awake=sel.hand==="train"?trainReady(sel.who):null;
   }
-  else if(st==="who2"){ sel.who2=+id; }
+  else if(st==="who2"){
+    sel.who2=+id;
+    // **相方が決まった時点で覚醒するかが決まる**(→docs/03 §3.31)
+    sel.bawake=sel.hand==="bond"&&bondCanAwake(sel.who,sel.who2);
+  }
   else if(st==="menu"){ sel.menu=id; }
   ch.i++; ch.step=null;
   save(); chatAdvance();
@@ -1440,12 +1465,17 @@ function chatOptions(){
         say:chatText(st==="who"?CHAT.sayWho:CHAT.sayWho2,"sw:"+N+c.id,
           { n:shortName(c), m:shortName(c) }),
         star:trainStar(c.id),
-        // **覚醒できる選手は枠が光る**。文字で「覚醒」とは書かない(→docs/03 §3.30)
-        hot:st==="who"&&sel.hand==="train"&&!!trainReady(c.id),
+        // **覚醒できる選手は枠が光る**。文字で「覚醒」とは書かない(→docs/03 §3.30)。
+        // 交流では「呼ぶ側」は覚醒できる相手が居るか、「相方」はその組が挑めるか
+        hot:sel.hand==="train"?(st==="who"&&!!trainReady(c.id))
+          :st==="who"?bondReadyWith(c.id)
+          :bondCanAwake(sel.who,c.id),
         sub:primarySub(c)+" ・ OVR "+c.ovr })) };
   if(st==="menu"){
     if(sel.awake)return { q:"どう声をかけますか",
       items:AWAKES.map(a=>({ id:a.id, label:a.label, say:a.label+"。" })) };
+    if(sel.bawake)return { q:"二人にどう声をかけますか",
+      items:BOND_AWAKES.map(a=>({ id:a.id, label:a.label, say:a.label+"。" })) };
     return sel.hand==="train"
       ? { q:"メニューを指示する", items:TRAININGS.map(t=>({ id:t.id, label:t.label, sub:t.ask,
           say:chatText(CHAT.sayMenu,"sm:"+N+t.id,{ t:t.label }) })) }

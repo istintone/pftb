@@ -353,10 +353,14 @@ function matchSide(clubId){
     // **カードは書き換えず写しに載せる**
     const ids=(S.squad||[]).filter(x=>x!=null);
     return { cards:squadCards().map(c=>{
-        const up=trainUps(c.id), bond={};
-        for(const o of ids)if(o!==c.id){ const v=bondOf(c.id,o); if(v)bond[o]=v; }
-        const has=Object.keys(bond).length;
-        return { ...c, cond:condOf(c.id), ...(up?{ up }:{}), ...(has?{ bond }:{}) };
+        const up=trainUps(c.id), bond={}, gold={};
+        for(const o of ids)if(o!==c.id){
+          const v=bondOf(c.id,o); if(v)bond[o]=v;
+          if(bondIsGold(c.id,o))gold[o]=1;              // 黄金線(→§3.31)
+        }
+        const has=Object.keys(bond).length, hasG=Object.keys(gold).length;
+        return { ...c, cond:condOf(c.id), ...(up?{ up }:{}),
+          ...(has?{ bond }:{}), ...(hasG?{ gold }:{}) };
       }),
       form:S.form, name:club.name,
       kickers:S.kickers, captain:S.captain, order:S.order };
@@ -685,16 +689,32 @@ function bondMatch(){
 function bondPairs(ids){
   const out=[];
   for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){
-    const v=bondSum(ids[i],ids[j]);
-    if(v>TUNING.bond.t1)out.push({ a:i, b:j, sum:v, tier:bondTier(v) });
+    const v=bondSum(ids[i],ids[j]), g=bondIsGold(ids[i],ids[j]);
+    if(v>TUNING.bond.t1||g)out.push({ a:i, b:j, sum:v, tier:bondTier(v,g) });
   }
   return out;
 }
-/** しきい値の段(0=なし / 1..3)。 */
-function bondTier(sum){
+/** しきい値の段(0=なし / 1..3)。**覚醒した組は4**(黄金線)。 */
+function bondTier(sum,gold){
   const B=TUNING.bond;
+  if(gold)return 4;
   return sum>B.t3?3:sum>B.t2?2:sum>B.t1?1:0;
 }
+
+// --- 連携の覚醒(→docs/03 §3.31) ---
+// **積み上げの続きではなく、1回きりの節目。** 合計が t4 を超えた組だけが挑め、
+// 1/2 で成功する。外しても積み上げは消えないので、次の交流でまた挑める。
+const bondIsGold=(a,b)=>!!(S.career.bondGold||{})[bondKey(a,b)];
+/** その組が覚醒に挑めるか(=合計がしきい値を超え、まだ覚醒していない)。 */
+const bondCanAwake=(a,b)=>a!==b&&!bondIsGold(a,b)&&bondSum(a,b)>TUNING.bond.t4;
+/** 覚醒に成功した。**値はそのまま**で、黄金線の印だけが付く。 */
+function bondAwake(a,b){
+  if(!S.career.bondGold)S.career.bondGold={};
+  S.career.bondGold[bondKey(a,b)]=true;
+  return true;
+}
+/** その選手が覚醒に挑める相手が居るか(チャットの一覧を光らせるため)。 */
+const bondReadyWith=id=>(S.squad||[]).some(o=>o!=null&&o!==id&&bondCanAwake(id,o));
 
 // ---------- コンディション(→docs/03 §3.32) ----------
 // **隠しパラメータ。** 0=ケガ / 1=不調 / 2=普通 / 3=好調 / 4=絶好調。
