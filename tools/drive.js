@@ -225,6 +225,36 @@ const STEPS = [
         +document.querySelector('.cup-res b').textContent;
     })()`));
     await ctx.shot("07m-cup-plan");
+    // 組み合わせ表の枠からも相手を下見できる(→docs/03 §3.34)。
+    // **その回戦で当たったときの相手**が出る(回戦が上がるほど強くなる)
+    ctx.log("  カップの下見:", await ctx.js(`(()=>{
+      const rows=[...document.querySelectorAll('#schedList .br-row')];
+      if(rows.some(r=>r.classList.contains('me')&&r.classList.contains('foe')))
+        throw new Error('自クラブの枠が下見できてしまう');
+      if(rows.some(r=>r.classList.contains('tbd')&&r.classList.contains('foe')))
+        throw new Error('TBD の枠が下見できてしまう');
+      return rows.filter(r=>r.classList.contains('foe')).length+'枠が下見できる';
+    })()`));
+    await ctx.js("document.querySelector('#schedList .br-row.foe').click()");
+    await ctx.wait(500);
+    ctx.log("  カップの相手:", await ctx.js(`(()=>{
+      if(document.querySelector('.screen.on').id!=='scr-foe')throw new Error('下見に行けない');
+      // **下見が嘘をつかないこと**。次戦の枠を開いたら、試合で出てくる11人と一致する
+      const f=cupFixtureOf();
+      if(!f)throw new Error('次戦が無い');
+      openFoe({ kind:'cup', cup:f.cup, round:f.round, slot:f.foe });
+      const shown=[...document.querySelectorAll('#foeSlots .sl-name')].map(e=>e.textContent);
+      const real=f.side.cards.slice(0,11).map(c=>shortName(c));
+      if(shown.join(',')!==real.join(','))
+        throw new Error('下見と試合の11人が違う ／ 下見 '+shown.join(',')+' ／ 試合 '+real.join(','));
+      return document.getElementById('foeName').textContent
+        +' ／ '+document.getElementById('foeCoach').textContent
+        +' ／ '+document.getElementById('foeForm').textContent.trim()
+        +' ／ 試合に出てくる11人と一致';
+    })()`));
+    await ctx.shot("07m2-cup-foe");
+    await ctx.js("document.getElementById('hdBack').click()");
+    await ctx.wait(300);
 
     // 1回戦を戦うと**TBDが次の回戦ぶんだけ埋まる**
     // PK戦(→docs/03 §3.33)。引き分けたノックアウトはその場で決着を見せる
@@ -1481,6 +1511,53 @@ const STEPS = [
       "/ 戻るボタン:", await ctx.js("!document.getElementById('hdBack').classList.contains('off')"),
       "/ 親タブ点灯:", await ctx.js(`document.querySelector('#tabs button[data-s="season"]').classList.contains('on')`));
     ctx.log("日程の消化行:", await ctx.js("document.querySelectorAll('#schedList .cal.done').length"));
+    // 対戦表から相手の下見へ(→docs/03 §3.34)。**編成画面と同じ形**で出る
+    await ctx.js("document.querySelector('#schedList .cal.foe').click()");
+    await ctx.wait(500);
+    ctx.log("  相手の下見:", await ctx.js(`(()=>{
+      if(document.querySelector('.screen.on').id!=='scr-foe')throw new Error('下見に行けない');
+      const n=document.querySelectorAll('#foeSlots .slot').length;
+      const b=document.querySelectorAll('#foeBench .bn').length;
+      const k=document.querySelectorAll('#foeKickers .kk').length;
+      if(n!==11)throw new Error('ピッチが11人でない: '+n);
+      if(b!==TUNING.squad.bench)throw new Error('控えの数が編成画面と違う: '+b);
+      if(k!==3)throw new Error('セットプレーの枠が3つでない: '+k);
+      if(document.querySelector('#foePitch .pt-links'))throw new Error('連携線が出ている');
+      if(!/^監督 /.test(document.getElementById('foeCoach').textContent))
+        throw new Error('監督名が出ていない: '+document.getElementById('foeCoach').textContent);
+      // **下見が嘘をつかないこと**。試合エンジンに渡る11人と並びまで一致する
+      const shown=[...document.querySelectorAll('#foeSlots .sl-name')].map(e=>e.textContent);
+      const id=document.querySelector('#schedList .cal.foe').dataset.club;
+      const real=matchSide(id).cards.slice(0,11).map(c=>shortName(c));
+      if(shown.join(',')!==real.join(','))
+        throw new Error('下見と試合の11人が違う: '+shown.join(',')+' / '+real.join(','));
+      return document.getElementById('foeName').textContent
+        +' ／ '+document.getElementById('foeCoach').textContent
+        +' ／ '+document.getElementById('foeForm').textContent.trim()
+        +' ／ 総合 '+document.getElementById('foePower').textContent;
+    })()`));
+    await ctx.shot("13b-foe-squad");
+    // 選手をタップすると詳細が開き、**相手の選手だと分かる**
+    await ctx.js("document.querySelector('#foeSlots .slot').click()");
+    await ctx.wait(400);
+    ctx.log("  相手の選手カード:", await ctx.js(`(()=>{
+      const own=document.querySelector('.cm-own');
+      if(!own)throw new Error('カード詳細が開かない');
+      if(own.textContent.indexOf('自分のカード')>=0)throw new Error('自分のカード扱いになっている');
+      return own.textContent.trim();
+    })()`));
+    await ctx.shot("13c-foe-card");
+    await ctx.js("document.getElementById('cardModalClose').click()");
+    await ctx.wait(200);
+    // 同じ相手をもう一度開いても同じ11人(決定的に作られている)
+    ctx.log("  下見は決定的:", await ctx.js(`(()=>{
+      const nm=()=>[...document.querySelectorAll('#foeSlots .sl-name')].map(e=>e.textContent).join(',');
+      const a=nm(); renderFoe(); const b=nm();
+      if(a!==b)throw new Error('開くたびに11人が変わる');
+      return a.split(',').slice(0,3).join(' / ')+' … 何度開いても同じ';
+    })()`));
+    await ctx.js("document.getElementById('hdBack').click()");
+    await ctx.wait(300);
     // 順位表の要約をタップ → 詳細へ
     await ctx.js("document.getElementById('schedStandH').click()");
     await ctx.wait(300);

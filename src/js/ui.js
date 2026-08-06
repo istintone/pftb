@@ -28,6 +28,7 @@ const SCREENS={
   clubhouse: { title:"CLUB",      tab:"clubhouse", chrome:"full", render:()=>renderClubhouse() },
   schedule:  { title:"FIXTURES",  under:"season",  chrome:"back", render:()=>renderSchedule() },
   standings: { title:"STANDINGS", under:"season",  chrome:"back", render:()=>renderStandings() },
+  foe:       { title:"OPPONENT",  under:"season",  chrome:"back", render:()=>renderFoe() },
   gallery:   { title:"GALLERY",   under:"clubhouse", chrome:"back", render:()=>renderGallery() },
   gacha:     { title:"SCOUT",     under:"home",    chrome:"back", render:()=>renderScout() },
   secretary: { title:"SECRETARY", under:"home",    chrome:"back" },
@@ -655,8 +656,9 @@ function setForm(f){
 }
 
 /** カード詳細(→docs/06 §6.12)。IDでもカードそのものでも開ける(見本は所持していないため)。 */
-function openCard(x){
+function openCard(x,opts){
   const c=(x&&typeof x==="object")?x:cardById(x); if(!c)return;
+  const foe=opts&&opts.club;                     // 相手の下見(→docs/03 §3.34)
   const nation=nationById(c.nation);
   // **シートにホロは掛けない**(→docs/06 §6.13)。段の色は縁と光だけで示す。
   // ホロを全面に掛けると、WORLD CLASS の虹が能力バーや文字の上を流れて読めない。
@@ -699,7 +701,9 @@ function openCard(x){
       +'<div class="cm-combo">'+esc(c.club||"—")+'</div>'
       +'<div class="cm-k">PROFILE</div>'
       +'<div class="cm-bio">'+esc(bioOf(c))+'</div>'
-      +'<div class="cm-own">'+(isLoaned(c)
+      +'<div class="cm-own">'+(foe
+        ? esc(foe)+" の選手 — 対戦相手として出てきます"
+        : isLoaned(c)
         ? "<span class=\"loan\">(CLUBS)</span> クラブからの貸与 — 退任するとこのクラブに残ります"
         : "自分のカード — 移籍しても連れて行けます")+'</div>'
     +'</div>';
@@ -743,20 +747,13 @@ function figHtml(c,cls,extra){
 /** 覚醒の★(→docs/03 §3.30)。名前の下に置く。 */
 const starRow=c=>{ const n=c?trainStar(c.id):0;
   return n?'<div class="fig-star">'+"★".repeat(n)+'</div>':""; };
-function renderDeck(){
-  const slots=FORMATIONS[S.form], cards=squadCards();
-  const start=cards.slice(0,TUNING.squad.starters);
-  // 総合力は**配置込み**で出す。この画面で決めるのは「誰をどこに置くか」なので、
-  // 適性を無視した平均を見せても判断材料にならない(→docs/06 §6.15)。
-  const raw=squadPower(start), fit=squadPowerAt(cards,S.form);
-  $("deckPower").textContent=fit;
-  $("deckCoach").textContent=S.coach?("監督 "+S.coach):"監督";
-  $("deckForm").textContent="陣形: "+S.form
-    +(fit<raw?"　適性ロス −"+(raw-fit):"");
+// ---------- 編成の見た目(自チームと相手で共有 → docs/03 §3.34) ----------
+// **自チームと相手を同じ形で見せる。** 違うのは触れるかどうかだけで、ピッチも控えも
+// CAPもセットプレーも同じ部品から作る。片方だけ直して見た目が食い違うのを防ぐ。
 
-  // ピッチ上の11人。位置は FORMATIONS が持つ % をそのまま使う。
-  // 枠のポジション名の濃さが、そのまま**その枠への適性**を表す。
-  $("deckSlots").innerHTML=slots.map(([sub,x,y],i)=>{
+/** ピッチの11人。位置は FORMATIONS が持つ % をそのまま使う。 */
+function pitchHtml(cards,form){
+  return FORMATIONS[form].map(([sub,x,y],i)=>{
     const c=cards[i];
     return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
       +' data-slot="'+i+'"'+(c?' data-card="'+c.id+'"':'')+'>'
@@ -769,6 +766,47 @@ function renderDeck(){
       +starRow(c)
     +'</div>';
   }).join("");
+}
+/** 控え。枠のポジションを持たないので適性は掛からず、素のOVRを出す(→docs/03 §3.17)。 */
+function benchHtml(cards){
+  const N=TUNING.squad.starters;
+  return Array.from({length:TUNING.squad.bench},(_,k)=>{
+    const c=cards[N+k];
+    return '<div class="bn'+(c?"":" empty")+'" data-slot="'+(N+k)+'"'+(c?kitStyle(c):"")+'>'
+      +figHtml(c,"bn-fig")
+      +'<div class="bn-ovr">'+(c?c.ovr:"+")+'</div>'
+      +'<div class="bn-name">'+(c?esc(shortName(c)):"空き")+'</div>'
+      +starRow(c)
+      +'<div class="bn-pos">'+(c?primarySub(c):"控え"+(k+1))+'</div></div>';
+  }).join("");
+}
+/**
+ * CAP と セットプレーの共通タイル(→docs/06 §6.15)。同じ「1人を指名する枠」なので
+ * 形をそろえる。相手の下見では指名できないので、行き先の `›` を出さない。
+ */
+function ptileHtml(c,cls,band,sub,go,attr){
+  return '<div class="ptile '+cls+'"'+(attr||"")+(c?kitStyle(c):"")+'>'
+    +figHtml(c,"cap-fig")+'<div class="cap-band">'+band+'</div>'
+    +'<div class="cap-b"><div class="cap-nm">'
+      +(c?esc(c.name)+'<i class="awk">'+starOf(c)+'</i>':"—")+'</div>'
+      +'<div class="cap-sub">'+sub+'</div></div>'
+    +(go?'<div class="cap-go">›</div>':"")
+  +'</div>';
+}
+
+function renderDeck(){
+  const slots=FORMATIONS[S.form], cards=squadCards();
+  const start=cards.slice(0,TUNING.squad.starters);
+  // 総合力は**配置込み**で出す。この画面で決めるのは「誰をどこに置くか」なので、
+  // 適性を無視した平均を見せても判断材料にならない(→docs/06 §6.15)。
+  const raw=squadPower(start), fit=squadPowerAt(cards,S.form);
+  $("deckPower").textContent=fit;
+  $("deckCoach").textContent=S.coach?("監督 "+S.coach):"監督";
+  $("deckForm").textContent="陣形: "+S.form
+    +(fit<raw?"　適性ロス −"+(raw-fit):"");
+
+  // ピッチ上の11人。枠のポジション名の濃さが、そのまま**その枠への適性**を表す。
+  $("deckSlots").innerHTML=pitchHtml(cards,S.form);
   // 連携の線(→docs/03 §3.31)。**しきい値を超えた組だけ**を白い線で結ぶ。
   // 太さが段。誰と誰が噛み合っているかを、盤面の上でそのまま見せる(WCCF踏襲)。
   {
@@ -789,17 +827,7 @@ function renderDeck(){
 
 
   // 控え(交代要員)。先発と同じく**枠**なので、タップして差し替えられる。
-  // 枠のポジションを持たないので適性は掛からず、素のOVRを出す(→docs/03 §3.17)。
-  $("deckBench").innerHTML=Array.from({length:TUNING.squad.bench},(_,k)=>{
-    const c=cards[TUNING.squad.starters+k];
-    return '<div class="bn'+(c?"":" empty")+'" data-slot="'
-      +(TUNING.squad.starters+k)+'"'+(c?kitStyle(c):"")+'>'
-      +figHtml(c,"bn-fig")
-      +'<div class="bn-ovr">'+(c?c.ovr:"+")+'</div>'
-      +'<div class="bn-name">'+(c?esc(shortName(c)):"空き")+'</div>'
-      +starRow(c)
-      +'<div class="bn-pos">'+(c?primarySub(c):"控え"+(k+1))+'</div></div>';
-  }).join("");
+  $("deckBench").innerHTML=benchHtml(cards);
   $("deckBench").querySelectorAll(".bn").forEach(el=>{
     el.onclick=()=>openSlot(Number(el.dataset.slot));
   });
@@ -809,13 +837,9 @@ function renderDeck(){
     const named=cardById(S.captain);
     const on=named&&start.some(c=>c&&c.id===named.id);   // 先発に居ないと務まらない
     const c=on?named:autoCaptain(start);
-    $("deckCaptain").innerHTML='<div class="ptile cap'+(on?"":" auto")+'"'+(c?kitStyle(c):"")+'>'
-      +figHtml(c,"cap-fig")+'<div class="cap-band">CAP</div>'
-      +'<div class="cap-b"><div class="cap-nm">'+(c?esc(c.name)+'<i class="awk">'+starOf(c)+'</i>':"—")+'</div>'
-        +'<div class="cap-sub">'+(on?"指名":"自動")+"　スタミナの減りが "
-        +Math.round((1-TUNING.fatigue.capMul)*100)+"% 緩やか</div></div>"
-      +'<div class="cap-go">›</div>'
-    +'</div>';
+    $("deckCaptain").innerHTML=ptileHtml(c,"cap"+(on?"":" auto"),"CAP",
+      (on?"指名":"自動")+"　スタミナの減りが "
+      +Math.round((1-TUNING.fatigue.capMul)*100)+"% 緩やか",true);
     const el=$("deckCaptain").querySelector(".cap");
     if(el)el.onclick=openCaptain;
   }
@@ -829,13 +853,8 @@ function renderDeck(){
     const c=on?named:autoKicker(start,k);
     // **キャプテンと同じタイル**にそろえる(→docs/06 §6.15)。
     // 同じ「1人を指名する枠」なのに形が違うと、別の機能に見える
-    return '<div class="ptile kk'+(on?"":" auto")+'" data-kick="'+k+'"'+(c?kitStyle(c):"")+'>'
-      +figHtml(c,"cap-fig")+'<div class="cap-band">'+label+'</div>'
-      +'<div class="cap-b"><div class="cap-nm">'
-        +(c?esc(c.name)+'<i class="awk">'+starOf(c)+'</i>':"—")+'</div>'
-        +'<div class="cap-sub">'+(on?"指名":"自動")+'　'+note+'</div></div>'
-      +'<div class="cap-go">›</div>'
-    +'</div>';
+    return ptileHtml(c,"kk"+(on?"":" auto"),label,
+      (on?"指名":"自動")+'　'+note,true,' data-kick="'+k+'"');
   }).join("");
   $("deckKickers").querySelectorAll("[data-kick]").forEach(el=>{
     el.onclick=()=>openKicker(el.dataset.kick);
@@ -847,6 +866,63 @@ function renderDeck(){
   $("deckNote").innerHTML="クラブからの貸与 <b>"+loaned+"人</b>"
     +"　／　枠に合っていない選手 <b>"+off+"人</b>";
 }
+// ---------- 相手の下見(→docs/03 §3.34) ----------
+// **対戦表から相手の編成をそのまま覗ける。** 自分の編成画面と同じ形で見せるのは、
+// 打つ手が双方向だから — 相手の並びを読んで采配や交代を決められるようにする。
+// 触れるのは選手のカード詳細だけで、並べ替えはできない。
+let _foe=null;                 // { kind:"club"|"cup", … } 見ている相手
+let _foeCards=[];              // 描画したカードの実体(相手のIDでは cardById が引けない)
+/** 対戦表から相手を開く。spec は renderFoe がそのまま解釈する。 */
+function openFoe(spec){ _foe=spec; show("foe",{push:1}); }
+/** 対戦表の行に下見のリンクを掛ける。自クラブの行は対象外(自分は編成画面で見る)。 */
+function wireFoeLinks(root){
+  root.querySelectorAll("[data-club]").forEach(el=>{
+    const id=el.dataset.club;
+    if(id===S.club.id)return;
+    el.onclick=()=>openFoe({ kind:"club", clubId:id });
+  });
+}
+function renderFoe(){
+  const f=_foe; if(!f)return;
+  // リーグの相手はクラブそのもの、カップの相手は**その回戦の枠**(→docs/03 §3.23)
+  const side=f.kind==="cup"
+    ? cupSide(cupById(f.cup),f.round,f.slot)
+    : cpuSquad(f.clubId);
+  const name=f.kind==="cup"?side.name:clubName(f.clubId);
+  const coach=f.kind==="cup"
+    ? coachName("cup:"+f.cup+":"+S.world.season+":"+S.career.cup.node0+":"+f.slot)
+    : coachName("club:"+f.clubId);
+  const cards=_foeCards=side.cards;
+  const start=cards.slice(0,TUNING.squad.starters);
+
+  $("foeCoach").textContent="監督 "+coach;
+  $("foeForm").textContent="陣形: "+side.form+"　"+esc(f.sub||"");
+  $("foePower").textContent=squadPowerAt(cards,side.form);
+  $("foeName").textContent=name;
+  $("foeSlots").innerHTML=pitchHtml(cards,side.form);
+  $("foeBench").innerHTML=benchHtml(cards);
+  // 相手は指名を持たないので、**試合と同じ自動選出**をそのまま出す
+  $("foeCaptain").innerHTML=ptileHtml(autoCaptain(start),"cap auto","CAP","自動選出",false);
+  $("foeKickers").innerHTML=SP_KINDS.map(([k,label,note])=>
+    ptileHtml(autoKicker(start,k),"kk auto",label,"自動選出　"+note,false)).join("");
+  // 連携の線は出さない。相手の連携は覗けるものではないし、
+  // 覗けたところで打てる手が無い(→docs/03 §3.31)
+  const foeCard=i=>{ const c=cards[i]; if(c)openCard(c,{ club:name }); };
+  $("foeSlots").querySelectorAll(".slot").forEach(el=>{
+    el.onclick=()=>foeCard(Number(el.dataset.slot));
+  });
+  $("foeBench").querySelectorAll(".bn").forEach(el=>{
+    el.onclick=()=>foeCard(Number(el.dataset.slot));
+  });
+  $("foeCaptain").querySelector(".cap").onclick=()=>{
+    const c=autoCaptain(start); if(c)openCard(c,{ club:name });
+  };
+  $("foeKickers").querySelectorAll(".kk").forEach((el,i)=>{
+    el.onclick=()=>{ const c=autoKicker(start,SP_KINDS[i][0]); if(c)openCard(c,{ club:name }); };
+  });
+  $("foeNote").innerHTML="この11人がそのまま出てきます　／　編成は変えられません";
+}
+
 // 一覧やピッチに出す短い名前 = **姓**。表示名の並び順は国籍で変わる(日本は姓が先)ので、
 // 分割して末尾を取る方法は使えない。sur を持たない古いカードだけ従来どおり分割する。
 const shortName=c=>c.sur||c.name.split(" ").slice(-1)[0];
@@ -1033,7 +1109,9 @@ function renderSchedule(){
     const m=round.find(x=>x.h===S.club.id||x.a===S.club.id);
     const md=i+1, done=md<W.matchday, next=md===W.matchday;
     const home=m.h===S.club.id, opp=home?m.a:m.h;
-    return '<div class="cal'+(next?" next":"")+(done?" done":"")+'">'
+    // 行ごと相手の下見へのリンク(→docs/03 §3.34)
+    return '<div class="cal foe'+(next?" next":"")+(done?" done":"")+'"'
+      +' data-club="'+opp+'" role="button" tabindex="0">'
       +'<span class="cal-n num">'+md+'</span>'
       +'<span class="cal-c" style="background:'+clubColor(opp)+'"></span>'
       +'<span class="cal-b"><b>'+esc(clubName(opp))+'</b>'
@@ -1043,6 +1121,7 @@ function renderSchedule(){
              :'<span class="cal-r">vs</span>')
       +'</div>';
   }).join("");
+  wireFoeLinks($("schedList"));
 
   // 順位表の要約(タップで詳細へ)
   $("schedStand").innerHTML='<div class="stand-h" id="schedStandH">'
@@ -1449,6 +1528,12 @@ function renderCupSchedule(){
           :"第"+cupLastNode()+"節に大会が完了し、賞金が振り込まれます")+'</span></div>';
 
   $("schedList").innerHTML=head+rows;
+  // 枠をタップすると**その回戦で当たったときの相手**が見られる。回戦が上がるほど
+  // 相手は強くなる(→docs/03 §3.23)ので、round ごとに引き直す
+  $("schedList").querySelectorAll(".br-row.foe").forEach(el=>{
+    el.onclick=()=>openFoe({ kind:"cup", cup:c.id, round:Number(el.dataset.round),
+      slot:Number(el.dataset.slot), sub:cupRoundName(cup,Number(el.dataset.round)) });
+  });
   $("schedStand").innerHTML=cupInfoBox(cup,c);
 }
 /**
@@ -1466,8 +1551,8 @@ function cupRoundBlock(cup,c,round,node){
     const a=m?m.i:pair?pair[0]:null, b=m?m.j:pair?pair[1]:null;
     const next=mine&&pair&&(pair[0]===c.slot||pair[1]===c.slot);
     ms.push('<div class="br-m'+(next?" next":"")+'">'
-      +cupBrRow(c,a,m?m.gi:null,m&&m.w===a)
-      +cupBrRow(c,b,m?m.gj:null,m&&m.w===b)
+      +cupBrRow(c,a,m?m.gi:null,m&&m.w===a,round)
+      +cupBrRow(c,b,m?m.gj:null,m&&m.w===b,round)
       +(m&&m.pk?'<div class="br-pk">PK '+esc(m.pk)+'</div>':"")
       +(next?'<div class="br-next">次戦</div>':"")
       +'</div>');
@@ -1475,10 +1560,12 @@ function cupRoundBlock(cup,c,round,node){
   return '<div class="br-r"><div class="br-k">'+esc(cupRoundName(cup,round))
     +'<span class="num">第'+node+'節</span></div>'+ms.join("")+'</div>';
 }
-/** 組み合わせ表の1行。決まっていない枠は TBD。 */
-function cupBrRow(c,i,g,won){
-  const tbd=i===null||i===undefined;
-  return '<div class="br-row'+(won?" w":"")+(!tbd&&i===c.slot?" me":"")+(tbd?" tbd":"")+'">'
+/** 組み合わせ表の1行。決まっていない枠は TBD。埋まった枠は下見へのリンク(→docs/03 §3.34)。 */
+function cupBrRow(c,i,g,won,round){
+  const tbd=i===null||i===undefined, me=!tbd&&i===c.slot;
+  return '<div class="br-row'+(won?" w":"")+(me?" me":"")+(tbd?" tbd":"")
+    +((tbd||me)?"":" foe")+'"'
+    +((tbd||me)?"":' data-slot="'+i+'" data-round="'+round+'" role="button" tabindex="0"')+'>'
     +'<span class="br-n">'+esc(tbd?"TBD":cupTeamName(c,i))+'</span>'
     +'<span class="br-s num">'+(g===null||g===undefined?"-":g)+'</span></div>';
 }
@@ -1524,11 +1611,14 @@ function renderStandings(){
     (W.div>1?"上位"+t.promote+"クラブが "+divName(W.div-1)+" へ昇格。":"")
     +(W.div<DIVS.length?"下位"+t.relegate+"クラブが "+divName(W.div+1)+" へ降格。":"")
     +(W.div===1?"最上位の部です。ここを制すれば大陸の舞台が開きます。":"");
+  // 行ごと相手の下見へのリンク(→docs/03 §3.34)
   $("standTbl").innerHTML='<tr><th>#</th><th>CLUB</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>PTS</th></tr>'
-    +rows.map(r=>'<tr class="'+(r.id===S.club.id?"me":"")+zone(r)+'"><td class="num">'+r.rank+'</td>'
+    +rows.map(r=>'<tr class="'+(r.id===S.club.id?"me":"foe")+zone(r)+'" data-club="'+r.id+'">'
+      +'<td class="num">'+r.rank+'</td>'
       +'<td class="nm">'+esc(clubName(r.id))+'</td><td class="num">'+r.w+'</td><td class="num">'+r.d+'</td>'
       +'<td class="num">'+r.l+'</td><td class="num">'+r.gf+'</td><td class="num">'+r.ga+'</td>'
       +'<td class="num pt">'+r.pts+'</td></tr>').join("");
+  wireFoeLinks($("standTbl"));
 }
 
 // ---------- CLUB(クラブハウス) ----------

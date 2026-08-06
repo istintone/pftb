@@ -356,13 +356,20 @@ function matchSide(clubId){
       form:S.form, name:club.name,
       kickers:S.kickers, captain:S.captain, order:S.order };
   }
-  const roster=clubRoster(S.world.seed,clubId);
-  const form=formFor(clubId);
+  const { cards:base, form }=cpuSquad(clubId);
   // 相手にもコンディションを配る(→docs/03 §3.32)。節ごとに変わり、格で上に寄る
   const rng=mulberry32((S.world.seed^hashStr("cond:"+clubId+":"+S.world.season
     +":"+S.career.node))>>>0);
-  const cards=bestXI(roster,form).map(c=>({ ...c, cond:condCpu(clubId,rng) }));
+  const cards=base.map(c=>({ ...c, cond:condCpu(clubId,rng) }));
   return { cards, form, name:club.name };
+}
+/**
+ * CPUクラブの編成(→docs/03 §3.34)。**試合も下見もここを通す**ので、
+ * 対戦表から覗いた11人がそのまま出てくることが構造で保証される。
+ */
+function cpuSquad(clubId){
+  const form=formFor(clubId);
+  return { cards:bestXI(clubRoster(S.world.seed,clubId),form), form };
 }
 /** クラブの陣形。クラブIDから決定的に選ぶ(クラブごとに一貫した色になる)。 */
 // 陣形は名簿から決まる = 世界のたねが変わらない限り不変。毎回引き直すと重いので覚えておく。

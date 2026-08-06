@@ -1455,6 +1455,11 @@ body{
 .cup-res b{ font:600 15px/1.2 var(--f-head); color:var(--text) }
 .cup-res.win{ background:oklch(0.26 0.07 85 / .40); border-color:var(--accent) }
 .cup-res.win .eyebrow, .cup-res.win b{ color:var(--accent) }
+/* 相手の下見へ行ける行(→docs/03 §3.34)。**押せることだけ**を示す。
+   矢印を足すと対戦表の右端(スコア・「次戦」)とぶつかるので、触れたときの反応で伝える。 */
+.cal.foe,.br-row.foe,.tbl tr.foe{ cursor:pointer }
+.cal.foe:active,.br-row.foe:active{ background:oklch(0.26 0.03 255) }
+.tbl tr.foe:active td{ background:oklch(0.26 0.03 255) }
 /* HELPタブが右端に浮くので、右寄せの数字を少し内側に寄せる */
 .cup-info{ padding-right:26px }
 /* 順位表の昇格圏 / 降格圏(→docs/03 §3.24) */
@@ -1594,6 +1599,11 @@ body{
   background:var(--surface); border:1px dashed var(--line);
 }
 .bd-say .eyebrow{ display:block; margin-bottom:4px; color:var(--text-mute) }
+/* 相手の下見へ行ける行(→docs/03 §3.34)。**押せることだけ**を示す。
+   矢印を足すと対戦表の右端(スコア・「次戦」)とぶつかるので、触れたときの反応で伝える。 */
+.cal.foe,.br-row.foe,.tbl tr.foe{ cursor:pointer }
+.cal.foe:active,.br-row.foe:active{ background:oklch(0.26 0.03 255) }
+.tbl tr.foe:active td{ background:oklch(0.26 0.03 255) }
 /* HELPタブが右端に浮くので、右寄せの数字を少し内側に寄せる */
 #boardBox{ padding-right:26px }
 .bd-say b{ font:400 13px/1.7 var(--f-body); color:var(--text-2) }
