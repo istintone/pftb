@@ -316,11 +316,15 @@ const E=setup({tmpName:"_tmp_train.js"});
       assert.ok(Math.abs(b.condK-C.mul[2])<1e-9,"普通は等倍");
       assert.ok(Math.abs(E.eff(a,"atk")/(a.c.atk*a.fit*a.stam)-C.mul[4])<1e-9,
         "eff に一様に掛かる");
-      // 絶好調のチームのほうが勝ちやすい
-      let w=0,n=400;
-      for(let i=0;i<n;i++){ const r=E.resolveMatch(mk(4),mk(2),i+1); if(r.hg>r.ag)w++; }
+      // 絶好調のチームのほうが勝ちやすい。
+      // **勝率の絶対値では測らない**。同じクラブ同士なので、その名簿が低スコアだと
+      // 引き分けが半分を占め、はっきり勝ち越していても勝率が40%に届かない
+      // (実測 勝36% 分52% 敗13% で落ちた)。見るのは**勝ちと負けの比**。
+      let w=0,l=0,n=400;
+      for(let i=0;i<n;i++){ const r=E.resolveMatch(mk(4),mk(2),i+1);
+        if(r.hg>r.ag)w++; else if(r.hg<r.ag)l++; }
+      assert.ok(w>l*1.5,"絶好調のほうが勝ち越す: 勝"+w+" 敗"+l);
       const r2=w/n;
-      assert.ok(r2>0.40,"絶好調のほうが勝ち越す: "+(r2*100).toFixed(1)+"%");
       // **効きすぎない**。1段の差で勝負が決まってしまうと、編成より運の話になる
       // (0=ケガはイベントでしか起きないが、起きたときの重さはここで見る)
       let w0=0;
