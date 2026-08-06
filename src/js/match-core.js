@@ -49,6 +49,12 @@ function skS(p,at,ch){
 /** 札を持たない掛かり先(GK・空中戦・スタミナなど)。 */
 const skK=(p,key)=>(p&&p.sk&&p.sk.k[key])||1;
 
+/**
+ * その日の出来(→docs/03 §3.32)。**鉄人は振れ幅そのものを圧縮する**(好調も不調も)。
+ * 倍率を掛けるのではなく「1からの隔たり」を縮めるので、絶好調でも上振れしなくなる。
+ */
+const ironK=p=>1+(condMul(p.c.cond)-1)*skK(p,"iron");
+
 // ---------- 有効値 ----------
 /**
  * 有効値 — **すべての判定の単一集約点**(→docs/07 §7.3)。
@@ -150,10 +156,10 @@ function buildTeam(cards,form,name,side,kickers,captain,order){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
     p.y0=p.y; p.ordM=null;                      // y0 = 采配で動かす前の縦位置
-    p.condK=condMul(p.c.cond);                  // その日の出来(→docs/03 §3.32)
+    p.condK=ironK(p);                           // その日の出来(→docs/03 §3.32)
     p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
       pass:0, passOk:0, duelW:0, duelL:0 }; });
-  bench.forEach(p=>{ p.side=side; p.stam=1; p.sk=skillsOf(p.c); p.condK=condMul(p.c.cond); });
+  bench.forEach(p=>{ p.side=side; p.stam=1; p.sk=skillsOf(p.c); p.condK=ironK(p); });
   const cap=pickCaptain(xi,captain);
   if(cap)cap.captain=true;
   // kickers … {pk,fk,ck} のカードID。自クラブは編成で指名し、CPUは自動選出に任せる
@@ -351,7 +357,7 @@ function bookCard(M,rng,push,df,D,pk,min){
  * 空中戦。クロス(CK / 深くないFK)がボックスに入ったときの競り合い。
  * **pow が主役**なので、足元の巧い選手ではなく高さのある選手が主役になる。
  */
-function aerialDuel(rng,T,D){
+function aerialDuel(rng,T,D,kickK){
   const SP=TUNING.sp;
   const pick=(list,k)=>pickW(rng,list,p=>eff(p,"pow")*0.7+eff(p,k)*0.3);
   const atk=pick(T.players.filter(p=>p.role!=="GK"),"atk");
@@ -359,7 +365,7 @@ function aerialDuel(rng,T,D){
   if(!atk)return null;
   if(!df)return { atk, df:null, ok:true };
   const aSc=(eff(atk,"pow")*SP.aerialPow+eff(atk,"atk")*(1-SP.aerialPow))*SP.aerialK
-    *skK(atk,"aerial")*rr(rng);
+    *skK(atk,"aerial")*(kickK||1)*rr(rng);
   const dSc=(eff(df,"pow")*SP.aerialPow+eff(df,"def")*(1-SP.aerialPow))*lineMul(D)
     *skK(df,"aerial")*rr(rng);
   return { atk, df, ok:aSc>dSc*TUNING.th.aerial };
@@ -402,13 +408,13 @@ function takeSet(M,rng,push,T,D,kind,x,from,att,min){
   if(!intoBox){
     // **遠いFKは繋ぐだけ**。蹴った先で収めた選手から、ふつうの連鎖が始まる
     const tg={ h:clamp(h+SP.restartGain,0,1), x:clamp(x+(rng()-0.5)*30,2,98) };
-    const recv=receiverAt(rng,T,tg,kicker)||kicker;
+    const recv=receiverAt(rng,T,tg,kicker,min)||kicker;
     kicker.stat.passOk++;
     return runChain(M,rng,push,T,D,recv,tg.h,tg.x,0,kicker,att,from,min);
   }
 
   // ボックスへ入れる → 空中戦
-  const a=aerialDuel(rng,T,D);
+  const a=aerialDuel(rng,T,D,skK(kicker,"spDeliver"));
   if(!a)return M.events.slice(from);
   a.atk.stat.inv++; if(a.df)a.df.stat.inv++;
   push({ side:T.side, type:"aerial", by:a.atk.c.id, vs:a.df?a.df.c.id:null, ok:a.ok,
@@ -455,8 +461,19 @@ function resolveRebound(rng,atk,df){
 /** 攻撃側から見たモメンタム。ホームは M.mom そのまま、アウェイは符号を反転。 */
 const momOf=(M,T)=>T.side==="H"?M.mom:-M.mom;
 /** side に勢いを加える(ホーム基準のゲージに符号を合わせて足す)。 */
+/**
+ * 勢いの乗りやすさ(→docs/08 §8.4)。**上がるときだけ**掛かる。
+ * キャプテンシーは**腕章を巻いているときだけ**効く(指名が効く数少ない場面)。
+ */
+function momGain(T){
+  let m=1;
+  for(const p of T.players)m*=skK(p,"mood");
+  if(T.captain)m*=skK(T.captain,"captaincy");
+  return m;
+}
 function addMom(M,side,v){
   const F=TUNING.mom;
+  if(v>0)v*=momGain(side==="H"?M.home:M.away);
   M.mom=clamp(M.mom+(side==="H"?v:-v),-F.cap,F.cap);
 }
 /** キックオフ時のモメンタム。**強いチームが前から始められる**。 */
@@ -481,13 +498,21 @@ const heightOf=p=>clamp((87-p.y)/74,0,1);
  * 距離に対してガウス重みを掛けるので、**遠い位置の選手も低確率で選ばれる**(決定は確率的)。
  * 左右のレーンは**監督の采配**で寄せる(→docs/03 §3.28)。指示が無ければ効かない。
  */
-function pickOrigin(rng,T,mom){
+function pickOrigin(rng,T,mom,min){
   const F=TUNING.mom;
   const target=clamp(0.5+mom*F.spread,0,1);
   return pickW(rng,T.players,p=>{
     const d=(heightOf(p)-target)/F.sigma;
-    return Math.exp(-d*d)*skK(p,"start")*laneW(T,p);  // 動き出しでボールを引き出す
+    return Math.exp(-d*d)*skK(p,"start")*freshK(p,min)*laneW(T,p);  // 動き出しでボールを引き出す
   });
+}
+/**
+ * **交代で入った直後だけ**効く倍率(→docs/08 §8.4 スーパーサブ)。
+ * 分が渡ってこない場面(セットプレーの起点など)では掛からない。
+ */
+function freshK(p,min){
+  if(!p||!p.enter||min==null)return 1;
+  return min-p.enter<=TUNING.squad.subWindow?skK(p,"joker"):1;
 }
 /** 采配で指したレーンの選手に乗る重み(→docs/03 §3.28)。指示が無ければ1。 */
 function laneW(T,p){
@@ -654,7 +679,7 @@ function ballTarget(rng,h0,x0,ch){
  * 実測で枠内率が 33%→17%、決定率が 15%→2% まで落ちていた。
  * 深い位置ほど決定力の重みを乗せて、**点を取れる選手を探す**ようにする。
  */
-function receiverAt(rng,T,tg,self){
+function receiverAt(rng,T,tg,self,min){
   const C=TUNING.chain;
   const cand=T.players.filter(q=>q!==self&&q.role!=="GK");
   if(!cand.length)return null;
@@ -662,7 +687,7 @@ function receiverAt(rng,T,tg,self){
     const dh=(heightOf(q)-tg.h)/C.sigmaH;
     const dx=((q.x-tg.x)/100)/C.sigmaX;
     const seek=1+eff(q,"atk")/STAT_MAX*C.recvAtk*skK(self,"vision")*clamp(tg.h,0,1);
-    return Math.exp(-(dh*dh+dx*dx))*seek*skK(q,"recv")*laneW(T,q);   // 預けられやすさ
+    return Math.exp(-(dh*dh+dx*dx))*seek*skK(q,"recv")*freshK(q,min)*laneW(T,q); // 預けられやすさ
   });
 }
 /**
@@ -762,7 +787,7 @@ function applyOrders(M,t){
       // 入る選手は**万全**で入る(出場時間も関与回数も0から)。これが交代の価値。
       const nw={ c:inc.c, sub:out.sub, role:out.role, fit:slotFit(inc.c,out.sub),
         x:out.x, y:out.y, y0:out.y0, ordM:out.ordM,      // 采配は枠側の属性なので引き継ぐ
-        condK:condMul(inc.c.cond),                        // 出来は入る選手のもの
+        condK:ironK({ c:inc.c, sk:inc.sk }),               // 出来は入る選手のもの
         ix:out.ix, side, enter:t.min, stam:1, sk:inc.sk,
         stat:{ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
           pass:0, passOk:0, duelW:0, duelL:0 } };
@@ -815,7 +840,7 @@ function stepMatch(M){
 
   // ③ 起点 — **モメンタムが高さを決め、高さが選手を決め、サブポジがチャンネルを決める**
   //    以降は連鎖(→docs/07 §7.9)。
-  const origin=pickOrigin(rng,T,mom)||pickAttacker(rng,T);
+  const origin=pickOrigin(rng,T,mom,t.min)||pickAttacker(rng,T);
   // 1回の攻撃で持ち回す状態。セットプレーを重ねすぎないための回数もここに持つ。
   const att={ sp:0, foulH:0 };
   // **ボールの位置は選手の枠とは別に持つ**。持ち運びで動くのはボールであって、
@@ -843,7 +868,7 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
     // **パスは渡す相手を先に決める**(→docs/03 §3.31)。誰に出すかが決まらないと
     // 連携が判定に乗らない。撃つかどうかの判断だけは、収めたあとに回す(→§7.9)
     const tg=ballTarget(rng,h,x,ch);
-    const recv=ch.kind==="pass"?receiverAt(rng,T,tg,carrier):null;
+    const recv=ch.kind==="pass"?receiverAt(rng,T,tg,carrier,min):null;
     const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x,bondK(carrier,recv)):true;
     carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
@@ -862,7 +887,7 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
       // 荒い手ほど確率が高い(守備チャンネルの反則率にそのまま比例させる)。
       // **綺麗に止める選手はファウルもケガも起こしにくい**(→docs/08 §8.6②)
       const clean=marker?skK(marker,"clean"):1;
-      if(marker&&rng()<dch.foul*clean*TUNING.cond.hurtK)
+      if(marker&&rng()<dch.foul*clean*skK(carrier,"tough")*TUNING.cond.hurtK)
         push({ side:T.side, type:"injury", by:carrier.c.id, vs:marker.c.id,
           dch:dch.id, dlabel:dch.label,
           h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });

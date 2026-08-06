@@ -166,10 +166,15 @@ function makeCard(rng,pos,opts={}){
   // 単体で作るときだけ、ここで世界中から1つ引く。
   const nation=opts.nation||rpick(rng,NATION_IDS);
   const st=statsFor(rng,pos,ovr);
-  const pool=SKILLS[pos];
-  const n=RARITY[rarity].skills;
+  // 位置ごとの札 + 汎用の札(→docs/08 §8.4)。**汎用は専門の札より出にくい**。
+  // 均等に混ぜると位置の札が薄まり、それだけで試合のバランスが動く(→§8.5)
+  const own=SKILLS[pos]||[], n=RARITY[rarity].skills;
   const skills=[];
-  while(skills.length<n){ const s=rpick(rng,pool); if(!skills.includes(s))skills.push(s); }
+  for(let guard=0;skills.length<n&&guard<200;guard++){
+    const from=(rng()<TUNING.skill.any)?SKILLS_ANY:own;
+    const s=rpick(rng,from);
+    if(!skills.includes(s))skills.push(s);
+  }
   const subs=rollSubs(rng,pos,rarity);
   const sur=opts.family||rpick(rng,FAMILY[nation]);
   return {

@@ -346,6 +346,73 @@ function runSeason() {
       "/ STD以外の割合", (open * 100).toFixed(0) + "% → " + (focus * 100).toFixed(0) + "%");
   }
 
+  // ---------- 汎用スキル(→docs/08 §8.4)。**効いていることを確かめる** ----------
+  {
+    const sk = n => E.skillsOf({ skills: [n] });
+    // 鉄人 — 好調も不調も**振れ幅そのもの**が縮む
+    {
+      const iron = E.TUNING.eval && E.SKILL_FX["鉄人"].k;
+      for (const cond of [0, 1, 3, 4]) {
+        const plain = E.ironK({ c: { cond }, sk: sk("なし") });
+        const tough = E.ironK({ c: { cond }, sk: sk("鉄人") });
+        assert.ok(Math.abs(tough - 1) < Math.abs(plain - 1) || plain === 1,
+          "cond" + cond + " の振れ幅が縮む: " + plain.toFixed(3) + " → " + tough.toFixed(3));
+        assert.ok((plain - 1) * (tough - 1) >= 0, "向きは変わらない(好調が不調にならない)");
+      }
+      console.log("鉄人OK 振れ幅 ×" + iron + " ／ 好調・不調のどちらにも同じだけ効く");
+    }
+    // スーパーサブ — **交代直後の窓の中だけ**効く
+    {
+      const W = E.TUNING.squad.subWindow, j = E.SKILL_FX["スーパーサブ"].k;
+      const p = { enter: 60, sk: sk("スーパーサブ") };
+      assert.strictEqual(E.freshK(p, 60), j, "入った瞬間は効く");
+      assert.strictEqual(E.freshK(p, 60 + W), j, "窓の端までは効く");
+      assert.strictEqual(E.freshK(p, 60 + W + 1), 1, "窓を過ぎたら効かない");
+      assert.strictEqual(E.freshK({ enter: 0, sk: sk("スーパーサブ") }, 30), 1,
+        "先発には効かない");
+      assert.strictEqual(E.freshK({ enter: 60, sk: sk("なし") }, 61), 1, "持っていなければ1");
+      console.log("スーパーサブOK 交代後" + W + "分だけ ×" + j + " ／ 先発には効かない");
+    }
+    // キャプテンシー — **腕章を巻いているときだけ**。ムードメーカーは居るだけで効く
+    {
+      const cap = { sk: sk("キャプテンシー") }, mood = { sk: sk("ムードメーカー") };
+      const plain = { sk: sk("なし") };
+      assert.strictEqual(E.momGain({ players: [cap, plain], captain: null }), 1,
+        "腕章を巻いていなければキャプテンシーは効かない");
+      assert.ok(E.momGain({ players: [cap, plain], captain: cap }) > 1,
+        "腕章を巻けば効く");
+      assert.ok(E.momGain({ players: [mood, plain], captain: null }) > 1,
+        "ムードメーカーは居るだけで効く");
+      console.log("キャプテンシーOK 腕章あり ×" + E.momGain({ players: [cap], captain: cap }).toFixed(2)
+        + " / 腕章なし ×" + E.momGain({ players: [cap], captain: null }).toFixed(2));
+    }
+    // セットプレーの名手 — 直接狙う球にだけ s が乗る(流れの中の終点には乗らない)
+    {
+      const g = E.SK_GRP.set;
+      assert.ok(g(E.SET_FINISH.pk) && g(E.SET_FINISH.fk), "PKと直接FKは set に入る");
+      assert.ok(!g(E.SET_FINISH.hdr), "ヘディングは set ではない");
+      const flow = Array.isArray(E.FINISHES) ? E.FINISHES : Object.values(E.FINISHES).flat();
+      assert.ok(flow.every(f => !g(f)), "流れの中の終点は set ではない");
+      console.log("セットプレーの名手OK 直接狙う球だけ ／ 流れの中の終点には乗らない");
+    }
+    // ケガ耐性 — 掛かり先が守備側ではなく**競り負けた側**であること
+    assert.strictEqual(E.SKILL_FX["ケガ耐性"].at, "tough", "ケガ耐性の掛かり先");
+    assert.ok(E.SKILL_FX["ケガ耐性"].k < 1, "ケガ耐性は確率を下げる");
+    // **掛かり先に説明文があること**。無いと吹き出しが空になる(実際になった)
+    for (const [name, fx] of Object.entries(E.SKILL_FX)) {
+      if (fx.k != null) assert.ok(E.SK_SOLO[fx.at],
+        name + " の掛かり先 " + fx.at + " に説明文が無い");
+      if (fx.grp) assert.ok(E.SK_WHAT[fx.grp] !== undefined,
+        name + " のグループ " + fx.grp + " に説明文が無い");
+    }
+    // 汎用の札はどのポジションからも引ける
+    for (const pos of Object.keys(E.SKILLS))
+      for (const n of E.SKILLS_ANY)
+        assert.ok(E.skillPool(pos).includes(n), pos + " が " + n + " を引ける");
+    console.log("汎用スキルOK", E.SKILLS_ANY.length + "種がどのポジションからも出る ／ 出やすさ",
+      Math.round(E.TUNING.skill.any * 100) + "%");
+  }
+
   // ---------- スキル(D39 → docs/03 §3.21) ----------
   {
     // 表の形が守られていること。**w と s は必ずセット**(引けるだけでは強くならない)

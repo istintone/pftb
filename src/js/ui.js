@@ -185,7 +185,7 @@ const SK_WHAT={
   pass:"パス", carry:"持ち運び", passTec:"技巧的なパス", long:"一発の縦パス",
   cross:"クロス", wide:"散らし", cut:"中への切れ込み", carryOut:"サイドの上がり",
   press:"激しい寄せ", close:"ゴール前のシュート", far:"遠めのシュート",
-  spd:"速さで勝負する手", tec:"技術で勝負する手", all:"",
+  spd:"速さで勝負する手", tec:"技術で勝負する手", set:"直接狙うセットプレー", all:"",
 };
 const SK_SOLO={
   gk:"枠内のシュートを止めやすい", noRebound:"こぼれ球にしにくい",
@@ -194,6 +194,14 @@ const SK_SOLO={
   vision:"良い受け手を見つけやすい", recv:"味方から預けられやすい",
   start:"起点になりやすい", onTarget:"シュートが枠に飛びやすい",
   pkKick:"PKを決めやすい", rebound:"こぼれ球に詰めやすい",
+  // **掛かり先を足したら必ずここにも書く**。書き忘れると吹き出しが空になる
+  // (careertest が「説明の無い掛かり先」を落とす)
+  offTarget:"相手のシュートが枠を外れやすい", marshal:"味方の寄せを厚くする",
+  mid:"中盤の押し合いに強い", block:"シュートに身体を入れやすい",
+  clean:"ファウルもケガも起こしにくい", tough:"ケガをしにくい",
+  captaincy:"腕章を巻くと勢いに乗りやすい", mood:"チームが勢いに乗りやすい",
+  spDeliver:"セットプレーの球が良い", joker:"交代直後はボールが集まる",
+  iron:"調子の good/bad に振り回されない",
 };
 /**
  * スキルの効果を**タップで浮かせる**(→docs/03 §3.21)。
@@ -229,7 +237,9 @@ function bindSkillPop(skills){
 }
 function skillNote(name){
   const fx=SKILL_FX[name]; if(!fx)return "";
-  const solo=SK_SOLO[fx.at]||"";
+  // k を持つ札は SK_SOLO に文が要る。無ければ掛かり先の名前をそのまま出して、
+  // **空の吹き出しにはしない**(気付かないまま出荷されるのを防ぐ)
+  const solo=fx.k!=null?(SK_SOLO[fx.at]||fx.at):"";
   if(!fx.grp)return solo;
   const what=SK_WHAT[fx.grp]||"";
   const at=fx.at2||fx.at;

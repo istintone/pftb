@@ -1536,8 +1536,9 @@ const STEPS = [
     })()`));
     // スキルの定義に穴が無いこと(→docs/08 §8.7①)。片側だけだと静かに死ぬ
     ctx.log("  スキルの定義:", await ctx.js(`(()=>{
+      // 位置ごとの札 + **汎用の札**(→docs/08 §8.4)
       const pos={};
-      for(const p of Object.keys(SKILLS))for(const n of SKILLS[p])(pos[n]=pos[n]||[]).push(p);
+      for(const p of Object.keys(SKILLS))for(const n of skillPool(p))(pos[n]=pos[n]||[]).push(p);
       const all=Object.keys(pos);
       const noFx=all.filter(n=>!SKILL_FX[n]);
       const noPool=Object.keys(SKILL_FX).filter(n=>!pos[n]);
@@ -1548,14 +1549,15 @@ const STEPS = [
       if(badG.length)throw new Error('未定義のグループ: '+badG.join(','));
       // **段の枚数がプールを超えないこと**。超えると makeCard が無限ループする
       const need=Math.max(...Object.keys(RARITY).map(k=>RARITY[k].skills));
-      const thin=Object.keys(SKILLS).filter(p=>SKILLS[p].length<need);
+      const thin=Object.keys(SKILLS).filter(p=>skillPool(p).length<need);
       if(thin.length)throw new Error('プールが段の枚数に足りない: '+thin.join(','));
       // PKに掛かるGKスキルが増えていないこと(→docs/08 §8.6①)
       const pk=SET_FINISH.pk;
       const gkPk=SKILLS.GK.filter(n=>{ const f=SKILL_FX[n];
         return f.grp&&f.at==='gkFin'&&SK_GRP[f.grp](pk); });
       if(gkPk.length)throw new Error('PKに掛かるGKスキルがある: '+gkPk.join(','));
-      return all.length+'種 ／ '+Object.keys(SKILLS).map(p=>p+' '+SKILLS[p].length).join(' / ');
+      return all.length+'種 ／ '+Object.keys(SKILLS).map(p=>p+' '+SKILLS[p].length).join(' / ')
+        +' / 汎用 '+SKILLS_ANY.length;
     })()`));
     // **廃止した仕組みが説明に残っていないこと**。実装より説明のほうが腐りやすい
     ctx.log("  古い言葉が残っていないか:", await ctx.js(`(()=>{
