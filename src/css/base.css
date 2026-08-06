@@ -1135,6 +1135,23 @@ body{
   background:var(--kit, oklch(0.30 0.03 255)); border:2px solid var(--rar, var(--line));
 }
 .fig-star{ font-size:9px; line-height:1; color:#fff; letter-spacing:-1px; margin-top:1px }
+/* **★が上限まで並んだら金**(→docs/03 §3.30)。黄金の連携線と同じ色にして、
+   「仕上がった選手」と「噛み合った組」が同じ意味の金だと分かるようにする */
+.fig-star.full{ color:oklch(0.85 0.16 88);
+  text-shadow:0 0 4px oklch(0.80 0.17 85 / .9), 0 1px 3px oklch(0 0 0 / .9) }
+/* コンディションの印(→docs/03 §3.32)。立ち絵の左下、OVRの対角に置く。
+   **形で「良い/悪い」、色で段**を表す(▲=上向き / ▽=下向き / ✚=治療中)。 */
+.cnd{
+  position:absolute; left:-4px; bottom:-1px; z-index:2;
+  font-style:normal; font-size:11px; line-height:1;
+  text-shadow:0 1px 2px oklch(0 0 0 / .95), 0 0 3px oklch(0 0 0 / .8);
+}
+.cnd.c0{ color:oklch(0.64 0.23 25) }    /* 治療中 */
+.cnd.c1{ color:oklch(0.72 0.15 250) }   /* 不調 */
+.cnd.c2{ color:oklch(0.74 0.17 150) }   /* 普通 */
+.cnd.c3{ color:oklch(0.77 0.16 62) }    /* 好調 */
+.cnd.c4{ color:oklch(0.66 0.24 25) }    /* 絶好調 */
+.bn .cnd{ left:auto; right:2px; top:2px; bottom:auto; font-size:10px }
 /* ピッチの枠。**元の丸と同じ背丈に収める**(→docs/06 §6.15)。
    陣形の座標は丸の大きさを前提に決まっているので、背が伸びると枠同士が重なる。 */
 .sl-fig{ width:46px; height:46px }

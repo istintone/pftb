@@ -1165,6 +1165,52 @@ const STEPS = [
           return '3本 / 太さ '+w.join(' < ')+' / 端点が枠の中心に一致';
         })()`));
         await ctx.wait(200);
+        // コンディションの印(→docs/03 §3.32)と、★が上限のときの金(→§3.30)
+        ctx.log("  コンディションの印:", await ctx.js(`(()=>{
+          S.career.cond={}; S.career.train={};
+          S.squad.forEach((id,i)=>{ if(id!=null)condSet(id,i%5); });   // 0〜4を配る
+          const top=S.squad.find(x=>x!=null);
+          for(let k=0;k<TUNING.train.maxStar;k++)trainAwake(top,'tec'); // ★を上限まで
+          renderDeck();
+          const marks=[...document.querySelectorAll('#deckSlots .cnd')];
+          if(marks.length<5)throw new Error('印が足りない: '+marks.length);
+          const byCls={};
+          for(const m of marks){
+            const c=[...m.classList].find(x=>/^c[0-4]$/.test(x));
+            byCls[c]=m.textContent;
+            if(!getComputedStyle(m).color)throw new Error('色が付いていない');
+          }
+          for(let v=0;v<5;v++)if(!byCls['c'+v])throw new Error('段 '+v+' の印が出ていない');
+          if(byCls.c0!=='✚')throw new Error('ケガが十字でない: '+byCls.c0);
+          if(byCls.c1!=='▽')throw new Error('不調が▽でない: '+byCls.c1);
+          for(const v of [2,3,4])if(byCls['c'+v]!=='▲')
+            throw new Error('段 '+v+' が▲でない: '+byCls['c'+v]);
+          // 色は5段すべて違う
+          const cols=[0,1,2,3,4].map(v=>getComputedStyle(
+            document.querySelector('#deckSlots .cnd.c'+v)).color);
+          if(new Set(cols).size!==5)throw new Error('色が重なっている: '+cols.join(' / '));
+          // ★が上限なら金(黄金の連携線と同じ色)
+          const full=document.querySelector('#deckSlots .fig-star.full');
+          if(!full)throw new Error('上限の★が金になっていない');
+          if(full.textContent.length!==TUNING.train.maxStar)
+            throw new Error('★の数が上限でない: '+full.textContent);
+          const gold=getComputedStyle(full).color;
+          const link=getComputedStyle(document.createElement('div'));
+          return '✚▽▲▲▲ / 5段とも別の色 / ★'+TUNING.train.maxStar+'は '+gold;
+        })()`));
+        await ctx.wait(300);
+        await ctx.shot("10k-deck-condition");
+        // **相手の下見にはコンディションを出さない**(→docs/03 §3.34)
+        ctx.log("  相手には出さない:", await ctx.js(`(()=>{
+          const foe=divClubs().find(x=>x!==S.club.id);
+          openFoe({ kind:'club', clubId:foe });
+          const n=document.querySelectorAll('#foeSlots .cnd').length;
+          if(n)throw new Error('相手のコンディションが見えている: '+n);
+          show('deck');
+          return '相手の印 0 個';
+        })()`));
+        await ctx.js("(()=>{S.career.cond={};S.career.train={};renderDeck();})()");
+        await ctx.wait(200);
         await ctx.shot("10j-deck-links");
         // **外しても連携は消えない**(→docs/03 §3.31)。凍結され、戻せば続きから使える
         ctx.log("  連携の維持:", await ctx.js(`(()=>{

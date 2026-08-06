@@ -756,14 +756,27 @@ function figHtml(c,cls,extra){
   +'</div>';
 }
 /** 覚醒の★(→docs/03 §3.30)。名前の下に置く。 */
+// **★が上限まで並んだら金**(→docs/03 §3.30)。黄金の連携線(→§3.31)と同じ色で、
+// 「もう伸びしろが無い = 仕上がった」を盤面の上で一目で分かるようにする。
 const starRow=c=>{ const n=c?trainStar(c.id):0;
-  return n?'<div class="fig-star">'+"★".repeat(n)+'</div>':""; };
+  return n?'<div class="fig-star'+(n>=TUNING.train.maxStar?" full":"")+'">'
+    +"★".repeat(n)+'</div>':""; };
+// コンディションの印(→docs/03 §3.32)。**自チームの編成でだけ**出す。
+// 相手の下見(→§3.34)では出さない — こちらが知りようのない情報だから。
+const COND_MARK=["✚","▽","▲","▲","▲"];
+const COND_NAME=["治療中","不調","普通","好調","絶好調"];
+const condMark=(c,on)=>{
+  if(!c||!on)return "";
+  const v=clamp(condOf(c.id),COND_HURT,COND_MAX);
+  return '<i class="cnd c'+v+'" title="'+COND_NAME[v]+'">'+COND_MARK[v]+'</i>';
+};
 // ---------- 編成の見た目(自チームと相手で共有 → docs/03 §3.34) ----------
 // **自チームと相手を同じ形で見せる。** 違うのは触れるかどうかだけで、ピッチも控えも
 // CAPもセットプレーも同じ部品から作る。片方だけ直して見た目が食い違うのを防ぐ。
 
 /** ピッチの11人。位置は FORMATIONS が持つ % をそのまま使う。 */
-function pitchHtml(cards,form){
+function pitchHtml(cards,form,opts){
+  const cond=!!(opts&&opts.cond);
   return FORMATIONS[form].map(([sub,x,y],i)=>{
     const c=cards[i];
     return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
@@ -772,19 +785,21 @@ function pitchHtml(cards,form){
       // **立ち絵の右下に実効値**を出す。素のOVRを出すと、50%の選手のほうが
       // 大きく見えて「置き間違いのほうが強い」という逆の読みになる。
       +figHtml(c,"sl-fig",
-        '<b class="sl-ovr'+(c?effClass(c,sub):"")+'">'+(c?effOvr(c,sub):"+")+'</b>')
+        '<b class="sl-ovr'+(c?effClass(c,sub):"")+'">'+(c?effOvr(c,sub):"+")+'</b>'
+        +condMark(c,cond))
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
       +starRow(c)
     +'</div>';
   }).join("");
 }
 /** 控え。枠のポジションを持たないので適性は掛からず、素のOVRを出す(→docs/03 §3.17)。 */
-function benchHtml(cards){
+function benchHtml(cards,opts){
+  const cond=!!(opts&&opts.cond);
   const N=TUNING.squad.starters;
   return Array.from({length:TUNING.squad.bench},(_,k)=>{
     const c=cards[N+k];
     return '<div class="bn'+(c?"":" empty")+'" data-slot="'+(N+k)+'"'+(c?kitStyle(c):"")+'>'
-      +figHtml(c,"bn-fig")
+      +figHtml(c,"bn-fig",condMark(c,cond))
       +'<div class="bn-ovr">'+(c?c.ovr:"+")+'</div>'
       +'<div class="bn-name">'+(c?esc(shortName(c)):"空き")+'</div>'
       +starRow(c)
@@ -817,7 +832,7 @@ function renderDeck(){
     +(fit<raw?"　適性ロス −"+(raw-fit):"");
 
   // ピッチ上の11人。枠のポジション名の濃さが、そのまま**その枠への適性**を表す。
-  $("deckSlots").innerHTML=pitchHtml(cards,S.form);
+  $("deckSlots").innerHTML=pitchHtml(cards,S.form,{ cond:true });
   // 連携の線(→docs/03 §3.31)。**しきい値を超えた組だけ**を白い線で結ぶ。
   // 太さが段。誰と誰が噛み合っているかを、盤面の上でそのまま見せる(WCCF踏襲)。
   {
@@ -838,7 +853,7 @@ function renderDeck(){
 
 
   // 控え(交代要員)。先発と同じく**枠**なので、タップして差し替えられる。
-  $("deckBench").innerHTML=benchHtml(cards);
+  $("deckBench").innerHTML=benchHtml(cards,{ cond:true });
   $("deckBench").querySelectorAll(".bn").forEach(el=>{
     el.onclick=()=>openSlot(Number(el.dataset.slot));
   });
