@@ -1104,7 +1104,10 @@ const TUNING={
          gkDef:0.65, gkPow:0.20, gkTec:0.15,
          finStat:0.35, fkAccBase:0.62,
          accBase:0.30, accTec:0.45, accRange:0.55, rebound:0.30,
-         reboundH:0.95, reboundMax:4 },  // 詰める位置(ゴール前) / 連続の上限(安全網)
+         reboundH:0.95, reboundMax:4,
+         // GKのフィード(→docs/07 §7.18)。枠外とセーブのあと、**次の攻撃**が
+         // 守っていた側のGKから始まる。攻撃の回数は増えない(増やすと得点が膨らむ)
+         feed:0.55 },  // 詰める位置(ゴール前) / 連続の上限(安全網)
   // 各スコアに乗る揺らぎ rr() = min + random×span
   rng:{ min:0.60, span:0.80 },
   // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)。

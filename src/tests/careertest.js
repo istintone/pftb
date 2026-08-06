@@ -241,9 +241,13 @@ function runSeason() {
         bucket[b][p.role] = (bucket[b][p.role] || 0) + 1;
       }
     }
-    const share = (o, r) => (o[r] || 0) / (Object.values(o).reduce((a, b) => a + b, 0) || 1);
-    assert.ok(share(bucket.lo, "DF") > 0.5, "押されているとDF起点が主体: "
-      + (share(bucket.lo, "DF") * 100).toFixed(0) + "%");
+    const share = (o, ...rs) => rs.reduce((n, r) => n + (o[r] || 0), 0)
+      / (Object.values(o).reduce((a, b) => a + b, 0) || 1);
+    // **GKも後ろの起点**(→docs/07 §7.18)。ゴールキックは押されている場面で出るので、
+    // 「後ろから始まる」を見るなら DF と GK を合わせて数える
+    assert.ok(share(bucket.lo, "DF", "GK") > 0.5, "押されていると後ろから始まる: DF "
+      + (share(bucket.lo, "DF") * 100).toFixed(0) + "% + GK "
+      + (share(bucket.lo, "GK") * 100).toFixed(0) + "%");
     assert.ok(share(bucket.mid, "MF") > 0.5, "拮抗するとMF起点が主体: "
       + (share(bucket.mid, "MF") * 100).toFixed(0) + "%");
     assert.ok(share(bucket.hi, "FW") > 0.35, "勢いがあるとFW起点が増える: "
@@ -251,9 +255,60 @@ function runSeason() {
     // 遠い位置も低確率で選ばれる(決定は確率的 = 一意に決まらない)
     assert.ok(share(bucket.lo, "MF") > 0.02 && share(bucket.hi, "MF") > 0.02,
       "狙いから外れた位置も低確率で起点になる");
-    console.log("モメンタムOK 押され DF", (share(bucket.lo, "DF") * 100).toFixed(0) + "%",
+    console.log("モメンタムOK 押され DF+GK",
+      (share(bucket.lo, "DF", "GK") * 100).toFixed(0) + "%",
       "/ 拮抗 MF", (share(bucket.mid, "MF") * 100).toFixed(0) + "%",
       "/ 勢い FW", (share(bucket.hi, "FW") * 100).toFixed(0) + "%");
+  }
+
+  // ---------- GKのフィード(→docs/07 §7.18) ----------
+  // **枠外とセーブのあと、次の攻撃が守っていた側のGKから始まる。**
+  // 攻撃を1つ増やすのではなく、次の攻撃の入り口を決めるだけ(増やすと得点が膨らむ)。
+  {
+    const mk = id => { const r = E.clubRoster(4242, id);
+      return { cards: E.bestXI(r, "4-4-2"), form: "4-4-2", name: id }; };
+    const run = feed => {
+      const keep = E.TUNING.shot.feed;
+      E.TUNING.shot.feed = feed;
+      let poss = 0, restart = 0, gkOrigin = 0, gkPass = 0, shots = 0, goals = 0, n = 0;
+      for (let i = 0; i < 300; i++) {
+        const M = E.finishMatch(E.createMatch(mk("ger-4"), mk("esp-4"), i + 1));
+        n++;
+        let head = false;
+        for (const e of M.events) {
+          if (e.type === "possession") { poss++; head = true; if (e.restart) restart++; continue; }
+          if (["goal", "save", "miss", "block"].includes(e.type)) shots++;
+          if (e.type === "goal") goals++;
+          if (!e.by) continue;
+          if (head) { const p = E.playerOf(M, e.side, e.by);
+            if (p && p.role === "GK") gkOrigin++; head = false; }
+        }
+        for (const T of [M.home, M.away]) { const g = T.players.find(p => p.role === "GK");
+          if (g) gkPass += g.stat.pass || 0; }
+      }
+      E.TUNING.shot.feed = keep;
+      return { poss: poss / n, restart: restart / n, gkOrigin: gkOrigin / n,
+        gkPass: gkPass / n, shots: shots / n, goals: goals / n };
+    };
+    const off = run(0), on = run(E.TUNING.shot.feed);
+    // ① GK が起点になる。無効なら**ほとんど起点にならない**
+    assert.ok(on.gkOrigin > off.gkOrigin * 3, "フィードでGKが起点になる: "
+      + off.gkOrigin.toFixed(2) + " → " + on.gkOrigin.toFixed(2));
+    assert.ok(on.gkPass > 3, "GKにパスが記録される: " + on.gkPass.toFixed(2) + "本/試合");
+    // ② **攻撃の回数は増えない**。ここが崩れると得点が膨らむ
+    assert.ok(Math.abs(on.poss - off.poss) < 0.5, "攻撃の回数が増えていない: "
+      + off.poss.toFixed(1) + " → " + on.poss.toFixed(1));
+    assert.ok(on.shots < off.shots * 1.10, "シュートが増えていない: "
+      + off.shots.toFixed(1) + " → " + on.shots.toFixed(1));
+    assert.ok(on.goals < off.goals * 1.15, "得点が膨らんでいない: "
+      + off.goals.toFixed(2) + " → " + on.goals.toFixed(2));
+    // ③ ゴールキックでの再開が起きている
+    assert.ok(on.restart > 1, "ゴールキック再開が起きる: " + on.restart.toFixed(1) + "回/試合");
+    assert.strictEqual(off.restart, 0, "無効なら再開は起きない");
+    console.log("GKのフィードOK 起点", off.gkOrigin.toFixed(2), "→", on.gkOrigin.toFixed(2),
+      "/ GKのパス", on.gkPass.toFixed(1) + "本",
+      "/ 攻撃", off.poss.toFixed(1), "→", on.poss.toFixed(1), "(増えない)",
+      "/ 再開", on.restart.toFixed(1) + "回");
   }
 
   // ---------- 起点のチャンネル(→docs/07 §7.9) ----------

@@ -824,6 +824,7 @@ function stepMatch(M){
 
   if(t.half===2&&!M._ht){                                   // ハーフの切れ目
     M._ht=true;
+    M.restart=null;                                         // 後半はキックオフから(→§7.18)
     M.events.push({ min:45, half:1, at:false, side:null, type:"halftime",
       hg:H.score, ag:A.score });
   }
@@ -835,16 +836,19 @@ function stepMatch(M){
   M.mom*=TUNING.mom.decay;                                  // 勢いは毎ティック中立へ戻る
 
   // ① 支配率 → ② 攻撃権の抽選
+  // **前のティックが枠外/セーブで終わっていれば、支配率は引かない**(→docs/07 §7.18)。
+  // ゴールキックは相手ボールで再開するので、そこは抽選する場面ではない
   const mh=midPower(H)*TUNING.atk.homeAdv, ma=midPower(A);
   const share=mh/(mh+ma);
-  const T=rng()<share?H:A, D=T===H?A:H;
+  const restart=M.restart; M.restart=null;
+  const T=restart?(restart==="H"?H:A):(rng()<share?H:A), D=T===H?A:H;
   const mom=momOf(M,T);
   push({ side:T.side, type:"possession", share:Math.round(share*100)/100,
-    mom:Math.round(M.mom*100)/100 });
+    mom:Math.round(M.mom*100)/100, ...(restart?{ restart:1 }:{}) });
 
   // ③ 起点 — **モメンタムが高さを決め、高さが選手を決め、サブポジがチャンネルを決める**
-  //    以降は連鎖(→docs/07 §7.9)。
-  const origin=pickOrigin(rng,T,mom,t.min)||pickAttacker(rng,T);
+  //    以降は連鎖(→docs/07 §7.9)。ゴールキックのときだけ起点はGKで固定
+  const origin=restart?pickGK(T):(pickOrigin(rng,T,mom,t.min)||pickAttacker(rng,T));
   // 1回の攻撃で持ち回す状態。セットプレーを重ねすぎないための回数もここに持つ。
   const att={ sp:0, foulH:0 };
   // **ボールの位置は選手の枠とは別に持つ**。持ち運びで動くのはボールであって、
@@ -924,6 +928,18 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
   }
 }
 /**
+ * GKのフィード(→docs/07 §7.18)。**枠外(ゴールキック)とセーブ(キャッチ)のあと、
+ * 次の攻撃が守っていた側のGKから始まる**ように予約するだけ。
+ *
+ * **その場で連鎖を回さない。** 回すと1ティックに攻撃が2回入り、
+ * シュートも得点もそのぶん増える(実測 feed=1.0 で +44%)。
+ * ゴールキックは「攻撃が1つ増える」ことではなく「次の攻撃を誰がどこから始めるか」。
+ */
+function gkFeed(M,rng,D,from){
+  if(rng()<TUNING.shot.feed)M.restart=D.side;
+  return M.events.slice(from);
+}
+/**
  * シュートまで行ったときの決着(→docs/07 §7.9)。連鎖のどこからでも呼べる。
  *
  *   ブロック → 枠外 → GK → こぼれ球 → 詰め
@@ -960,7 +976,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
   if(!onTarget(rng,shooter,gk,tg.h,fin)){
     addMom(M,D.side,F.miss);
     push(Object.assign({ type:"miss" },base));
-    return M.events.slice(from);
+    return gkFeed(M,rng,D,from);                            // ゴールキック(→§7.18)
   }
   shooter.stat.sog=(shooter.stat.sog||0)+1;                // 枠内シュート
   gk.stat.inv++;
@@ -983,13 +999,14 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
   //    「こぼれる(30%) × 詰め合いに勝つ(約40%)」で1回あたり約12%なので、
   //    幾何級数的に収束する(期待値 +0.14本)。reboundMax は暴走を防ぐ安全網。
   if(d>=TUNING.shot.reboundMax||rng()>=TUNING.shot.rebound*skK(gk,"noRebound"))
-    return M.events.slice(from);
+    return gkFeed(M,rng,D,from);                            // GKが収めた(→§7.18)
   const chaser=pickShooter(rng,T)||shooter;
   const guard=matchupDefender(rng,1,tg.x,D);
   chaser.stat.inv++; if(guard)guard.stat.inv++;
   const got=guard?resolveRebound(rng,chaser,guard):true;
   push({ side:T.side, type:"rebound", by:chaser.c.id,
     vs:guard?guard.c.id:null, ok:got, depth:d, pos });
+  // 詰めに負けた = 守備側が拾った。GKが持っているとは限らないのでフィードは無し
   if(!got){ addMom(M,D.side,F.duelLost); return M.events.slice(from); }
   addMom(M,T.side,F.duelWon);
   return shoot(M,rng,push,T,D,chaser,null,{ h:TUNING.shot.reboundH, x:tg.x },from,d+1,A,null,min);

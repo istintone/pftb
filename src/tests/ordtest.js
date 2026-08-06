@@ -59,6 +59,9 @@ const E=setup({tmpName:"_tmp_ord.js"});
         for(const e of M.events){
           if(e.side!=="H"||!(e.type==="origin"||e.type==="pass"))continue;
           const p=E.playerOf(M,"H",e.by); if(!p)continue;
+          // **ゴールキックは采配で動かせない**(→docs/07 §7.18)。起点がGKに固定されるので、
+          // 数えると指示の効きが薄まって見える(実測 中央 5.1pp → 4.3pp)
+          if(p.role==="GK")continue;
           n++; if(p.x<38)l++; else if(p.x>62)r++; else c++;
         }
       }
