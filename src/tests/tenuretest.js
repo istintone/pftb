@@ -228,6 +228,11 @@ function runSeason(hand) {
     assert.strictEqual(champ.cupClosed.fame, cup.fame[0], "優勝の名声");
     assert.ok(cup.fame[0] > cup.fame[1] && cup.fame[1] > cup.fame[3],
       "勝ち上がるほど名声が増える: " + cup.fame.join(" > "));
+    // **勝ち抜いてこそ**。出るだけで貰えると、1試合あたりの実入りがリーグを上回る
+    assert.ok(cup.fame[0] >= cup.fame[3] * 10,
+      "初戦敗退は token: " + cup.fame[3] + " ↔ 優勝 " + cup.fame[0]);
+    assert.ok(cup.fame[0] / cup.rounds <= 400,
+      "1試合あたりが大きすぎない: " + (cup.fame[0] / cup.rounds).toFixed(0));
     assert.ok(S3.club.coins >= coin1 + cup.prize[0], "賞金が入る");
     assert.ok(C.cup.win && C.cup.champ, "優勝クラブとして残る: " + C.cup.champ);
     assert.strictEqual(E.cupPlaceName(cup, C.cup), "優勝", "成績の呼び名");
