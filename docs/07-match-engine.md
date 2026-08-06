@@ -838,4 +838,4 @@ runChain(M, rng, push, T, D, carrier, h, x, step, assist, att, from, min)
 
 ---
 
-[← 前: 6. デザインシステム](06-design-system.md) ｜ [↑ 索引](../SPEC.md)
+[← 前: 6. デザインシステム](06-design-system.md) ｜ [↑ 索引](../SPEC.md) ｜ [次: 8. スキル →](08-skills.md)
