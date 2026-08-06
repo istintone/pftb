@@ -262,6 +262,9 @@ function runSeason() {
     for (const [sub, list] of Object.entries(E.ORIGINS)) {
       assert.strictEqual(list.length, 3, sub + " のチャンネルは3種");
       assert.strictEqual(new Set(list.map(c => c.stat)).size, 3, sub + " の3種は別々の能力で決まる");
+      // **どのサブポジも pass を1枚以上持つ**(→docs/07 §7.8)。持たないと、
+      // そのサブポジは受けても味方に渡せない(CFが1試合9回受けてパス0本になっていた)
+      assert.ok(list.some(c => c.kind === "pass"), sub + " にパスの札が無い");
       for (const c of list) {
         assert.ok(E.STAT_KEYS.includes(c.stat), sub + "/" + c.id + " の stat が実在する能力");
         assert.ok(c.risk > 0 && c.risk < 1, sub + "/" + c.id + " の risk が 0〜1");

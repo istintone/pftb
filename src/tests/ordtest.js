@@ -50,9 +50,11 @@ const E=setup({tmpName:"_tmp_ord.js"});
 
   // --- レーン指示で、そのレーンの起点と受け手が増える ---
   {
+    // **N=80 では足りない**。中央の効きは 6pp 前後だが、80試合(1300件)だと 3〜6pp に振れて
+    // しきい値を割ることがある(実際に落ちた)。400試合で 左9.4 / 中6.3 / 右9.8pp に安定する。
     const lane=id=>{
       let l=0,c=0,r=0,n=0;
-      for(let i=0;i<80;i++){
+      for(let i=0;i<400;i++){
         const M=E.finishMatch(E.createMatch({...side(),order:id},side(),i+1));
         for(const e of M.events){
           if(e.side!=="H"||!(e.type==="origin"||e.type==="pass"))continue;

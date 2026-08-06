@@ -174,7 +174,7 @@ const SKILL_FX={
   // **GKを増やすときは「PKに触らない」ものを選ぶ**(→docs/08 §8.6①)。
   // PKは fixAcc で枠内が決まり close=false なので、下の4つはどれもPKに掛からない。
   // ここを外すと、GKの枚数を増やしただけでPK戦の決定率が落ちる(実測 49%→45%)。
-  "1対1の強さ":     { at:"gkFin",    grp:"close", s:1.16 },   // ゴール前の終点に強い(26%)
+  "1対1の強さ":     { at:"gkFin",    grp:"close", s:1.22 },   // ゴール前の終点に強い(26%)
   "角度の消し方":   { at:"offTarget",k:1.08 },   // 相手のシュートが枠を外れやすい
   "守備の統率":     { at:"marshal",  k:1.15 },   // **味方の寄せ**(coverOf の支援ぶん)が厚くなる
   "ビルドアップ":   { at:"mid",      k:1.15 },   // 後ろから組み立てて中盤の押し合いを助ける
@@ -182,7 +182,7 @@ const SKILL_FX={
   "対人守備":       { at:"counter", grp:"all",      s:1.05 },
   "カバーリング":   { at:"cover",   k:1.45 },     // 守備の厚み(coverOf)
   "空中戦":         { at:"aerial",  k:1.15 },     // 攻守とも自分の側に効く
-  "ロングパス":     { at:"origin",  grp:"long",     w:1.70, s:1.07 },
+  "ロングパス":     { at:"origin",  grp:"long",     w:1.70, s:1.06 },
   "オーバーラップ": { at:"origin",  grp:"carryOut", w:1.95, s:1.09 },
   "クロス":         { at:"origin",  grp:"cross",    w:1.85, s:1.08 },
   // **両層で発動する唯一の札**。起点でも守備でも効くので、1層あたりの s は小さい
@@ -193,33 +193,33 @@ const SKILL_FX={
   "正確なクロス":   { at:"origin",  grp:"cross",    s:1.13 },  // クロス(W型)の対
   "厳しい寄せ":     { at:"counter", grp:"press",    w:1.60, s:1.10 },  // タックル(S型)の対
   "推進力":         { at:"origin",  grp:"carryOut", s:1.15 },  // オーバーラップ(W型)の対
-  "正確なフィード": { at:"origin",  grp:"long",     s:1.10 },  // ロングパス(W型)の対
+  "正確なフィード": { at:"origin",  grp:"long",     s:1.09 },  // ロングパス(W型)の対
   // ---- MF ----
-  "スルーパス":     { at:"origin",  grp:"passTec",  w:2.35, s:1.11 },
-  "視野の広さ":     { at:"vision",  k:1.60, at2:"origin", grp:"pass", s:1.06 },
-  "キープ力":       { at:"origin",  grp:"carry",    s:1.04 },
+  "スルーパス":     { at:"origin",  grp:"passTec",  w:1.85, s:1.08 },
+  "視野の広さ":     { at:"vision",  k:1.60, at2:"origin", grp:"pass", s:1.05 },
+  "キープ力":       { at:"origin",  grp:"carry",    s:1.05 },
   "ボール奪取":     { at:"counter", grp:"tec",      w:1.60, s:1.10 },
   "ロングシュート": { at:"finish",  grp:"far",      w:2.00, s:1.07 },
-  "ドリブル":       { at:"origin",  grp:"carry",    w:1.60, s:1.03 },
+  "ドリブル":       { at:"origin",  grp:"carry",    w:1.55, s:1.04 },
   "展開力":         { at:"origin",  grp:"wide",     w:1.70, s:1.07 },
   "運動量":         { at:"stam",    k:0.80 },      // 消耗が緩やか
   "PKの名手":       { at:"pkKick",  k:1.25 },
   "セカンドボール": { at:"mid",     k:1.12 },     // 中盤の押し合い(支配率)に効く
-  "パスの精度":     { at:"origin",  grp:"passTec",  s:1.23 },  // スルーパス(W型)の対
+  "パスの精度":     { at:"origin",  grp:"passTec",  s:1.13 },  // スルーパス(W型)の対
   "ミドルの精度":   { at:"finish",  grp:"far",      s:1.08 },  // ロングシュート(W型)の対
   "サイドチェンジ": { at:"origin",  grp:"wide",     s:1.10 },  // 展開力(W型)の対
   "間合いの読み":   { at:"counter", grp:"tec",      s:1.14 },  // ボール奪取(W型)の対
   // ---- FW ----
   "決定力":         { at:"finish",  grp:"all",      s:1.06 },
   "フィニッシュ":   { at:"onTarget",k:1.12 },      // 枠に飛ぶ率
-  "ポストプレー":   { at:"recv",    k:1.60, at2:"origin", grp:"carry", s:1.04 },
+  "ポストプレー":   { at:"recv",    k:1.60, at2:"origin", grp:"carry", s:1.05 },
   "オフザボール":   { at:"start",   k:1.50, at2:"origin", grp:"spd",   s:1.07 },
-  "ドリブル突破":   { at:"origin",  grp:"carry",    s:1.04 },
-  "カットイン":     { at:"origin",  grp:"cut",      w:1.80, s:1.07 },
-  "ゴール前の嗅覚": { at:"finish",  grp:"close",    w:1.70, s:1.12 },
+  "ドリブル突破":   { at:"origin",  grp:"carry",    s:1.05 },
+  "カットイン":     { at:"origin",  grp:"cut",      w:1.85, s:1.08 },
+  "ゴール前の嗅覚": { at:"finish",  grp:"close",    w:1.70, s:1.13 },
   "詰めの速さ":     { at:"rebound", k:1.15 },
   "冷静なフィニッシュ":{ at:"finish",grp:"close",    s:1.22 },  // ゴール前の嗅覚(W型)の対
-  "切れ込みの鋭さ": { at:"origin",  grp:"cut",      s:1.11 },  // カットイン(W型)の対
+  "切れ込みの鋭さ": { at:"origin",  grp:"cut",      s:1.13 },  // カットイン(W型)の対
   "初速":           { at:"origin",  grp:"spd",      s:1.07 },  // スピード(W型)の対
   // ---- 汎用(ポジションを問わない) ----
   "ケガ耐性":       { at:"tough",   k:0.45 },   // 競り負けてもケガをしにくい
@@ -458,6 +458,10 @@ const DEFAULT_FORM="4-4-2";
 //          same=そのレーン / in=中央へ / out=サイドへ / switch=逆サイド /
 //          box=ペナルティエリア中央 / any=散らす(ばらつきが大きい)
 // risk と gain はトレードオフに置く。安全に繋ぐか、失っても一気に行くかが選手の個性になる。
+// **どのサブポジも pass を1枚以上持つ**(→docs/07 §7.8)。前線(OMF/CF/ST)が
+// carry と shot だけだった頃は、**前線に入った球がそこから味方に渡らなかった**
+// (CFは1試合に9.14回受けてパス0本)。スキル「ポストプレー」が捌く先を持たない、
+// という食い違いも起きていた。
 const ORIGINS={
   GK: [{id:"gkLong",  label:"ロングキック",   stat:"pow", risk:0.40, gain:0.55, to:0.60, kind:"pass",  lane:"any"},
        {id:"gkQuick", label:"速攻のスロー",   stat:"spd", risk:0.66, gain:0.30, kind:"pass",  lane:"out"},
@@ -477,7 +481,7 @@ const ORIGINS={
   CMF:[{id:"cmThru",  label:"スルーパス",     stat:"tec", risk:0.50, gain:0.55, to:0.82, kind:"pass",  lane:"same"},
        {id:"cmCarry", label:"持ち出し",       stat:"spd", risk:0.62, gain:0.35, kind:"carry", lane:"same"},
        {id:"cmOpen",  label:"展開",           stat:"pow", risk:0.72, gain:0.22, kind:"pass",  lane:"out"}],
-  OMF:[{id:"omTurnUp",label:"前向きの持ち出し", stat:"tec", risk:0.66, gain:0.38, kind:"carry", lane:"same"},
+  OMF:[{id:"omLast",  label:"ラストパス",     stat:"tec", risk:0.48, gain:0.58, to:0.90, kind:"pass",  lane:"box"},
        {id:"omTurn",  label:"反転ドリブル",   stat:"spd", risk:0.52, gain:0.50, kind:"carry", lane:"in"},
        {id:"omMid",   label:"ミドルシュート",   stat:"atk", risk:0.44, gain:0.62, kind:"shot",  lane:"same"}],
   LMF:[{id:"wmUp",    label:"サイドの駆け上がり", stat:"spd", risk:0.62, gain:0.38, kind:"carry", lane:"out"},
@@ -487,10 +491,10 @@ const ORIGINS={
        {id:"wmIn",    label:"絞り込み",       stat:"tec", risk:0.64, gain:0.34, kind:"carry", lane:"in"},
        {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55, to:0.90, kind:"pass",  lane:"box"}],
   CF: [{id:"cfPress",label:"前線からのプレス",stat:"def", risk:0.52, gain:0.55, kind:"carry", lane:"same"},
-       {id:"cfTurn", label:"反転からの持ち上がり",stat:"tec",risk:0.66, gain:0.30, kind:"carry", lane:"in"},
+       {id:"cfDrop", label:"落とし",         stat:"tec", risk:0.80, gain:0.10, kind:"pass",  lane:"same"},
        {id:"cfRun",   label:"裏抜け",     stat:"spd", risk:0.42, gain:0.62, kind:"carry", lane:"same"}],
   ST: [{id:"stBehind",label:"背後への抜け出し", stat:"spd", risk:0.44, gain:0.60, kind:"carry", lane:"same"},
-       {id:"stLoose", label:"こぼれ球への詰め",stat:"atk",risk:0.60, gain:0.38, kind:"carry", lane:"box"},
+       {id:"stHold",  label:"収めて預ける",   stat:"tec", risk:0.74, gain:0.14, kind:"pass",  lane:"same"},
        {id:"stStrike",label:"ダイレクトシュート",   stat:"pow", risk:0.40, gain:0.66, kind:"shot",  lane:"same"}],
   LWG:[{id:"wgLine",  label:"縦の突破",       stat:"spd", risk:0.52, gain:0.50, kind:"carry", lane:"out"},
        {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46, kind:"carry", lane:"in"},
@@ -1136,7 +1140,10 @@ const TUNING={
   //   decay   毎ティック中立へ戻る率(流れは移ろう)
   //   spread  モメンタムが起点の高さを動かす幅
   //   sigma   高さの選好のばらつき(大きいほどランダム寄り)
-  mom:{ kickK:60, kickCap:0.45, decay:0.90, cap:1.0, spread:0.55, sigma:0.18,
+  //   sigma … 起点の抽選が「モメンタムが決めた高さ」からどれだけ広く拾うか。
+  //           0.18 の頃は DMF が起点の半分(13.4/28)を独占し、CBは3.2しか無かった。
+  //           0.30 にすると CB 4.6 / DMF 9.3 になり、DMFが主役なのは保ったまま偏りが緩む
+  mom:{ kickK:60, kickCap:0.45, decay:0.90, cap:1.0, spread:0.55, sigma:0.30,
         // duelWon/duelLost … 連鎖の1マッチアップごとの増減(勢いの主な動力)
         goal:0.54, shot:0.16, save:0.19, block:0.14, miss:0.08,
         duelWon:0.09, duelLost:0.17 },
