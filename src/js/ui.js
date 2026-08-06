@@ -498,16 +498,9 @@ const closeSlot=()=>{ $("slotModal").classList.remove("on"); _slotIx=-1; };
 
 /** 枠に選手を入れる。他の枠にいた選手なら**その枠と入れ替える**。 */
 function setSlot(ix,cardId){
-  // **編成から外れる選手の連携は捨てる**(→docs/03 §3.31)。
-  // 積み上げたものが消えるので、消える前に必ず確認する。
-  const out=S.squad[ix];
-  const gone=out!=null&&cardId!==out&&(cardId==null||S.squad.indexOf(cardId)<0);
-  if(gone){
-    const n=bondTies(out), c=cardById(out);
-    if(n&&!confirm((c?shortName(c):"この選手")+" を編成から外します。"
-      +n+"人ぶんの連携がリセットされますが、よろしいですか?"))return;
-    if(n)bondDrop(out);
-  }
+  // **編成から外しても連携は消えない**(→docs/03 §3.31)。値は凍結され、戻せば続きから使える。
+  // 外した時点で捨てていた頃は、ケガや不調で一時的に外すだけで積み上げが飛び、
+  // 確認ダイアログを出しても「外せない」という圧にしかならなかった。
   if(cardId!=null){
     const at=S.squad.indexOf(cardId);
     if(at>=0&&at!==ix)S.squad[at]=S.squad[ix];   // 入れ替え(空きが出ない)

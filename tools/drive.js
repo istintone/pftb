@@ -1116,6 +1116,20 @@ const STEPS = [
         })()`));
         await ctx.wait(200);
         await ctx.shot("10j-deck-links");
+        // **外しても連携は消えない**(→docs/03 §3.31)。凍結され、戻せば続きから使える
+        ctx.log("  連携の維持:", await ctx.js(`(()=>{
+          const a=S.squad[0], b=S.squad[1];
+          const was=bondOf(a,b);
+          if(!was)throw new Error('検証に使える連携が無い');
+          setSlot(0,null);                      // 編成から外す
+          if(bondOf(a,b)!==was)throw new Error('外したら消えた: '+bondOf(a,b));
+          if(S.squad[0]!==null)throw new Error('外れていない');
+          setSlot(0,a);                         // 戻す
+          if(bondOf(a,b)!==was)throw new Error('戻したら変わった: '+bondOf(a,b));
+          if(document.querySelector('.pt-links .lk')===null&&bondTier(bondSum(a,b)))
+            throw new Error('線が消えている');
+          return '外す→'+bondOf(a,b)+' のまま ／ 戻す→'+bondOf(a,b)+' から続く';
+        })()`));
         await ctx.js("(()=>{S.career.bond={};renderDeck();})()");
         // 控えは**5枠が画面幅に収まる**(→docs/06 §6.15)
         ctx.log("  控えの並び:", await ctx.js(`(()=>{

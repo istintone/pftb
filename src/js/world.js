@@ -653,6 +653,9 @@ function trainAdd(id,k,n){
 // ---------- 連携(→docs/03 §3.31) ----------
 // **2人の組ごと**に積み上がる値。任期のあいだだけで、career を畳めば消える。
 // 組み合わせの数だけあるので、**順序を持たない1つのキー**にまとめて持つ。
+//
+// **編成とは独立に持つ**ので、外した選手の組は消えずに凍結される(積み上げは
+// bondMatch が現在の16人にしか掛けないため、勝手に止まる)。戻せば続きから積み上がる。
 const bondKey=(a,b)=>a<b?a+":"+b:b+":"+a;
 const bondOf=(a,b)=>(S.career.bond||{})[bondKey(a,b)]||0;
 /** その2人のあいだの合計(**お互いが持つぶん** = 組の値×2)。しきい値はこれで見る。 */
@@ -663,17 +666,6 @@ function bondAdd(a,b,n){
   const k=bondKey(a,b);
   return S.career.bond[k]=(S.career.bond[k]||0)+n;
 }
-/** その選手が持つ連携をすべて捨てる(編成から外れたとき)。 */
-function bondDrop(id){
-  const B=S.career.bond; if(!B)return 0;
-  let n=0;
-  for(const k of Object.keys(B))
-    if(k.split(":").some(x=>+x===id)){ delete B[k]; n++; }
-  return n;
-}
-/** その選手が値を持っている相手の数(確認ダイアログに出す)。 */
-const bondTies=id=>Object.keys(S.career.bond||{})
-  .filter(k=>k.split(":").some(x=>+x===id)&&S.career.bond[k]>0).length;
 /**
  * 1試合ぶんの積み上げ(→docs/03 §3.31)。**編成の16人の総当たり**に入る。
  * 国籍が同じ / コンビネーションのクラブが同じ なら、そのぶん厚くなる(最大3)。

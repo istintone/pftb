@@ -170,15 +170,21 @@ const E=setup({tmpName:"_tmp_train.js"});
     E.bondAdd(a1,b1,B.fail);
     assert.strictEqual(E.bondOf(a1,b1),B.great+B.ok,"失敗は増えない");
 
-    // --- 編成から外れたら、その選手の連携だけ消える ---
+    // --- 編成から外しても連携は消えない(→docs/03 §3.31) ---
+    // **凍結されるだけ**。戻せば続きから使え、外している間は積み上がらない。
+    const kept=E.bondOf(a1,b1);
     const other=[sq[2],sq[3]];
     E.bondAdd(other[0],other[1],20);
-    const ties=E.bondTies(a1);
-    assert.ok(ties>0,"外す選手は連携を持っている: "+ties+"人");
-    E.bondDrop(a1);
-    assert.strictEqual(E.bondOf(a1,b1),0,"外れた選手の連携は消える");
-    assert.strictEqual(E.bondOf(other[0],other[1]),20,"関係のない組は残る");
-    console.log("リセットOK",ties,"人ぶんを捨て、他の組は残る");
+    const sq0=S4.squad.slice();
+    S4.squad=S4.squad.map(id=>id===a1?null:id);      // 編成から外す
+    assert.strictEqual(E.bondOf(a1,b1),kept,"外しても値は残る");
+    E.bondMatch();                                    // 外れている間の1試合
+    assert.strictEqual(E.bondOf(a1,b1),kept,"外れている間は積み上がらない");
+    assert.ok(E.bondOf(other[0],other[1])>20,"編成に居る組はそのまま積み上がる");
+    S4.squad=sq0;                                     // 戻す
+    E.bondMatch();
+    assert.ok(E.bondOf(a1,b1)>kept,"戻せば続きから積み上がる");
+    console.log("連携の維持OK 外す→凍結("+kept+") / 戻す→"+E.bondOf(a1,b1)+" と続きから");
 
     // --- しきい値の段 ---
     assert.strictEqual(E.bondTier(B.t1),0,"しきい値ちょうどではまだ上がらない");
