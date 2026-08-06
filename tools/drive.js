@@ -81,6 +81,15 @@ const STEPS = [
         "getComputedStyle(document.getElementById('helpTab')).display"));
     const fonts = await ctx.js(`(async()=>{await document.fonts.ready;return [...document.fonts].map(f=>f.family+':'+f.status).join(', ')})()`);
     ctx.log("フォント:", fonts);
+    // **どのビルドを見ているか**が分かること(→SPEC.md)
+    ctx.log("  版の表記:", await ctx.js(`(()=>{
+      const t=document.getElementById('tFoot').textContent;
+      if(t.indexOf('v'+VERSION)<0)throw new Error('版が出ていない: '+t);
+      if(t.indexOf('save v'+SAVE_VER)<0)throw new Error('セーブの形式が出ていない: '+t);
+      const r=document.getElementById('tFoot').getBoundingClientRect();
+      if(r.width<=0||r.bottom>innerHeight)throw new Error('画面の外にある');
+      return t;
+    })()`));
     await ctx.shot("01-title");
   }],
   ["就任先の選択(名声0で届く範囲)", async ctx => {

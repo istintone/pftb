@@ -21,7 +21,9 @@ function setupTitle(exists){
   const start=document.getElementById("tStart"), menu=document.getElementById("tMenu");
   start.style.display=exists?"none":"";
   menu.style.display=exists?"flex":"none";
-  document.getElementById("tFoot").textContent="© P-FOOTBALL";
+  // **どのビルドを見ているか**が分かるように、版とセーブの形式を添える(→SPEC.md)
+  document.getElementById("tFoot").textContent=
+    "© P-FOOTBALL　v"+VERSION+" · save v"+SAVE_VER;
 
   const begin=async()=>{
     await newGame();                     // 世界のシードをここで固定する
