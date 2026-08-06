@@ -507,13 +507,14 @@ const STEPS = [
       const nm=document.querySelector('.pc-name .awk');
       const star=nm?nm.textContent:'';
       if(star.length!==trainStar(id))throw new Error('★の数が合わない: "'+star+'"');
-      const box=document.querySelector('.cm-awk');
-      if(!box)throw new Error('覚醒の内訳が出ていない');
+      // 内訳は**バーの右の★**で読む(→docs/03 §3.30)。枠に文字で書き出さない
       if(cardById(id).tec!==tec0)throw new Error('カードの数値が変わっている');
-      const shown=[...document.querySelectorAll('.bars .bar')]
+      const tec=[...document.querySelectorAll('.bars .bar')]
         .find(b=>b.textContent.indexOf('TEC')===0);
+      if(tec.querySelector('s').textContent!=='★')
+        throw new Error('TECの★が1つになっていない');
       S.career.train={};
-      return '★'+star.length+' ／ 表示 '+tec0+' のまま ／ '+box.textContent.trim();
+      return '★'+star.length+' ／ 表示 '+tec0+' のまま ／ 内訳はバー右の★';
     })()`));
     await ctx.js("(()=>{S.career.chat=null;show('season');})()");
     await ctx.wait(200);
@@ -1282,29 +1283,52 @@ const STEPS = [
           return ([...new Set(g.map(e=>e.textContent))].join(' / ')||'ホロの段が無い')
             +' / '+g.length+'枚 / 選手z='+za+' 文字z='+zs;
         })()`));
-        // 経験点は**線だけ**で見せる(→docs/03 §3.30)。数字を並べると能力に
-        // 足されているように読める
+        // 経験点は**バーそのものを左から塗って**見せる(→docs/03 §3.30)。数字を並べると
+        // 能力に足されているように読め、細い線＋添え書きは説明しないと伝わらなかった
         ctx.log("  経験点の見え方:", await ctx.js(`(()=>{
           const id=S.player.coll[0]&&S.player.coll[0].id;
           if(!id)throw new Error('手持ちカードが無い');
+          const body=document.getElementById('cardModalBody');
+          const bar=()=>[...body.querySelectorAll('.bar')].find(b=>b.textContent.indexOf('TEC')===0);
           S.career.train={}; trainAdd(id,'tec',9);
           openCard(cardById(id));
-          const body=document.getElementById('cardModalBody');
           if(body.className.indexOf('holo')>=0)
             throw new Error('詳細シートにホロが掛かっている: '+body.className);
-          if(body.querySelector('.bar b em'))throw new Error('能力の隣に +N が出ている');
+          if(body.querySelector('.cm-note'))throw new Error('添え書きが残っている');
+          if(body.querySelector('.cm-awk'))throw new Error('覚醒の枠が残っている');
           const u=body.querySelector('.bar .tr u');
-          if(!u)throw new Error('経験点の線が出ていない');
-          const tec=[...body.querySelectorAll('.bar')].find(b=>b.textContent.indexOf('TEC')===0);
-          const num=tec.querySelector('b').textContent.trim();
+          if(!u)throw new Error('経験点の塗りが出ていない');
+          if(u.style.width!=='90%')throw new Error('経験点9/10が90%になっていない: '+u.style.width);
+          if(!body.querySelector('.bar .tr em'))throw new Error('10目盛りが無い');
+          const num=bar().querySelector('b').textContent.trim();
           if(num!==String(cardById(id).tec))
             throw new Error('能力欄に余計な文字がある: "'+num+'"');
-          if(!body.querySelector('.cm-note'))throw new Error('線の説明が無い');
-          const w=u.style.width;
+          if(bar().querySelector('.tr.rdy'))throw new Error('9点で満タンの光が出ている');
+          if(body.querySelector('.bars s'))throw new Error('★が無いのに枠が出ている');
+          // 満タン=覚醒できる合図。バーが光る
           document.getElementById('cardModalClose').click();
-          S.career.train={};
-          return '線のみ('+w+') / 数字は '+num+'(経験点9は数字にしない)';
+          trainAdd(id,'tec',1); openCard(cardById(id));
+          if(!bar().querySelector('.tr.rdy'))throw new Error('満タンなのに光っていない');
+          if(bar().querySelector('.tr u').style.width!=='100%')throw new Error('満タンで塗り切れていない');
+          // 覚醒すると★がバーの右に伸び、経験点は0に戻る
+          document.getElementById('cardModalClose').click();
+          trainAwake(id,'tec'); trainAwake(id,'tec'); openCard(cardById(id));
+          const st=bar().querySelector('s');
+          if(!st||st.textContent!=='★★')throw new Error('★がバーの右に出ていない: '+(st&&st.textContent));
+          const atk=[...body.querySelectorAll('.bar')].find(b=>b.textContent.indexOf('ATK')===0);
+          if(!atk.querySelector('s'))throw new Error('★の枠が段で揃っていない');
+          if(atk.querySelector('s').textContent!=='')throw new Error('覚醒していない能力に★が出ている');
+          return '9点=90%塗り / 満タンで発光 / ★★はTECの右だけ';
         })()`));
+        // **目で見る**: 塗りかけ・満タンの発光・★の並びが1枚に収まった状態を撮る
+        await ctx.js(`(()=>{
+          const id=S.player.coll[0].id;
+          trainAdd(id,'atk',10); trainAdd(id,'spd',4); trainAdd(id,'def',7);
+          openCard(cardById(id));
+        })()`);
+        await ctx.wait(400);
+        await ctx.shot("09g-exp-bar");
+        await ctx.js("(()=>{document.getElementById('cardModalClose').click();S.career.train={};})()");
         await ctx.wait(200);
         // 通常のカードでも詳細が開くこと
         await ctx.js("document.querySelector('#cardsGrid [data-card]').click()");

@@ -639,7 +639,8 @@ body{
 .bars{ margin-bottom:16px }
 .bar{ display:flex; align-items:center; gap:8px; margin:7px 0 }
 .bar > span{ width:32px; font-size:10px; color:oklch(0.60 0.02 255) }
-.bar .tr{ position:relative; flex:1; height:6px; border-radius:3px; overflow:hidden; background:oklch(0.28 0.02 255) }
+/* 目盛りを刻むので 6px では潰れる。8px あれば 10 分割が数えられる */
+.bar .tr{ position:relative; flex:1; height:8px; border-radius:4px; overflow:hidden; background:oklch(0.28 0.02 255) }
 .bar i{ display:block; height:100%; background:var(--accent) }
 .bar b{ min-width:22px; text-align:right; font:400 10px/1 var(--f-mono); color:var(--text-2) }
 .skills{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px }
@@ -1441,22 +1442,36 @@ body{
 .tbl tr.up td:first-child{ box-shadow:inset 3px 0 0 var(--accent) }
 .tbl tr.down td:first-child{ box-shadow:inset 3px 0 0 oklch(0.60 0.16 25) }
 #standNote{ margin-top:8px }
-/* 訓練の経験点(→docs/03 §3.30)。能力バーの上に細い線で重ね、数値の右に +N を添える */
-/* 経験点はバーの中に**下敷きの線**として重ねる(トラックは overflow:hidden) */
-.bar .tr u{
-  position:absolute; left:0; bottom:0; height:2px;
-  background:oklch(0.72 0.14 150);
+/* 訓練の経験点(→docs/03 §3.30)。**バーそのものを左から緑に塗る**。
+   トラックは 10 目盛りに割ってあるので、いくつ塗れたか=経験点がそのまま読める。
+   細い線＋添え書きでやっていた頃は、説明を書かないと伝わらなかった。 */
+.bar .tr u{ position:absolute; inset:0 auto 0 0; background:oklch(0.70 0.16 150) }
+/* 10目盛り。塗りの上に敷いて、どこまで来たかを数えられるようにする */
+.bar .tr em{
+  position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(90deg,
+    transparent 0 calc(10% - 1px), oklch(0.16 0.02 255 / .9) calc(10% - 1px) 10%);
 }
-.cm-note{ margin-top:-6px; margin-bottom:12px; font-size:10px; color:oklch(0.68 0.12 150) }
+/* **満タン=覚醒できる合図**。文字では言わず、緑の発光だけで知らせる(チャットの枠と同じ光) */
+.bar .tr.rdy{ animation:barRdy 1.8s ease-in-out infinite }
+@keyframes barRdy{
+  0%,100%{ box-shadow:0 0 4px 0 oklch(0.75 0.16 150 / .30) }
+  50%    { box-shadow:0 0 12px 2px oklch(0.82 0.18 150 / .75) }
+}
+@media (prefers-reduced-motion:reduce){
+  .bar .tr.rdy{ animation:none; box-shadow:0 0 10px 1px oklch(0.82 0.18 150 / .60) }
+}
+/* 覚醒の★はバーの**続き**として右に伸びる(→docs/03 §3.30)。
+   幅を固定して段を揃えるのは、★の無い能力との差が「増えた分」に見えるようにするため。
+   ★を1つも持たないカードでは枠ごと出さない(空白だけが並ぶので)。 */
+.bars.has-awk .bar s{
+  flex:0 0 44px; text-decoration:none;
+  font-size:10px; line-height:1; letter-spacing:-1px; color:var(--rar);
+}
 /* 覚醒の★(→docs/03 §3.30)。**文字としての★**なので色は周りに合わせる
    (カードでは名前と同じ色、一覧では白のまま)。 */
 .awk{ font-style:normal; margin-left:3px; font-size:.78em; color:inherit; letter-spacing:-1px }
 .news-x{ color:oklch(0.72 0.15 25) }      /* 治療中の選手名 */
-.cm-awk{
-  margin-top:8px; padding:8px 10px; border-radius:8px;
-  background:oklch(0.24 0.05 85 / .35); border:1px solid var(--accent-dim);
-  font-size:11px; color:var(--accent);
-}
 /* クラブチャット(→docs/06 §6.23)。モックの秘書チャットを踏襲した吹き出し */
 .ch-head{
   display:flex; align-items:center; gap:10px;
@@ -1527,18 +1542,20 @@ body{
 }
 .ch-op:active{ background:oklch(0.26 0.05 85) }
 .ch-op .ch-os{ display:block; font-size:10px; color:var(--text-dim); margin-top:3px }
-/* **覚醒の合図は枠の光だけ**(→docs/03 §3.30)。「覚醒」と書くと種明かしになる */
-.ch-op.hot{ border-color:var(--accent); animation:awkGlow 1.8s ease-in-out infinite }
+/* **覚醒の合図は枠の光だけ**(→docs/03 §3.30)。「覚醒」と書くと種明かしになる。
+   光は**緑**。カード詳細の満タンのバーと同じ色にして、同じ合図だと分かるようにする
+   (地のゴールドと同じ色で光らせても、ただ強調しているようにしか見えない)。 */
+.ch-op.hot{ border-color:oklch(0.72 0.16 150); animation:awkGlow 1.8s ease-in-out infinite }
 @keyframes awkGlow{
-  0%,100%{ box-shadow:0 0 6px 0 oklch(0.78 0.14 85 / .22);
-           background:oklch(0.24 0.04 85 / .28) }
-  50%    { box-shadow:0 0 20px 3px oklch(0.80 0.15 85 / .62);
-           background:oklch(0.30 0.07 85 / .55) }
+  0%,100%{ box-shadow:0 0 6px 0 oklch(0.75 0.14 150 / .22);
+           background:oklch(0.24 0.04 150 / .28) }
+  50%    { box-shadow:0 0 20px 3px oklch(0.82 0.18 150 / .62);
+           background:oklch(0.30 0.07 150 / .55) }
 }
 /* 止まっていても分かるよう、常時ぶんの光は残す */
 @media (prefers-reduced-motion:reduce){ .ch-op.hot{ animation:none;
-  box-shadow:0 0 16px 2px oklch(0.80 0.15 85 / .50);
-  background:oklch(0.28 0.06 85 / .45) } }
+  box-shadow:0 0 16px 2px oklch(0.82 0.18 150 / .50);
+  background:oklch(0.28 0.06 150 / .45) } }
 /* 段のタグ(カード見本と同じ)。名前の前に置く */
 .ch-op .gl-abbr{ margin-right:7px; vertical-align:1px }
 /* 選手を選ぶときだけ2列にして、名前とポジションを並べる */

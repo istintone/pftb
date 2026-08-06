@@ -651,21 +651,21 @@ function openCard(x){
         +'<div><span>得意ポジション</span><b>'+c.subs.join(" / ")+'</b></div>'
       +'</div>'
       +'<div class="cm-k">ABILITY <span class="cm-cap">/ '+STAT_MAX+'</span></div>'
-      // 訓練の経験点(→docs/03 §3.30)は**線だけ**で見せる。数字を「20 +9」と並べると
-      // 能力に足されているように読めるが、経験点は覚醒の材料であって能力ではない。
-      +'<div class="bars">'+STAT_KEYS.map(k=>{
+      // 訓練の経験点(→docs/03 §3.30)は**バーそのものを左から緑に塗って**見せる。
+      // トラックは 10 目盛りに割ってあり、ぜんぶ緑になった=経験点が満ちた=覚醒できる。
+      // 説明文はいらない(添え書きが要る時点で見せ方が負けている)。
+      // 覚醒した回数は**バーの右に★**として伸びる。20 のバーの先に★が3つ並べば 23。
+      +'<div class="bars'+(trainStar(c.id)?' has-awk':'')+'">'+STAT_KEYS.map(k=>{
         const ex=trainExp(c.id,k), need=TUNING.train.need;
         return '<div class="bar"><span>'+STAT_LABEL[k]+'</span>'
-        +'<div class="tr"><i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i>'
-        +(ex?'<u style="width:'+Math.min(100,Math.round(ex/need*100))+'%"></u>':"")+'</div>'
+        +'<div class="tr'+(ex>=need?' rdy':'')+'">'
+          +'<i style="width:'+Math.round(c[k]/STAT_MAX*100)+'%"></i>'
+          +(ex?'<u style="width:'+Math.min(100,Math.round(ex/need*100))+'%"></u>':"")
+          +'<em></em>'   // 10目盛り。経験点がどこまで来たかを数えられるようにする
+        +'</div>'
+        +(trainStar(c.id)?'<s>'+"★".repeat(trainUp(c.id,k))+'</s>':"")
         +'<b>'+c[k]+'</b></div>';
       }).join("")+'</div>'
-      +(STAT_KEYS.some(k=>trainExp(c.id,k))
-        ?'<div class="cm-note">下の細い線は訓練の経験点。'
-          +'いっぱいになると覚醒のチャンスが来ます</div>':"")
-      +(trainStar(c.id)?'<div class="cm-awk">覚醒 '+"★".repeat(trainStar(c.id))
-        +' ／ '+STAT_KEYS.filter(k=>trainUp(c.id,k)).map(k=>STAT_LABEL[k]+" +"+trainUp(c.id,k)).join(" ")
-        +'</div>':"")
       +'<div class="cm-k">SKILLS</div>'
       // 効果は**タップで浮かせる**(→docs/03 §3.21)。常に添えると説明が4行並んで、
       // 肝心の「何を持っているか」が読み取れなくなる
