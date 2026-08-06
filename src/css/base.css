@@ -1627,6 +1627,8 @@ body{
 .ev-w b{ margin-left:6px; font:600 10px/1 var(--f-mono) }
 .ev-w.up b{ color:oklch(0.78 0.15 150) }
 .ev-w.dn b{ color:oklch(0.72 0.15 25) }
+/* 名声は評価と同じ札に添える(→docs/03 §3.9)。同じ出来事から来ていると読めるように */
+.ev-w s{ margin-left:6px; text-decoration:none; font-size:9px; color:var(--text-dim) }
 /* 相手の下見へ行ける行(→docs/03 §3.34)。**押せることだけ**を示す。
    矢印を足すと対戦表の右端(スコア・「次戦」)とぶつかるので、触れたときの反応で伝える。 */
 .cal.foe,.br-row.foe,.tbl tr.foe{ cursor:pointer }

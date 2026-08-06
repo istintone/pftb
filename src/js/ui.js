@@ -2650,16 +2650,19 @@ async function openOwner(){
   show("board",{push:1});
 }
 /** 評価の見え方(→docs/03 §3.9)。**数字だけを置かない。** 何で動いたかを添える。 */
+// **名声も同じ表から出る**(→docs/03 §3.9)ので、理由の札に両方を並べる。
+// 評価と名声が同じ出来事から来ていることが、札を見れば分かる
 const EVAL_WHY={ upset:["格上を倒した",1], slip:["格下に取りこぼした",-1],
-  lChamp:["リーグ優勝",1], cChamp:["カップ優勝",1], cOut1:["カップ初戦敗退",-1] };
-const EVAL_PT={ upset:"upset", slip:"slip", lChamp:"lChamp", cChamp:"cChamp", cOut1:"cOut1" };
+  lChamp:["リーグ優勝",1], promote:["昇格",1],
+  cChamp:["カップ優勝",1], cOut1:["カップ初戦敗退",-1] };
 function ownerRating(evLog){
   const E=TUNING.eval, v=Math.round(S.club.eval);
   const need=E.extendNeed;
   const why=Object.keys(EVAL_WHY).filter(k=>evLog&&evLog[k]).map(k=>{
-    const [lab,sign]=EVAL_WHY[k], n=evLog[k], pt=E[EVAL_PT[k]]*n*sign;
+    const [lab,sign]=EVAL_WHY[k], n=evLog[k], pt=E[k]*n*sign;
     return '<span class="ev-w'+(sign>0?" up":" dn")+'">'+lab+(n>1?" ×"+n:"")
-      +'<b>'+(pt>0?"+":"")+pt+'</b></span>';
+      +'<b>'+(pt>0?"+":"")+pt+'</b>'
+      +(E.fameFor.includes(k)?'<s>名声 +'+fmtNum(E[k]*n*E.fameK)+'</s>':"")+'</span>';
   }).join("");
   return '<div class="ev-box"><div class="ev-h"><span class="eyebrow">OWNER RATING</span>'
     +'<b class="'+(v>=need?"ok":"")+'">'+esc(evalLabel(S.club.eval))+'</b></div>'
@@ -2739,7 +2742,7 @@ function renderBoard(){
       +(m.promoted?"（昇格 +"+fmtNum(TUNING.reward.season.promote)+"）":"")
       +(j.rank===1?"（優勝 +"+fmtNum(TUNING.reward.season.champ)+"）":""))
     +kv("所持コイン",fmtNum(S.club.coins))
-    +kv("名声",(j.fameGain>=0?"+":"")+fmtNum(j.fameGain)+" ／ 通算 "+fmtNum(S.player.fame))
+    +kv("名声","+"+fmtNum(j.fameGain)+" ／ 通算 "+fmtNum(S.player.fame))
     +kv("任期","残り "+tenureLeft()+" 節（上限 "+S.career.limit+"）")
     +ownerRating(j.evLog)
     +(S.career.over?'<div class="lg" style="margin-top:10px">任期が明けました。次のクラブを選べます。</div>':"");

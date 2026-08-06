@@ -322,6 +322,7 @@ function startTenure(clubId){
     exp:0,                                                   // チーム熟練度(→§3.7)
     eval:TUNING.eval.start,                                  // オーナーの評価(→§3.9)
     evLog:{},                                                // 今季なにで評価が動いたか
+    fameSeason:0,                                            // 今季ぶんの名声(総括で見せる)
     loan:clubRoster(seed,clubId),                            // 任期中だけ借りる所属選手
     expect:0,
   };
@@ -508,7 +509,11 @@ function refitSquad(form){
 //
 // 評価は**積み上げ式**で 0〜100 を動く。動くのは次の場面だけ:
 //   ・格上に勝った(+upset) / 格下に負けた(-slip)
-//   ・リーグ優勝(+lChamp) / カップ優勝(+cChamp) / カップ初戦敗退(-cOut1)
+//   ・リーグ優勝(+lChamp) / 昇格(+promote) / カップ優勝(+cChamp) / カップ初戦敗退(-cOut1)
+//
+// **名声はこの表に相乗りする**(→§3.9)。覚えることは2つだけ:
+//   ① 評価が上がる出来事は名声も生む(評価 × fameK)
+//   ② 評価が下がる出来事は名声を動かさない(他人の期待を外して世間の評判は落ちない)
 /** 評価を動かす。**何で動いたか**をシーズンごとに数えておき、総括で言葉にする。 */
 function evalAdd(reason,n){
   if(!S.club||!n)return 0;
@@ -517,7 +522,18 @@ function evalAdd(reason,n){
   S.club.eval=clamp(before+n,0,E.max);
   if(!S.club.evLog)S.club.evLog={};
   S.club.evLog[reason]=(S.club.evLog[reason]||0)+1;
+  // **名声は評価の頭打ちに引きずられない**。評価が100で止まっていても偉業は偉業で、
+  // 経歴には残る。だから clamp 後の差分ではなく、**元の n** から引く。
+  // カップは順位ぶんの表を別に持つので、ここでは名声を生まない(→closeCup)
+  if(n>0&&E.fameFor.includes(reason))fameAdd(n*E.fameK);
   return S.club.eval-before;
+}
+/** 名声を足す。**減らさない**(→§3.9)。シーズンぶんは総括で見せるので数えておく。 */
+function fameAdd(n){
+  if(!n||n<0)return 0;
+  S.player.fame+=n;
+  if(S.club)S.club.fameSeason=(S.club.fameSeason||0)+n;
+  return n;
 }
 /**
  * 1試合ぶんの評価。**格が違う相手との結果だけ**が動かす。
@@ -1042,8 +1058,11 @@ function closeCup(){
   const coin=cup.prize[Math.min(dist,cup.prize.length-1)];
   S.club.coins+=coin;
   // **名声も完了節に入る**(→docs/03 §3.9)。カップを勝ち上がるほど次の就任先が開く
+  // **カップだけは順位ぶんの表を持つ**(→§3.9)。勝ち上がるほど増えるという、
+  // 評価には無い勾配。§3.23 で1試合あたりの実入りを実測して調整した値なので、
+  // 評価の表に吸収させない
   const fame=(cup.fame||[])[Math.min(dist,(cup.fame||[]).length-1)]||0;
-  S.player.fame=Math.max(0,S.player.fame+fame);
+  fameAdd(fame);
   if(win){
     // 任期カレンダーの決勝の行に王冠を立てる
     const last=[...S.career.log].reverse().find(e=>e.comp==="cup"&&e.cup===cup.id);
@@ -1228,10 +1247,12 @@ function judgeSeason(){
   const evLog=S.club.evLog||{};
   // **リーグ優勝は評価に乗る**(→§3.9)。目標達成は金の話で、優勝は内容の話
   if(rank===1)evalAdd("lChamp",TUNING.eval.lChamp);
-  const fameGain=Math.round(diff*140+(rank===1?900:0));
-  S.player.fame=Math.max(0,S.player.fame+fameGain);
   // **順位が確定したこの時点で入れ替えを行う**。世界のほうも同時に動く
   const move=applyPromotion(rank);
+  // 昇格も内容の話。金(昇格報酬)とは別に、評価と経歴に残る
+  if(move.promoted)evalAdd("promote",TUNING.eval.promote);
+  // 名声は**評価に相乗りして季の途中で積んである**(→evalAdd)。ここでは合計を渡すだけ
+  const fameGain=S.club.fameSeason||0;
   // **シーズン末の賞金**(→docs/03 §3.24)。昇格に厚く積み、補強の元手にする。
   // 目標を上回れば一時金、届かなければ減俸(→§3.9)。合計は0を下回らせない
   const R=TUNING.reward.season, n=TUNING.league.clubs;
@@ -1272,6 +1293,6 @@ function startNextSeason(){
   W.matchday=1;
   // 目標順位は**総括で告げた値**をそのまま使う(judgeSeason が確定させている)。
   // ここで引き直すと、オーナーが言った数字と実際の目標がずれる
-  S.club.evLog={};
+  S.club.evLog={}; S.club.fameSeason=0;
   S.player.history.push({ season:W.season, clubId:S.club.id, div:W.div, result:"在任" });
 }

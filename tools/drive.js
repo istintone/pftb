@@ -1656,6 +1656,30 @@ const STEPS = [
       "/", await ctx.js("document.getElementById('boardHead').textContent"),
       "/", await ctx.js("document.querySelector('#boardMove b').textContent"),
       "/ オーナー:", await ctx.js("document.querySelector('#boardOwner b').textContent"));
+    // 名声は**評価と同じ表から出る**(→docs/03 §3.9)。減らないこと・札に両方出ること
+    ctx.log("  名声の相乗り:", await ctx.js(`(()=>{
+      const E=TUNING.eval, log=_review.j.evLog||{};
+      if(_review.j.fameGain<0)throw new Error('名声が減っている: '+_review.j.fameGain);
+      const ws=[...document.querySelectorAll('.ev-w')];
+      ws.filter(w=>w.classList.contains('up')).forEach(w=>{
+        if(!w.querySelector('s'))throw new Error('上がった札に名声が無い: '+w.textContent);
+      });
+      ws.filter(w=>w.classList.contains('dn')).forEach(w=>{
+        if(w.querySelector('s'))throw new Error('下がった札に名声が付いている: '+w.textContent);
+      });
+      const want=E.fameFor.reduce((n,k)=>n+(log[k]||0)*E[k]*E.fameK,0);
+      if(_review.j.fameGain<want)throw new Error('名声が足りない: '+_review.j.fameGain+' < '+want);
+      // 全種類の札を1枚ずつ出して、名声が付く/付かないの割り振りを確かめる
+      const all={ upset:2, slip:1, lChamp:1, promote:1, cChamp:1, cOut1:1 };
+      document.getElementById('boardBox').innerHTML=ownerRating(all);
+      const got=[...document.querySelectorAll('.ev-w')].map(w=>
+        w.textContent.replace(/\s+/g,' ').trim());
+      const cc=[...document.querySelectorAll('.ev-w')]
+        .find(w=>w.textContent.indexOf('カップ優勝')===0);
+      if(cc.querySelector('s'))throw new Error('カップ優勝に名声が二重に付いている');
+      renderBoard();                       // 検査用に差し替えた中身を戻してから撮る
+      return '季の名声 +'+_review.j.fameGain+' ／ 札: '+got.join(' / ');
+    })()`));
     await ctx.shot("15-board-review");
   }],
   ["昇降格して次のシーズンへ", async ctx => {

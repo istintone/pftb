@@ -66,7 +66,17 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   const fameBefore = S.player.fame, divBefore = S.world.div, clubBefore = S.club.id;
   const j = E.judgeSeason();
   assert.ok(typeof j.rank === "number" && j.move, "審判の結果が返る");
-  assert.strictEqual(S.player.fame, Math.max(0, fameBefore + j.fameGain), "名声が増減する");
+  // 名声は**評価に相乗りして季の途中で積む**(→docs/03 §3.9)ので、
+  // j.fameGain は季の合計。判定の中で増えるのは優勝と昇格のぶんだけ
+  assert.ok(S.player.fame >= fameBefore, "名声は減らない");
+  assert.strictEqual(j.fameGain, S.club.fameSeason, "季の名声の合計が返る");
+  {
+    const E0 = E.TUNING.eval;
+    const want = Object.keys(j.evLog).reduce((n, k) =>
+      n + (E0[k] > 0 && ["upset", "lChamp", "promote", "cChamp"].includes(k)
+        ? E0[k] * j.evLog[k] * E0.fameK : 0), 0);
+    assert.ok(j.fameGain >= want, "評価が上がった出来事のぶんは必ず入っている");
+  }
   assert.strictEqual(S.player.history.length, 1, "キャリア履歴が残る");
   assert.ok(["昇格", "残留", "降格"].includes(S.player.history[0].result), "在任結果が記録される");
   // **クラブは替わらない**。替わるのは部だけ(→§3.24)

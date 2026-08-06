@@ -952,10 +952,14 @@ const TUNING={
   // オーナーの評価(→docs/03 §3.9)。**積み上げ式**で 0〜100 を動く。
   //   gap        … これ以上の総合力差があれば「格が違う」と見なす
   //   upset/slip … 格上に勝った / 格下に負けた
-  //   lChamp..   … リーグ優勝 / カップ優勝 / カップ初戦敗退
+  //   lChamp..   … リーグ優勝 / カップ優勝 / カップ初戦敗退 / 昇格
   //   extendNeed … 第80節の延命イベントで契約が伸びる評価
+  //   fameK      … **名声はこの倍率で評価に相乗りする**(→docs/03 §3.9)
+  //   fameFor    … そのうち名声を生む出来事。**カップは順位ぶんの表を別に持つ**ので
+  //                 ここに入れない(入れると優勝で名声が二重に入る)
   eval:{ start:50, max:100, gap:3, upset:4, slip:5,
-         lChamp:10, cChamp:8, cOut1:5, extendNeed:70 },
+         lChamp:10, cChamp:8, cOut1:5, promote:6, extendNeed:70,
+         fameK:40, fameFor:["upset","lChamp","promote"] },
   // 期待順位: クラブの格と「持ち込んだ編成の強さ」の合成(→docs/03 §3.9)
   expect:{ squadWeight:0.45 },
   // --- 試合エンジン(→docs/03 §3.19 / docs/07-match-engine.md) ---

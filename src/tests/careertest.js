@@ -53,9 +53,11 @@ function runSeason() {
     const known = ["upset", "slip", "lChamp", "cChamp", "cOut1"];
     Object.keys(hit.evLog || {}).forEach(k => assert.ok(known.includes(k),
       "評価が動いた理由が定義外: " + k));
-    const moved = E.TUNING.eval.upset * (hit.evLog.upset || 0)
-      - E.TUNING.eval.slip * (hit.evLog.slip || 0)
-      + E.TUNING.eval.lChamp * (hit.evLog.lChamp || 0);
+    const E0 = E.TUNING.eval;
+    const moved = E0.upset * (hit.evLog.upset || 0)
+      - E0.slip * (hit.evLog.slip || 0)
+      + E0.lChamp * (hit.evLog.lChamp || 0)
+      + E0.promote * (hit.evLog.promote || 0);
     assert.strictEqual(Math.round(E.getS().club.eval), Math.max(0, Math.min(100, ev0 + moved)),
       "評価の増減は理由の合計と一致する");
     console.log("目標達成OK", hit.rank + "位(目標" + hit.goal + "位) / 一時金 +" + hit.goalCoin);
@@ -73,6 +75,34 @@ function runSeason() {
     assert.ok(E.getS().club.id === "sam-8", "評価が低くてもクラブは替わらない");
     console.log("減俸OK", miss.rank + "位(目標" + miss.goal + "位) / 減俸 " + miss.goalCoin
       + " / 賞金 +" + miss.coin);
+  }
+
+  // ---------- 名声は評価に相乗りする(→docs/03 §3.9) ----------
+  // **同じ出来事から出る**。覚えることは「上がる出来事は名声も生む」
+  // 「下がる出来事は名声を動かさない」の2つだけ。
+  {
+    await E.newGame();
+    E.getS().coach = "検証";
+    E.startTenure("sam-8");
+    const E0 = E.TUNING.eval, s = E.getS();
+    const f0 = s.player.fame;
+    E.evalMatch(60, 70, true, false);                 // 格上に勝つ
+    assert.strictEqual(s.player.fame - f0, E0.upset * E0.fameK, "格上撃破で名声が入る");
+    const f1 = s.player.fame;
+    E.evalMatch(70, 60, false, true);                 // 格下に負ける
+    assert.strictEqual(s.player.fame, f1, "評価が下がる出来事では名声が動かない");
+    // **評価の頭打ちに引きずられない**。100で止まっていても偉業は経歴に残る
+    s.club.eval = E0.max;
+    const f2 = s.player.fame;
+    E.evalAdd("lChamp", E0.lChamp);
+    assert.strictEqual(s.club.eval, E0.max, "評価は100を超えない");
+    assert.strictEqual(s.player.fame - f2, E0.lChamp * E0.fameK,
+      "評価が頭打ちでも名声は満額入る");
+    // 季ぶんの合計が数えられている
+    assert.strictEqual(s.club.fameSeason, s.player.fame - f0, "季ぶんの名声を数えている");
+    console.log("名声の相乗りOK 格上 +" + E0.upset * E0.fameK
+      + " / 優勝 +" + E0.lChamp * E0.fameK + " / 昇格 +" + E0.promote * E0.fameK
+      + " / 下がる出来事は 0 / 評価の頭打ちに影響されない");
   }
 
   // ---------- 第80節の去就(→docs/03 §3.9) ----------
