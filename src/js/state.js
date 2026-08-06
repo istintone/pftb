@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=18;
+const SAVE_VER=19;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -42,6 +42,11 @@ function defaultState(){
       limit:TUNING.tenure.limit,    // 現在の上限(延命で伸びる)
       closing:false,                // 上限に達した = 新規大会へエントリーしない
       over:false,                   // 任期終了(キャリア1周の終わり)
+      // オーナーのイベント(→docs/03 §3.9)。**どちらも一度きり**。
+      //   opened     … 就任直後の開幕イベント(目標順位を告げられた)
+      //   tenureDone … 第80節の去就イベント(契約が伸びたか、当初のままか)
+      opened:false,
+      tenureDone:false,
       hand:null,                    // 今節の打ち手(選ぶまで試合に進めない)
       // クラブチャット(→docs/03 §3.29)。**節ごとに畳む**ので、節が進めば消える。
       // { log:[{w,t}], i:段の位置, step:入力待ちの段, sel:{選んだもの} }
@@ -236,6 +241,14 @@ function migrate(){
   if(S.v<17&&S.career&&!S.career.cond)S.career.cond={};
   // v17 → v18: ケガの治療を足した(→docs/03 §3.32)。
   if(S.v<18&&S.career&&!S.career.hurt)S.career.hurt={};
+  // v18 → v19: オーナーの評価を積み上げ式にし(→docs/03 §3.9)、
+  // 開幕イベントと第80節の去就イベントを足した。
+  // 途中のセーブに遡ってイベントを出すと話が繋がらないので、**済んだことにする**。
+  if(S.v<19){
+    S.career.opened=true;
+    S.career.tenureDone=S.career.node>=TUNING.tenure.extendAt;
+    if(S.club&&!S.club.evLog)S.club.evLog={};
+  }
   S.v=SAVE_VER;
 }
 

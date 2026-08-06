@@ -30,7 +30,7 @@
 | `club.coins` | number | コイン(クラブ予算)。パックと施設が奪い合う(→[03. §3.5](03-game-design.md)) |
 | `club.fac` | object | 施設レベル `{training, medical, stadium, scouting}` |
 | `club.exp` | number | チーム熟練度。選べる戦術の幅を決める(→[03. §3.7](03-game-design.md)) |
-| `club.eval` | number | 会長の評価。**期待順位との差から導出**する(累積しない) |
+| `club.eval` | number | オーナーの評価(→03 §3.9)。**積み上げ式**で 0〜100。第80節の契約更新を決める |
 | `club.expect` | number | 今季の期待順位。クラブの格 × 持ち込んだ編成の強さ |
 | `club.loan` | array | **クラブから借りている選手**。退任するとクラブに残る(→[03. §3.4](03-game-design.md) D13) |
 | **`world`** | object | 世界の状態 |

@@ -19,7 +19,7 @@ const SCREENS={
   title:     { chrome:"bare" },
   contract:  { chrome:"bare" },
   offer:     { title:"OFFERS",    chrome:"back",  render:()=>renderOffers() },
-  board:     { title:"REVIEW",    chrome:"back",  render:()=>renderBoard() },
+  board:     { title:"OWNER",     chrome:"back",  render:()=>renderBoard() },
   chat:      { title:"CLUB",      under:"season", chrome:"back", render:()=>renderChat() },
   home:      { title:"HOME",      tab:"home",      chrome:"full", render:()=>renderHome() },
   cards:     { title:"CARDS",     tab:"cards",     chrome:"full", render:()=>renderCards() },
@@ -285,12 +285,18 @@ function renderHome(){
     +String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0");
 
   const f=myFixture();
-  if(seasonOver()){
-    $("homeNext").innerHTML='<div class="card"><div class="sect-t">NEXT MATCH</div>'
-      +'<div class="lg">今季の全日程が終了しました。'
-      +(S.career.closing?'<br><b>任期の上限に達しています。ここで去就が決まります。</b>':'')+'</div>'
-      +'<button class="btn" id="btnFinishSeason" style="margin-top:10px">シーズンを終える</button></div>';
-    $("btnFinishSeason").onclick=finishSeason;
+  const ev=pendingOwner();
+  if(ev){
+    // **オーナーの呼び出しは1つの入口**(→docs/03 §3.9)。開幕・総括・去就のどれであれ、
+    // HOME から同じタイルで向かう。重なったときの順番は pendingOwner が持つ
+    const t=OWNER_EV[ev];
+    $("homeNext").innerHTML='<div class="nx own" id="nxTile" role="button" tabindex="0">'
+      +'<div class="nx-md">OWNER</div>'
+      +'<div class="nx-tag">'+esc(t.tag)+'</div>'
+      +'<div class="nx-hype">'+esc(t.line)+'</div>'
+      +'<div class="nx-go">&gt; '+esc(t.go)+'</div>'
+    +'</div>';
+    $("nxTile").onclick=openOwner;
   }else if(f){
     // 試合そのものはスケジュール画面(=クラブ進行の起点)から始める。
     // HOME は「監督のデバイス」であって、進行の操作盤ではない(→docs/06 §6.8)。
@@ -344,11 +350,11 @@ function hypeOf(f){
 }
 
 function secretaryLine(){
-  if(seasonOver())return "監督、今季の全日程が終わりました。会長がお待ちです。";
+  if(pendingOwner())return "監督、オーナーがお待ちです。";
   if(S.world.matchday===1)return "監督、就任おめでとうございます。まずは編成を確認してから初戦に臨みましょう。";
   const r=rankOf(S.world.table,S.club.id);
   if(r<=S.club.expect)return "現在"+r+"位。期待を上回っています、この調子で。";
-  return "現在"+r+"位。会長の期待は"+S.club.expect+"位です。巻き返しましょう。";
+  return "現在"+r+"位。オーナーの目標は"+S.club.expect+"位です。巻き返しましょう。";
 }
 function clubNews(){
   const r=rankOf(S.world.table,S.club.id), t=S.world.table[S.club.id];
@@ -362,10 +368,12 @@ function clubNews(){
   return hurt.concat([
     "今季の目標は<b>"+S.club.expect+"位以内</b>。現在 <b>"+r+"位</b>（"+t.w+"勝"+t.d+"分"+t.l+"敗）",
     lg.name+"は<b>"+lg.style+"</b>のチームが多い。",
-    "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ 会長の評価 "+evalLabel(S.club.eval),
+    "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ オーナーの評価 "+evalLabel(S.club.eval),
   ]);
 }
-const evalLabel=v=>v>=75?"良好":v>=45?"普通":v>=TUNING.eval.floorDismiss?"不満":"危機的";
+// オーナーの評価の言い方(→docs/03 §3.9)。**延命ライン(70)を跨ぐところで言葉が変わる**ので、
+// 「良好」なら契約が伸びる、と読めるようにしてある。
+const evalLabel=v=>v>=TUNING.eval.extendNeed?"良好":v>=45?"普通":v>=20?"不満":"危機的";
 
 // ---------- CARDS(コレクション) ----------
 let _cardFilter="ALL";
@@ -995,9 +1003,9 @@ function renderSeason(){
   $("seasonBox").innerHTML=
     kv("クラブ",esc(club.name)+"（格★"+club.grade+"）")
     +kv("いまの舞台",lg.name+" "+divName(W.div))
-    +kv("期待順位",S.club.expect+"位")
+    +kv("オーナーの目標",S.club.expect+"位")
     +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
-    +kv("会長の評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
+    +kv("オーナーの評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
     +kv("チーム熟練度",fmtNum(S.club.exp));
 
   renderTenureBar();
@@ -2614,24 +2622,103 @@ function renderResult(){
 }
 const passPct=t=>t.pass?Math.round(t.passOk/t.pass*100):0;
 
-/** シーズン終了 → 審判 → 総括画面へ。**クラブは替わらず、部だけが動く**(→§3.24)。
- *  任期が上限に達していれば、ここで延命 or キャリア終了も決まる(→§3.2.3)。 */
-async function finishSeason(){
-  _review={ expect:S.club.expect, j:judgeSeason() };
+// ---------- オーナー(→docs/03 §3.9) ----------
+// **オーナーと向き合う場は1つ**。開幕も総括も去就も同じ画面で、HOME から同じタイルで行く。
+// 重なったら「総括 → 去就」の順に出す(先にシーズンを畳んでからでないと契約の話にならない)。
+const OWNER_EV={
+  open:  { tag:"就任のあいさつ", line:"オーナーが目標を告げようとしています。", go:"Meet the Owner" },
+  season:{ tag:"シーズンの総括", line:"今季の全日程が終了しました。", go:"Meet the Owner" },
+  tenure:{ tag:"契約の話", line:"オーナーが去就について話したいそうです。", go:"Meet the Owner" },
+};
+/** いま待っているオーナーのイベント。**順番はここが持つ**(総括が去就より先)。 */
+function pendingOwner(){
+  const C=S.career;
+  if(!S.club||!C)return null;
+  if(!C.opened)return "open";
+  if(seasonOver())return "season";
+  if(!C.tenureDone&&C.node>=TUNING.tenure.extendAt&&!C.over)return "tenure";
+  return null;
+}
+let _review=null;
+/** オーナーに会う。**ここで判定も走る**ので、開いた時点で結果は確定している。 */
+async function openOwner(){
+  const k=pendingOwner(); if(!k)return;
+  if(k==="open"){ S.career.opened=true; _review={ kind:"open" }; }
+  else if(k==="season")_review={ kind:"season", j:judgeSeason() };
+  else _review={ kind:"tenure", t:ownerTenure() };
   await save();
   show("board",{push:1});
 }
+/** 評価の見え方(→docs/03 §3.9)。**数字だけを置かない。** 何で動いたかを添える。 */
+const EVAL_WHY={ upset:["格上を倒した",1], slip:["格下に取りこぼした",-1],
+  lChamp:["リーグ優勝",1], cChamp:["カップ優勝",1], cOut1:["カップ初戦敗退",-1] };
+const EVAL_PT={ upset:"upset", slip:"slip", lChamp:"lChamp", cChamp:"cChamp", cOut1:"cOut1" };
+function ownerRating(evLog){
+  const E=TUNING.eval, v=Math.round(S.club.eval);
+  const need=E.extendNeed;
+  const why=Object.keys(EVAL_WHY).filter(k=>evLog&&evLog[k]).map(k=>{
+    const [lab,sign]=EVAL_WHY[k], n=evLog[k], pt=E[EVAL_PT[k]]*n*sign;
+    return '<span class="ev-w'+(sign>0?" up":" dn")+'">'+lab+(n>1?" ×"+n:"")
+      +'<b>'+(pt>0?"+":"")+pt+'</b></span>';
+  }).join("");
+  return '<div class="ev-box"><div class="ev-h"><span class="eyebrow">OWNER RATING</span>'
+    +'<b class="'+(v>=need?"ok":"")+'">'+esc(evalLabel(S.club.eval))+'</b></div>'
+    +'<div class="ev-bar"><i style="width:'+v+'%"></i>'
+      +'<u style="left:'+need+'%" title="延命ライン"></u></div>'
+    +'<div class="ev-lg">第'+TUNING.tenure.extendAt+'節に <b>'+need+'</b> 以上で契約が延びます'
+      +'（いま '+v+'）</div>'
+    +(why?'<div class="ev-ws">'+why+'</div>':"")
+  +'</div>';
+}
+// 見出しは**誰の話か**ではなく**何の話か**。2つ並ぶときに同じ札が続くと、
+// 同じことを2回言われたように読める
+const ownerSay=(pool,vars,seed,head)=>'<div class="bd-say"><span class="eyebrow">'
+  +(head||"OWNER")+'</span>'
+  +'<b>「'+esc(chatText(pool,seed,vars||{}))+'」</b></div>';
+
 /**
- * シーズン総括(→docs/03 §3.24)。**クラブは替わらない**ので、ここで見せるのは
- * 「どこまで上がったか」と「次に何を期待されているか」。
+ * オーナーの画面(→docs/03 §3.9)。開幕・総括・去就の3つを1つの型で出す。
+ * **クラブは替わらない**ので、見せるのは「どこまで来たか」と「次に何を求められているか」。
  */
-let _review=null;
 function renderBoard(){
   const r=_review; if(!r)return;
-  const j=r.j, m=j.move, W=S.world;
-  const lg=leagueById(clubById(S.club.id).league);
+  const W=S.world, lg=leagueById(clubById(S.club.id).league);
+
+  // ---- 開幕。オーナーが目標順位を告げる ----
+  if(r.kind==="open"){
+    $("boardHead").textContent="SEASON "+W.season+" · APPOINTMENT";
+    $("boardMove").innerHTML='<div class="bd-move stay">'
+      +'<span class="eyebrow">TARGET</span><b>'+S.club.expect+'位以内</b>'
+      +'<span class="lg">'+esc(clubName(S.club.id)+" ／ "+lg.name+" "+divName(W.div))+'</span></div>';
+    $("boardOwner").innerHTML=ownerSay(OWNER.open,{ g:String(S.club.expect) },"op:"+W.season);
+    $("boardBox").innerHTML='<div class="sect-t">契約</div>'
+      +kv("目標順位",S.club.expect+"位以内")
+      +kv("達成すると","一時金 +"+fmtNum(TUNING.reward.season.goalHit)+" コイン（上回るほど増額）")
+      +kv("届かないと","1つ下回るごとに −"+fmtNum(TUNING.reward.season.goalMiss)+" コイン")
+      +kv("任期",TUNING.tenure.limit+"節（第"+TUNING.tenure.extendAt+"節の評価しだいで "
+        +TUNING.tenure.hardMax+"節）")
+      +ownerRating(null);
+    $("boardGo").textContent="シーズンを始める";
+    $("boardGo").onclick=async()=>{ await save(); show("home"); };
+    return;
+  }
+  // ---- 第80節。去就 ----
+  if(r.kind==="tenure"){
+    const t=r.t;
+    $("boardHead").textContent="NODE "+S.career.node+" · CONTRACT";
+    $("boardMove").innerHTML='<div class="bd-move '+(t.ok?"up":"stay")+'">'
+      +'<span class="eyebrow">'+(t.ok?"EXTENDED":"UNCHANGED")+'</span>'
+      +'<b>'+(t.ok?"任期 +"+t.add+"節":"任期はそのまま")+'</b>'
+      +'<span class="lg">上限 '+t.limit+'節 ／ 残り '+tenureLeft()+'節</span></div>';
+    $("boardOwner").innerHTML=ownerSay(t.ok?OWNER.keepOk:OWNER.keepNg,null,"kp:"+S.career.node);
+    $("boardBox").innerHTML=ownerRating(S.club.evLog);
+    $("boardGo").textContent="続ける";
+    $("boardGo").onclick=async()=>{ await save(); show("home"); };
+    return;
+  }
+  // ---- シーズンの総括(+ 次のシーズンの目標) ----
+  const j=r.j, m=j.move;
   $("boardHead").textContent="SEASON "+W.season+" REVIEW · "+lg.abbr+" "+divName(m.from);
-  // ① 昇格 / 残留 / 降格
   const kind=m.promoted?"up":m.relegated?"down":"stay";
   const lab=m.promoted?"昇格":m.relegated?"降格":"残留";
   $("boardMove").innerHTML='<div class="bd-move '+kind+'">'
@@ -2639,26 +2726,22 @@ function renderBoard(){
     +'<b>'+j.rank+'位 ／ '+lab+'</b>'
     +'<span class="lg">'+esc(lg.name+" "+divName(m.from)
       +(m.move?" → "+divName(m.to):"（"+divName(m.to)+"のまま）"))+'</span></div>';
-  // ② オーナーの言葉。**評価より「次に何を求められているか」**
-  const key=m.promoted?"up":m.relegated?"down":j.rank<S.club.expect?"over":j.rank>S.club.expect?"under":"met";
-  const say=OWNER[key][Math.abs(hashStr(S.club.id+":"+W.season))%OWNER[key].length];
-  $("boardOwner").innerHTML='<div class="bd-say"><span class="eyebrow">OWNER</span>'
-    +'<b>「'+esc(say)+'」</b></div>';
-  // ③ 数字
-  const tenure=j.tenure&&j.tenure.extended
-    ?"延長 +"+TUNING.tenure.extend+"節（上限 "+j.tenure.limit+"）"
-    :j.shrunk?"短縮 −"+j.shrunk+"節（上限 "+S.career.limit+"）"
-    :"残り "+tenureLeft()+" 節";
+  // オーナーの言葉。**総括と次季の目標を1つのイベントにまとめる**(→docs/03 §3.9)
+  const key=m.promoted?"up":m.relegated?"down":j.diff>0?"over":j.diff<0?"under":"met";
+  $("boardOwner").innerHTML=ownerSay(OWNER[key],null,S.club.id+":"+W.season)
+    +(j.nextGoal?ownerSay(OWNER.goal,{ g:String(j.nextGoal) },"gl:"+W.season,"NEXT SEASON"):"");
+  // 数字。**目標に対してどうだったか**を賞金の内訳で見せる
+  const gc=j.goalCoin;
   $("boardBox").innerHTML='<div class="sect-t">総括</div>'
-    +kv("順位",j.rank+"位（期待 "+r.expect+"位）")
-    +kv("会長の評価",evalLabel(j.eval)+"（"+Math.round(j.eval)+"）")
-    +kv("名声",(j.fameGain>=0?"+":"")+fmtNum(j.fameGain)+" ／ 通算 "+fmtNum(S.player.fame))
-    // **昇格の賞金は補強の元手**(→docs/03 §3.24)。内訳を見せて、次の一手に繋げる
-    +kv("賞金","+"+fmtNum(j.coin||0)+" コイン"
+    +kv("順位",j.rank+"位（目標 "+j.goal+"位）")
+    +kv(gc>=0?"達成ボーナス":"減俸",(gc>=0?"+":"")+fmtNum(gc)+" コイン")
+    +kv("賞金の合計","+"+fmtNum(j.coin||0)+" コイン"
       +(m.promoted?"（昇格 +"+fmtNum(TUNING.reward.season.promote)+"）":"")
       +(j.rank===1?"（優勝 +"+fmtNum(TUNING.reward.season.champ)+"）":""))
     +kv("所持コイン",fmtNum(S.club.coins))
-    +kv("任期",tenure)
+    +kv("名声",(j.fameGain>=0?"+":"")+fmtNum(j.fameGain)+" ／ 通算 "+fmtNum(S.player.fame))
+    +kv("任期","残り "+tenureLeft()+" 節（上限 "+S.career.limit+"）")
+    +ownerRating(j.evLog)
     +(S.career.over?'<div class="lg" style="margin-top:10px">任期が明けました。次のクラブを選べます。</div>':"");
   $("boardGo").textContent=S.career.over?"キャリアを振り返る":divName(m.to)+" を始める";
   $("boardGo").onclick=async()=>{

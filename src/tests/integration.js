@@ -85,12 +85,16 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   // シーズン末の賞金(→docs/03 §3.24)。**昇格に厚く積む**ので補強の元手になる
   {
     const R = E.TUNING.reward.season, n = E.TUNING.league.clubs;
-    const want = R.base + R.perRank * (n - j.rank)
+    // 目標(→docs/03 §3.9)の達成/未達がここに乗る。合計は0を下回らない
+    const goalCoin = j.diff >= 0 ? R.goalHit + R.goalStep * j.diff : -R.goalMiss * (-j.diff);
+    const want = Math.max(0, R.base + R.perRank * (n - j.rank)
       + (j.rank === 1 ? R.champ : 0)
-      + (j.move.promoted ? R.promote : 0) + (j.move.relegated ? R.relegate : 0);
+      + (j.move.promoted ? R.promote : 0) + (j.move.relegated ? R.relegate : 0)
+      + goalCoin);
+    assert.strictEqual(j.goalCoin, goalCoin, "目標ぶんの増減が返る");
     assert.strictEqual(j.coin, want, "賞金が定義どおり");
-    assert.ok(j.coin > 0, "順位にかかわらず賞金は出る");
-    if (j.move.promoted) assert.ok(j.coin >= R.promote, "昇格なら昇格ぶんが乗る");
+    assert.ok(j.coin >= 0, "賞金が負にならない");
+    if (j.move.promoted && j.diff >= 0) assert.ok(j.coin >= R.promote, "昇格なら昇格ぶんが乗る");
     console.log("シーズン賞金OK", j.rank + "位", j.move.promoted ? "昇格" : "", "+" + j.coin);
   }
 

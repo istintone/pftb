@@ -1599,6 +1599,34 @@ body{
   background:var(--surface); border:1px dashed var(--line);
 }
 .bd-say .eyebrow{ display:block; margin-bottom:4px; color:var(--text-mute) }
+.bd-say + .bd-say{ margin-top:-6px }
+/* オーナーの呼び出し(→docs/03 §3.9)。試合の煽りタイルと同じ形だが、色を金に寄せる */
+.nx.own{ border-color:var(--accent-dim); background:linear-gradient(160deg,
+  oklch(0.22 0.04 85 / .55), var(--panel)) }
+.nx.own .nx-md{ color:var(--accent) }
+/* 評価(→docs/03 §3.9)。**数字だけを置かない。** 帯・延命ライン・理由の3点で見せる */
+.ev-box{
+  margin-top:12px; padding:12px 14px; border-radius:12px;
+  background:var(--surface); border:1px solid var(--line);
+}
+.ev-h{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px }
+.ev-h b{ font:600 15px/1 var(--f-head); color:var(--text-2) }
+.ev-h b.ok{ color:var(--accent) }
+.ev-bar{ position:relative; height:8px; border-radius:4px; overflow:hidden;
+  background:oklch(0.28 0.02 255) }
+.ev-bar i{ display:block; height:100%; background:linear-gradient(90deg,
+  oklch(0.55 0.10 255), var(--accent)) }
+/* 延命ライン。**越えたかどうか**が一目で分かるように、帯の上に立てる */
+.ev-bar u{ position:absolute; top:-2px; bottom:-2px; width:2px;
+  background:oklch(0.95 0.02 90); box-shadow:0 0 4px oklch(0 0 0 / .8) }
+.ev-lg{ margin-top:7px; font-size:10px; color:var(--text-dim) }
+.ev-lg b{ color:var(--text-2) }
+.ev-ws{ display:flex; flex-wrap:wrap; gap:6px; margin-top:9px }
+.ev-w{ padding:4px 8px; border-radius:7px; font-size:10px;
+  background:var(--panel); border:1px solid var(--line); color:var(--text-2) }
+.ev-w b{ margin-left:6px; font:600 10px/1 var(--f-mono) }
+.ev-w.up b{ color:oklch(0.78 0.15 150) }
+.ev-w.dn b{ color:oklch(0.72 0.15 25) }
 /* 相手の下見へ行ける行(→docs/03 §3.34)。**押せることだけ**を示す。
    矢印を足すと対戦表の右端(スコア・「次戦」)とぶつかるので、触れたときの反応で伝える。 */
 .cal.foe,.br-row.foe,.tbl tr.foe{ cursor:pointer }

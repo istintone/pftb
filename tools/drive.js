@@ -116,6 +116,27 @@ const STEPS = [
       "/ ヘッダー:", await ctx.js("document.getElementById('hdClubName').textContent"),
       "/ コイン:", await ctx.js("document.getElementById('hdCoin').textContent"));
     await ctx.shot("04-home");
+    // **就任したらまずオーナーが目標を告げる**(→docs/03 §3.9)。HOME から向かう
+    ctx.log("  開幕イベント:", await ctx.js(`(()=>{
+      if(pendingOwner()!=='open')throw new Error('開幕イベントが待っていない: '+pendingOwner());
+      const t=document.getElementById('nxTile');
+      if(t.querySelector('.nx-md').textContent!=='OWNER')throw new Error('オーナーのタイルでない');
+      return t.querySelector('.nx-tag').textContent;
+    })()`));
+    await ctx.js("document.getElementById('nxTile').click()");
+    await ctx.wait(500);
+    ctx.log("  オーナーの言葉:", await ctx.js(`(()=>{
+      if(document.querySelector('.screen.on').id!=='scr-board')throw new Error('オーナーの画面に行けない');
+      const say=document.querySelector('#boardOwner .bd-say b').textContent;
+      if(say.indexOf(String(S.club.expect))<0)throw new Error('目標順位を言っていない: '+say);
+      if(/\{|\}/.test(say))throw new Error('差し込みが残っている: '+say);
+      if(!document.querySelector('.ev-box'))throw new Error('評価の欄が無い');
+      return String(S.club.expect)+'位以内 ／ '+say;
+    })()`));
+    await ctx.shot("04b-owner-open");
+    await ctx.js("document.getElementById('boardGo').click()");
+    await ctx.wait(400);
+    if(await ctx.js("pendingOwner()"))throw new Error('開幕イベントが繰り返し出る');
   }],
   ["HOME → 任期スケジュール → リーグ戦 → 試合", async ctx => {
     // NEXT MATCH のタイル(→docs/06 §6.8)。**ボタンは無く、タイルごとタップ**して日程へ
@@ -1628,7 +1649,7 @@ const STEPS = [
     ctx.log("節:", await ctx.js(
       "document.getElementById('homeNext').textContent.replace(/\s+/g,' ').slice(0,40)"));
     await ctx.shot("14-season-end");
-    await ctx.js("document.getElementById('btnFinishSeason').click()");
+    await ctx.js("document.getElementById('nxTile').click()");
     await ctx.wait(600);
     // **クラブは替わらない**。総括を見て次の部へ進む(→docs/03 §3.24)
     ctx.log("審判後の画面:", await ctx.screen(),
@@ -1667,6 +1688,34 @@ const STEPS = [
       "/ 降格圏", await ctx.js("document.querySelectorAll('#standTbl tr.down').length"),
       "/", await ctx.js("document.getElementById('standNote').textContent"));
     await ctx.shot("16b-standings-zones");
+    // 第80節の去就(→docs/03 §3.9)。**総括が先、去就があと**の順で出ること
+    ctx.log("  第80節の去就:", await ctx.js(`(()=>{
+      const T=TUNING.tenure, need=TUNING.eval.extendNeed;
+      const save={ node:S.career.node, done:S.career.tenureDone, limit:S.career.limit,
+        ev:S.club.eval, md:S.world.matchday };
+      // シーズン末と重なっても、待っているのは先に総括
+      S.career.node=T.extendAt; S.career.tenureDone=false;
+      S.world.matchday=S.world.fixtures.length+1;
+      if(pendingOwner()!=='season')throw new Error('総括より先に去就が来ている: '+pendingOwner());
+      S.world.matchday=save.md;
+      if(pendingOwner()!=='tenure')throw new Error('去就が待っていない: '+pendingOwner());
+      // 評価が届かなければ伸びない
+      S.club.eval=need-1; S.career.tenureDone=false; S.career.limit=T.limit;
+      const ng=ownerTenure();
+      if(ng.ok||S.career.limit!==T.limit)throw new Error('評価不足なのに伸びた');
+      // 届けば伸びる
+      S.club.eval=need; S.career.tenureDone=false; S.career.limit=T.limit;
+      const ok=ownerTenure();
+      if(!ok.ok||S.career.limit!==T.hardMax)throw new Error('評価が足りているのに伸びない');
+      _review={ kind:'tenure', t:ok }; show('board');
+      const say=document.querySelector('#boardOwner .bd-say b').textContent;
+      if(/\{|\}/.test(say))throw new Error('差し込みが残っている: '+say);
+      return '総括→去就の順 ／ 評価'+(need-1)+'は据え置き ／ 評価'+need+'で '
+        +T.limit+'→'+T.hardMax+'節 ／ '+say;
+    })()`));
+    await ctx.shot("16c-owner-tenure");
+    await ctx.js("(()=>{S.career.tenureDone=true;S.career.limit=TUNING.tenure.limit;show('home');})()");
+    await ctx.wait(300);
     await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
     await ctx.wait(200);
   }],

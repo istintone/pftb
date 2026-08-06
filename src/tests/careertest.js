@@ -13,65 +13,93 @@ function runSeason() {
 }
 
 (async () => {
-  // ---------- 評価は「期待との差」から対称に決まる ----------
-  // 累積式だと、期待1位のクラブは減る一方・期待最下位のクラブは決してクビにならない、
-  // という非対称が生まれる。順位に依らず対称であることをここで守る。
-  await E.newGame();
-  E.getS().coach = "検証";
-  let matched = 0, checked = 0, aboveSeen = 0, belowSeen = 0;
-  for (let i = 0; i < 16; i++) {
-    E.startTenure("sam-" + (1 + (i % 8)));
-    const r = runSeason();
-    const ev = E.getS().club.eval;
-    if (r.rank === r.expect) {
-      matched++;
-      assert.ok(Math.abs(ev - E.TUNING.eval.start) < 1,
-        "期待順位ちょうど(" + r.rank + "位)なら評価は基準値のまま: " + ev);
-    } else if (r.rank < r.expect) {
-      aboveSeen++;
-      assert.ok(ev > E.TUNING.eval.start, "期待を上回れば基準値より上: " + r.rank + "位/期待" + r.expect + "位 → " + ev);
-    } else {
-      belowSeen++;
-      assert.ok(ev < E.TUNING.eval.start, "期待を下回れば基準値より下: " + r.rank + "位/期待" + r.expect + "位 → " + ev);
-    }
-    checked++;
-    E.getS().world.season++;
-  }
-  assert.ok(aboveSeen > 0 && belowSeen > 0, "上振れも下振れも観測できている");
-  console.log("評価の対称性OK", checked, "シーズン(ちょうど", matched, "/ 上回り", aboveSeen, "/ 下回り", belowSeen, ")");
-
-  // ---------- 期待を大きく上回れば評価も名声も上がる ----------
-  await E.newGame();
-  E.getS().coach = "検証";
-  E.startTenure("sam-8");                 // 弱小クラブ
-  E.getS().club.expect = 8;                  // 最下位を期待されている状態にする
-  const fame0 = E.getS().player.fame, eval0 = E.getS().club.eval;
-  runSeason();
-  const rank = E.rankOf(E.getS().world.table, "sam-8");
-  if (rank < 8) {
-    assert.ok(E.getS().club.eval >= eval0, "期待を上回れば評価は下がらない");
-    assert.ok(E.getS().player.fame > fame0, "期待を上回れば名声が増える");
-    console.log("上振れOK", rank + "位(期待8位) / 評価", Math.round(eval0), "→", Math.round(E.getS().club.eval),
-      "/ 名声", fame0, "→", E.getS().player.fame);
-  } else console.log("上振れ検証: 今回は8位のままだった(乱数依存のためスキップ)");
-
-  // ---------- 期待を大きく下回れば任期が削られる(→docs/03 §3.24) ----------
+  // ---------- 評価は積み上げ式。動くのは「格が違う相手との結果」だけ ----------
+  // 順位から導出していた頃は、格下相手に勝ち点を積んだ監督と格上を食った監督が
+  // 同じ評価になっていた。**お金は目標、評価は内容**に分けた(→docs/03 §3.9)。
   await E.newGame();
   E.getS().coach = "検証";
   E.startTenure("sam-8");
-  E.getS().club.expect = 1;                  // 優勝を期待されている状態にする(弱小なので届かない)
-  const limit0 = E.getS().career.limit;
-  const r2 = runSeason();
-  assert.ok(E.getS().club.eval < E.TUNING.eval.start, "期待を下回れば評価が落ちる");
-  // **解任は無い**。評価が下限を割ると「持ち時間」が減る
-  assert.strictEqual(r2.poor, E.getS().club.eval < E.TUNING.eval.floorDismiss,
-    "任期短縮の判定が閾値と一致する");
-  assert.strictEqual(E.getS().career.limit, limit0 - (r2.shrunk || 0), "削られたぶんだけ上限が減る");
-  if (r2.poor) assert.strictEqual(r2.shrunk, E.TUNING.tenure.shrink, "1シーズンぶん削られる");
-  assert.ok(E.getS().club.id === "sam-8", "評価が低くてもクラブは替わらない");
-  console.log("下振れOK", r2.rank + "位(期待1位) / 評価", Math.round(E.getS().club.eval),
-    "/ 任期", limit0, "→", E.getS().career.limit, "節 /", r2.move.promoted ? "昇格"
-      : r2.move.relegated ? "降格" : "残留");
+  {
+    const E0 = E.TUNING.eval;
+    E.getS().club.eval = 50;
+    assert.strictEqual(E.evalMatch(60, 70, true, false), E0.upset, "格上に勝てば上がる");
+    assert.strictEqual(E.evalMatch(70, 60, false, true), -E0.slip, "格下に負ければ下がる");
+    assert.strictEqual(E.evalMatch(70, 60, true, false), 0, "格下に勝っても動かない");
+    assert.strictEqual(E.evalMatch(60, 70, false, true), 0, "格上に負けても動かない");
+    assert.strictEqual(E.evalMatch(60, 61, true, false), 0, "格の差が小さければ動かない");
+    assert.strictEqual(E.evalMatch(60, 70, false, false), 0, "引き分けは動かない");
+    // 0〜100 に収まる
+    E.getS().club.eval = 2; E.evalMatch(70, 60, false, true);
+    assert.strictEqual(E.getS().club.eval, 0, "0を下回らない");
+    E.getS().club.eval = 99; E.evalMatch(60, 70, true, false);
+    assert.strictEqual(E.getS().club.eval, 100, "100を上回らない");
+    console.log("評価の増減OK 格上勝ち +" + E0.upset + " / 格下負け -" + E0.slip
+      + " / それ以外 0 / 0〜" + E0.max + "に収まる");
+  }
+
+  // ---------- 目標順位は**お金**を動かす(評価ではない) ----------
+  await E.newGame();
+  E.getS().coach = "検証";
+  E.startTenure("sam-8");
+  {
+    const R = E.TUNING.reward.season;
+    E.getS().club.expect = 8;              // 最下位が目標 = まず達成する
+    const ev0 = E.getS().club.eval, coin0 = E.getS().club.coins;
+    const hit = runSeason();
+    assert.ok(hit.diff >= 0, "最下位目標なら達成する: " + hit.rank + "位");
+    assert.strictEqual(hit.goalCoin, R.goalHit + R.goalStep * hit.diff, "達成ぶんの一時金が乗る");
+    assert.ok(E.getS().club.coins > coin0, "コインが増える");
+    // **目標そのものは評価の理由にならない。** 動いた理由は試合とタイトルだけ
+    const known = ["upset", "slip", "lChamp", "cChamp", "cOut1"];
+    Object.keys(hit.evLog || {}).forEach(k => assert.ok(known.includes(k),
+      "評価が動いた理由が定義外: " + k));
+    const moved = E.TUNING.eval.upset * (hit.evLog.upset || 0)
+      - E.TUNING.eval.slip * (hit.evLog.slip || 0)
+      + E.TUNING.eval.lChamp * (hit.evLog.lChamp || 0);
+    assert.strictEqual(Math.round(E.getS().club.eval), Math.max(0, Math.min(100, ev0 + moved)),
+      "評価の増減は理由の合計と一致する");
+    console.log("目標達成OK", hit.rank + "位(目標" + hit.goal + "位) / 一時金 +" + hit.goalCoin);
+  }
+  await E.newGame();
+  E.getS().coach = "検証";
+  E.startTenure("sam-8");
+  {
+    const R = E.TUNING.reward.season;
+    E.getS().club.expect = 1;              // 優勝が目標 = 弱小なので届かない
+    const miss = runSeason();
+    assert.ok(miss.diff <= 0, "優勝目標なら届かない: " + miss.rank + "位");
+    assert.strictEqual(miss.goalCoin, -R.goalMiss * (-miss.diff), "届かないぶんが減俸される");
+    assert.ok(miss.coin >= 0, "減俸で賞金が負にならない");
+    assert.ok(E.getS().club.id === "sam-8", "評価が低くてもクラブは替わらない");
+    console.log("減俸OK", miss.rank + "位(目標" + miss.goal + "位) / 減俸 " + miss.goalCoin
+      + " / 賞金 +" + miss.coin);
+  }
+
+  // ---------- 第80節の去就(→docs/03 §3.9) ----------
+  // **評価が届いていれば契約が伸びる。** 罰は「120節まで生きられない」ことだけ。
+  {
+    const T = E.TUNING.tenure, need = E.TUNING.eval.extendNeed;
+    await E.newGame();
+    E.getS().coach = "検証";
+    E.startTenure("sam-8");
+    E.getS().career.node = T.extendAt;
+    E.getS().club.eval = need - 1;
+    const ng = E.ownerTenure();
+    assert.strictEqual(ng.ok, false, "評価が足りなければ伸びない");
+    assert.strictEqual(E.getS().career.limit, T.limit, "上限は当初のまま");
+    assert.strictEqual(E.getS().career.tenureDone, true, "二度は起きない");
+
+    await E.newGame();
+    E.getS().coach = "検証";
+    E.startTenure("sam-8");
+    E.getS().career.node = T.extendAt;
+    E.getS().club.eval = need;
+    const ok = E.ownerTenure();
+    assert.strictEqual(ok.ok, true, "評価が届けば伸びる");
+    assert.strictEqual(E.getS().career.limit, T.hardMax, "上限が " + T.hardMax + " になる");
+    console.log("去就OK 第" + T.extendAt + "節 / 評価" + need + "以上で "
+      + T.limit + " → " + T.hardMax + "節");
+  }
 
   // ---------- 名声が上がるとキャリアの階段が開く ----------
   const s = E.getS();

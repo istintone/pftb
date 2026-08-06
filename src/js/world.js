@@ -320,7 +320,8 @@ function startTenure(clubId){
     coins:Math.round(3000*leagueById(clubById(clubId).league).money),
     fac:{ training:0, medical:0, stadium:0, scouting:0 },   // 施設(第4段で使う)
     exp:0,                                                   // チーム熟練度(→§3.7)
-    eval:TUNING.eval.start,                                  // 会長の評価
+    eval:TUNING.eval.start,                                  // オーナーの評価(→§3.9)
+    evLog:{},                                                // 今季なにで評価が動いたか
     loan:clubRoster(seed,clubId),                            // 任期中だけ借りる所属選手
     expect:0,
   };
@@ -334,6 +335,9 @@ function startTenure(clubId){
   S.form=bestFormFor(availableCards());
   S.squad=autoSquad();
   S.club.expect=expectedRank(seed,clubId,squadPower(squadCards().slice(0,TUNING.squad.starters)));
+  // **開幕イベントはまだ**。オーナーが目標を告げるまで、HOME はそこへ誘導する(→§3.9)
+  S.career.opened=false;
+  S.career.tenureDone=false;
   S.player.history.push({ season:S.world.season, clubId, div:S.world.div, result:"在任" });
 }
 
@@ -497,17 +501,48 @@ function refitSquad(form){
   return xi.concat(bench);
 }
 
-// --- 会長の評価(→docs/03 §3.9) ---
+// --- オーナーの評価(→docs/03 §3.9) ---
+// **お金は目標、評価は内容。** 目標順位は賞金と減俸を決め、評価は「どう戦ったか」で動く。
+// 2つを分けたのは、順位だけで評価すると格下相手に勝ち点を積んだだけの監督と、
+// 格上を食って回った監督が同じ評価になってしまうため。
+//
+// 評価は**積み上げ式**で 0〜100 を動く。動くのは次の場面だけ:
+//   ・格上に勝った(+upset) / 格下に負けた(-slip)
+//   ・リーグ優勝(+lChamp) / カップ優勝(+cChamp) / カップ初戦敗退(-cOut1)
+/** 評価を動かす。**何で動いたか**をシーズンごとに数えておき、総括で言葉にする。 */
+function evalAdd(reason,n){
+  if(!S.club||!n)return 0;
+  const E=TUNING.eval;
+  const before=S.club.eval;
+  S.club.eval=clamp(before+n,0,E.max);
+  if(!S.club.evLog)S.club.evLog={};
+  S.club.evLog[reason]=(S.club.evLog[reason]||0)+1;
+  return S.club.eval-before;
+}
 /**
- * 評価は**累積しない**。「今の順位が期待に対してどうか」から毎回導出する。
- *
- * 累積式にすると、期待1位のクラブは (期待-順位) が常に0以下にしかならず評価が減る一方になり、
- * 逆に期待最下位のクラブは常に0以上で決してクビにならない、という非対称が生まれる。
- * 導出式なら「期待どおり = start」「上回れば上、下回れば下」が順位に関わらず対称に効く。
+ * 1試合ぶんの評価。**格が違う相手との結果だけ**が動かす。
+ * 格は総合力(編成込み)で測る。画面に出ている数字と同じものを使う(→docs/06 §6.15)。
  */
-function chairmanEval(){
-  const r=rankOf(S.world.table,S.club.id);
-  return clamp(TUNING.eval.start+(S.club.expect-r)*TUNING.eval.perRank,0,TUNING.eval.max);
+function evalMatch(myPow,foePow,win,lose){
+  const E=TUNING.eval;
+  if(win&&foePow-myPow>=E.gap)return evalAdd("upset",E.upset);
+  if(lose&&myPow-foePow>=E.gap)return evalAdd("slip",-E.slip);
+  return 0;
+}
+/**
+ * 第80節、オーナーが去就を告げる(→docs/03 §3.9)。
+ * **評価が届いていれば契約が伸びる。** 届かなければ当初のままで、罰は無い
+ * (「120節まで生きられない」ことが罰になっている)。
+ */
+function ownerTenure(){
+  const T=TUNING.tenure, C=S.career;
+  C.tenureDone=true;
+  const need=TUNING.eval.extendNeed, ok=S.club.eval>=need;
+  if(ok){
+    C.limit=Math.min(T.hardMax,C.limit+T.extend);
+    C.closing=false;
+  }
+  return { ok, need, eval:S.club.eval, limit:C.limit, add:T.extend };
 }
 
 // --- 節の進行 ---
@@ -521,7 +556,7 @@ function myFixture(md){
 
 /**
  * 1節を進める。自クラブの試合と、同じ節の他クラブ同士の試合をまとめて解決し、
- * 順位表・コイン・チーム熟練度・会長の評価を更新する。
+ * 順位表・コイン・チーム熟練度・オーナーの評価を更新する。
  * 返り値: { my:{opp,home,hg,ag,win}, others:[...] }  シーズン終了なら my=null もありうる。
  */
 // --- 任期(キャリア1周) → docs/03 §3.2.3 ---
@@ -533,15 +568,10 @@ function checkTenureClosing(){
 }
 /**
  * 大会(シーズン)が決着した時点で任期の去就を決める。
- * 上限前なら何も起きない。上限に達していれば、成績次第で延命 or 任期終了。
+ * **延命の判断は第80節のイベントに移した**(→ownerTenure)ので、ここは終わりを告げるだけ。
  */
-function judgeTenure(rank){
+function judgeTenure(){
   if(!checkTenureClosing())return null;
-  if(S.career.limit<TUNING.tenure.hardMax&&rank<=TUNING.tenure.extendRank){
-    S.career.limit=Math.min(TUNING.tenure.hardMax,S.career.limit+TUNING.tenure.extend);
-    S.career.closing=false;
-    return { extended:true, limit:S.career.limit };
-  }
   S.career.over=true;
   return { extended:false };
 }
@@ -1021,8 +1051,13 @@ function closeCup(){
     if(!S.player.trophies.some(t=>t.id===cup.id))
       S.player.trophies.push({ id:cup.id, name:cup.trophy, season:S.world.season, node:S.career.node });
   }
+  // **オーナーの評価**(→docs/03 §3.9)。優勝は上げ、**初戦敗退は下げる**。
+  // 賞金や名声と違って、ここは順位ではなく「どう戦ったか」を見ている
+  const out1=!win&&c.out===1;
+  const ev=win?evalAdd("cChamp",TUNING.eval.cChamp)
+    :out1?evalAdd("cOut1",-TUNING.eval.cOut1):0;
   c.champ=champ; c.done=true; c.coin=coin; c.dist=dist; c.win=win; c.fame=fame;
-  return { cup, champ, coin, fame, dist, win };
+  return { cup, champ, coin, fame, dist, win, ev, out1 };
 }
 /** 大会での成績の呼び名。 */
 function cupPlaceName(cup,c){
@@ -1101,7 +1136,9 @@ function playMatchday(done){
       W.results[md]=out.my;                                  // 日程画面で過去のスコアを出すため
       S.club.coins+=gf>ga?TUNING.reward.win:gf===ga?TUNING.reward.draw:TUNING.reward.lose;
       S.club.exp+=gf>ga?350:gf===ga?220:150;              // チーム熟練度(→§3.7)
-      S.club.eval=chairmanEval();
+      // オーナーの評価(→§3.9)。**格が違う相手との結果だけ**が動かす
+      evalMatch(squadPowerAt(squadCards(),S.form),
+        squadPowerAt(cpuSquad(out.my.opp).cards,formFor(out.my.opp)),gf>ga,gf<ga);
       bondMatch();                                         // 連携(→§3.31)。一戦ごとに積む
       condAfterMatch(out.M,home?"H":"A",seed);             // 出来(→§3.32)
       out.hurt=applyInjuries(out.M,home?"H":"A");          // ケガ(→§3.32)
@@ -1186,32 +1223,34 @@ const seasonOver=()=>S.world.matchday>(S.world.fixtures||[]).length;
 function judgeSeason(){
   const W=S.world;
   const rank=rankOf(W.table,S.club.id);
-  const diff=S.club.expect-rank;                 // 正なら期待を上回った
-  S.club.eval=chairmanEval();
+  const goal=S.club.expect;                      // オーナーが季の頭に告げた目標順位
+  const diff=goal-rank;                          // 正なら目標を上回った
+  const evLog=S.club.evLog||{};
+  // **リーグ優勝は評価に乗る**(→§3.9)。目標達成は金の話で、優勝は内容の話
+  if(rank===1)evalAdd("lChamp",TUNING.eval.lChamp);
   const fameGain=Math.round(diff*140+(rank===1?900:0));
   S.player.fame=Math.max(0,S.player.fame+fameGain);
   // **順位が確定したこの時点で入れ替えを行う**。世界のほうも同時に動く
   const move=applyPromotion(rank);
-  // 評価が低いと任期が短くなる。解任のかわりに「持ち時間を失う」形で効かせる
-  const poor=S.club.eval<TUNING.eval.floorDismiss;
-  let shrunk=null;
-  if(poor){
-    const before=S.career.limit;
-    S.career.limit=Math.max(S.career.node,S.career.limit-TUNING.tenure.shrink);
-    shrunk=before-S.career.limit;
-    checkTenureClosing();
-  }
-  // **シーズン末の賞金**(→docs/03 §3.24)。昇格に厚く積み、補強の元手にする
+  // **シーズン末の賞金**(→docs/03 §3.24)。昇格に厚く積み、補強の元手にする。
+  // 目標を上回れば一時金、届かなければ減俸(→§3.9)。合計は0を下回らせない
   const R=TUNING.reward.season, n=TUNING.league.clubs;
-  const coin=R.base+R.perRank*(n-rank)
+  const goalCoin=diff>=0?R.goalHit+R.goalStep*diff:-R.goalMiss*(-diff);
+  const coin=Math.max(0,R.base+R.perRank*(n-rank)
     +(rank===1?R.champ:0)
-    +(move.promoted?R.promote:0)+(move.relegated?R.relegate:0);
+    +(move.promoted?R.promote:0)+(move.relegated?R.relegate:0)
+    +goalCoin);
   S.club.coins+=coin;
   const h=S.player.history[S.player.history.length-1];
   if(h){ h.rank=rank; h.result=move.promoted?"昇格":move.relegated?"降格":"残留"; }
   // 大会が決着したこの時点で、任期の去就も決まる(→§3.2.3)
-  const tenure=judgeTenure(rank);
-  return { rank, diff, fameGain, move, poor, shrunk, tenure, coin, eval:S.club.eval };
+  const tenure=judgeTenure();
+  // **次のシーズンの目標**は昇降格のあとに決まる。総括で告げるので、ここで確定させる
+  const nextGoal=S.career.over?null
+    :expectedRank(W.seed,S.club.id,squadPower(squadCards().slice(0,TUNING.squad.starters)));
+  if(nextGoal)S.club.expect=nextGoal;
+  return { rank, goal, diff, fameGain, move, tenure, coin, goalCoin, nextGoal,
+    eval:S.club.eval, evLog };
 }
 /**
  * 次のシーズンを始める。**同じクラブのまま、決まった部で組み直す**。
@@ -1231,6 +1270,8 @@ function startNextSeason(){
   W.fixtures=makeFixtures(league,rng);
   W.results={};
   W.matchday=1;
-  S.club.expect=expectedRank(W.seed,S.club.id,squadPower(squadCards().slice(0,TUNING.squad.starters)));
+  // 目標順位は**総括で告げた値**をそのまま使う(judgeSeason が確定させている)。
+  // ここで引き直すと、オーナーが言った数字と実際の目標がずれる
+  S.club.evLog={};
   S.player.history.push({ season:W.season, clubId:S.club.id, div:W.div, result:"在任" });
 }

@@ -70,25 +70,20 @@ function runSeason(hand) {
   assert.ok(over > E.TUNING.tenure.limit, "上限を超えてもリーグは最後まで戦う: " + over + "節");
   assert.strictEqual(E.getS().career.closing, true, "上限到達で closing になる");
   const j = E.judgeSeason();
+  // **上限に達したら終わり**。延命の判断は第80節に済んでいる(→docs/03 §3.9)
   assert.ok(j.tenure, "大会の決着で任期の去就が返る");
-  if (j.tenure.extended) {
-    assert.strictEqual(E.getS().career.limit, E.TUNING.tenure.limit + E.TUNING.tenure.extend, "延命で上限が伸びる");
-    assert.strictEqual(E.getS().career.closing, false, "延命したら closing が解除される");
-    assert.strictEqual(E.getS().career.over, false, "延命したら任期は続く");
-    console.log("延命OK", j.rank + "位 → 上限", E.getS().career.limit, "節");
-  } else {
-    assert.strictEqual(E.getS().career.over, true, "延命しなければ任期終了");
-    console.log("任期終了OK", j.rank + "位（" + E.TUNING.tenure.extendRank + "位以内なら延命）");
-  }
+  assert.strictEqual(j.tenure.extended, false, "上限のあとに延命は起きない");
+  assert.strictEqual(E.getS().career.over, true, "上限に達したら任期終了");
+  console.log("任期終了OK", j.rank + "位 / 上限", E.TUNING.tenure.limit, "節で明ける");
 
   // ---------- 延命は上限120節で頭打ち ----------
   const s = E.getS();
   s.career.limit = E.TUNING.tenure.hardMax;
-  s.career.closing = true; s.career.over = false;
-  const j2 = E.judgeTenure(1);                        // 優勝しても
+  s.career.tenureDone = false;
+  s.club.eval = 100;                                  // 評価が満点でも
+  const t2 = E.ownerTenure();
   assert.strictEqual(s.career.limit, E.TUNING.tenure.hardMax, "上限は " + E.TUNING.tenure.hardMax + " 節を超えない");
-  assert.strictEqual(j2.extended, false, "頭打ちなら延命しない");
-  assert.strictEqual(s.career.over, true, "頭打ちなら任期終了");
+  assert.strictEqual(t2.ok, true, "評価が足りていれば話は通る");
   console.log("頭打ちOK 最大", E.TUNING.tenure.hardMax, "節");
 
   // ---------- 節は「打ち手 → 出場する大会」の順で決まる ----------
