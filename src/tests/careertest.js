@@ -413,6 +413,57 @@ function runSeason() {
       Math.round(E.TUNING.skill.any * 100) + "%");
   }
 
+  // ---------- スキルの実効価値がそろっている(→docs/08 §8.6④) ----------
+  // **機会と効果はセットで測る。** グループが狭い札は発動しない、広い札は毎回発動する。
+  // どちらか片方だけ見ると、フラットな数値が「公平」に見えてしまう(実際に4.8倍ひらいていた)。
+  {
+    const V = E.TUNING.skillVal;
+    const sets = { origin: E.ORIGINS, counter: E.COUNTERS, finish: E.FINISHES };
+    const share = {};
+    for (const [layer, arr] of Object.entries(sets)) {
+      const list = Array.isArray(arr) ? arr : Object.values(arr).flat();
+      share[layer] = {};
+      for (const g of Object.keys(E.SK_GRP)) {
+        let n = 0;
+        for (const ch of list) { try { if (E.SK_GRP[g](ch)) n++; } catch (e) { } }
+        share[layer][g] = n / list.length;
+      }
+    }
+    // gkFin は GK 側から終点の札を見るので、広さは finish のもの
+    share.gkFin = share.finish;
+    const fireOf = (p, w) => w * p / (w * p + 1 - p);
+    const vals = {};
+    for (const [name, fx] of Object.entries(E.SKILL_FX)) {
+      if (!fx.grp) continue;
+      const layer = fx.at2 || fx.at;
+      // both は起点と守備の**両方**で発動する。合計を2層の平均目標と比べる
+      if (layer === "both") {
+        const f = fireOf(share.origin[fx.grp], fx.w || 1) + fireOf(share.counter[fx.grp], fx.w || 1);
+        const t = (V.origin + V.counter) / 2, val = f * (fx.s - 1);
+        assert.ok(Math.abs(val - t) <= t * V.band,
+          name + " の価値が目標から外れている(両層): " + (val * 1000).toFixed(1)
+          + " (目標 " + (t * 1000).toFixed(1) + ")");
+        (vals.origin = vals.origin || []).push(val / 2);
+        continue;
+      }
+      const p = share[layer] && share[layer][fx.grp];
+      // set(セットプレー専用)は FINISHES から引かれないので、この物差しに乗らない
+      if (!p) { assert.strictEqual(fx.grp, "set", name + " のグループが層に無い: " + fx.grp); continue; }
+      const W = fx.w || 1, fire = fireOf(p, W);
+      const val = fire * (fx.s - 1);
+      const tgt = V[layer === "gkFin" ? "finish" : layer];
+      assert.ok(tgt, layer + " の目標価値が無い");
+      assert.ok(Math.abs(val - tgt) <= tgt * V.band,
+        name + " の価値が目標から外れている: " + (val * 1000).toFixed(1)
+        + " (目標 " + (tgt * 1000).toFixed(1) + " ±" + (V.band * 100) + "%)");
+      (vals[layer === "gkFin" ? "finish" : layer] = vals[layer === "gkFin" ? "finish" : layer] || []).push(val);
+      // w を持つ札は s が小さい(w が発動率を押し上げているぶん)
+      if (fx.w) assert.ok(fx.s <= 1.13, name + " は w を持つので s は控えめ: " + fx.s);
+    }
+    console.log("スキルの公平さOK", Object.entries(vals).map(([k, v]) =>
+      k + " " + v.length + "枚 開き" + (Math.max(...v) / Math.min(...v)).toFixed(1) + "倍").join(" / "));
+  }
+
   // ---------- スキル(D39 → docs/03 §3.21) ----------
   {
     // 表の形が守られていること。**w と s は必ずセット**(引けるだけでは強くならない)
@@ -421,10 +472,8 @@ function runSeason() {
       if (fx.grp) {
         assert.ok(E.SK_GRP[fx.grp], name + " のグループが定義されている: " + fx.grp);
         assert.ok(fx.s, name + " は s を持つ（引けるだけでは強くならない）");
-        // 主効果(w か k)を別に持つなら s は控えめ、s だけなら効きは強め
-        const paired = fx.w || fx.k != null;
-        if (paired) assert.ok(fx.s <= 1.09, name + " は主効果があるので s は控えめ: " + fx.s);
-        else assert.ok(fx.s >= 1.08, name + " は s だけなので効きは強め: " + fx.s);
+        // **強さの上限下限はここでは見ない**。グループの広さで決まるので、
+        // 実効価値のほうで揃っているかを見る(→上の「スキルの公平さ」)
       } else {
         assert.ok(fx.k != null, name + " は単独の倍率を持つ");
       }
