@@ -148,15 +148,22 @@ function runSeason() {
       const form = "4-4-2";
       return { cards: E.bestXI(roster, form), form, name: id };
     };
-    const h = side("ger-4"), a = side("ger-4");   // 同じ編成同士 = 完全な互角
-    let goals = 0, draws = 0, homeW = 0, n = 2000;
-    for (let i = 0; i < n; i++) {
-      const { hg, ag } = E.resolveMatch(h, a, i + 1);
-      goals += hg + ag;
-      if (hg === ag) draws++; else if (hg > ag) homeW++;
+    // **1つの名簿で測らない**。同じ編成同士は互角だが、その編成が尖っているか
+    // 平らかで得点が倍近く動く(実測 sam-8 で 1.0点 / ger-4 で 5.8点)。
+    // カード生成を触るたびに名簿が変わるので、1つに賭けると系の変化で嘘をつく。
+    const clubs = ["ger-4", "sam-8", "eng-3", "esp-6", "fra-2", "ita-7"];
+    let goals = 0, draws = 0, homeW = 0, n = 0;
+    for (const cid of clubs) {
+      const h = side(cid), a = side(cid);         // 同じ編成同士 = 完全な互角
+      for (let i = 0; i < 400; i++) {
+        const { hg, ag } = E.resolveMatch(h, a, i + 1);
+        goals += hg + ag; n++;
+        if (hg === ag) draws++; else if (hg > ag) homeW++;
+      }
     }
     const avg = goals / n, drawPct = draws / n, homePct = homeW / n;
-    assert.ok(avg > 1.5 && avg < 5.0, "1試合の平均得点が現実的な範囲: " + avg.toFixed(2));
+    assert.ok(avg > 1.5 && avg < 5.0, "1試合の平均得点が現実的な範囲: " + avg.toFixed(2)
+      + "（" + clubs.length + "クラブの平均）");
     assert.ok(drawPct > 0.08 && drawPct < 0.45, "引き分けの割合が極端でない: " + (drawPct * 100).toFixed(1) + "%");
     assert.ok(homePct > drawPct * 0.5, "ホームがある程度勝ち越す: " + (homePct * 100).toFixed(1) + "%");
     // 上は「同じ編成同士・4-4-2」の値。実際のリーグは陣形がばらけるので、
@@ -394,8 +401,9 @@ function runSeason() {
       const wcRate = wc / n, packRate = packWithWc / N;
       assert.ok(Math.abs(wcRate - pro.w.WC / 100) < 0.03,
         "WC の割合が定義どおり: " + (wcRate * 100).toFixed(1) + "%");
-      assert.ok(packRate > 0.25 && packRate < 0.40,
-        "1回で WC を引ける確率が3割前後: " + (packRate * 100).toFixed(0) + "%");
+      // **1回に1人**(→docs/03 §3.22)なので、1回で WC を引ける確率は w.WC そのもの
+      assert.ok(Math.abs(packRate - pro.w.WC / 100) < 0.03,
+        "1回で WC を引ける確率が定義どおり: " + (packRate * 100).toFixed(0) + "%");
       console.log("プロスカウトOK", pro.cost, "コイン / SPE",
         (spe / n * 100).toFixed(0) + "% ・WC", (wcRate * 100).toFixed(0) + "%",
         "/ 1回で WC が出る確率", (packRate * 100).toFixed(0) + "%");
@@ -981,9 +989,13 @@ function runSeason() {
   {
     const side = id => ({ cards: E.bestXI(E.clubRoster(4242, id), "4-4-2"),
       form: "4-4-2", name: id });
-    const H = side("ger-4"), A = side("ger-4");
+    // **1つの名簿で測らない**(→上の「試合結果の分布」と同じ理由)。
+    // 尖った編成かどうかで決定率が倍近く動く
+    const clubs = ["ger-4", "sam-8", "eng-3", "esp-6", "fra-2", "ita-7"];
     const t = {}; let reb = 0, rebOk = 0; const depth = {};
-    for (let i = 1; i <= 500; i++) {
+    for (let i = 1; i <= 600; i++) {
+      const cid = clubs[i % clubs.length];
+      const H = side(cid), A = side(cid);
       const M = E.finishMatch(E.createMatch(H, A, i));
       for (const e of M.events) {
         if (["block", "miss", "save", "goal"].includes(e.type)) t[e.type] = (t[e.type] || 0) + 1;

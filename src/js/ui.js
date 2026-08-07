@@ -693,7 +693,9 @@ function openCard(x,opts){
     +'<div class="pcard cm-card '+rarClass(c)+'"'+cardBgStyle(c)+'>'+cardFace(c)+'</div>'
     +'<div class="cm-b">'
       +'<div class="cm-name">'+esc(c.name)+'</div>'
-      +'<div class="cm-sub">'+c.pos+' · '+esc(c.club||"—")+' · '+esc(nation?nation.name:c.nation)+'</div>'
+      +'<div class="cm-sub">'+c.pos+' · '+esc(c.club||"—")+' · '+esc(nation?nation.name:c.nation)
+        // **体つき**(→docs/03 §3.27)。素の重みの選手には何も付かない
+        +(c.body?' · <b class="cm-body">'+esc(c.body)+'</b>':'')+'</div>'
       +'<div class="cm-facts">'
         +'<div><span>年齢</span><b>'+c.age+'歳</b></div>'
         +'<div><span>得意ポジション</span><b>'+c.subs.join(" / ")+'</b></div>'
@@ -997,7 +999,8 @@ function renderScout(){
   $("scoutList").innerHTML=TUNING.scout.map((pk,i)=>{
     const can=S.club&&S.club.coins>=pk.cost;
     return '<div class="sc-row'+(i?" hi":"")+'">'
-      +'<div class="sc-b"><div class="sc-nm">'+esc(pk.name)+'　'+pk.cards+'枚</div>'
+      +'<div class="sc-b"><div class="sc-nm">'+esc(pk.name)
+        +(pk.cards>1?'　'+pk.cards+'枚':'')+'</div>'
         +'<div class="sc-de">'+esc(pk.note)+'</div></div>'
       +'<button class="btn sc-buy'+(i?"":" ghost")+'" data-pack="'+pk.id+'"'
         +(can?"":" disabled")+'>'+fmtNum(pk.cost)+'</button>'

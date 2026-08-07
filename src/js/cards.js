@@ -95,6 +95,47 @@ const STAT_W={
   FW:[1.35,0.60,1.20,1.10,1.20,0.55],
 };
 
+// 体つき(→docs/03 §3.27)。**pow / tec / spd の重みだけ**を組み替える。
+// ポジションごとの重みが固定だと、同じ枠の選手はみな同じ手を選び、同じ動きになる。
+// 3つの合計は変えないので、**OVR も段の帯も動かない**(尖り方だけが変わる)。
+const BODY_IX=[2,3,4];                                   // pow / tec / spd
+const BODY_NAME=["","パワー型","テクニック型","スピード型","万能型"];
+/**
+ * その選手の体つきを引く。**ほとんどは素の重み(null)**。
+ *   spec … 3つのうち1つが飛び抜ける(FWなのに極端に速い、など)
+ *   flat … 3つが横並びになる(尖りは無いが穴も無い)
+ */
+function rollBody(rng){
+  const B=TUNING.body;
+  if(rng()>=B.rate)return null;
+  return rng()<B.flat?{ kind:"flat" }:{ kind:"spec", ix:BODY_IX[Math.floor(rng()*3)] };
+}
+/**
+ * 体つきを能力に反映する。**3つの中だけで点を移す**。
+ *
+ * 重みをいじって `statsFor` に配らせてはいけない。削ったぶんが **atk など別の能力へ
+ * 流れて**しまい、特化が「速くて決定力も高い」という純粋な強化になる。実測で
+ * 1試合の得点が 2.7 → 7.0 まで跳ねた。3つの中で閉じれば、尖った分だけ必ず穴が空く。
+ */
+function applyBody(st,body){
+  if(!body)return st;
+  const B=TUNING.body, keys=BODY_IX.map(i=>STAT_KEYS[i]);
+  const tot=keys.reduce((n,k)=>n+st[k],0);
+  if(body.kind==="flat"){
+    const base=Math.floor(tot/3);
+    keys.forEach((k,i)=>st[k]=base+(i<tot-base*3?1:0));
+    return st;
+  }
+  const hi=STAT_KEYS[body.ix], lo=keys.filter(k=>k!==hi);
+  for(const k of lo){
+    const move=Math.min(B.move,st[k]-1,STAT_MAX-st[hi]);
+    if(move>0){ st[k]-=move; st[hi]+=move; }
+  }
+  return st;
+}
+/** 体つきの呼び名(カード詳細に出す)。素の重みなら空。 */
+const bodyLabel=body=>!body?"":body.kind==="flat"?BODY_NAME[4]:BODY_NAME[BODY_IX.indexOf(body.ix)+1];
+
 /**
  * 目標OVRを6能力へ配分する。各能力は 1..STAT_MAX(20)、合計はぴったり目標OVRになる。
  * 端数と上限クランプで合計がずれるため、最後に余りを配り直して必ず一致させる
@@ -165,7 +206,9 @@ function makeCard(rng,pos,opts={}){
   // 国籍は呼び出し側が決める(makeRoster がリーグの構成比から配る)。
   // 単体で作るときだけ、ここで世界中から1つ引く。
   const nation=opts.nation||rpick(rng,NATION_IDS);
-  const st=statsFor(rng,pos,ovr);
+  // 体つき(→docs/03 §3.27)。**能力を配ってから3つの中で移す**
+  const body=rollBody(rng);
+  const st=applyBody(statsFor(rng,pos,ovr),body);
   // 位置ごとの札 + 汎用の札(→docs/08 §8.4)。**汎用は専門の札より出にくい**。
   // 均等に混ぜると位置の札が薄まり、それだけで試合のバランスが動く(→§8.5)
   const own=SKILLS[pos]||[], n=RARITY[rarity].skills;
@@ -189,6 +232,7 @@ function makeCard(rng,pos,opts={}){
     ...st,                        // atk/def/pow/tec/spd/sta
     skills,
     club:opts.club||"",           // 所属クラブ(コンビネーション combo の判定に使う)
+    ...(body?{ body:bodyLabel(body) }:{}),   // 体つき(→docs/03 §3.27)。素の重みなら持たない
   };
 }
 

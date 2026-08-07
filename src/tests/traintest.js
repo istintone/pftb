@@ -320,7 +320,9 @@ const E=setup({tmpName:"_tmp_train.js"});
           return { cards:E.bestXI(r,"4-4-2"), form:"4-4-2", name:id }; };
         const gapOf=(a,b)=>{
           let up=0,dn=0,n=0;
-          for(let i=0;i<120;i++){
+          // **N=120 では足りない**。中央値からの差は 0〜2pp に収まるはずだが、
+          // 120試合だと 2.6〜6.4pp に振れてしきい値を割る(実際に落ちた)。
+          for(let i=0;i<400;i++){
             const M2=E.finishMatch(E.createMatch(mk(a),mk(b),i+1));
             const rs=E.matchRatings(M2,"H").filter(r=>r.min);
             const m2=rs.map(r=>r.rating).sort((x,y)=>x-y)[Math.floor(rs.length/2)];
