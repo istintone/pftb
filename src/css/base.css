@@ -1084,7 +1084,7 @@ body{
 }
 .pso-t{ font:600 10px/1 var(--f-head); letter-spacing:2px; color:var(--accent);
   margin-bottom:8px }
-.pso-rows{ max-height:132px; overflow-y:auto; display:flex; flex-direction:column; gap:3px }
+.pso-rows{ max-height:184px; overflow-y:auto; display:flex; flex-direction:column; gap:3px }
 .pso-r{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-dim) }
 .pso-r.me{ color:var(--text) }
 .pso-n{ width:16px; font:400 10px/1 var(--f-mono); color:var(--text-mute) }
@@ -1095,6 +1095,13 @@ body{
 .pso-m.ok{ color:oklch(0.72 0.14 150) }
 .pso-p{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .pso-s{ font:400 11px/1 var(--f-mono); color:var(--text-2) }
+/* 積まれたばかりの行を一瞬だけ光らせる。**どれが今の1本か**が分かる */
+.pso-r{ animation:psoIn .28s ease-out }
+@keyframes psoIn{ from{ opacity:0; transform:translateY(-4px) } to{ opacity:1 } }
+/* PK戦のカットイン(→docs/03 §3.33)。流れの中のシュートと同じ形だが、
+   本数が多いので**帯を少し細く**して連続しても重く見えないようにする */
+.cut.pso-cut .cut-hd{ color:var(--accent) }
+.cut.pso-cut .cut-row{ padding:6px 0 }
 .pso-sum{
   display:flex; align-items:baseline; justify-content:space-between;
   margin-top:8px; padding-top:8px; border-top:1px solid var(--line);

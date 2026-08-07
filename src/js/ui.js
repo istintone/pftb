@@ -2280,6 +2280,46 @@ function cutShot(e,sc,keeper,word,scored,assist){
   },P.shotHold);
   return ms;
 }
+/**
+ * PK戦の1本(→docs/03 §3.33)。**流れの中のシュートと同じ形**で見せる。
+ * 蹴った瞬間と結果のあいだに間を置き、そのあとで下の一覧に1行積む。
+ */
+function cutPso(e,kicker,keeper){
+  const P=TUNING.play, sp=Math.max(1,_mSpeed);
+  const kSide=e.side==="H"?"A":"H";
+  const hold=P.psoHold/sp, ms=(P.psoMs+P.psoHold)/sp;
+  cutShow('<div class="cut pso-cut">'
+    +'<div class="cut-hd">PK '+e.n+'本目</div>'
+    +'<div class="cut-row">'
+      +cutFig(kicker,e.side,"L",kicker?"ATK "+kicker.c.atk+" / TEC "+kicker.c.tec:"")
+      +'<div class="cut-vs">VS</div>'
+      +cutFig(keeper,kSide,"R",keeper?"GK DEF "+keeper.c.def:"")
+    +'</div>'
+    +'<div class="cut-word">キック!</div>'
+  +'</div>',ms);
+  // 結果はあとから。**蹴り手とGKのどちらが勝ったか**をそのとき初めて見せる
+  clearTimeout(_mCutJ);
+  _mCutJ=setTimeout(()=>{
+    const c=$("mCut"), band=c.querySelector(".cut");
+    if(!band)return;
+    const f=c.querySelectorAll(".cut-fig");
+    if(f.length>=2){
+      f[0].classList.add(e.ok?"win":"dim");
+      f[1].classList.add(e.ok?"dim":"win");
+    }
+    const w=c.querySelector(".cut-word");
+    if(w){
+      w.className="cut-word "+(e.ok?"goal":"stop");
+      w.textContent=e.ok?"決めた!":"止めた!";
+      w.style.animation="none"; void w.offsetWidth;
+      w.style.animation="cutWord .42s cubic-bezier(.2,1.4,.4,1)";
+    }
+    if(e.ok){ band.classList.add("goal"); c.classList.add("shake"); }
+    const hd=band.querySelector(".cut-hd");
+    if(hd)hd.textContent="PK "+(mMine()==="H"?e.hg+" - "+e.ag:e.ag+" - "+e.hg);
+  },hold);
+  return ms;
+}
 /** キックオフ。両クラブを向かい合わせる。 */
 /** セットプレー宣言。誰が蹴るのかを大きく出す(→docs/06 §6.19)。 */
 function cutSet(e,kicker){
@@ -2438,20 +2478,27 @@ function psoShow(){
         +'<span class="num">PK '+(mine==="H"?p.hg+" - "+p.ag:p.ag+" - "+p.hg)+'</span>';
       $("mSc").textContent=mScore(_M.home.score,_M.away.score);
       $("mDone").style.display="";
+      // **決着も見える位置へ送る**。本数が多いと一覧ごと画面外へ流れる
+      setTimeout(()=>{ try{ $("psoBox").scrollIntoView({block:"end"}); }catch(e){} },30);
       return;
     }
     const e=kicks[i++];
     const p=playerOf(_M,e.side,e.by);
-    // **印は成否、タグはどちらの蹴りか**。色で両方を表すと読み違える
-    $("psoRows").insertAdjacentHTML("beforeend",
-      '<div class="pso-r'+(e.side===mine?" me":"")+'">'
-      +'<span class="pso-n num">'+e.n+'</span>'
-      +'<span class="pso-w">'+(e.side===mine?"自":"相")+'</span>'
-      +'<span class="pso-m'+(e.ok?" ok":"")+'">'+(e.ok?"●":"×")+'</span>'
-      +'<span class="pso-p">'+esc(p?shortName(p.c):"—")+'</span>'
-      +'<span class="pso-s num">'+(mine==="H"?e.hg+"-"+e.ag:e.ag+"-"+e.hg)+'</span></div>');
-    const box=$("psoRows"); box.scrollTop=box.scrollHeight;
-    _psoTimer=setTimeout(step,TUNING.ui.tickMs/_mSpeed/2.2);
+    const gk=playerOf(_M,e.side==="H"?"A":"H",e.gk);
+    // **まず蹴る**(→docs/03 §3.33)。一覧に積むのは結果が出てから
+    const ms=cutPso(e,p,gk);
+    _psoTimer=setTimeout(()=>{
+      // **印は成否、タグはどちらの蹴りか**。色で両方を表すと読み違える
+      $("psoRows").insertAdjacentHTML("beforeend",
+        '<div class="pso-r'+(e.side===mine?" me":"")+'">'
+        +'<span class="pso-n num">'+e.n+'</span>'
+        +'<span class="pso-w">'+(e.side===mine?"自":"相")+'</span>'
+        +'<span class="pso-m'+(e.ok?" ok":"")+'">'+(e.ok?"●":"×")+'</span>'
+        +'<span class="pso-p">'+esc(p?shortName(p.c):"—")+'</span>'
+        +'<span class="pso-s num">'+(mine==="H"?e.hg+"-"+e.ag:e.ag+"-"+e.hg)+'</span></div>');
+      const box=$("psoRows"); box.scrollTop=box.scrollHeight;
+      _psoTimer=setTimeout(step,TUNING.play.psoGap/Math.max(1,_mSpeed));
+    },ms);
   };
   step();
 }

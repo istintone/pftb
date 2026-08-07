@@ -305,6 +305,23 @@ const STEPS = [
       window.__psoWait=_M.events.filter(e=>e.type==='pso').length;
       return 'PK '+_M.pso.hg+'-'+_M.pso.ag+' / '+window.__psoWait+'本を1本ずつ表示';
     })()`));
+    // **1本ごとにカットインが出る**(→docs/03 §3.33)。蹴ってから一覧に積まれる
+    await ctx.wait(200);
+    ctx.log("  PKのカットイン:", await ctx.js(`(()=>{
+      const cut=document.querySelector('#mCut .cut.pso-cut');
+      if(!cut)throw new Error('カットインが出ていない');
+      const hd=cut.querySelector('.cut-hd').textContent;
+      if(!/PK/.test(hd))throw new Error('見出しがPKでない: '+hd);
+      const figs=cut.querySelectorAll('.cut-fig');
+      if(figs.length!==2)throw new Error('蹴り手とGKが並んでいない: '+figs.length);
+      // **蹴った直後は結果を出さない**。まだ勝敗は付いていない
+      const w=cut.querySelector('.cut-word');
+      if(/決めた|止めた/.test(w.textContent))throw new Error('結果が先に出ている');
+      // 一覧もまだ空(蹴ってから積まれる)
+      return hd+' / '+w.textContent.trim()
+        +' / 積まれた行 '+document.querySelectorAll('#psoRows .pso-r').length;
+    })()`));
+    await ctx.shot("07o2-pso-cutin");
     // 本数は毎回変わる(サドンデスもある)ので、**出そろうまで待つ**
     for (let i = 0; i < 40; i++) {
       // 決着の帯が出るのは**最後の1本のさらに次のコマ**なので、そこまで待つ
@@ -320,6 +337,10 @@ const STEPS = [
       if(!sum)throw new Error('決着が出ていない');
       if(document.getElementById('mDone').style.display==='none')
         throw new Error('結果へ進めない');
+      // 最後の1本のカットインは結果まで出ている
+      const w=document.querySelector('#mCut .cut.pso-cut .cut-word');
+      if(w&&!/決めた|止めた/.test(w.textContent))
+        throw new Error('最後の1本の結果が出ていない: '+w.textContent);
       return rows+'本 → '+sum.replace(/\s+/g,' ');
     })()`));
     await ctx.shot("07o-pso");
