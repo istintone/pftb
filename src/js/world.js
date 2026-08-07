@@ -799,11 +799,15 @@ function restAll(){
  */
 function condAfterMatch(M,side,seed){
   const C=TUNING.cond;
-  const rows=matchRatings(M,side);
+  // **チームの中で良かったか悪かったか**で動く(→docs/03 §3.32)。
+  // 絶対値のしきい値では採点がクラブの強さで丸ごと動くので、
+  // 強豪は好調に、弱小は不調に張り付いた。中央値からの差なら対戦相手にも依らない。
+  const rows=matchRatings(M,side).filter(r=>r.min);
+  const med=rows.map(r=>r.rating).sort((a,b)=>a-b)[Math.floor(rows.length/2)];
   const moved=[];
   for(const r of rows){
-    if(!r.min||condHurt(r.p.c.id))continue;                // 出ていない/ケガの選手は動かない
-    const d=r.rating>=C.up?1:r.rating<=C.dn?-1:0;
+    if(condHurt(r.p.c.id))continue;                        // ケガの選手は動かない
+    const d=r.rating>=med+C.gap?1:r.rating<=med-C.gap?-1:0;
     if(!d)continue;
     const before=condOf(r.p.c.id);
     if(condMove(r.p.c.id,d)!==before)moved.push({ id:r.p.c.id, d, by:"stat" });

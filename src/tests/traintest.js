@@ -305,12 +305,36 @@ const E=setup({tmpName:"_tmp_train.js"});
       const shake=moved.filter(m=>m.by==="shake");
       assert.ok(shake.length>=C.shakeLo&&shake.length<=C.shakeHi,
         "揺さぶりは"+C.shakeLo+"〜"+C.shakeHi+"人: "+shake.length);
-      // 採点で動いた選手は、良ければ上・悪ければ下
-      const rows=E.matchRatings(M,"H");
+      // 採点で動いた選手は、**チームの中央値**より良ければ上・悪ければ下
+      const rows=E.matchRatings(M,"H").filter(r=>r.min);
+      const med=rows.map(r=>r.rating).sort((a,b)=>a-b)[Math.floor(rows.length/2)];
       for(const m of moved.filter(x=>x.by==="stat")){
         const r=rows.find(x=>x.p.c.id===m.id);
-        assert.ok(r&&r.min,"出た選手だけが採点で動く");
-        assert.strictEqual(m.d,r.rating>=C.up?1:-1,"採点の向きと一致");
+        assert.ok(r,"出た選手だけが採点で動く");
+        assert.strictEqual(m.d,r.rating>=med+C.gap?1:-1,"採点の向きと一致");
+      }
+      // **クラブの強さに依らない**(→docs/03 §3.32)。絶対値のしきい値では
+      // 強豪が好調に、弱小が不調に張り付いていた(実測 強×弱 +18pp / 弱×強 −71pp)
+      {
+        const mk=id=>{ const r=E.clubRoster(4242,id);
+          return { cards:E.bestXI(r,"4-4-2"), form:"4-4-2", name:id }; };
+        const gapOf=(a,b)=>{
+          let up=0,dn=0,n=0;
+          for(let i=0;i<120;i++){
+            const M2=E.finishMatch(E.createMatch(mk(a),mk(b),i+1));
+            const rs=E.matchRatings(M2,"H").filter(r=>r.min);
+            const m2=rs.map(r=>r.rating).sort((x,y)=>x-y)[Math.floor(rs.length/2)];
+            for(const r of rs){ n++;
+              if(r.rating>=m2+C.gap)up++; else if(r.rating<=m2-C.gap)dn++; }
+          }
+          return (up-dn)/n;
+        };
+        const cases=[["eng-1","eng-2"],["sam-8","sam-7"],["eng-1","sam-8"],["sam-8","eng-1"]];
+        const ds=cases.map(([a,b])=>gapOf(a,b));
+        ds.forEach((d,i)=>assert.ok(Math.abs(d)<0.06,
+          cases[i].join("×")+" で上下が偏っている: "+(d*100).toFixed(1)+"pp"));
+        console.log("  強さに依らないOK",cases.map(([a,b],i)=>
+          a+"×"+b+" "+(ds[i]*100).toFixed(1)+"pp").join(" / "));
       }
       for(const id of Object.keys(S5.career.cond))
         assert.ok(S5.career.cond[id]>=E.COND_MIN&&S5.career.cond[id]<=E.COND_MAX,
