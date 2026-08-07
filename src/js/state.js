@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=20;
+const SAVE_VER=21;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -254,6 +254,11 @@ function migrate(){
   }
   // v19 → v20: 連携に覚醒を足した(→docs/03 §3.31)。既存の任期には黄金線を持たせない。
   if(S.v<20&&!S.career.bondGold)S.career.bondGold={};
+  // v20 → v21: 連携のしきい値を約3倍に引き上げた(→docs/03 §3.31)。
+  // **進行中の任期の線が細くならないよう、積み上げも3倍にする**。
+  // 40/80/120 → 80/200/360 なので、×3 で段はほぼそのまま残る。
+  if(S.v<21&&S.career&&S.career.bond)
+    for(const k of Object.keys(S.career.bond))S.career.bond[k]*=3;
   S.v=SAVE_VER;
 }
 
