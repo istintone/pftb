@@ -1447,14 +1447,27 @@ body{
 
 /* ---- 参加中の大会カード(任期スケジュールの起点) ---- */
 .comp-card{
-  display:flex; align-items:center; gap:10px; padding:12px 14px; margin:8px 0; cursor:pointer;
+  display:flex; align-items:center; gap:10px; padding:9px 12px; margin:6px 0; cursor:pointer;
   background:var(--panel); border:1px solid var(--line); border-radius:11px;
 }
+/* **9つ並んでもスクロールさせない**(→docs/03 §3.23)。種別は見出し行に畳んで2行に収める */
 .comp-card.off{ opacity:.55 }
+/* **srgb で混ぜる**。oklch で線色(青灰)と金を混ぜると途中が緑に寄って別の色に見える */
+.comp-card.off.ok{ opacity:.8; border-color:color-mix(in srgb, var(--accent) 38%, var(--line)) }
 .comp-card .cc-l{ flex:1; min-width:0 }
-.comp-card .cc-k{ font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--accent); margin-bottom:4px }
-.comp-card b{ display:block; font:600 13px/1.4 var(--f-head); letter-spacing:.5px }
+.comp-card .cc-k{
+  font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--accent);
+  font-style:normal; margin-right:6px;
+}
+.comp-card b{ display:block; font:600 13px/1.35 var(--f-head); letter-spacing:.5px }
+.comp-card .lg{ font-size:11px; line-height:1.35 }
 .comp-card .cc-r{ color:var(--text-dim); font-size:16px }
+/* 引き出しの頭に置く一言(条件の読み方) */
+.side-note{
+  margin:0 0 8px; padding:8px 10px; font-size:11px; line-height:1.5;
+  color:var(--text-2); background:var(--panel-2); border-radius:9px;
+}
+.side-note b{ color:var(--text) }
 
 /* ---- 日程の1行(節 / クラブ色 / 相手 / 結果 or 試合開始) ---- */
 .fxrow{

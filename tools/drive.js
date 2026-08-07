@@ -1835,8 +1835,16 @@ const STEPS = [
     ctx.log("  日程タブ:", await ctx.js(`(()=>{
       if(document.getElementById('seasonBox').hidden===false)
         throw new Error('大会なのに契約が出ている');
+      const rows=[...document.querySelectorAll('#seasonComps [data-comp]')];
+      // **参加条件は全部の行に出す**(→docs/03 §3.23)。何で開くのか分からない行を作らない
+      const bad=rows.slice(1).find(e=>!e.querySelector('.lg').textContent.trim());
+      if(bad)throw new Error('参加条件が書かれていない行がある');
+      // **スクロールさせない**。大会が増えるとここが最初に溢れる
+      const sc=document.querySelector('#sideDrawer .hd-in');   // 実際に縦スクロールする器
+      const over=sc.scrollHeight-sc.clientHeight;
+      if(over>2)throw new Error('日程タブがスクロールしないと全部見えない: +'+over+'px');
       return document.getElementById('sideTitle').textContent
-        +' / '+document.querySelectorAll('#seasonComps [data-comp]').length+'件';
+        +' / '+rows.length+'件 / 器 '+sc.clientHeight+'px 中身 '+sc.scrollHeight+'px';
     })()`));
     await ctx.shot("12d-tab-comps");
     // **進行バーは上に貼り付く**。記録をどこまで送っても任期の現在地が見えている

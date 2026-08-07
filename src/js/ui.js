@@ -95,7 +95,9 @@ const helpOpen=()=>$("helpDrawer").classList.contains("on");
 let _side=null;
 function openSide(kind){
   _side=kind;
-  $("sideTitle").textContent=kind==="contract"?"契約":"エントリー中の大会";
+  // **大会は8つあり、出ていない大会も条件つきで並ぶ**(→docs/03 §3.23)ので
+  // 「エントリー中の大会」では中身と合わない
+  $("sideTitle").textContent=kind==="contract"?"契約":"大会と参加条件";
   $("seasonBox").hidden=kind!=="contract";
   $("seasonComps").hidden=kind!=="comp";
   $("sideDrawer").classList.add("on");
@@ -1053,9 +1055,12 @@ function renderSeason(){
   // 参加中の大会。タップするとその大会の日程(順位表と結果の参照)へ。
   const played=Math.min(W.matchday-1,W.fixtures.length);
   $("seasonComps").innerHTML=
-    '<div class="comp-card" data-comp="league">'
-      +'<div class="cc-l"><div class="cc-k">LEAGUE</div>'
-      +'<b>'+esc(lg.name)+' '+divName(W.div)+'</b>'
+    // **ここが大会の一覧そのもの**(→docs/03 §3.23)。日程画面には出られる大会しか
+    // 並べないので、「何があって何で開くのか」はこの引き出しだけが答えられる
+    '<p class="side-note">条件を満たした大会は、<b>開催節にクラブチャットからエントリー</b>できます。'
+      +'大会を終えると次のエントリーまで'+TUNING.cup.rest+'節あきます。</p>'
+    +'<div class="comp-card" data-comp="league">'
+      +'<div class="cc-l"><b><i class="cc-k">LEAGUE</i>'+esc(lg.name)+' '+divName(W.div)+'</b>'
       +'<div class="lg">'+r+'位 · 勝点'+pts(t)+'（'+played+'/'+W.fixtures.length+'節）</div></div>'
       +'<div class="cc-r">›</div></div>'
     +CUPS.map(cup=>{
@@ -1068,12 +1073,14 @@ function renderSeason(){
       if(j&&j.done)             sub="終了 ／ "+cupPlaceName(cup,j)+"（"+(j.win?"優勝":"優勝 "+j.champ)+"・+"+fmtNum(j.coin)+"）";
       else if(j&&j.alive)       sub="エントリー中 ／ 次は "+cupRoundName(cup,j.round);
       else if(j)                sub="敗退（"+cupPlaceName(cup,j)+"）／ 決勝は第"+cupLastNode()+"節";
-      else if(en&&en.id===cup.id)sub="今節にエントリーできます";
-      else if(need)             sub=need+"（参加条件）";
-      else                      sub="次の開催は "+cup.every+"の倍数の節";
-      return '<div class="comp-card'+(j?"":" off")+'" data-comp="cup">'
-        +'<div class="cc-l"><div class="cc-k">CUP'+(won?' <i class="cc-t">🏆</i>':'')+'</div>'
-        +'<b>'+esc(cup.name)+'</b>'
+      else if(en&&en.id===cup.id)sub="今節にエントリーできます ／ "+cup.rounds+"回戦";
+      // **開催と条件は必ず並べて出す**。片方だけだと「いつ来るのか」か
+      // 「なぜ出られないのか」のどちらかが分からなくなる
+      else sub=cup.every+"の倍数の節 ／ "
+        +(need||(cupNeedFull(cup)==="なし"?"参加条件なし":"参加条件クリア（"+cupNeedFull(cup)+"）"));
+      return '<div class="comp-card'+(j?"":" off")+(!j&&!need?" ok":"")+'" data-comp="cup">'
+        +'<div class="cc-l"><b><i class="cc-k">CUP</i>'+esc(cup.name)
+        +(won?' <i class="cc-t">🏆</i>':'')+'</b>'
         +'<div class="lg">'+esc(sub)+'</div></div>'
         +'<div class="cc-r">›</div></div>';
     }).join("");
@@ -1640,18 +1647,21 @@ function renderCupSchedule(){
   $("schedHead").textContent="CUP COMPETITIONS · KNOCKOUT STAGE";
 
   if(!c){
-    // どの大会がいつ開くのか、条件は何かを**まとめて**見せる
-    const exp=S.club?S.club.exp:0;
-    $("schedList").innerHTML=CUPS.map(x=>{
-      const next=(Math.floor(C.node/x.every)+1)*x.every;
-      const why=cupNeedShort(x)||"第"+next+"節";
-      return '<div class="cal'+(cupOpen(x)?"":" none")+'">'
-        +'<span class="cal-h">🏆</span>'
-        +'<span class="cal-b"><b>'+esc(x.name)+'</b>'
-        +'<span class="lg">'+esc(x.note)+'</span></span>'
-        +'<span class="cal-r">'+esc(why)+'</span></div>';
-    }).join("");
-    $("schedStand").innerHTML=CUPS.map(x=>cupInfoBox(x,null)).join("");
+    // **出られる大会だけを並べる**。8つ全部を条件つきで並べると、いま何ができるのかが
+    // 埋もれる。条件と品揃えの一覧は SEASON の日程タブが持つ(→docs/03 §3.23)
+    const open=CUPS.filter(cupOpen);
+    $("schedList").innerHTML=open.length
+      ? open.map(x=>{
+          const next=(Math.floor(C.node/x.every)+1)*x.every;
+          return '<div class="cal">'
+            +'<span class="cal-h">🏆</span>'
+            +'<span class="cal-b"><b>'+esc(x.name)+'</b>'
+            +'<span class="lg">'+esc(x.note)+'</span></span>'
+            +'<span class="cal-r">第'+next+'節</span></div>';
+        }).join("")
+      : '<div class="cal none"><span class="cal-b"><b>出場できる大会がありません</b>'
+        +'<span class="lg">'+esc(cupWhy())+'</span></span></div>';
+    $("schedStand").innerHTML=open.map(x=>cupInfoBox(x,null)).join("");
     return;
   }
 
