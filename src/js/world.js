@@ -273,14 +273,19 @@ function facBuild(id){
   S.club.build={ id, to:c.to, left:c.nodes };
   return { ...c };
 }
-/** 節が1つ進む。建設中なら残りを減らし、0になったら完成させる。 */
+/**
+ * 節が1つ進む。建設中なら残りを減らし、0になったら完成させる。
+ * **完成の知らせは1節だけ持つ**(`built`)。CLUB NEWS がそれを読む(→docs/06 §6.8)。
+ */
 function facTick(){
+  if(S.club)S.club.built=null;                             // 前の節の知らせは畳む
   const b=S.club&&S.club.build;
   if(!b)return null;
   if(--b.left>0)return null;
   S.club.fac[b.id]=b.to;
   S.club.build=null;
-  return { id:b.id, lv:b.to };
+  S.club.built={ id:b.id, lv:b.to };
+  return S.club.built;
 }
 // 施設の効き方(→docs/03 §3.5)。**掛かり先はそれぞれ1つだけ**にする。
 /** 練習場 — 訓練の経験点が増える(→§3.30)。 */
@@ -378,6 +383,7 @@ function startTenure(clubId){
     // 施設(→docs/03 §3.5)。**前任者の遺産**なので、国の格が高いほど整っている
     fac:facStart(clubById(clubId)),
     build:null,                                              // 建設中の1件 {id,to,left}
+    built:null,                                              // 完成の知らせ(1節だけ)
     exp:0,                                                   // チーム熟練度(→§3.7)
     eval:TUNING.eval.start,                                  // オーナーの評価(→§3.9)
     evLog:{},                                                // 今季なにで評価が動いたか

@@ -1558,6 +1558,7 @@ body{
    (カードでは名前と同じ色、一覧では白のまま)。 */
 .awk{ font-style:normal; margin-left:3px; font-size:.78em; color:inherit; letter-spacing:-1px }
 .news-x{ color:oklch(0.72 0.15 25) }      /* 治療中の選手名 */
+.news-up{ color:var(--accent) }           /* 施設の完成(→docs/03 §3.5)。1節だけ出る */
 /* クラブチャット(→docs/06 §6.23)。モックの秘書チャットを踏襲した吹き出し */
 .ch-head{
   display:flex; align-items:center; gap:10px;

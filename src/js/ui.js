@@ -375,7 +375,19 @@ function clubNews(){
     return '<b class="news-x">'+esc(shortName(c))+'</b> は現在治療中　回復まで <b>'
       +h.left+'節</b>';
   });
-  return hurt.concat([
+  // 施設(→docs/03 §3.5)。**完成した節はまっさきに知らせる**(1節しか出ない)。
+  // 建設中は残り節数だけを出す — 何節後に効き始めるかが分かればよい
+  const fac=[];
+  if(S.club.built){
+    const f=facById(S.club.built.id);
+    fac.push('<b class="news-up">'+f.label+'</b> が完成　<b>Lv.'+S.club.built.lv+'</b> になりました');
+  }
+  const b=S.club.build;
+  if(b){
+    const f=facById(b.id);
+    fac.push(esc(f.label)+' を <b>Lv.'+b.to+'</b> へ建設中　完成まで <b>'+b.left+'節</b>');
+  }
+  return fac.slice(0,1).concat(hurt,fac.slice(1),[
     "今季の目標は<b>"+S.club.expect+"位以内</b>。現在 <b>"+r+"位</b>（"+t.w+"勝"+t.d+"分"+t.l+"敗）",
     lg.name+"は<b>"+lg.style+"</b>のチームが多い。",
     "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ オーナーの評価 "+evalLabel(S.club.eval),

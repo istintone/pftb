@@ -1114,6 +1114,34 @@ const STEPS = [
           return FACILITIES.length+'種 / '+wip.textContent.trim()+' / 段 '+F.maxLv
             +' / 観客収入あり';
         })()`));
+        // 建設状況は HOME の CLUB NEWS に出る(→docs/03 §3.5)
+        ctx.log("  施設の知らせ:", await ctx.js(`(()=>{
+          const news=()=>{ show('home');
+            return document.getElementById('homeNews').textContent; };
+          if(news().indexOf('が完成')<0)throw new Error('完成の知らせが出ない');
+          const first=document.querySelector('#homeNews .news').textContent;
+          if(first.indexOf('が完成')<0)throw new Error('完成が先頭に無い: '+first);
+          facTick();
+          if(news().indexOf('が完成')>=0)throw new Error('完成の知らせが残り続ける');
+          S.club.coins=999999; facBuild('medical');
+          const t=news();
+          if(t.indexOf('医療施設')<0||t.indexOf('建設中')<0)
+            throw new Error('建設中が出ない: '+t);
+          if(t.indexOf('完成まで')<0)throw new Error('残り節数が出ない');
+          const before=t;
+          facTick(); facTick();
+          const t2=news();
+          if(t2===before)throw new Error('残り節数が減っていない');
+          S.club.build=null; S.club.built=null;
+          return '完成は1節だけ / 建設中は残り節数が減る';
+        })()`));
+        await ctx.js(`(()=>{
+          S.club.coins=999999; S.club.build=null; S.club.built=null;
+          facBuild('stadium'); show('home');
+        })()`);
+        await ctx.wait(300);
+        await ctx.shot("03b-home-facility-news");
+        await ctx.js("(()=>{S.club.build=null;S.club.built=null;show('clubhouse');})()");
         await ctx.wait(250);
         await ctx.shot("12b-club-facilities");
       }
