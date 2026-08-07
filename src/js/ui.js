@@ -747,9 +747,13 @@ const playArt=c=>{
  * 編成画面に置く選手の姿(→docs/06 §6.15)。**丸の代わりに立ち絵**を出す。
  * 足元にチームカラーの影を敷いて、ピッチ上の見え方(→§6.17)と揃える。
  */
-function figHtml(c,cls,extra){
+function figHtml(c,cls,extra,cond){
   const src=playArt(c);
-  return '<div class="fig '+cls+'"'+(c?kitStyle(c):"")+'>'
+  // コンディションは**選手の後ろから放射状に光る**(→docs/03 §3.32)。
+  // 印を並べるより、盤面を見渡したときに「誰が来ているか」が一目で分かる。
+  const v=(c&&cond!=null)?clamp(cond,COND_HURT,COND_MAX):null;
+  return '<div class="fig '+cls+(v!=null?" cd-"+v:"")+'"'+(c?kitStyle(c):"")+'>'
+    +(v?'<i class="fig-aura"></i>':'')          // ケガ(0)は光らない。立ち絵が沈む
     +'<i class="fig-sh"></i>'
     +(src?'<img src="'+src+'" alt="">':'<i class="fig-dot"></i>')
     +(extra||"")
@@ -761,32 +765,33 @@ function figHtml(c,cls,extra){
 const starRow=c=>{ const n=c?trainStar(c.id):0;
   return n?'<div class="fig-star'+(n>=TUNING.train.maxStar?" full":"")+'">'
     +"★".repeat(n)+'</div>':""; };
-// コンディションの印(→docs/03 §3.32)。**自チームの編成でだけ**出す。
+// コンディション(→docs/03 §3.32)は**オーラ**で見せる。**自チームの編成でだけ**。
 // 相手の下見(→§3.34)では出さない — こちらが知りようのない情報だから。
-const COND_MARK=["✚","▽","▲","▲","▲"];
+//
+// **ケガだけは印を残す。** 光らないことは「良くない」までしか伝えず、
+// 「試合に出せない」という重さが出ない。印は OVR と同じ高さ・大きさで右上に置く
+// (名前に重ねると読めなくなる)。
 const COND_NAME=["治療中","不調","普通","好調","絶好調"];
-const condMark=(c,on)=>{
-  if(!c||!on)return "";
-  const v=clamp(condOf(c.id),COND_HURT,COND_MAX);
-  return '<i class="cnd c'+v+'" title="'+COND_NAME[v]+'">'+COND_MARK[v]+'</i>';
-};
+const condOn=(c,on)=>(c&&on)?clamp(condOf(c.id),COND_HURT,COND_MAX):null;
+const hurtMark=v=>v===COND_HURT?'<i class="cnd" title="'+COND_NAME[0]+'">✚</i>':"";
 // ---------- 編成の見た目(自チームと相手で共有 → docs/03 §3.34) ----------
 // **自チームと相手を同じ形で見せる。** 違うのは触れるかどうかだけで、ピッチも控えも
 // CAPもセットプレーも同じ部品から作る。片方だけ直して見た目が食い違うのを防ぐ。
 
 /** ピッチの11人。位置は FORMATIONS が持つ % をそのまま使う。 */
 function pitchHtml(cards,form,opts){
-  const cond=!!(opts&&opts.cond);
+  const on=!!(opts&&opts.cond);
   return FORMATIONS[form].map(([sub,x,y],i)=>{
-    const c=cards[i];
-    return '<div class="slot'+(c?"":" empty")+'" style="left:'+x+'%;top:'+y+'%"'
+    const c=cards[i], v=condOn(c,on);
+    return '<div class="slot'+(c?"":" empty")+(v===COND_HURT?" hurt":"")
+      +'" style="left:'+x+'%;top:'+y+'%"'
       +' data-slot="'+i+'"'+(c?' data-card="'+c.id+'"':'')+'>'
       +'<div class="sl-pos'+(c?" fit-"+fitTier(c,sub):"")+'">'+sub+'</div>'
-      // **立ち絵の右下に実効値**を出す。素のOVRを出すと、50%の選手のほうが
+      // **立ち絵の右上に実効値**を出す。素のOVRを出すと、50%の選手のほうが
       // 大きく見えて「置き間違いのほうが強い」という逆の読みになる。
       +figHtml(c,"sl-fig",
         '<b class="sl-ovr'+(c?effClass(c,sub):"")+'">'+(c?effOvr(c,sub):"+")+'</b>'
-        +condMark(c,cond))
+        +hurtMark(v),v)
       +'<div class="sl-name">'+(c?esc(shortName(c)):"空き")+'</div>'
       +starRow(c)
     +'</div>';
@@ -798,8 +803,9 @@ function benchHtml(cards,opts){
   const N=TUNING.squad.starters;
   return Array.from({length:TUNING.squad.bench},(_,k)=>{
     const c=cards[N+k];
-    return '<div class="bn'+(c?"":" empty")+'" data-slot="'+(N+k)+'"'+(c?kitStyle(c):"")+'>'
-      +figHtml(c,"bn-fig",condMark(c,cond))
+    return '<div class="bn'+(c?"":" empty")+(condOn(c,cond)===COND_HURT?" hurt":"")
+      +'" data-slot="'+(N+k)+'"'+(c?kitStyle(c):"")+'>'
+      +figHtml(c,"bn-fig",hurtMark(condOn(c,cond)),condOn(c,cond))
       +'<div class="bn-ovr">'+(c?c.ovr:"+")+'</div>'
       +'<div class="bn-name">'+(c?esc(shortName(c)):"空き")+'</div>'
       +starRow(c)

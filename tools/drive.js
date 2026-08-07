@@ -1181,23 +1181,43 @@ const STEPS = [
           const top=S.squad.find(x=>x!=null);
           for(let k=0;k<TUNING.train.maxStar;k++)trainAwake(top,'tec'); // ★を上限まで
           renderDeck();
-          const marks=[...document.querySelectorAll('#deckSlots .cnd')];
-          if(marks.length<5)throw new Error('印が足りない: '+marks.length);
-          const byCls={};
-          for(const m of marks){
-            const c=[...m.classList].find(x=>/^c[0-4]$/.test(x));
-            byCls[c]=m.textContent;
-            if(!getComputedStyle(m).color)throw new Error('色が付いていない');
+          // **オーラで見せる**(→docs/03 §3.32)。1〜4は光り、0(ケガ)は光らない
+          for(let v=0;v<5;v++){
+            const fig=document.querySelector('#deckSlots .fig.cd-'+v);
+            if(!fig)throw new Error('段 '+v+' の選手が居ない');
+            const aura=fig.querySelector('.fig-aura');
+            if(v===0){
+              if(aura)throw new Error('ケガなのに光っている');
+              const f=getComputedStyle(fig.querySelector('img')).filter;
+              if(!f||f==='none')throw new Error('ケガの立ち絵が沈んでいない');
+            }else if(!aura)throw new Error('段 '+v+' が光っていない');
           }
-          for(let v=0;v<5;v++)if(!byCls['c'+v])throw new Error('段 '+v+' の印が出ていない');
-          if(byCls.c0!=='✚')throw new Error('ケガが十字でない: '+byCls.c0);
-          if(byCls.c1!=='▽')throw new Error('不調が▽でない: '+byCls.c1);
-          for(const v of [2,3,4])if(byCls['c'+v]!=='▲')
-            throw new Error('段 '+v+' が▲でない: '+byCls['c'+v]);
-          // 色は5段すべて違う
-          const cols=[0,1,2,3,4].map(v=>getComputedStyle(
-            document.querySelector('#deckSlots .cnd.c'+v)).color);
-          if(new Set(cols).size!==5)throw new Error('色が重なっている: '+cols.join(' / '));
+          // オーラは**立ち絵より前に置く**(後ろに敷くため)
+          const f2=document.querySelector('#deckSlots .fig.cd-2');
+          if(f2.querySelector('.fig-aura')!==f2.children[0])
+            throw new Error('オーラが立ち絵の後ろに敷かれていない');
+          // 段ごとに見た目が違う(色 or 大きさ)
+          const look=[1,2,3,4].map(v=>{
+            const a2=document.querySelector('#deckSlots .fig.cd-'+v+' .fig-aura');
+            const st=getComputedStyle(a2);
+            return st.backgroundImage+'|'+st.boxShadow;
+          });
+          if(new Set(look).size!==4)throw new Error('段の見分けが付かない');
+          // **オーラはレイアウトを押し広げない**(box-shadow で外へ出す)
+          const au=document.querySelector('#deckSlots .fig.cd-4 .fig-aura');
+          const fg=au.parentElement;
+          if(au.getBoundingClientRect().width>fg.getBoundingClientRect().width+1)
+            throw new Error('オーラが枠より大きい(行を押し広げる)');
+          // ケガの印は OVR と同じ高さ・大きさ、右上
+          const hurt=document.querySelector('#deckSlots .slot.hurt');
+          const mk=hurt.querySelector('.cnd'), ov=hurt.querySelector('.sl-ovr');
+          if(!mk||mk.textContent!=='✚')throw new Error('ケガの印が十字でない');
+          const rm=mk.getBoundingClientRect(), ro=ov.getBoundingClientRect();
+          if(Math.abs(rm.top-ro.top)>1)throw new Error('OVRと高さが違う');
+          if(Math.abs(rm.height-ro.height)>1)throw new Error('OVRと大きさが違う');
+          if(rm.left<ro.left)throw new Error('印がOVRより左に無い(重なっている)');
+          if(document.querySelectorAll('#deckSlots .slot:not(.hurt) .cnd').length)
+            throw new Error('ケガ以外にも印が出ている');
           // ★が上限なら金(黄金の連携線と同じ色)
           const full=document.querySelector('#deckSlots .fig-star.full');
           if(!full)throw new Error('上限の★が金になっていない');
@@ -1205,7 +1225,7 @@ const STEPS = [
             throw new Error('★の数が上限でない: '+full.textContent);
           const gold=getComputedStyle(full).color;
           const link=getComputedStyle(document.createElement('div'));
-          return '✚▽▲▲▲ / 5段とも別の色 / ★'+TUNING.train.maxStar+'は '+gold;
+          return 'オーラ 1〜4 / ケガは沈む+✚ / ★'+TUNING.train.maxStar+'は '+gold;
         })()`));
         await ctx.wait(300);
         await ctx.shot("10k-deck-condition");
@@ -1213,7 +1233,8 @@ const STEPS = [
         ctx.log("  相手には出さない:", await ctx.js(`(()=>{
           const foe=divClubs().find(x=>x!==S.club.id);
           openFoe({ kind:'club', clubId:foe });
-          const n=document.querySelectorAll('#foeSlots .cnd').length;
+          const n=document.querySelectorAll('#foeSlots .cnd').length
+            +document.querySelectorAll('#foeSlots .fig-aura').length;
           if(n)throw new Error('相手のコンディションが見えている: '+n);
           show('deck');
           return '相手の印 0 個';
