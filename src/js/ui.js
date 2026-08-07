@@ -1068,12 +1068,12 @@ function renderSeason(){
       const won=S.player.trophies.some(t=>t.id===cup.id);
       // **エントリー中なら状態を、そうでなければ出られない理由を**書く。
       // 出られるかどうかは**その大会について**見る(cupEnterable は今節の1つを返す)
-      const en=cupEnterable(), need=cupNeedShort(cup);
+      const en=cupEnterables().some(x=>x.id===cup.id), need=cupNeedShort(cup);
       let sub;
       if(j&&j.done)             sub="終了 ／ "+cupPlaceName(cup,j)+"（"+(j.win?"優勝":"優勝 "+j.champ)+"・+"+fmtNum(j.coin)+"）";
       else if(j&&j.alive)       sub="エントリー中 ／ 次は "+cupRoundName(cup,j.round);
       else if(j)                sub="敗退（"+cupPlaceName(cup,j)+"）／ 決勝は第"+cupLastNode()+"節";
-      else if(en&&en.id===cup.id)sub="今節にエントリーできます ／ "+cup.rounds+"回戦";
+      else if(en)               sub="今節にエントリーできます ／ "+cup.rounds+"回戦";
       // **開催と条件は必ず並べて出す**。片方だけだと「いつ来るのか」か
       // 「なぜ出られないのか」のどちらかが分からなくなる
       else sub=cup.every+"の倍数の節 ／ "
@@ -1165,10 +1165,11 @@ function cupCalNote(n){
   // そこから間隔があく節では待つ理由が違う。全部同じ文にすると先の予定まで嘘になる
   const nodes=(c&&!c.done)?cupNodes():null, last=nodes?nodes[nodes.length-1]:0;
   const rest=nodes?last+TUNING.cup.rest:(S.career.cupRest||0);
+  const also=on.length>1?"（他"+(on.length-1)+"大会と同日・選べます）":"";
   const sub=n<=last?"開催予定（大会が終わるまで参加できません）"
     :n<rest?"開催予定（前の大会から"+TUNING.cup.rest+"節あきます）"
     :cupOpen(on[0])?"開催予定（エントリーできます）":"開催予定（条件を満たせば参加できます）";
-  return { label:on[0].name, sub:sub, cls:"cup soon", mark:"◇" };
+  return { label:on[0].name+(on.length>1?" 他":""), sub:sub+also, cls:"cup soon", mark:"◇" };
 }
 const seasonDivider=(season,clubId)=>
   '<div class="cal-div"><span>SEASON '+season+'</span><b>'+esc(clubName(clubId))+'</b></div>';
@@ -1358,10 +1359,14 @@ function chatEnter(st){
   const C=S.career, ch=C.chat, sel=ch.sel;
   if(st==="cup"){
     if(cupMustPlay()){ pickComp("cup"); return false; }   // 勝ち残り中は選ぶ余地がない
-    const cup=cupEnterable();
-    if(!cup)return false;
-    sel.cup=cup.id;
-    chatSay("sec",chatText(CHAT.cupAsk,"cupAsk:"+C.node,{ c:cup.name }));
+    const list=cupEnterables();
+    if(!list.length)return false;
+    sel.cup=list[0].id;
+    // **重なった日は「どれに出るか」を聞く**(→docs/03 §3.23)。
+    // 格の高いほうを黙って選ぶと、あえて下位大会を獲りにいく手が消える
+    chatSay("sec",list.length>1
+      ? chatText(CHAT.cupPick,"cupPick:"+C.node,{ c:list.map(x=>x.name).join("・") })
+      : chatText(CHAT.cupAsk,"cupAsk:"+C.node,{ c:list[0].name }));
     return true;
   }
   if(st==="foe"){
@@ -1498,8 +1503,9 @@ function chatPick(id,label){
   const C=S.career, ch=C.chat, sel=ch.sel, st=ch.step;
   chatSay("mgr",label);
   if(st==="cup"){
-    if(id==="yes"){
-      const cup=cupEnterable();
+    // id は大会のID(重なった日は選べる)。"no" だけが見送り
+    if(id!=="no"){
+      const cup=cupEnterables().find(x=>x.id===id)||cupEnterable();
       if(cup&&enterCup(cup.id)){
         // **エントリーは手続きだけ**。打ち手は別に選ぶ(→docs/03 §3.23)。
         // 1回戦の節だけ選手を呼べないと、会話が飛ばされたようにしか読めない
@@ -1531,11 +1537,19 @@ function chatOptions(){
   const C=S.career, ch=C.chat, sel=ch.sel, st=ch&&ch.step;
   // **監督は単語で返さない**(→docs/06 §6.23)。選択肢は短く、発言は文にする
   const N=C.node;
-  if(st==="cup")return { q:"どうしますか", items:[
-    { id:"yes", label:"エントリーする", say:chatText(CHAT.sayCupYes,"sy:"+N),
-      sub:"勝ち続ける限りリーグ戦は進められません" },
-    { id:"no",  label:"今節は見送る",   say:chatText(CHAT.sayCupNo,"sn:"+N),
-      sub:"リーグ戦に集中します" }] };
+  if(st==="cup"){
+    // **重なった日は大会ごとに選択肢を出す**(→docs/03 §3.23)。1つなら今までどおり
+    const list=cupEnterables();
+    const one=list.length<2;
+    return { q:one?"どうしますか":"どの大会に出ますか", items:list.map(c=>({
+        id:c.id,
+        label:one?"エントリーする":c.name,
+        say:one?chatText(CHAT.sayCupYes,"sy:"+N):c.name+"へ。",
+        sub:one?"勝ち続ける限りリーグ戦は進められません"
+          :c.rounds+"回戦 ／ 優勝 "+fmtNum(c.prize[0])+"コイン・名声 "+fmtNum(c.fame[0]) }))
+      .concat([{ id:"no", label:"今節は見送る", say:chatText(CHAT.sayCupNo,"sn:"+N),
+        sub:"リーグ戦に集中します" }]) };
+  }
   if(st==="hand")return { q:"打ち手を選ぶ",
     items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc,
       say:chatText(CHAT[h.id==="train"?"sayTrain":h.id==="bond"?"sayBond":"sayRest"],

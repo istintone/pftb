@@ -964,19 +964,22 @@ const cupMustPlay=()=>{
   return !!(c&&c.alive&&!c.done&&cupNodeNow());
 };
 /** 今節にエントリーできるカップ。無ければ null。 */
-function cupEnterable(){
+function cupEnterables(){
   // **同時に複数はエントリーできない**。ただし塞ぐのは**進行中のあいだだけ**。
   // 終わった大会の記録は結果を見せるために残すので、done を見ないと
   // 一度出たら二度と出られなくなる(実際にそうなった)。
-  if(S.career.cup&&!S.career.cup.done)return null;
+  if(S.career.cup&&!S.career.cup.done)return [];
   // **大会のあとは間をあける**(→docs/03 §3.23)。8種すべてが開くと開催日が
   // 任期の75%を覆い、リーグが1.7シーズンしか回らなくなる
-  if(S.career.cupRest&&S.career.node<S.career.cupRest)return null;
-  if(S.career.plan[S.career.node])return null;             // 予定が埋まっている節は不可
-  // 同じ節に2つ重なったら**格の高いほう**(賞金の大きいほう)を出す
-  const open=CUPS.filter(cup=>cupOpen(cup)&&cupDay(cup,S.career.node));
-  return open.sort((a,b)=>b.prize[0]-a.prize[0])[0]||null;
+  if(S.career.cupRest&&S.career.node<S.career.cupRest)return [];
+  if(S.career.plan[S.career.node])return [];               // 予定が埋まっている節は不可
+  // **重なった大会は全部返す**。どれに出るかはチャットで監督が選ぶ(→docs/03 §3.23)。
+  // 並びは格の高い順(賞金の大きい順)で、これがそのまま選択肢の順になる
+  return CUPS.filter(cup=>cupOpen(cup)&&cupDay(cup,S.career.node))
+    .sort((a,b)=>b.prize[0]-a.prize[0]);
 }
+/** 今節の筆頭(いちばん格の高い大会)。「出られるか」を1つだけ知りたい側が使う。 */
+const cupEnterable=()=>cupEnterables()[0]||null;
 /** 制したカップの種類数(→docs/03 §3.23)。同じ大会は何度優勝しても1つ。 */
 const cupWins=()=>(S.player.trophies||[]).filter(t=>cupById(t.id)).length;
 /** DIV1 でリーグを制した経験があるか。**最終目標の大会の鍵**。 */
@@ -995,8 +998,10 @@ function cupOpen(cup){
  * 表の上では TBD で、勝ち上がりが決まるたびに埋まっていく。
  */
 function enterCup(id){
-  const cup=cupEnterable();
-  if(!cup||(id&&cup.id!==id))return false;
+  // **重なった節では筆頭以外も選べる**(→docs/03 §3.23)
+  const list=cupEnterables();
+  const cup=id?list.find(c=>c.id===id):list[0];
+  if(!cup)return false;
   const c={ id:cup.id, node0:S.career.node, round:1, alive:true,
     out:null, champ:null, done:false, res:[] };
   cupDraw(cup,c);

@@ -208,6 +208,37 @@ const STEPS = [
 
     // --- カップの一巡を確かめる。**元の状態は最後に戻す**(以降の撮影に影響させない) ---
     await ctx.js("window.__snap=JSON.stringify(S)");
+    // **開催日が重なったら監督が選ぶ**(→docs/03 §3.23)。格の高いほうを黙って選ばない
+    ctx.log("  重なった開催日:", await ctx.js(`(()=>{
+      const lo=CUPS.find(c=>c.id==='pre'), hi=CUPS.find(c=>c.id==='super');
+      let n=0;
+      for(let i=1;i<=96;i++)if(i%lo.every===0&&i%hi.every===0){ n=i; break; }
+      if(!n)throw new Error('重なる節が無い');
+      S.club.exp=99999; S.world.div=1; S.career.node=n; S.career.cupRest=0;
+      S.career.cup=null; S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      S.career.plan[n]=null;
+      show('chat');
+      const ops=[...document.querySelectorAll('#chatAsk [data-pick]')];
+      const ids=ops.map(b=>b.dataset.pick);
+      if(ids.indexOf(lo.id)<0||ids.indexOf(hi.id)<0)
+        throw new Error('重なった大会が選択肢に出ない: '+ids);
+      if(ids[ids.length-1]!=='no')throw new Error('見送りが最後に無い: '+ids);
+      if(ids.indexOf(hi.id)>ids.indexOf(lo.id))throw new Error('格の高い大会が先に出ていない');
+      window.__lo=lo.id;
+      return '第'+n+'節 '+ids.length+'択（'+ids.join('/')+'）';
+    })()`));
+    await ctx.shot("07k2-cup-pick");                 // 選ぶ前の画面を残す
+    ctx.log("  格下を選ぶ:", await ctx.js(`(()=>{
+      // **格の高いほうが押し付けられない**こと
+      const b=[...document.querySelectorAll('#chatAsk [data-pick]')]
+        .find(e=>e.dataset.pick===window.__lo);
+      b.click();
+      if(!S.career.cup||S.career.cup.id!==window.__lo)
+        throw new Error('選んだ大会に入っていない: '+(S.career.cup&&S.career.cup.id));
+      const out=cupById(S.career.cup.id).name+' でエントリー';
+      S.career.cup=null; S.career.chat=null; S.career.comp=null; S.world.div=3;
+      return out;
+    })()`));
     ctx.log("  エントリー:", await ctx.js(`(()=>{
       const cup=CUPS[0];
       S.club.exp=cup.needExp+400; S.career.node=cup.every; S.career.cup=null;
@@ -215,7 +246,8 @@ const STEPS = [
       renderSeason();
       // **エントリーはクラブチャットの中**(→docs/03 §3.29)
       show('chat');
-      const yes=[...document.querySelectorAll('#chatAsk [data-pick]')].find(b=>b.dataset.pick==='yes');
+      // 選択肢のIDは**大会のID**(重なった日は複数並ぶ)。見送りだけが 'no'
+      const yes=[...document.querySelectorAll('#chatAsk [data-pick]')].find(b=>b.dataset.pick!=='no');
       if(!yes)throw new Error('チャットにエントリーの選択肢が出ない');
       yes.click();
       // **エントリーしても打ち手は別に選ぶ**(→docs/03 §3.23)。会話が飛ばない

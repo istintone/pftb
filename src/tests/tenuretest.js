@@ -305,10 +305,18 @@ function runSeason(hand) {
     assert.ok(!E.cupOpen(conti), conti.name + " は DIV2 では出られない");
     S4.world.div = 1;
     assert.ok(E.cupOpen(conti), conti.name + " は DIV1 で開く");
-    // 同じ節に2つ重なったら格の高いほうが出る
+    // **重なった節は全部が選択肢になる**(→docs/03 §3.23)。筆頭は格の高いほう
     S4.career.node = conti.every * E.CUPS[0].every;          // 両方の開催サイクル
-    const pick = E.cupEnterable();
-    assert.strictEqual(pick && pick.id, conti.id, "重なったら賞金の大きいほうを選ぶ");
+    const all = E.cupEnterables();
+    assert.ok(all.length >= 2, "重なった大会が全部返る: " + all.map(c => c.id));
+    assert.strictEqual(all[0].id, conti.id, "筆頭は賞金の大きいほう");
+    assert.strictEqual(E.cupEnterable().id, conti.id, "1つだけ知りたい側にも筆頭が出る");
+    // **格下をあえて選べる**。ここが選べないと「今節は軽い大会を獲る」手が消える
+    const low = all[all.length - 1];
+    assert.notStrictEqual(low.id, conti.id, "筆頭以外の選択肢がある");
+    assert.ok(E.enterCup(low.id), low.name + " を選んで入れる");
+    assert.strictEqual(S4.career.cup.id, low.id, "選んだ大会に入っている");
+    S4.career.cup = null; S4.career.comp = null;
     // 大陸カップの相手は**DIV1 のリーグ首位級**(→docs/03 §3.25)
     {
       const plan = E.cupPlan(conti, false), elite = E.cupPlan(conti, true);
