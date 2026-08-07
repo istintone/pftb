@@ -192,10 +192,11 @@ function runSeason(hand) {
       assert.ok(!C.cup.alive && C.cup.out === 1, "敗退が表から読める");
       C.node = E.cupLastNode();
       const coin0 = S3.club.coins;
+      const gate = E.gateIncome();          // 節が進むと観客収入も入る(→docs/03 §3.5)
       const closed = E.advanceNode();
       assert.ok(closed && !closed.win, "決勝の節を越えたら大会が締まる");
       assert.ok(C.cup.done, "大会は完了扱いになる");
-      assert.strictEqual(S3.club.coins - coin0, closed.coin, "順位の賞金は完了節に入る");
+      assert.strictEqual(S3.club.coins - coin0 - gate, closed.coin, "順位の賞金は完了節に入る");
       // **名声も完了節に入る**(→docs/03 §3.9)
       assert.strictEqual(closed.fame, cup.fame[closed.dist], "順位ぶんの名声が付く");
       assert.ok(closed.fame > 0, "敗退でも名声は増える: " + closed.fame);

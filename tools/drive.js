@@ -1084,6 +1084,39 @@ const STEPS = [
       await ctx.wait(250);
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
+      if (tab === "clubhouse") {
+        // 施設(→docs/03 §3.5)。**同時に建てられるのは1つだけ**
+        ctx.log("  施設:", await ctx.js(`(()=>{
+          S.club.coins=999999; S.club.build=null;
+          const F=TUNING.fac;
+          for(const f of FACILITIES)S.club.fac[f.id]=0;
+          renderClubhouse();
+          const rows=[...document.querySelectorAll('#clubFac .fc')];
+          if(rows.length!==FACILITIES.length)throw new Error('施設の行が足りない: '+rows.length);
+          const btn=document.querySelector('#clubFac [data-fac="training"]');
+          if(!btn)throw new Error('投資ボタンが無い');
+          if(btn.classList.contains('off'))throw new Error('コインがあるのに押せない');
+          const cells=document.querySelectorAll('#clubFac .fc .fc-bar i').length;
+          if(cells!==FACILITIES.length*F.maxLv)throw new Error('段のマスが合わない: '+cells);
+          facBuild('training'); renderClubhouse();
+          if(document.querySelectorAll('#clubFac [data-fac]').length)
+            throw new Error('建設中なのに他の施設が押せる');
+          const wip=document.querySelector('#clubFac .fc.on .fc-wip');
+          if(!wip)throw new Error('建設中の表示が無い');
+          if(facLv('training')!==0)throw new Error('投資した時点で上がっている');
+          for(let i=0;i<F.nodes[0];i++)facTick();
+          renderClubhouse();
+          if(facLv('training')!==1)throw new Error('完成していない');
+          if(!document.querySelector('#clubFac [data-fac]'))
+            throw new Error('完成したのに投資できない');
+          if(document.querySelectorAll('#clubFac .fc-bar i.on').length!==1)
+            throw new Error('点灯した段が合わない');
+          return FACILITIES.length+'種 / '+wip.textContent.trim()+' / 段 '+F.maxLv
+            +' / 観客収入あり';
+        })()`));
+        await ctx.wait(250);
+        await ctx.shot("12b-club-facilities");
+      }
       if (tab === "deck") {
         // ピッチは aspect-ratio:3/4 で形が決まる。px 固定に戻ると歪むのでここで押さえる
         const box = await ctx.js(

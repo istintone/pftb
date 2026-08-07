@@ -260,11 +260,16 @@ function scoutRarity(rng,pack,minKey){
  * パックを1つ開ける。**確定枠は最後ではなく最初に引く**。
  * 最後に回すと「残り1枚で確定」が読めてしまい、めくる楽しみが消える。
  */
-function openScout(pack,rng){
+function openScout(pack,rng,boost){
   const out=[];
   for(let i=0;i<pack.cards;i++){
     const min=(i===0&&pack.floor)?pack.floor:null;
-    const rarity=scoutRarity(rng,pack,min);
+    let rarity=scoutRarity(rng,pack,min);
+    // **スカウト網**(→docs/03 §3.5)。確率で引き直し、良いほうを取る
+    if(boost&&rng()<boost){
+      const r2=scoutRarity(rng,pack,min);
+      if(RAR_KEYS.indexOf(r2)>RAR_KEYS.indexOf(rarity))rarity=r2;
+    }
     const pos=rpick(rng,["GK","DF","DF","MF","MF","MF","FW","FW"]);   // GKは出過ぎない
     out.push(makeCard(rng,pos,{ rarity }));
   }

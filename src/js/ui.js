@@ -1009,7 +1009,7 @@ function buyScout(id){
   // **たねは引くたびに変える**。ここは資産が増える場所なので、
   // 同じ結果を再現できてはいけない(セーブを戻して引き直す余地を作らない)。
   const rng=mulberry32((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0);
-  _scoutGot=openScout(pk,rng);
+  _scoutGot=openScout(pk,rng,facScoutK());       // スカウト網(→docs/03 §3.5)
   S.player.coll.push(..._scoutGot);
   save(); headUI(); renderScout();
   const best=_scoutGot.reduce((b,c)=>RAR_KEYS.indexOf(c.rarity)>RAR_KEYS.indexOf(b.rarity)?c:b);
@@ -1418,8 +1418,9 @@ function chatEnter(st){
     // **訓練は経験点になる**(→docs/03 §3.30)。失敗は0
     if(sel.hand==="train"&&sel.menu&&!sel.awake){
       const G=TUNING.train, t=trainById(sel.menu);
-      const gain=sel.res==="great"?rri(rng,G.greatLo,G.greatHi)
-        :sel.res==="ok"?rri(rng,G.okLo,G.okHi):0;
+      // **練習場**(→docs/03 §3.5)で経験点が増える
+      const gain=facTrainGain(sel.res==="great"?rri(rng,G.greatLo,G.greatHi)
+        :sel.res==="ok"?rri(rng,G.okLo,G.okHi):0);
       trainAdd(sel.who,t.stat,gain);
       sel.gain=gain;
       // **数字は言わない**。積み上がりはカード詳細で見られる(→docs/03 §3.30)
@@ -1728,8 +1729,46 @@ function renderClubhouse(){
     ?'<div class="trophies">'+tr.map(t=>'<div class="trophy"><i>🏆</i><div>'
       +'<b>'+esc(t.name)+'</b><span>SEASON '+t.season+'</span></div></div>').join("")+'</div>'
     :'<div class="lg">まだありません。カップ戦を制すると刻まれます。</div>';
-  $("clubFac").innerHTML=Object.keys(F).map(k=>kv(F[k],"Lv."+S.club.fac[k])).join("")
-    +'<div class="lg" style="margin-top:6px">投資は第4段で実装します。</div>';
+  renderFac();
+}
+/**
+ * 施設(→docs/03 §3.5)。**同時に建てられるのは1つだけ**なので、
+ * 建設中はほかの行を「待ち」にする。何を先に建てるかがそのまま判断になる。
+ */
+function renderFac(){
+  const b=S.club.build, F=TUNING.fac;
+  $("clubFac").innerHTML=FACILITIES.map(f=>{
+    const lv=facLv(f.id), on=b&&b.id===f.id;
+    const c=facCanBuild(f.id);
+    const bar='<div class="fc-bar">'+Array.from({length:F.maxLv},(_,i)=>
+      '<i'+(i<lv?' class="on"':(on&&i===b.to-1?' class="wip"':''))+'></i>').join("")+'</div>';
+    // **状態は右端に1つだけ**。建設中/上限/金額のどれかで、迷いが出ないようにする
+    const right=on?'<span class="fc-wip">あと '+b.left+'節</span>'
+      :lv>=F.maxLv?'<span class="fc-max">最大</span>'
+      :b?'<span class="fc-off">—</span>'
+      :'<button class="fc-go'+(c&&c.ok?"":" off")+'" data-fac="'+f.id+'">'
+        +fmtNum(F.cost[lv])+'</button>';
+    return '<div class="fc'+(on?" on":"")+'">'
+      +'<div class="fc-b"><b>'+f.label+' <span class="fc-lv">Lv.'+lv+'</span></b>'
+      +'<span class="lg">'+f.note+'</span>'+bar+'</div>'
+      +'<div class="fc-r">'+right+'</div></div>';
+  }).join("")
+  +'<div class="lg" style="margin-top:8px">'
+  +(b?'建設中は<b>ほかの施設を建てられません</b>。':'投資した節には効果が出ません。'
+    +'完成まで<b>'+F.nodes[0]+'〜'+F.nodes[F.maxLv-1]+'節</b>かかります。')
+  +'<br>観客収入 <b class="num">'+fmtNum(gateIncome())+'</b> ／節'
+  +'（スタジアムと成績で伸びます）</div>';
+  $("clubFac").querySelectorAll("[data-fac]").forEach(el=>{
+    el.onclick=()=>{
+      const f=facById(el.dataset.fac), c=facCanBuild(f.id);
+      if(!c)return;
+      if(!c.ok){ toast("コインが足りません（"+fmtNum(c.cost)+"）"); return; }
+      if(!confirm(f.label+" を Lv."+c.to+" にします。"
+        +fmtNum(c.cost)+" コイン／完成まで "+c.nodes+"節。よろしいですか?"))return;
+      facBuild(f.id); save(); headUI(); renderFac();
+      toast(f.label+" の工事を始めました（あと "+c.nodes+"節）");
+    };
+  });
 }
 
 // ---------- 試合(第3段までは結果だけ) ----------

@@ -246,6 +246,63 @@ function requiredFame(club){
 }
 const offersFor=fame=>CLUBS.filter(c=>requiredFame(c)<=fame);
 
+// --- 施設(→docs/03 §3.5) ---
+// **クラブの資産**なので退任時は置いていく。就任時のレベルは前任者の遺産で、
+// 国の格が高いほど整っている。**1度に建てられるのは1つだけ**で、これが
+// 「全施設最大」を構造で止める(0→5 に40節かかるので96節では2つが限界)。
+function facStart(club){
+  const F=TUNING.fac, lv=clamp(Math.floor((leagueById(club.league).tier-1)*F.startTier),0,F.maxLv);
+  const out={};
+  for(const f of FACILITIES)out[f.id]=lv;
+  return out;
+}
+const facLv=id=>(S.club&&S.club.fac&&S.club.fac[id])||0;
+/** 投資できるか。**建設中は他を建てられない**、上限は上げられない、コインが要る。 */
+function facCanBuild(id){
+  const F=TUNING.fac;
+  if(!S.club||S.club.build)return null;
+  const lv=facLv(id);
+  if(lv>=F.maxLv)return null;
+  return { id, to:lv+1, cost:F.cost[lv], nodes:F.nodes[lv], ok:S.club.coins>=F.cost[lv] };
+}
+/** 投資する。**その節には効果が出ない**(完成まで数節)。これが遅延の本体。 */
+function facBuild(id){
+  const c=facCanBuild(id);
+  if(!c||!c.ok)return null;
+  S.club.coins-=c.cost;
+  S.club.build={ id, to:c.to, left:c.nodes };
+  return { ...c };
+}
+/** 節が1つ進む。建設中なら残りを減らし、0になったら完成させる。 */
+function facTick(){
+  const b=S.club&&S.club.build;
+  if(!b)return null;
+  if(--b.left>0)return null;
+  S.club.fac[b.id]=b.to;
+  S.club.build=null;
+  return { id:b.id, lv:b.to };
+}
+// 施設の効き方(→docs/03 §3.5)。**掛かり先はそれぞれ1つだけ**にする。
+/** 練習場 — 訓練の経験点が増える(→§3.30)。 */
+const facTrainGain=n=>Math.round(n*(1+facLv("training")*TUNING.fac.train));
+/** 医療施設 — ケガをしにくい(→§3.32)。試合に渡す倍率。 */
+const facMedK=()=>Math.max(0.1,1-facLv("medical")*TUNING.fac.medHurt);
+/** 医療施設 — 治りが早い。減らす節数。 */
+const facMedHeal=()=>Math.round(facLv("medical")*TUNING.fac.medHeal);
+/** スカウト網 — 段を引き直して良いほうを取る確率(→§3.22)。 */
+const facScoutK=()=>facLv("scouting")*TUNING.fac.scout;
+
+/** 観客収入(→docs/03 §3.5)。**節ごとの安定収入**。スタジアムと成績で伸びる。 */
+function gateIncome(){
+  const G=TUNING.gate, club=clubById(S.club.id);
+  const t=S.world.table[S.club.id];
+  const n=t?t.w+t.d+t.l:0;
+  const form=n?(t.w+t.d*0.5)/n:0.5;                          // 勝っているほど客が入る
+  return Math.round(G.base*(1+facLv("stadium")*G.perLv)
+    *(1-G.form/2+form*G.form)
+    *leagueById(club.league).money*G.divK[clamp(S.world.div,1,3)-1]);
+}
+
 // --- 部(DIV)の昇降格 → docs/03 §3.24 ---
 // 所属は任期のあいだ動くので**セーブに持つ**。決定的に作り直せない唯一の世界情報。
 /** いま自クラブが戦っている部の顔ぶれ(クラブIDの配列)。 */
@@ -318,7 +375,9 @@ function startTenure(clubId){
   S.club={
     id:clubId,
     coins:Math.round(3000*leagueById(clubById(clubId).league).money),
-    fac:{ training:0, medical:0, stadium:0, scouting:0 },   // 施設(第4段で使う)
+    // 施設(→docs/03 §3.5)。**前任者の遺産**なので、国の格が高いほど整っている
+    fac:facStart(clubById(clubId)),
+    build:null,                                              // 建設中の1件 {id,to,left}
     exp:0,                                                   // チーム熟練度(→§3.7)
     eval:TUNING.eval.start,                                  // オーナーの評価(→§3.9)
     evLog:{},                                                // 今季なにで評価が動いたか
@@ -363,7 +422,8 @@ function matchSide(clubId){
           ...(has?{ bond }:{}), ...(hasG?{ gold }:{}) };
       }),
       form:S.form, name:club.name,
-      kickers:S.kickers, captain:S.captain, order:S.order };
+      kickers:S.kickers, captain:S.captain, order:S.order,
+      med:facMedK() };                                       // 医療施設(→§3.5)
   }
   const { cards:base, form }=cpuSquad(clubId);
   // 相手にもコンディションを配る(→docs/03 §3.32)。節ごとに変わり、格で上に寄る
@@ -745,8 +805,10 @@ function condInjure(id,rng){
   const C=TUNING.cond;
   if(!S.career.hurt)S.career.hurt={};
   condSet(id,COND_HURT);
-  S.career.hurt[id]=rri(rng||mulberry32((S.world.seed^hashStr("heal:"+id+":"+S.career.node))>>>0),
-    C.healLo,C.healHi);
+  // **医療施設で治りが早くなる**(→§3.5)。1節は必ず残す
+  S.career.hurt[id]=Math.max(1,
+    rri(rng||mulberry32((S.world.seed^hashStr("heal:"+id+":"+S.career.node))>>>0),
+      C.healLo,C.healHi)-facMedHeal());
   return S.career.hurt[id];
 }
 /** 治療中の選手と残りの節数。CLUB NEWS と秘書の催促に使う。 */
@@ -1243,9 +1305,11 @@ function advanceNode(){
   const closed=(c&&!c.done&&C.node>=cupLastNode())?closeCup():null;
   C.node++;
   hurtTick();                                               // 治療が1節ぶん進む(→§3.32)
+  facTick();                                                // 建設が1節ぶん進む(→§3.5)
+  S.club.coins+=gateIncome();                               // 観客収入(→§3.5)
   C.hand=null; C.comp=null; C.chat=null;                    // 次節はまた選び直す
   checkTenureClosing();
-  return closed;
+  return closed;                                            // 戻り値は**カップの決着だけ**
 }
 
 const seasonOver=()=>S.world.matchday>(S.world.fixtures||[]).length;

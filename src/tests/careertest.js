@@ -471,6 +471,53 @@ function runSeason() {
       Math.round(E.TUNING.skill.any * 100) + "%");
   }
 
+  // ---------- 施設(→docs/03 §3.5) ----------
+  {
+    await E.newGame(); E.getS().coach="検証"; E.startTenure("sam-8");
+    const S = E.getS(), F = E.TUNING.fac;
+    // ① 初期レベルは**前任者の遺産**。国の格が高いほど整っている
+    const lv = id => E.facStart(E.clubById(id)).training;
+    assert.ok(lv("eng-1") > lv("sam-8"), "格の高い国ほど施設が整っている: "
+      + lv("sam-8") + " → " + lv("eng-1"));
+    // ② **同時に建てられるのは1つだけ**
+    S.club.coins = 999999;
+    assert.ok(E.facBuild("training"), "投資できる");
+    assert.strictEqual(E.facCanBuild("medical"), null, "建設中はほかを建てられない");
+    assert.strictEqual(E.facCanBuild("training"), null, "同じ施設も重ねられない");
+    // ③ **その節には効果が出ない**。完成まで数節
+    const need = F.nodes[0];
+    assert.strictEqual(E.facLv("training"), 0, "投資した時点ではまだ上がらない");
+    for (let i = 0; i < need - 1; i++) { E.facTick();
+      assert.strictEqual(E.facLv("training"), 0, "完成前は上がらない"); }
+    assert.ok(E.facTick(), "完成する");
+    assert.strictEqual(E.facLv("training"), 1, "レベルが上がる");
+    assert.strictEqual(S.club.build, null, "建設中の枠が空く");
+    // ④ 効果が掛かる
+    const g0 = E.facTrainGain(10);
+    S.club.fac.training = F.maxLv;
+    assert.ok(E.facTrainGain(10) > g0, "練習場で経験点が増える: " + g0 + " → " + E.facTrainGain(10));
+    S.club.fac.medical = 0; const m0 = E.facMedK();
+    S.club.fac.medical = F.maxLv;
+    assert.ok(E.facMedK() < m0, "医療施設でケガをしにくい: " + m0.toFixed(2) + " → " + E.facMedK().toFixed(2));
+    assert.ok(E.facMedHeal() > 0, "医療施設で治りが早い");
+    S.club.fac.scouting = F.maxLv;
+    assert.ok(E.facScoutK() > 0, "スカウト網が効く");
+    S.club.fac.stadium = 0; const s0 = E.gateIncome();
+    S.club.fac.stadium = F.maxLv;
+    assert.ok(E.gateIncome() > s0, "スタジアムで観客収入が増える: " + s0 + " → " + E.gateIncome());
+    // ⑤ **上限より上には行けない**
+    assert.strictEqual(E.facCanBuild("training"), null, "上限に達したら投資できない");
+    // ⑥ **全施設最大は時間で止まる**。0→5 に nodes の合計がかかる
+    const all = F.nodes.reduce((a, b) => a + b, 0);
+    const T = E.TUNING.tenure;
+    assert.ok(all * 4 > T.hardMax, "**全施設最大はありえない**: 1つ " + all
+      + "節 × 4 = " + all * 4 + "節 > 任期 " + T.hardMax + "節");
+    assert.ok(all * 2 <= T.limit, "2つなら任期(" + T.limit + "節)に収まる: " + all * 2 + "節");
+    console.log("施設OK 初期 sam", lv("sam-8"), "/ eng", lv("eng-1"),
+      "｜ 1つ上げ切る", F.cost.reduce((a, b) => a + b, 0), "コイン・" + all + "節",
+      "｜ 同時に1つだけ");
+  }
+
   // ---------- スキルの実効価値がそろっている(→docs/08 §8.6④) ----------
   // **機会と効果はセットで測る。** グループが狭い札は発動しない、広い札は毎回発動する。
   // どちらか片方だけ見ると、フラットな数値が「公平」に見えてしまう(実際に4.8倍ひらいていた)。

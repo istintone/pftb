@@ -152,7 +152,7 @@ function pickCaptain(xi,want){
   const w=c=>c.ovr+(c.age-18)*1.5;
   return xi.reduce((b,p)=>w(p.c)>w(b.c)?p:b,xi[0]);
 }
-function buildTeam(cards,form,name,side,kickers,captain,order){
+function buildTeam(cards,form,name,side,kickers,captain,order,med){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
     p.y0=p.y; p.ordM=null;                      // y0 = 采配で動かす前の縦位置
@@ -164,7 +164,8 @@ function buildTeam(cards,form,name,side,kickers,captain,order){
   if(cap)cap.captain=true;
   // kickers … {pk,fk,ck} のカードID。自クラブは編成で指名し、CPUは自動選出に任せる
   const T={ players:xi, bench, form, name, side, score:0,
-    kickers:kickers||null, captain:cap, subOut:[], sentOff:[], order:null, lane:null };
+    kickers:kickers||null, captain:cap, subOut:[], sentOff:[], order:null, lane:null,
+    med:med||1 };                                    // 医療施設のケガ倍率(→docs/03 §3.5)
   setTeamOrder(T,order||null);
   return T;
 }
@@ -738,8 +739,8 @@ function matchClock(rng){
 /** 試合の状態を作る。ここではまだ1ティックも解かない。 */
 function createMatch(home,away,seed,opts){
   const s=seed>>>0;
-  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain,home.order);
-  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain,away.order);
+  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain,home.order,home.med);
+  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain,away.order,away.med);
   const M={
     seed:s, home:H, away:A, ix:0,
     clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定
@@ -895,7 +896,8 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
       // 荒い手ほど確率が高い(守備チャンネルの反則率にそのまま比例させる)。
       // **綺麗に止める選手はファウルもケガも起こしにくい**(→docs/08 §8.6②)
       const clean=marker?skK(marker,"clean"):1;
-      if(marker&&rng()<dch.foul*clean*skK(carrier,"tough")*TUNING.cond.hurtK)
+      // **医療施設**(→docs/03 §3.5)は痛める側=競り負けた選手のチームに掛かる
+      if(marker&&rng()<dch.foul*clean*skK(carrier,"tough")*(T.med||1)*TUNING.cond.hurtK)
         push({ side:T.side, type:"injury", by:carrier.c.id, vs:marker.c.id,
           dch:dch.id, dlabel:dch.label,
           h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
