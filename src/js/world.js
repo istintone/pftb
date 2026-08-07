@@ -969,15 +969,24 @@ function cupEnterable(){
   // 終わった大会の記録は結果を見せるために残すので、done を見ないと
   // 一度出たら二度と出られなくなる(実際にそうなった)。
   if(S.career.cup&&!S.career.cup.done)return null;
+  // **大会のあとは間をあける**(→docs/03 §3.23)。8種すべてが開くと開催日が
+  // 任期の75%を覆い、リーグが1.7シーズンしか回らなくなる
+  if(S.career.cupRest&&S.career.node<S.career.cupRest)return null;
   if(S.career.plan[S.career.node])return null;             // 予定が埋まっている節は不可
   // 同じ節に2つ重なったら**格の高いほう**(賞金の大きいほう)を出す
   const open=CUPS.filter(cup=>cupOpen(cup)&&cupDay(cup,S.career.node));
   return open.sort((a,b)=>b.prize[0]-a.prize[0])[0]||null;
 }
-/** 参加条件(熟練度・部)を満たしているか。**開催日とは別に判定する**(予告に使う)。 */
+/** 制したカップの種類数(→docs/03 §3.23)。同じ大会は何度優勝しても1つ。 */
+const cupWins=()=>(S.player.trophies||[]).filter(t=>cupById(t.id)).length;
+/** DIV1 でリーグを制した経験があるか。**最終目標の大会の鍵**。 */
+const wonDiv1=()=>(S.player.history||[]).some(h=>h.div===1&&h.rank===1);
+/** 参加条件を満たしているか。**開催日とは別に判定する**(予告に使う)。 */
 function cupOpen(cup){
   if((S.club&&S.club.exp||0)<cup.needExp)return false;
-  if(cup.needDiv&&S.world.div>cup.needDiv)return false;    // DIV1 に上がると開く大会
+  if(cup.needDiv&&S.world.div>cup.needDiv)return false;    // その部に上がると開く大会
+  if(cup.needCups&&cupWins()<cup.needCups)return false;    // カップを制すと開く大会
+  if(cup.needLg1&&!wonDiv1())return false;                 // DIV1 を制すと開く大会
   return true;
 }
 /**
@@ -1017,15 +1026,22 @@ const cupRound=()=>S.career.cup?S.career.cup.round:1;
  * 大陸カップは**DIV1 のリーグ首位級**。キングズカップは自分の部の一つ上あたり。
  * 強豪(★)の枠はさらに WORLD CLASS を厚くする。
  */
-function cupPlan(cup,elite){
-  const R=TUNING.roster;
-  if(cup.needDiv===1){
-    const wc=elite?R.div1.rest:R.contiWc;
-    return { REG:R.div1.REG, SPE:R.div1.rest-wc, WC:wc };
+function cupPlan(cup,elite,rng){
+  const R=TUNING.roster, tier=leagueById(clubById(S.club.id).league).tier;
+  const d1=wc=>({ REG:R.div1.REG, SPE:R.div1.rest-clamp(wc,0,R.div1.rest),
+    WC:clamp(wc,0,R.div1.rest) });
+  const r=rng||Math.random;
+  switch(cup.plan){
+    case "d3":   return { ...R.div3 };
+    case "d2":   return { ...R.div2 };
+    case "d1":   return d1(elite?R.div1.rest:R.contiWc);
+    // **最強ランク**(→docs/03 §3.23)。DIV1 の中でも WORLD CLASS を厚く積む
+    case "best": return d1(elite?R.div1.rest:R.contiWc+R.worldWc);
+    case "mix32":return r()<0.5?{ ...R.div3 }:{ ...R.div2 };
+    // **完全にランダム**。DIV3 の相手も DIV1 の相手も同じ確率で当たる
+    case "rand": return rosterPlan(tier,1+Math.floor(r()*3),elite?1:4);
   }
-  const div=clamp(S.world.div-(elite?1:0),1,3);
-  const plan=rosterPlan(leagueById(clubById(S.club.id).league).tier,div,elite?1:4);
-  return plan;
+  return rosterPlan(tier,clamp(S.world.div-(elite?1:0),1,3),elite?1:4);
 }
 /** 枠の呼び名。強豪には目印を付ける。 */
 const cupTeamName=(c,i)=>(i===c.elite?"★ ":"")+c.field[i];
@@ -1107,7 +1123,7 @@ function cupSide(cup,round,foe){
   const saveUid=uid; uid=7000000+Math.floor(rng()*900000);  // 手持ちカードとIDをぶつけない
   const roster=makeRoster(rng,{
     club:"", ovrBias:base+cup.bias+round,                    // 勝ち上がるほど強くなる
-    rarPlan:cupPlan(cup,elite) });
+    rarPlan:cupPlan(cup,elite,rng) });
   uid=saveUid;
   const form=Object.keys(FORMATIONS)[Math.floor(rng()*Object.keys(FORMATIONS).length)];
   return { cards:bestXI(roster,form), form, name:cupTeamName(c,foe), elite };
@@ -1159,6 +1175,7 @@ function closeCup(){
   const out1=!win&&c.out===1;
   const ev=win?evalAdd("cChamp",TUNING.eval.cChamp)
     :out1?evalAdd("cOut1",-TUNING.eval.cOut1):0;
+  S.career.cupRest=S.career.node+TUNING.cup.rest;           // 次の大会まで間をあける
   c.champ=champ; c.done=true; c.coin=coin; c.dist=dist; c.win=win; c.fame=fame;
   return { cup, champ, coin, fame, dist, win, ev, out1 };
 }

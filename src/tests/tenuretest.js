@@ -106,11 +106,24 @@ function runSeason(hand) {
 
   // ---------- カップ戦(D41 → docs/03 §3.23) ----------
   {
-    const cup = E.CUPS[0];
+    // **キングズを基準に見る**。プレシーズンは「難易度が低い」大会なので、
+    // 相手の強さの下限を測る土台にはならない(別に下で見る)
+    const cup = E.cupById("kings");
     const S3 = E.getS(), C = S3.career;
-    const at = (node, exp) => { C.cup = null; C.node = node; S3.club.exp = exp; return E.cupEnterable(); };
+    // **キングズは DIV3 水準の相手を出す**(→docs/03 §3.23)ので、
+    // 自クラブも DIV3 に置いて比べる。DIV1 のまま比べると「相手が弱い」のは当たり前
+    S3.world.div = 3;
+    // 大会を終えると間があく(→docs/03 §3.23)ので、検証では毎回そこも戻す
+    const at = (node, exp) => { C.cup = null; C.cupRest = 0;
+      C.node = node; S3.club.exp = exp; return E.cupEnterable(); };
     // **開催サイクルと参加条件の両方**を満たしたときだけエントリーできる
-    assert.ok(!at(cup.every - 1, cup.needExp + 500), "開催節でなければエントリーできない");
+    // **どの大会も開かない節**を探す。大会が増えたので `every-1` では
+    // 別の大会の開催日に当たってしまう(プレシーズンは6の倍数)
+    let quiet = 0;
+    for (let n = 20; n < 200 && !quiet; n++)
+      if (!E.CUPS.some(c => n % c.every === 0)) quiet = n;
+    assert.ok(quiet, "どの大会も開かない節がある");
+    assert.ok(!at(quiet, cup.needExp + 500), "開催節でなければエントリーできない");
     assert.ok(!at(cup.every, cup.needExp - 1), "熟練度が足りなければエントリーできない");
     assert.ok(at(cup.every, cup.needExp), "条件を満たせばエントリーできる");
     // エントリーする前は、開催節でもカップは選べない(**打ち手から入る**)
@@ -145,11 +158,38 @@ function runSeason(hand) {
     assert.deepStrictEqual(E.compsAvailable(), ["cup"], "勝ち残っている間はカップ一択");
     assert.strictEqual(E.pickComp("league"), false, "辞退してリーグへは回れない");
 
-    // 相手は**自クラブと同等かやや強い**
     const f = E.cupFixtureOf();
     assert.ok(f && f.side && f.side.cards.length >= 11, "組み合わせが作れる");
-    const mine = E.squadPower(E.squadCards().slice(0, E.TUNING.squad.starters));
-    assert.ok(E.squadPower(f.side.cards) >= mine - 8, "相手が極端に弱くない");
+    // **相手の強さは大会が決める**(→docs/03 §3.23)。自クラブとの比較では見ない —
+    // キングズは DIV3 水準の相手を出すので、DIV1 のクラブが出れば当然弱い。
+    // 見るのは「回戦が上がるほど強くなる」ことと、下の「大会の階段」。
+    {
+      // **1枠だけで比べない**。下駄は1回戦あたり +1 で、名簿の揺れのほうが大きい
+      const avg = r => { let n = 0, v = 0;
+        for (let k = 0; k < 8; k++) { if (k === C.cup.slot) continue;
+          v += E.squadPower(E.cupSide(cup, r, k).cards.slice(0, 11)); n++; }
+        return v / n; };
+      const p1 = avg(1), p3 = avg(cup.rounds);
+      assert.ok(p3 > p1, "勝ち上がるほど相手が強い: "
+        + p1.toFixed(1) + " → " + p3.toFixed(1));
+    }
+    // **大会ごとに相手の強さが階段になっている**(→docs/03 §3.23)。
+    // 同じ回戦・同じ枠で並べると、上の大会ほど強い
+    {
+      // 大会ごとの比較も**8枠の平均**で見る(1枠だと名簿の揺れに埋もれる)
+      const pw = id => { const cu = E.cupById(id); let n = 0, v = 0;
+        for (let k = 0; k < 8; k++) { if (k === C.cup.slot) continue;
+          v += E.squadPower(E.cupSide(cu, 1, k).cards.slice(0, 11)); n++; }
+        return Math.round(v / n); };
+      const order = ["pre", "kings", "super", "conti", "trophy", "world"];
+      const vals = order.map(pw);
+      for (let i = 1; i < vals.length; i++)
+        assert.ok(vals[i] >= vals[i - 1] - 2,
+          order[i - 1] + " より " + order[i] + " が弱い: " + vals[i - 1] + " → " + vals[i]);
+      assert.ok(vals[vals.length - 1] > vals[0] + 8,
+        "最上位と最下位で差が付く: " + vals[0] + " → " + vals[vals.length - 1]);
+      console.log("  大会の階段OK", order.map((id, i) => id + " " + vals[i]).join(" / "));
+    }
 
     // --- 1回戦: リーグの日程は進まない / 勝敗で勝ち残りが決まる ---
     const md0 = S3.world.matchday;
@@ -186,7 +226,7 @@ function runSeason(hand) {
 
     // --- 敗退したまま決勝の節を越えると、そこで大会が締まって賞金が入る ---
     {
-      C.cup = null; C.node = cup.every; S3.club.exp = cup.needExp + 500;
+      C.cup = null; C.cupRest = 0; C.node = cup.every; S3.club.exp = cup.needExp + 500;
       assert.ok(E.enterCup(cup.id), "入り直せる");
       E.cupResolveRound(C.cup, 1, { gf: 0, ga: 2, win: false });   // 1回戦で敗退
       assert.ok(!C.cup.alive && C.cup.out === 1, "敗退が表から読める");
@@ -209,8 +249,8 @@ function runSeason(hand) {
     let champ = null;
     const coin1 = S3.club.coins;
     for (let i = 0; i < 40 && !champ; i++) {
-      C.cup = null; C.node = cup.every;
-      E.enterCup(cup.id);
+      C.cup = null; C.cupRest = 0; C.node = cup.every;
+      assert.ok(E.enterCup(cup.id), "入り直せる");
       // 決勝まで勝ち上がった状態にする(手前の回戦は自分の勝ちで埋める)
       for (let r = 1; r < cup.rounds; r++) E.cupResolveRound(C.cup, r, { gf: 2, ga: 0, win: true });
       C.node = E.cupLastNode();
@@ -254,8 +294,10 @@ function runSeason(hand) {
 
   // ---------- 大陸大会は DIV1 に上がるまで開かない(→docs/03 §3.24) ----------
   {
-    const conti = E.CUPS.find(c => c.needDiv);
-    assert.ok(conti, "部で解禁される大会がある");
+    // **部で解禁される大会は複数ある**(スーパーキングズは DIV2、コンチネンタルは DIV1)。
+    // ここで見るのは「その部に上がるまで開かない」という規則そのもの
+    const conti = E.cupById("conti");
+    assert.strictEqual(conti.needDiv, 1, "コンチネンタルは DIV1 で開く");
     const S4 = E.getS();
     S4.career.cup = null;
     S4.club.exp = conti.needExp + 100;

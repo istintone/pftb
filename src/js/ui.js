@@ -1061,15 +1061,16 @@ function renderSeason(){
     +CUPS.map(cup=>{
       const j=(S.career.cup&&S.career.cup.id===cup.id)?S.career.cup:null;
       const won=S.player.trophies.some(t=>t.id===cup.id);
-      const exp=S.club?S.club.exp:0;
-      // **エントリー中なら状態を、そうでなければ出られない理由を**書く
+      // **エントリー中なら状態を、そうでなければ出られない理由を**書く。
+      // 出られるかどうかは**その大会について**見る(cupEnterable は今節の1つを返す)
+      const en=cupEnterable(), need=cupNeedShort(cup);
       let sub;
-      if(j&&j.done)           sub="終了 ／ "+cupPlaceName(cup,j)+"（"+(j.win?"優勝":"優勝 "+j.champ)+"・+"+fmtNum(j.coin)+"）";
-      else if(j&&j.alive)     sub="エントリー中 ／ 次は "+cupRoundName(cup,j.round);
-      else if(j)              sub="敗退（"+cupPlaceName(cup,j)+"）／ 決勝は第"+cupLastNode()+"節";
-      else if(cupEnterable()) sub="今節にエントリーできます";
-      else if(exp<cup.needExp)sub="熟練度 "+fmtNum(exp)+" / "+fmtNum(cup.needExp)+"（参加条件）";
-      else                    sub="次の開催は "+cup.every+"の倍数の節";
+      if(j&&j.done)             sub="終了 ／ "+cupPlaceName(cup,j)+"（"+(j.win?"優勝":"優勝 "+j.champ)+"・+"+fmtNum(j.coin)+"）";
+      else if(j&&j.alive)       sub="エントリー中 ／ 次は "+cupRoundName(cup,j.round);
+      else if(j)                sub="敗退（"+cupPlaceName(cup,j)+"）／ 決勝は第"+cupLastNode()+"節";
+      else if(en&&en.id===cup.id)sub="今節にエントリーできます";
+      else if(need)             sub=need+"（参加条件）";
+      else                      sub="次の開催は "+cup.every+"の倍数の節";
       return '<div class="comp-card'+(j?"":" off")+'" data-comp="cup">'
         +'<div class="cc-l"><div class="cc-k">CUP'+(won?' <i class="cc-t">🏆</i>':'')+'</div>'
         +'<b>'+esc(cup.name)+'</b>'
@@ -1147,14 +1148,20 @@ function cupCalNote(n){
     if(i>=0)return { label:cup.name+" "+cupRoundName(cup,i+1),
       sub:c.alive?"エントリー中の大会":"敗退のため不参加（進行は確認できます）",
       cls:c.alive?"planned cup":"planned cup out", mark:c.alive?"▣":"—" };
-    return null;                                   // 大会中は次の開催日を出さない
   }
   // 同じ節に重なったら格の高いほうを出す(エントリーの判定と揃える)
   const on=CUPS.filter(cup=>cupDay(cup,n)).sort((a,b)=>b.prize[0]-a.prize[0]);
-  if(on.length)return { label:on[0].name,
-    sub:cupOpen(on[0])?"開催予定（エントリーできます）":"開催予定（条件を満たせば参加できます）",
-    cls:"cup soon", mark:"◇" };
-  return null;
+  if(!on.length)return null;
+  // **出られない節でも開催日は見せる**。大会が8つあるので(→docs/03 §3.23)、
+  // 進行中や間隔待ちのあいだ先の予定が全部消えると、次にどれを狙うか決められない
+  // **その節に何が塞いでいるかで書き分ける**。進行中の大会が終わる節と、
+  // そこから間隔があく節では待つ理由が違う。全部同じ文にすると先の予定まで嘘になる
+  const nodes=(c&&!c.done)?cupNodes():null, last=nodes?nodes[nodes.length-1]:0;
+  const rest=nodes?last+TUNING.cup.rest:(S.career.cupRest||0);
+  const sub=n<=last?"開催予定（大会が終わるまで参加できません）"
+    :n<rest?"開催予定（前の大会から"+TUNING.cup.rest+"節あきます）"
+    :cupOpen(on[0])?"開催予定（エントリーできます）":"開催予定（条件を満たせば参加できます）";
+  return { label:on[0].name, sub:sub, cls:"cup soon", mark:"◇" };
 }
 const seasonDivider=(season,clubId)=>
   '<div class="cal-div"><span>SEASON '+season+'</span><b>'+esc(clubName(clubId))+'</b></div>';
@@ -1254,10 +1261,37 @@ function currentRow(){
 }
 const cupJoinedName=()=>{ const c=cupJoined(); return c?c.name:"カップ戦"; };
 /** カップに出られない理由。**条件が見えないと待つ理由が分からない**。 */
+/**
+ * その大会に出られない理由(短文)。満たしていれば null。
+ * **条件は4種類ある**(熟練度・部・カップ優勝数・DIV1制覇 →docs/03 §3.23)ので、
+ * 熟練度だけを見ると「第11節」としか出ず、なぜ灰色なのかが分からなくなる。
+ */
+function cupNeedShort(cup){
+  const exp=S.club?S.club.exp:0;
+  if(exp<cup.needExp)return "熟練度 "+fmtNum(exp)+" / "+fmtNum(cup.needExp);
+  if(cup.needDiv&&S.world.div>cup.needDiv)return divName(cup.needDiv)+"で出場権";
+  if(cup.needCups&&cupWins()<cup.needCups)
+    return "カップ優勝 "+cupWins()+" / "+cup.needCups;
+  if(cup.needLg1&&!wonDiv1())return divName(1)+"制覇で出場権";
+  return null;
+}
+/** 参加条件の書き出し。満たしているかに関係なく**同じ言い方**で並べる。 */
+function cupNeedFull(cup){
+  const a=[];
+  if(cup.needExp)a.push("熟練度 "+fmtNum(cup.needExp));
+  if(cup.needDiv)a.push(divName(cup.needDiv)+" 以上");
+  if(cup.needCups)a.push("カップ優勝 "+cup.needCups+"回");
+  if(cup.needLg1)a.push(divName(1)+"でリーグ優勝");
+  return a.length?a.join(" ／ "):"なし";
+}
 function cupWhy(){
   const C=S.career, exp=S.club?S.club.exp:0, j=C.cup;
   if(j&&!j.done)
     return cupJoinedName()+"が進行中です。大会が終わるまで次の大会にはエントリーできません。";
+  // **大会のあとは間をあける**(→docs/03 §3.23)。全部には出られない
+  if(C.cupRest&&C.node<C.cupRest)
+    return "大会を終えたばかりです。あと"+(C.cupRest-C.node)+"節あけば次の大会に出られます。"
+      +"すべての大会には出られないので、どれを狙うかを選ぶことになります。";
   // **いちばん早く出られる大会**を基準に理由を書く
   const cand=CUPS.map(cup=>({ cup, next:(Math.floor(C.node/cup.every)+1)*cup.every }))
     .sort((a,b)=>a.next-b.next);
@@ -1266,6 +1300,10 @@ function cupWhy(){
     return cup.name+"は熟練度 "+fmtNum(cup.needExp)+" から参加できます（現在 "+fmtNum(exp)+"）。";
   if(cup.needDiv&&S.world.div>cup.needDiv)
     return cup.name+"は"+divName(cup.needDiv)+"に上がると出場権が得られます（現在 "+divName(S.world.div)+"）。";
+  if(cup.needCups&&cupWins()<cup.needCups)
+    return cup.name+"はカップ優勝 "+cup.needCups+"回で出場権が得られます（現在 "+cupWins()+"回）。";
+  if(cup.needLg1&&!wonDiv1())
+    return cup.name+"は"+divName(1)+"でリーグを制すと出場権が得られます。";
   const next=(Math.floor(C.node/cup.every)+1)*cup.every;
   return cup.name+"は"+cup.every+"の倍数の節に開催されます（次は第"+next+"節）。エントリーは打ち手から選びます。";
 }
@@ -1598,16 +1636,15 @@ function scrollToCurrent(){
  */
 function renderCupSchedule(){
   const C=S.career, c=C.cup, cup=c?cupById(c.id):CUPS[0];
-  $("schedHead").textContent="KING'S CLUB CUP · KNOCKOUT STAGE";
+  // **大会は8つある**(→docs/03 §3.23)。特定の大会名を見出しに焼き付けない
+  $("schedHead").textContent="CUP COMPETITIONS · KNOCKOUT STAGE";
 
   if(!c){
     // どの大会がいつ開くのか、条件は何かを**まとめて**見せる
     const exp=S.club?S.club.exp:0;
     $("schedList").innerHTML=CUPS.map(x=>{
       const next=(Math.floor(C.node/x.every)+1)*x.every;
-      const why=exp<x.needExp?"熟練度 "+fmtNum(exp)+" / "+fmtNum(x.needExp)
-        :x.needDiv&&S.world.div>x.needDiv?divName(x.needDiv)+"で出場権"
-        :"第"+next+"節";
+      const why=cupNeedShort(x)||"第"+next+"節";
       return '<div class="cal'+(cupOpen(x)?"":" none")+'">'
         +'<span class="cal-h">🏆</span>'
         +'<span class="cal-b"><b>'+esc(x.name)+'</b>'
@@ -1682,7 +1719,7 @@ function cupInfoBox(cup,c){
   return '<div class="stand-h"><span class="sect-t">'+esc(cup.name)+' 要項</span></div>'
     +'<div class="stand-box cup-info">'
     +kv("開催",cup.every+"の倍数の節")
-    +kv("参加条件","熟練度 "+fmtNum(cup.needExp)+(cup.needDiv?" ／ "+divName(cup.needDiv):""))
+    +kv("参加条件",cupNeedFull(cup))
     +kv("方式",cup.rounds+"回戦（ノックアウト）")
     +cup.prize.map((v,i)=>kv(names[i],"+"+fmtNum(v)+" コイン"
       +((cup.fame&&cup.fame[i])?" ／ 名声 +"+fmtNum(cup.fame[i]):"")

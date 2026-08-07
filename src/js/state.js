@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=22;
+const SAVE_VER=23;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -74,6 +74,9 @@ function defaultState(){
       // 参加中のカップ(→docs/03 §3.23)。大会が完了するまで持ち続ける。
       // { id, node0, round, alive, out, champ, done }
       cup:null,
+      // 大会を終えてから次に出られるようになる節(→docs/03 §3.23)。
+      // これが無いと、8種の開催日が任期の大半を覆ってリーグが回らない
+      cupRest:0,
       log:[],                       // 消化した節の記録(カレンダーの過去行になる)
     },
   };
@@ -261,6 +264,8 @@ function migrate(){
     for(const k of Object.keys(S.career.bond))S.career.bond[k]*=3;
   // v21 → v22: 施設投資(→docs/03 §3.5)。建設中の1件を持つ。
   if(S.v<22&&S.club&&!S.club.build)S.club.build=null;
+  // v22 → v23: 大会を8種に増やしたので、間をあける仕組みを足した(→docs/03 §3.23)
+  if(S.v<23&&S.career&&S.career.cupRest==null)S.career.cupRest=0;
   S.v=SAVE_VER;
 }
 

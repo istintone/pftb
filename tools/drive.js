@@ -226,7 +226,9 @@ const STEPS = [
       const c=S.career.cup;
       if(!c)throw new Error('エントリーできない');
       if(S.career.node!==cup.every)throw new Error('エントリーで節が進んでしまう');
-      const rows=[...document.querySelectorAll('#seasonCal .cal.cup')].map(e=>e.querySelector('b').textContent);
+      // **planned で絞る**。大会は8つあり、先の節には他大会の「開催予定」(.cal.cup.soon)も
+      // 並ぶので、.cal.cup だけで数えると全部拾ってしまう(実際に 50 件になった)
+      const rows=[...document.querySelectorAll('#seasonCal .cal.planned.cup')].map(e=>e.querySelector('b').textContent);
       if(rows.length!==cup.rounds-1)throw new Error('大会の予定が節に並ばない: '+rows.length);
       // **組み合わせ表はこの時点で出来上がっている**(先の回戦は TBD)
       const n=Math.pow(2,cup.rounds);
@@ -323,7 +325,9 @@ const STEPS = [
     })()`));
     await ctx.shot("07o2-pso-cutin");
     // 本数は毎回変わる(サドンデスもある)ので、**出そろうまで待つ**
-    for (let i = 0; i < 40; i++) {
+    // 1本あたり psoMs+psoHold+psoGap ≒ 2.3秒。サドンデスで16本まで伸びると
+    // 40回(28秒)では足りず、途中で数えて落ちる。**最長の試合に合わせて待つ**
+    for (let i = 0; i < 90; i++) {
       // 決着の帯が出るのは**最後の1本のさらに次のコマ**なので、そこまで待つ
       const done = await ctx.js("!!document.getElementById('psoSum').textContent.trim()");
       if (done) break;
@@ -798,7 +802,7 @@ const STEPS = [
         +' / 影の色が別?'+(sh(me)!==sh(op));
     })()`));
     // 選手が枠に張り付かず、かつ陣形が崩壊していないこと(演出の要 → docs/06 §6.18)
-    ctx.log("  動き:", await ctx.js(`(()=>{
+    const moveExpr=`(()=>{
       const es=[...document.querySelectorAll('#mSlots .mp')];
       let moved=0, far=0, maxd=0;
       for(const e of es){
@@ -840,7 +844,17 @@ const STEPS = [
       if(moved<es.length*0.7)throw new Error('選手が固まっている: 動いたのは'+moved+'人');
       return moved+'/'+es.length+'人が動いている / ボールに寄った '+far
         +'人 / 最大 '+maxd.toFixed(0)+'%';
-    })()`));
+    })()`;
+    // **1コマだけで判定しない**。動きは毎コマ変わるので、ボールが隅にある瞬間や
+    // 再開の直後を切り取ると「誰も寄っていない」ことがある(実際に落ちた)。
+    // 何コマか見て、条件を満たすコマがあればよしとする
+    let moveOut=null, moveErr=null;
+    for(let i=0;i<8;i++){
+      try{ moveOut=await ctx.js(moveExpr); break; }
+      catch(e){ moveErr=e; await ctx.wait(500); }
+    }
+    if(moveOut===null)throw moveErr;
+    ctx.log("  動き:", moveOut);
     // オフサイドの絵にならないこと: 自軍の最前線が相手の最終ラインより手前にいる
     ctx.log("  ライン:", await ctx.js(`(()=>{
       const g=s=>[...document.querySelectorAll('#mSlots .mp[data-side="'+s+'"]')]
@@ -1912,7 +1926,9 @@ const STEPS = [
   ["シーズンを最後まで進める", async ctx => {
     // カップの節が割り込むので、リーグ14節ぶんより多く回す。
     // 打ち手は**エントリー以外**を選ぶ(ここで見たいのはリーグの決着)
-    for (let i = 0; i < 40; i++) {
+    // 1本あたり psoMs+psoHold+psoGap ≒ 2.3秒。サドンデスで16本まで伸びると
+    // 40回(28秒)では足りず、途中で数えて落ちる。**最長の試合に合わせて待つ**
+    for (let i = 0; i < 90; i++) {
       await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
       await ctx.wait(100);
       const playable = await ctx.js("!!document.getElementById('calCur')");
