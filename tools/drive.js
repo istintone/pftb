@@ -1200,7 +1200,7 @@ const STEPS = [
           const look=[1,2,3,4].map(v=>{
             const a2=document.querySelector('#deckSlots .fig.cd-'+v+' .fig-aura');
             const st=getComputedStyle(a2);
-            return st.backgroundImage+'|'+st.boxShadow;
+            return st.backgroundColor+'|'+st.height+'|'+st.filter;
           });
           if(new Set(look).size!==4)throw new Error('段の見分けが付かない');
           // **オーラはレイアウトを押し広げない**(box-shadow で外へ出す)
@@ -1215,7 +1215,15 @@ const STEPS = [
           const rm=mk.getBoundingClientRect(), ro=ov.getBoundingClientRect();
           if(Math.abs(rm.top-ro.top)>1)throw new Error('OVRと高さが違う');
           if(Math.abs(rm.height-ro.height)>1)throw new Error('OVRと大きさが違う');
-          if(rm.left<ro.left)throw new Error('印がOVRより左に無い(重なっている)');
+          // **印は立ち絵の左**。OVRを押しのけていないこと
+          if(rm.right>ro.left)throw new Error('印がOVRに重なっている');
+          // 枠ごとに位置が違うので、**枠の中でのずれ**で比べる
+          const off=e=>{ const s2=e.closest('.slot').getBoundingClientRect();
+            return e.getBoundingClientRect().right-s2.right; };
+          const ok2=document.querySelector('#deckSlots .slot:not(.hurt) .sl-ovr');
+          if(ok2&&Math.abs(off(ov)-off(ok2))>1)
+            throw new Error('ケガの選手だけOVRの位置がずれている: '
+              +off(ov).toFixed(1)+' vs '+off(ok2).toFixed(1));
           if(document.querySelectorAll('#deckSlots .slot:not(.hurt) .cnd').length)
             throw new Error('ケガ以外にも印が出ている');
           // ★が上限なら金(黄金の連携線と同じ色)

@@ -1142,45 +1142,35 @@ body{
 /* コンディションのオーラ(→docs/03 §3.32)。**選手の後ろから放射状に光る**。
    印を並べるより、盤面を見渡したときに「誰が来ているか」が一目で分かる。
    立ち絵より先に置いて**背後に敷く**(同じ z なので DOM の順が前後を決める)。 */
-/* **外へ広がる光は box-shadow で出す。** 要素を大きくして広げると、控えの行を
-   横に押し広げて5枠が収まらなくなる(実際にはみ出した)。box-shadow なら
-   レイアウトにもスクロール幅にも一切効かない。 */
+/* **ぼかした光の玉を1つ置くだけ。** 縁のある円 + box-shadow で組むと、
+   グラデーションが消えたあとに**透明な円板の輪郭**が残って不自然に見える。
+   `filter:blur` なら中心から外へ滑らかに減衰し、輪郭が出ない。
+   ぼかしの滲みは**インクのはみ出し**なので、レイアウトにもスクロール幅にも効かない
+   (要素を大きくして広げると、控えの行を押し広げて5枠が収まらなくなる)。 */
 .fig-aura{
-  position:absolute; left:50%; top:52%; transform:translate(-50%,-50%);
-  width:96%; height:96%; border-radius:50%; pointer-events:none;
+  position:absolute; left:50%; top:54%; transform:translate(-50%,-50%);
+  height:74%; aspect-ratio:1; width:auto;      /* 箱が正方形でなくても真円にする */
+  border-radius:50%; pointer-events:none; filter:blur(10px);
 }
-.fig.cd-1 .fig-aura{
-  background:radial-gradient(circle, oklch(0.68 0.14 250 / .40) 0%, transparent 62%);
-  box-shadow:0 0 9px 1px oklch(0.66 0.14 250 / .34);
-}
-.fig.cd-2 .fig-aura{
-  background:radial-gradient(circle, oklch(0.74 0.17 150 / .44) 0%, transparent 64%);
-  box-shadow:0 0 12px 2px oklch(0.72 0.17 150 / .40);
-}
-.fig.cd-3 .fig-aura{
-  background:radial-gradient(circle, oklch(0.86 0.16 88 / .52) 0%, transparent 66%);
-  box-shadow:0 0 15px 3px oklch(0.84 0.16 88 / .48);
-}
+.fig.cd-1 .fig-aura{ background:oklch(0.64 0.16 250 / .55) }
+.fig.cd-2 .fig-aura{ background:oklch(0.72 0.19 150 / .60) }
+.fig.cd-3 .fig-aura{ background:oklch(0.85 0.17 88 / .66) }
 /* 絶好調は**同じ金のまま広がりで**差を出す。色を変えると好調と別物に見えてしまう */
-.fig.cd-4 .fig-aura{
-  background:radial-gradient(circle, oklch(0.92 0.17 88 / .80) 0%,
-    oklch(0.86 0.16 88 / .38) 46%, transparent 72%);
-  box-shadow:0 0 26px 9px oklch(0.88 0.17 88 / .62);
-}
+.fig.cd-4 .fig-aura{ height:96%; filter:blur(15px);
+  background:oklch(0.90 0.18 88 / .85) }
 /* ケガは光らせず、**立ち絵そのものを沈ませる**。動けない状態を色で言う */
 .fig.cd-0 img{ filter:brightness(.48) saturate(.5) }
 .fig.cd-0 .fig-dot{ opacity:.45 }
-/* ケガの印だけは残す(→docs/03 §3.32)。**OVRと同じ高さ・大きさ**で右上に置く。
-   光らないことは「良くない」までしか伝えず、「出せない」という重さが出ない。 */
+/* ケガの印だけは残す(→docs/03 §3.32)。光らないことは「良くない」までしか伝えず、
+   「出せない」という重さが出ない。**立ち絵の左側、OVRと同じ高さ・大きさ**に置く。
+   右上に並べると実効値を押しのけてしまう(実際にそうなった)。 */
 .cnd{
-  position:absolute; right:-7px; top:-1px; z-index:3;
+  position:absolute; left:-7px; top:-1px; z-index:3;
   font-style:normal; padding:0 3px; border-radius:4px;
   background:oklch(0 0 0 / .78); color:oklch(0.72 0.22 25);
   font:700 11px/1.4 var(--f-head); text-shadow:0 1px 2px oklch(0 0 0 / .6);
 }
-/* 印が右上に入るぶん、実効値は内側へ寄せる(桁数が変わってもぶつからない) */
-.slot.hurt .sl-ovr{ right:15px }
-.bn .cnd{ right:2px; top:2px }
+.bn .cnd{ left:2px; top:2px }
 /* ピッチの枠。**元の丸と同じ背丈に収める**(→docs/06 §6.15)。
    陣形の座標は丸の大きさを前提に決まっているので、背が伸びると枠同士が重なる。 */
 .sl-fig{ width:46px; height:46px }

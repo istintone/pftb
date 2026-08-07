@@ -769,8 +769,8 @@ const starRow=c=>{ const n=c?trainStar(c.id):0;
 // 相手の下見(→§3.34)では出さない — こちらが知りようのない情報だから。
 //
 // **ケガだけは印を残す。** 光らないことは「良くない」までしか伝えず、
-// 「試合に出せない」という重さが出ない。印は OVR と同じ高さ・大きさで右上に置く
-// (名前に重ねると読めなくなる)。
+// 「試合に出せない」という重さが出ない。印は**立ち絵の左**、OVRと同じ高さ・大きさ
+// (名前に重ねると読めず、右上に並べると実効値を押しのける)。
 const COND_NAME=["治療中","不調","普通","好調","絶好調"];
 const condOn=(c,on)=>(c&&on)?clamp(condOf(c.id),COND_HURT,COND_MAX):null;
 const hurtMark=v=>v===COND_HURT?'<i class="cnd" title="'+COND_NAME[0]+'">✚</i>':"";
