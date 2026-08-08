@@ -243,7 +243,8 @@ function nearOf(h){
  * 撃ち抜く側は tec(コースを作る)と atk、止める側は def と pow。
  */
 function resolveBlock(rng,atk,df,D,fin,h,x){
-  const aSc=(eff(atk,"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
+  // ブロックを外すのも**その撃ち方の能力**。枠内率と同じ理由で tec 固定にしない
+  const aSc=(eff(atk,(fin&&fin.stat)||"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
   // 人数を割いていればコースも消える(→§7.14)
   const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*coverOf(D,h,x)
     *skK(df,"block")*rr(rng);
@@ -276,7 +277,10 @@ function onTarget(rng,atk,gk,h,fin){
   if(fin&&fin.tecAcc)                                        // 直接FKは距離より技術
     return rng()<S.fkAccBase*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
   const acc=(fin?fin.acc||1:1)*skK(atk,"onTarget")/skK(gk,"offTarget");
-  return rng()<acc*(S.accBase+eff(atk,"tec")/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
+  // **枠に飛ぶかは「その撃ち方の能力」**(→docs/07 §7.13)。tec 固定にすると、
+  // どの札を撃っても技術だけが効いてしまい、tec に尖った選手が無条件で有利になる
+  const st=(fin&&fin.stat)||"tec";
+  return rng()<acc*(S.accBase+eff(atk,st)/STAT_MAX*S.accTec)*Math.pow(nearOf(h),S.accRange);
 }
 /**
  * 枠内のシュート vs GK。
@@ -576,7 +580,11 @@ function matchupDefender(rng,h,x,D){
   return pickW(rng,cand.length?cand:D.players,q=>{
     const dh=(heightOf(q)-th)/F.sigmaH;
     const dx=((q.x-tx)/100)/F.sigmaX;
-    return Math.exp(-(dh*dh+dx*dx));
+    // **寄せるのは足の速い選手**(→docs/03 §3.37)。攻撃側で atk が「誰に渡すか」を
+    // 決める(recvAtk)のと対になる守備側の幹。これが無いと spd は3枚に1枚の
+    // チャンネルでしか出番が無く、守備の選手にとってほぼ死に能力になる
+    const q2=1+eff(q,"spd")/STAT_MAX*F.markSpd;
+    return Math.exp(-(dh*dh+dx*dx))*q2;
   });
 }
 /**

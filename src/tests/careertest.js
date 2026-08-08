@@ -204,6 +204,48 @@ function runSeason() {
       (drawPct * 100).toFixed(1) + "% / ホーム勝率", (homePct * 100).toFixed(1) + "%");
   }
 
+  // ---------- 体つきは損得にしない(→docs/03 §3.37) ----------
+  // pow / tec / spd のどれに尖っても、**チームの得点はだいたい同じだけ増える**こと。
+  // 以前は tec に尖った FW だけが 2〜3倍点を取り、パワー型は素より弱かった。
+  {
+    const form = "4-4-2", IX = 10;                       // 4-4-2 の CF
+    const mate = sub => {
+      const pos = E.subGroup(sub);
+      const c = E.makeCard(E.mulberry32(51), pos, { rarity: "REG" });
+      const st = E.statsFor(E.mulberry32(999), pos, 66);
+      for (const k of E.STAT_KEYS) c[k] = st[k];
+      c.skills = []; c.subs = [sub]; c.pos = pos; c.ovr = E.calcOvr(c, pos);
+      c.id = "fair-" + sub + "-" + Math.random().toString(36).slice(2, 8);
+      return c;
+    };
+    const base = E.FORMATIONS[form].map(([sub]) => mate(sub));
+    // **同じ配り方から作って体つきだけ変える**。OVR は動かない(3つの中で移すだけ)
+    const gf = body => {
+      const c = mate("CF");
+      const st = E.applyBody(E.statsFor(E.mulberry32(999), "FW", 66), body);
+      for (const k of E.STAT_KEYS) c[k] = st[k];
+      const cards = base.map((b2, i) => i === IX ? c : b2);
+      const H = { cards, form, name: "H" }, A = { cards: cards.map(x => ({ ...x })), form, name: "A" };
+      let g = 0;
+      for (let i = 0; i < 900; i++) g += E.resolveMatch(H, A, i * 7 + 1).hg;
+      return g / 900;
+    };
+    const flat = gf(null);
+    const kinds = [["パワー型", { kind: "spec", ix: 2 }], ["テクニック型", { kind: "spec", ix: 3 }],
+                   ["スピード型", { kind: "spec", ix: 4 }]];
+    const got = kinds.map(([lab, b2]) => ({ lab, v: gf(b2) }));
+    const mx = Math.max(...got.map(x => x.v)), mn = Math.min(...got.map(x => x.v));
+    for (const x of got)
+      assert.ok(x.v > flat * 0.95, x.lab + "が素の重みより弱くない: "
+        + flat.toFixed(2) + " → " + x.v.toFixed(2));
+    // **1.5倍まで**。ここを超えると「引くべき体つき」が1つに決まってしまう
+    assert.ok(mx / mn < 1.5, "体つきの差が極端でない: "
+      + got.map(x => x.lab + " " + x.v.toFixed(2)).join(" / ") + " → " + (mx / mn).toFixed(2) + "倍");
+    console.log("体つきOK 素", flat.toFixed(2), "点 ／ "
+      + got.map(x => x.lab + " " + x.v.toFixed(2)).join(" / ")
+      + " ／ 最大/最小 " + (mx / mn).toFixed(2) + "倍");
+  }
+
   // ---------- 同じたねなら必ず同じ試合になる(見せかけを排する前提 → docs/07 §7.1) ----------
   {
     const side = id => {
