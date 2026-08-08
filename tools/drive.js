@@ -714,7 +714,7 @@ const STEPS = [
       S.career.train={}; trainAdd(id,'tec',G.need);
       if(other){ trainAwake(other,'pow'); trainAwake(other,'atk'); }
       S.career.chat=null; S.career.hand=null; S.career.comp=null;
-      renderChat();
+      show('chat');                       // **画面も出す**。描き直すだけだと別の画面が写る
       let g=0;
       while(S.career.chat.step&&S.career.chat.step!=='who'&&g++<6){
         const st=S.career.chat.step;
