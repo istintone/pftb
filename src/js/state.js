@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=25;
+const SAVE_VER=26;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -68,6 +68,7 @@ function defaultState(){
       trust:{},
       mentor:[],                    // 師弟を結んだカードID(上限 TUNING.trust.max)
       mentorSeen:{},                // 相談が起きた選手(結果によらず二度目は無い)
+      streak:0,                     // 連勝数(→§3.40 スポンサーの課題)
       // コンディション(→docs/03 §3.32)。{ "<カードID>": 0..4 }。
       // **無ければ2(普通)**。任期の頭は全員が普通から始まる。
       cond:{},
@@ -283,6 +284,11 @@ function migrate(){
     if(!S.career.mentorSeen)S.career.mentorSeen={};
   }
   if(S.v<25&&S.player&&S.player.legacy===undefined)S.player.legacy=null;
+  // v25 → v26: スポンサー(→docs/03 §3.40)
+  if(S.v<26){
+    if(S.club&&S.club.sponsor===undefined)S.club.sponsor=null;
+    if(S.career&&S.career.streak==null)S.career.streak=0;
+  }
   if(S.v<24&&S.player&&S.player.trophies)
     for(const t of S.player.trophies){ if(!t.kind)t.kind="cup"; if(!t.n)t.n=1;
       if(!t.last)t.last=t.season; }

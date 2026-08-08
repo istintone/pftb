@@ -395,6 +395,9 @@ function startTenure(clubId){
     fameSeason:0,                                            // 今季ぶんの名声(総括で見せる)
     loan:clubRoster(seed,clubId),                            // 任期中だけ借りる所属選手
     expect:0,
+    // スポンサー(→docs/03 §3.40)。**クラブ側の資産**なので任期が明ければ消える。
+    // { id, tier, aid, node0, until, goal:{kind,cup,n}, hit, paid }
+    sponsor:null,
   };
   S.world.table=emptyTable(league);
   S.world.fixtures=makeFixtures(league,rng);
@@ -624,6 +627,17 @@ function evalAdd(reason,n){
   return S.club.eval-before;
 }
 /** 名声を足す。**減らさない**(→§3.9)。シーズンぶんは総括で見せるので数えておく。 */
+/**
+ * 名声を減らす(→docs/03 §3.9)。**スポンサーの課題を落としたときだけ**。
+ * 名声は本来「積み上がるだけ」の数字なので、減らす経路はここ1つに絞る。
+ */
+function fameLose(n){
+  if(!n||n<0)return 0;
+  const cut=Math.min(S.player.fame,n);
+  S.player.fame-=cut;
+  if(S.club)S.club.fameSeason=(S.club.fameSeason||0)-cut;
+  return cut;
+}
 function fameAdd(n){
   if(!n||n<0)return 0;
   S.player.fame+=n;
@@ -743,6 +757,123 @@ function trainAdd(id,k,n){
   const r=trainMake(id);
   r.exp[k]=(r.exp[k]||0)+n;
   return r.exp[k];
+}
+
+// ---------- スポンサー(→docs/03 §3.40) ----------
+// **クラブを支える企業と契約する**。契約は24節前後で、任期のあいだに何度か入れ替わる。
+// 価値は2つ: 期限つきの課題(達成で大きな報酬)と、契約中だけ使える4つ目の打ち手。
+const sponsor=()=>S.club&&S.club.sponsor||null;
+const sponAid=()=>{ const sp=sponsor(); return sp?sponAidById(sp.aid):null; };
+/** 課題の文。**数字は必ず期限を添える**(いつまでかが分からないと手が打てない)。 */
+function sponGoalText(sp){
+  if(!sp)return "";
+  const g=sp.goal;
+  const to="第"+sp.until+"節までに";
+  if(g.kind==="cup")return to+" "+(cupById(g.cup)||{name:"カップ"}).name+"で優勝する";
+  if(g.kind==="league")return to+" リーグで優勝する";
+  return to+" "+g.n+"連勝する";
+}
+/** 報酬の文。 */
+function sponPrizeText(sp){
+  if(!sp)return "";
+  const P=sponPrize(sp.tier);
+  return P.kind==="coin"?fmtNum(TUNING.spon.coin[sp.tier-1])+" コイン":P.label;
+}
+/**
+ * 候補を出す(→§3.40)。**リーグと名声で絞る**。名声が届いていて、いまのリーグに
+ * 現れるスポンサーの中から、格の高い順に pick 社。同じ節なら毎回同じ顔ぶれになる。
+ */
+function sponOffers(){
+  const lg=S.club?clubById(S.club.id).league:null;
+  const fame=S.player.fame;
+  const ok=SPONSORS.filter(x=>fame>=x.need&&(!x.league||x.league===lg));
+  const rng=mulberry32((S.world.seed^hashStr("spon:"+S.club.id+":"+S.career.node))>>>0);
+  // 格の高い順に並べ、同じ格の中だけを混ぜる(名声を上げた甲斐が必ず出る)
+  const sorted=ok.slice().sort((a,b)=>b.tier-a.tier||b.need-a.need||(rng()-0.5));
+  return sorted.slice(0,TUNING.spon.pick).map(x=>({ ...x, goal:sponGoalFor(x), aid:sponAidFor(x) }));
+}
+/** その会社が出してくる課題。**出られない大会は課題にしない**。 */
+function sponGoalFor(x){
+  const T=TUNING.spon;
+  const rng=mulberry32((S.world.seed^hashStr("spg:"+x.id+":"+S.career.node))>>>0);
+  const cups=CUPS.filter(c=>cupOpen(c));
+  const kinds=["streak"];
+  if(cups.length)kinds.push("cup");
+  if(S.world.matchday<=TUNING.league.rounds)kinds.push("league");
+  const kind=kinds[Math.floor(rng()*kinds.length)];
+  if(kind==="cup"){
+    // 段が高いほど格の高い大会を指してくる
+    const sorted=cups.slice().sort((a,b)=>a.prize[0]-b.prize[0]);
+    const i=Math.min(sorted.length-1,Math.floor(sorted.length*(x.tier-1)/SPON_PRIZE.length));
+    return { kind:"cup", cup:sorted[i].id };
+  }
+  if(kind==="league")return { kind:"league" };
+  return { kind:"streak", n:T.streak[Math.min(x.tier,T.streak.length)-1] };
+}
+/** その会社が出してくる支援。会社と節から決まる(選び直しでは変わらない)。 */
+function sponAidFor(x){
+  const rng=mulberry32((S.world.seed^hashStr("spa:"+x.id+":"+S.career.node))>>>0);
+  return SPONSOR_AID[Math.floor(rng()*SPONSOR_AID.length)].id;
+}
+/** いま相談が起きるか。**契約が無いときだけ**。 */
+const sponPending=()=>!!S.club&&!sponsor()&&sponOffers().length>0;
+/** 契約する。 */
+function sponSign(id){
+  const o=sponOffers().find(x=>x.id===id);
+  if(!o)return null;
+  S.club.sponsor={ id:o.id, tier:o.tier, aid:o.aid, goal:o.goal,
+    node0:S.career.node, until:S.career.node+TUNING.spon.term,
+    hit:false, paid:false };
+  return S.club.sponsor;
+}
+/**
+ * 課題の達成を見る。**達成は一度だけ**で、契約が切れるまで追加の報酬は無い。
+ * kind と中身が合っていれば hit を立てるだけで、報酬はチャットで渡す。
+ */
+function sponHit(kind,arg){
+  const sp=sponsor();
+  if(!sp||sp.hit||S.career.node>sp.until)return false;
+  const g=sp.goal;
+  if(g.kind!==kind)return false;
+  if(kind==="cup"&&g.cup!==arg)return false;
+  if(kind==="streak"&&(arg||0)<g.n)return false;
+  sp.hit=true;
+  return true;
+}
+/** 連勝を数える(→§3.40)。引き分けと負けで途切れる。 */
+function streakAdd(res){
+  S.career.streak=res==="win"?(S.career.streak||0)+1:0;
+  if(res==="win")sponHit("streak",S.career.streak);
+  return S.career.streak;
+}
+/** 期限を過ぎた契約を閉じる。**未達成なら名声が下がる**(→§3.9)。 */
+function sponTick(){
+  const sp=sponsor();
+  if(!sp||S.career.node<=sp.until)return null;
+  if(sp.hit&&!sp.paid)return null;                 // 報酬をまだ渡していない間は閉じない
+  const lost=sp.hit?0:TUNING.spon.fameFail[sp.tier-1];
+  if(lost)fameLose(lost);
+  S.club.sponsor=null;
+  return { id:sp.id, hit:sp.hit, lost };
+}
+/** 報酬を渡す(→§3.40)。カードは呼び出し側が受け取って手札に入れる。 */
+function sponPay(pos){
+  const sp=sponsor();
+  if(!sp||!sp.hit||sp.paid)return null;
+  sp.paid=true;
+  const P=sponPrize(sp.tier), T=TUNING.spon;
+  const rng=mulberry32((S.world.seed^hashStr("spp:"+sp.id+":"+sp.node0))>>>0);
+  if(P.kind==="coin"){
+    const v=T.coin[sp.tier-1];
+    S.club.coins+=v;
+    return { kind:"coin", coin:v };
+  }
+  // **段を名指しして1枚引く**(→docs/03 §3.26 のプロスカウトと同じ作り)
+  const rar=P.kind==="scoutLe"?"LEG":P.kind==="scoutWc"?"WC"
+    :(rng()<T.wcInPos?"WC":"SPE");
+  const card=makeCard(rng,pos||rpick(rng,POS),{ rarity:rar });
+  S.player.coll.push(card);
+  return { kind:P.kind, card };
 }
 
 // ---------- 信頼と師弟(→docs/03 §3.39) ----------
@@ -1030,8 +1161,21 @@ function condCpu(clubId,rng){
 }
 
 /** 今節の打ち手を選ぶ。選ぶまで試合には進めない(→§3.2.3)。 */
+/**
+ * いま選べる打ち手(→docs/03 §3.40)。**スポンサーが付いていれば4つ目が増える**。
+ * 支援は「強化トレーニングの1能力だけに絞った上位版」なので、HANDS には持たせず
+ * 契約から作る(契約が切れれば黙って消える)。
+ */
+function handsNow(){
+  const a=sponAid();
+  if(!a)return HANDS;
+  return HANDS.concat([{ id:"spon", icon:"📣", label:a.label,
+    desc:"スポンサー支援 ／ "+trainById(a.id).label+"だけを集中して伸ばす",
+    done:a.label, aid:a.id }]);
+}
+const handNow=id=>handsNow().find(h=>h.id===id)||null;
 function pickHand(id){
-  if(!handById(id))return false;
+  if(!handNow(id))return false;
   S.career.hand=id;
   return true;
 }
@@ -1327,6 +1471,7 @@ function closeCup(){
     const last=[...S.career.log].reverse().find(e=>e.comp==="cup"&&e.cup===cup.id);
     if(last)last.champ=true;
     trophyAdd(cup.id,cup.trophy,"cup");
+    sponHit("cup",cup.id);                                // スポンサーの課題(→§3.40)
   }
   // **オーナーの評価**(→docs/03 §3.9)。優勝は上げ、**初戦敗退は下げる**。
   // 賞金や名声と違って、ここは順位ではなく「どう戦ったか」を見ている
@@ -1432,6 +1577,7 @@ function playMatchday(done){
     opp:my?my.opp:null, home:my?my.home:null, gf:my?my.gf:null, ga:my?my.ga:null,
     res:my?(my.win?"win":my.draw?"draw":"lose"):null,
   });
+  if(my)streakAdd(my.win?"win":my.draw?"draw":"lose");    // 連勝(→§3.40)
   out.cupClosed=advanceNode();     // 大会の最終節がリーグの節に重なることがある
   W.matchday++;
   return out;
@@ -1470,6 +1616,7 @@ function playCupDay(done){
     comp:"cup", cup:cup.id, label:f.label, oppName:f.side.name,
     gf, ga, res:win?"win":"lose",
   });
+  streakAdd(win?"win":"lose");                            // 連勝(→§3.40)
   out.cupClosed=advanceNode();
   return out;
 }
@@ -1479,6 +1626,7 @@ function playCupDay(done){
  * 賞金はこのときにまとめて入る。負けて先に順位が決まっていても、入金はここ。
  */
 function advanceNode(){
+  sponTick();                                             // 契約の満了(→§3.40)
   const C=S.career, c=C.cup;
   // 敗退したあとも大会は進む。**その節の回戦を裏で確定させる**(表を見に行けば分かる)
   if(c&&!c.done){
@@ -1516,6 +1664,7 @@ function judgeSeason(){
     // DIV3 を制した実績が DIV2 のものとして残ってしまう
     const lg=leagueById(clubById(S.club.id).league);
     const d=trophyAdd(lgTrophyId(lg.id,W.div),lg.name+" "+divName(W.div)+" 制覇","league");
+    sponHit("league");                                    // スポンサーの課題(→§3.40)
     trophy={ id:d.t.id, name:d.t.name, n:d.t.n, first:d.first };
   }
   // **順位が確定したこの時点で入れ替えを行う**。世界のほうも同時に動く

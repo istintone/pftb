@@ -393,7 +393,19 @@ function clubNews(){
   // 「誰との関係が育っているか」がここで分かる
   const talk=trustNews().map(id=>
     '<b class="news-up">'+esc(shortName(cardById(id)))+'</b> からブリーフィングで相談があるそうです');
-  return fac.slice(0,1).concat(talk,hurt,fac.slice(1),[
+  // スポンサー(→docs/03 §3.40)。**課題と残り節を毎節出す**。期限が見えないと動けない
+  const spon=[];
+  {
+    const sp=sponsor();
+    if(sp&&sp.hit&&!sp.paid)
+      spon.push('<b class="news-up">'+esc(sponsorById(sp.id).name)+'</b> の課題を達成　報酬が届いています');
+    else if(sp)
+      spon.push(esc(sponsorById(sp.id).name)+'：'+esc(sponGoalText(sp))
+        +'　残り <b>'+Math.max(0,sp.until-S.career.node)+'節</b>');
+    else if(sponPending())
+      spon.push('<b class="news-up">スポンサー</b> の相談が来ています');
+  }
+  return fac.slice(0,1).concat(spon,talk,hurt,fac.slice(1),[
     "今季の目標は<b>"+S.club.expect+"位以内</b>。現在 <b>"+r+"位</b>（"+t.w+"勝"+t.d+"分"+t.l+"敗）",
     lg.name+"は<b>"+lg.style+"</b>のチームが多い。",
     "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ オーナーの評価 "+evalLabel(S.club.eval),
@@ -1056,7 +1068,15 @@ function renderSeason(){
     +kv("オーナーの目標",S.club.expect+"位")
     +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
     +kv("オーナーの評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
-    +kv("チーム熟練度",fmtNum(S.club.exp));
+    +kv("チーム熟練度",fmtNum(S.club.exp))
+    // スポンサー(→docs/03 §3.40)。契約の話なのでここに置く
+    +(()=>{ const sp=sponsor();
+      if(!sp)return kv("スポンサー",sponPending()?"相談が来ています":"—");
+      return kv("スポンサー",esc(sponsorById(sp.id).name)+"（第"+sp.until+"節まで）")
+        +kv("課題",esc(sponGoalText(sp))+(sp.hit?"　達成":""))
+        +kv("報酬",esc(sponPrizeText(sp)))
+        +kv("支援",esc(sponAidById(sp.aid).label));
+    })();
 
   renderTenureBar();
   renderTenureCalendar();
@@ -1234,7 +1254,9 @@ function renderTenureBar(){
 
 /** 過去1節の行。「何をやってきたか」= 打ち手 + 試合結果。 */
 function logRow(e){
-  const h=handById(e.hand);
+  // **スポンサーの打ち手も記録に出す**(→docs/03 §3.40)。契約が切れたあとに
+  // 過去の行を開いても名前が出るよう、handsNow ではなく汎用の呼び名で拾う
+  const h=handById(e.hand)||(e.hand==="spon"?{ icon:"📣", label:"スポンサー支援" }:null);
   const cls=e.res==="win"?"w":e.res==="draw"?"d":"l";
   const mark=e.res==="win"?"○":e.res==="draw"?"△":"●";
   // カップは相手がクラブ一覧に居ないので、記録側が持っている名前をそのまま出す
@@ -1435,6 +1457,9 @@ function chatEnter(st){
       chatSay(sel.who,chatText(CHAT.bondAwakeAsk,"bw:"+C.node,{ m:shortOf(sel.who2) }));
       return true;
     }
+    // **支援はメニューを聞かない**。伸ばす能力は契約で決まっている(→docs/03 §3.40)
+    if(sel.hand==="spon"){ sel.menu=sponAid().id;
+      chatSay(sel.who,chatText(sponAid().ask,"sq:"+C.node)); return false; }
     if(sel.hand==="train")chatSay(sel.who,chatText(CHAT.callTrain,"ct:"+C.node));
     else chatSay(sel.who,chatText(CHAT.bondAsk,"ba:"+C.node,{ m:shortOf(sel.who2) }));
     return true;
@@ -1476,8 +1501,9 @@ function chatEnter(st){
       }
       return false;
     }
-    // **手応えはランダム**(→docs/03 §3.29)
-    const T=TUNING.chat, rng=mulberry32((S.world.seed^hashStr("chat:"+C.node+":"+sel.hand))>>>0);
+    // **手応えはランダム**(→docs/03 §3.29)。スポンサーの支援は当たりが厚い(→§3.40)
+    const T=sel.hand==="spon"?TUNING.spon:TUNING.chat;
+    const rng=mulberry32((S.world.seed^hashStr("chat:"+C.node+":"+sel.hand))>>>0);
     const r=rng();
     sel.res=r<T.great?"great":r<T.great+T.fail?"fail":"ok";
     const key=sel.hand==="bond"
@@ -1496,7 +1522,7 @@ function chatEnter(st){
       if(g)bondAdd(sel.who,sel.who2,g);
     }
     // **訓練は経験点になる**(→docs/03 §3.30)。失敗は0
-    if(sel.hand==="train"&&sel.menu&&!sel.awake){
+    if((sel.hand==="train"||sel.hand==="spon")&&sel.menu&&!sel.awake){
       const G=TUNING.train, t=trainById(sel.menu);
       // **練習場**(→docs/03 §3.5)で経験点が増える
       const gain=facTrainGain(sel.res==="great"?rri(rng,G.greatLo,G.greatHi)
@@ -1510,6 +1536,25 @@ function chatEnter(st){
     return false;
   }
   if(st==="event"){
+    // **1節に1つだけ**。順は「報酬 → 契約 → 師弟」。金の話を先に片づける
+    const sp=sponsor();
+    if(sp&&sp.hit&&!sp.paid){
+      sel.spon="pay";
+      chatSay("sec",chatText(CHAT.sponHit,"sh:"+C.node,{ n:sponsorById(sp.id).name }));
+      // ポジション確定スカウトだけは**どこを厚くするか**を監督が選ぶ
+      if(sponPrize(sp.tier).kind==="scoutPos"){
+        chatSay("sec",chatText(CHAT.sponPos,"sp:"+C.node));
+        return true;
+      }
+      sponReward(null);
+      return false;
+    }
+    // **スポンサーが付いていなければオーナーが相談を持ってくる**(→docs/03 §3.40)
+    if(sponPending()){
+      sel.spon="sign";
+      chatSay("sec",chatText(CHAT.sponAsk,"sq:"+C.node));
+      return true;
+    }
     // **師弟の相談**(→docs/03 §3.39)。打ち手のあと、秘書ではなく選手が話しかけてくる
     const m=mentorPending();
     if(m){
@@ -1541,6 +1586,13 @@ function chatPick(id,label){
     chatSay("sec",chatText(CHAT.cupNo,"cupNo:"+C.node));
     pickComp("league");
   }
+  else if(st==="event"&&sel.spon==="pay"){ sponReward(id); sel.spon=null; }
+  else if(st==="event"&&sel.spon==="sign"){
+    const sp=sponSign(id);
+    sel.spon=null;
+    if(sp)chatSay("sec",chatText(CHAT.sponYes,"sy:"+C.node,
+      { n:sponsorById(sp.id).name, g:sponGoalText(sp), d:String(sp.until) }));
+  }
   else if(st==="event"){
     const who=sel.mentor;
     const ok=mentorAnswer(who,id==="yes");
@@ -1552,7 +1604,8 @@ function chatPick(id,label){
   else if(st==="who"){
     sel.who=+id;
     // **選んだ時点で覚醒するかが決まる**(→docs/03 §3.30)
-    sel.awake=sel.hand==="train"?trainReady(sel.who):null;
+    // 支援も強化トレーニングと同じ枝を通る(→docs/03 §3.40)
+    sel.awake=(sel.hand==="train"||sel.hand==="spon")?trainReady(sel.who):null;
   }
   else if(st==="who2"){
     sel.who2=+id;
@@ -1562,6 +1615,15 @@ function chatPick(id,label){
   else if(st==="menu"){ sel.menu=id; }
   ch.i++; ch.step=null;
   save(); chatAdvance();
+}
+/** 報酬を受け取り、何が届いたかを会話に残す(→docs/03 §3.40)。 */
+function sponReward(pos){
+  const r=sponPay(pos);
+  if(!r)return;
+  if(r.kind==="coin")chatSay("sec",chatText(CHAT.sponCoin,"sc:"+S.career.node,
+    { v:fmtNum(r.coin) }));
+  else chatSay("sec",chatText(CHAT.sponCard,"sd:"+S.career.node,
+    { n:RARITY[r.card.rarity].label+" "+shortName(r.card) }));
 }
 /** いま出す選択肢。 */
 function chatOptions(){
@@ -1581,12 +1643,24 @@ function chatOptions(){
       .concat([{ id:"no", label:"今節は見送る", say:chatText(CHAT.sayCupNo,"sn:"+N),
         sub:"リーグ戦に集中します" }]) };
   }
-  if(st==="event")return { q:"どう答えますか", items:MENTORS.map(m=>({
-    id:m.id, label:m.label, sub:m.sub, say:m.label+"。" })) };
+  if(st==="event"){
+    if(sel.spon==="pay")return { q:"どのポジションを呼びますか",
+      items:POS.map(g=>({ id:g, label:g, say:g+" を頼む。" })) };
+    if(sel.spon==="sign")return { q:"どこと契約しますか", items:sponOffers().map(o=>({
+      id:o.id, label:o.name,
+      // **課題と報酬と支援を並べて見せる**。これが選ぶ材料そのもの
+      sub:sponGoalText({ ...o, until:C.node+TUNING.spon.term })
+        +" ／ "+sponPrizeText(o)+" ／ 支援 "+sponAidById(o.aid).label,
+      say:o.name+"と組もう。" })) };
+    return { q:"どう答えますか", items:MENTORS.map(m=>({
+      id:m.id, label:m.label, sub:m.sub, say:m.label+"。" })) };
+  }
   if(st==="hand")return { q:"打ち手を選ぶ",
-    // **説明は添えない**(→docs/06 §6.24)。3つの違いは覚えるもので、毎節読むものではない
-    items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label,
-      say:chatText(CHAT[h.id==="train"?"sayTrain":h.id==="bond"?"sayBond":"sayRest"],
+    // **説明は添えない**(→docs/06 §6.24)。違いは覚えるもので、毎節読むものではない。
+    // スポンサーが付いていれば4つ目が増える(→docs/03 §3.40)
+    items:handsNow().map(h=>({ id:h.id, label:h.icon+" "+h.label,
+      say:h.id==="spon"?chatText(CHAT.sponAid,"sa:"+N,{ a:h.label })
+        :chatText(CHAT[h.id==="train"?"sayTrain":h.id==="bond"?"sayBond":"sayRest"],
         "sh:"+N+h.id) })) };
   // **★とチャンスを一覧に並べる**(→docs/03 §3.30)。誰を伸ばしてきたかが選ぶ前に分かる
   if(st==="who"||st==="who2")return { q:st==="who"?"誰を呼びますか":"相方を選びますか",
@@ -1597,7 +1671,7 @@ function chatOptions(){
         star:trainStar(c.id),
         // **覚醒できる選手は枠が光る**。文字で「覚醒」とは書かない(→docs/03 §3.30)。
         // 交流では「呼ぶ側」は覚醒できる相手が居るか、「相方」はその組が挑めるか
-        hot:sel.hand==="train"?(st==="who"&&!!trainReady(c.id))
+        hot:(sel.hand==="train"||sel.hand==="spon")?(st==="who"&&!!trainReady(c.id))
           :st==="who"?bondReadyWith(c.id)
           :bondCanAwake(sel.who,c.id),
         sub:primarySub(c)+" ・ OVR "+c.ovr })) };

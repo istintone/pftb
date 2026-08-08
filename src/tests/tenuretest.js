@@ -292,6 +292,80 @@ function runSeason(hand) {
     C.cup = null;
   }
 
+  // ---------- スポンサー(→docs/03 §3.40) ----------
+  {
+    await E.newGame();
+    const S7 = E.getS(); S7.coach = "検証"; E.startTenure("sam-8");
+    const T = E.TUNING.spon, C7 = S7.career;
+
+    // --- 相談は「契約が無いとき」だけ。候補は名声で開く ---
+    assert.ok(E.sponPending(), "契約が無ければ相談が来る");
+    const low = E.sponOffers();
+    assert.strictEqual(low.length, T.pick, "候補は " + T.pick + " 社");
+    assert.ok(low.every(o => o.need <= S7.player.fame), "名声が届いている会社だけ");
+    assert.ok(!low.some(o => o.tier >= 3), "名声0で上位の会社は来ない: " + low.map(o => o.name));
+    S7.player.fame = 99999;
+    const hi = E.sponOffers();
+    assert.ok(hi.some(o => o.tier === 4), "名声を積むと最上位が来る: " + hi.map(o => o.name));
+    assert.ok(!hi.some(o => o.league && o.league !== E.clubById(S7.club.id).league),
+      "他リーグ専属の会社は来ない");
+    S7.player.fame = 0;
+
+    // --- 契約すると課題・報酬・支援が決まり、打ち手が4つになる ---
+    assert.strictEqual(E.handsNow().length, 3, "契約前の打ち手は3つ");
+    const pick = E.sponOffers()[0];
+    const sp = E.sponSign(pick.id);
+    assert.ok(sp, "契約できる");
+    assert.strictEqual(sp.until, C7.node + T.term, "期限は " + T.term + "節先");
+    assert.ok(!E.sponPending(), "契約中は相談が来ない");
+    assert.ok(E.sponGoalText(sp).indexOf("第" + sp.until + "節") >= 0, "課題に期限が入る");
+    const hands = E.handsNow();
+    assert.strictEqual(hands.length, 4, "契約中は打ち手が4つ");
+    assert.strictEqual(hands[3].id, "spon", "4つ目はスポンサー支援");
+    assert.strictEqual(hands[3].label, E.sponAidById(sp.aid).label, "支援の名前が出る");
+    assert.ok(E.handNow("spon"), "4つ目を選べる");
+    assert.ok(T.great > E.TUNING.chat.great && T.fail < E.TUNING.chat.fail,
+      "支援は通常より当たりが厚い: " + T.great + " / " + T.fail);
+
+    // --- 課題は種類が合ったときだけ立つ。**報酬は一度きり** ---
+    sp.goal = { kind: "streak", n: 3 };
+    C7.streak = 0;
+    E.streakAdd("win"); E.streakAdd("win");
+    assert.ok(!sp.hit, "足りないうちは達成しない: " + C7.streak + "連勝");
+    E.streakAdd("draw");
+    assert.strictEqual(C7.streak, 0, "引き分けで連勝が切れる");
+    E.streakAdd("win"); E.streakAdd("win"); E.streakAdd("win");
+    assert.ok(sp.hit, "課題を達成する");
+    const coin0 = S7.club.coins, coll0 = S7.player.coll.length;
+    const r = E.sponPay(null);
+    assert.ok(r, "報酬が出る");
+    if (r.kind === "coin") assert.ok(S7.club.coins > coin0, "コインが入る");
+    else assert.strictEqual(S7.player.coll.length, coll0 + 1, "カードが1枚入る");
+    assert.strictEqual(E.sponPay(null), null, "報酬は一度きり");
+
+    // --- 期限を越えると契約が切れる。達成していれば名声は減らない ---
+    C7.node = sp.until + 1;
+    const end = E.sponTick();
+    assert.ok(end && end.hit, "達成のまま満了する");
+    assert.strictEqual(end.lost, 0, "達成していれば名声は減らない");
+    assert.strictEqual(E.sponsor(), null, "契約が外れる");
+    assert.strictEqual(E.handsNow().length, 3, "打ち手が3つに戻る");
+
+    // --- 落とすと名声が下がる(**名声が減る唯一の経路**) ---
+    S7.player.fame = 5000; C7.node = 10;
+    const sp2 = E.sponSign(E.sponOffers()[0].id);
+    C7.node = sp2.until + 1;
+    const fame0 = S7.player.fame;
+    const end2 = E.sponTick();
+    assert.ok(end2 && !end2.hit, "未達成のまま満了する");
+    assert.strictEqual(end2.lost, T.fameFail[sp2.tier - 1], "段ぶんの名声が引かれる");
+    assert.strictEqual(S7.player.fame, fame0 - end2.lost, "名声が減っている");
+    E.fameLose(999999);
+    assert.strictEqual(S7.player.fame, 0, "名声は0より下に行かない");
+    console.log("スポンサーOK 候補" + T.pick + "社 ／ " + T.term + "節契約 ／ 打ち手4つ目 ／"
+      + " 報酬は一度きり ／ 未達成で名声 -" + T.fameFail[sp2.tier - 1]);
+  }
+
   // ---------- 信頼と師弟(→docs/03 §3.39) ----------
   {
     await E.newGame();

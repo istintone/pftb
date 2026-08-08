@@ -517,6 +517,98 @@ const STEPS = [
     })()`));
     await ctx.wait(200);
     await ctx.shot("05d-chat-rest");
+    // スポンサー(→docs/03 §3.40)。**契約が無ければオーナーが相談を持ってくる**
+    ctx.log("  スポンサーの相談:", await ctx.js(`(()=>{
+      S.club.sponsor=null; S.player.fame=99999;
+      show('home');
+      if(document.getElementById('homeNews').textContent.indexOf('スポンサー')<0)
+        throw new Error('CLUB NEWS に相談が出ない');
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      show('chat');
+      let g=0;
+      while(S.career.chat.step&&S.career.chat.step!=='event'&&g++<8){
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        const st=S.career.chat.step;
+        const b=st==='cup'?bs.find(x=>x.dataset.pick==='no')
+          :st==='hand'?bs.find(x=>x.dataset.pick==='rest'):bs[0];
+        if(!b)throw new Error(st+' で選択肢が出ない');
+        b.click(); renderChat();
+      }
+      if(S.career.chat.step!=='event')throw new Error('相談まで進まない: '+S.career.chat.step);
+      const ops=[...document.querySelectorAll('#chatAsk [data-pick]')];
+      if(ops.length!==TUNING.spon.pick)throw new Error('候補が'+TUNING.spon.pick+'社出ない: '+ops.length);
+      window.__spon=ops[0].dataset.pick;
+      return ops.map(o=>o.textContent.split('／')[0].trim()).join(' / ');
+    })()`));
+    await ctx.shot("05k-chat-sponsor");
+    ctx.log("  契約と4つ目の打ち手:", await ctx.js(`(()=>{
+      [...document.querySelectorAll('#chatAsk [data-pick]')]
+        .find(b=>b.dataset.pick===window.__spon).click();
+      renderChat();
+      const sp=sponsor();
+      if(!sp)throw new Error('契約できない');
+      if(sponPending())throw new Error('契約したのにまだ相談が来る');
+      // 契約中は打ち手が4つになる
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      show('chat');
+      let g=0;
+      while(S.career.chat.step&&S.career.chat.step!=='hand'&&g++<6){
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        (bs.find(x=>x.dataset.pick==='no')||bs[0]).click(); renderChat();
+      }
+      const hs=[...document.querySelectorAll('#chatAsk [data-pick]')].map(b=>b.dataset.pick);
+      if(hs.length!==4||hs[3]!=='spon')throw new Error('4つ目が出ない: '+hs);
+      return sponsorById(sp.id).name+' ／ '+sponGoalText(sp)+' ／ 支援 '+sponAidById(sp.aid).label;
+    })()`));
+    await ctx.shot("05l-chat-hand4");
+    ctx.log("  支援の打ち手:", await ctx.js(`(()=>{
+      // **メニューは聞かれない**。伸ばす能力は契約で決まっている
+      [...document.querySelectorAll('#chatAsk [data-pick]')]
+        .find(b=>b.dataset.pick==='spon').click();
+      renderChat();
+      if(S.career.chat.step!=='who')throw new Error('選手を聞かれない: '+S.career.chat.step);
+      const who=[...document.querySelectorAll('#chatAsk [data-pick]')][0];
+      const id=+who.dataset.pick; who.click(); renderChat();
+      const st=S.career.chat.step;
+      if(st==='menu'&&!S.career.chat.sel.awake)throw new Error('メニューを聞いてきた');
+      const steps=S.career.chat.sel;
+      return '選手を呼んで '+sponAidById(sponsor().aid).label+' を実施（メニューは聞かない）';
+    })()`));
+    await ctx.shot("05m-chat-aid");
+    ctx.log("  報酬:", await ctx.js(`(()=>{
+      const sp=sponsor();
+      sp.hit=true; sp.paid=false;
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      show('chat');
+      const coll0=S.player.coll.length, coin0=S.club.coins;
+      let g=0;
+      // **入力の要らない報酬は素通りする**(コイン/WC/LE)。ready まで来たらそこで止める
+      while(S.career.chat.step&&S.career.chat.step!=='event'
+            &&S.career.chat.step!=='ready'&&g++<8){
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        const st=S.career.chat.step;
+        const b=st==='cup'?bs.find(x=>x.dataset.pick==='no')
+          :st==='hand'?bs.find(x=>x.dataset.pick==='rest'):bs[0];
+        b.click(); renderChat();
+      }
+      const kind=sponPrize(sp.tier).kind;
+      if(kind==='scoutPos'){
+        if(S.career.chat.step!=='event')throw new Error('ポジションを聞く段に来ない');
+        const ops=[...document.querySelectorAll('#chatAsk [data-pick]')].map(b=>b.dataset.pick);
+        if(ops.join(',')!==POS.join(','))throw new Error('ポジションを聞かない: '+ops);
+        [...document.querySelectorAll('#chatAsk [data-pick]')][3].click(); renderChat();
+      }
+      if(!sp.paid)throw new Error('報酬が渡っていない');
+      const got=S.player.coll.length>coll0?RARITY[S.player.coll[S.player.coll.length-1].rarity].label
+        :(S.club.coins-coin0)+' コイン';
+      // **一度きり**。同じ契約で二度は出ない
+      if(sponPay(null))throw new Error('報酬が二度出る');
+      return kind+' → '+got;
+    })()`));
+    await ctx.shot("05n-chat-prize");
+    // **契約は残したまま**にする。外すと次の節でまたスポンサーの相談が先に出て、
+    // 師弟の相談まで進まない(1節に出るイベントは1つ)
+    await ctx.js("S.player.fame=0; S.career.chat=null; S.career.hand=null; S.career.comp=null;");
     // 師弟の相談(→docs/03 §3.39)。**打ち手のあと**に選手から話しかけてくる
     ctx.log("  師弟の相談:", await ctx.js(`(()=>{
       const id=S.squad[9];
