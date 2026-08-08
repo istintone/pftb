@@ -667,7 +667,7 @@ const STEPS = [
       const pick=t=>{ const o=[...document.querySelectorAll('#chatAsk [data-pick]')]
         .find(e=>e.textContent.indexOf(t)>=0); if(!o)throw new Error('選べない: '+t);
         o.click(); renderChat(); };
-      pick('交流');
+      pick(handById('bond').label);      // 打ち手の呼び名は変わりうるので定義から引く
       // 呼ぶ側の一覧で**覚醒できる相手が居る選手だけ**が光る
       const hot=[...document.querySelectorAll('#chatAsk [data-pick]')]
         .filter(e=>e.classList.contains('hot')).length;

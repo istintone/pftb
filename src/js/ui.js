@@ -1638,22 +1638,30 @@ function renderChat(){
   const C=S.career;
   if(!C.chat)chatStart();
   const ch=C.chat;
-  $("chatClub").textContent=clubName(S.club.id);
-  $("chatSub").textContent="第"+C.node+"節の準備 ・ 秘書と選手";
+  // **見出しは今節の相手**(→docs/06 §6.24)。自クラブ名はヘッダーに出ているので、
+  // ここで繰り返すより「誰と戦うのか」を置いたほうがこの画面の役に立つ
+  const f=C.comp==="cup"?cupFixtureOf():null;
+  const m=f?null:myFixture();
+  const foe=f?f.side.name:m?clubName(m.opp):null;
+  $("chatClub").textContent=foe?"VS "+foe:clubName(S.club.id);
+  $("chatSub").textContent="第"+C.node+"節";
   $("chatDay").textContent="SEASON "+S.world.season+" ・ NODE "+C.node;
   $("chatAv").innerHTML=chatAvatar("sec","ch-av-in");
   $("chatLog").innerHTML=ch.log.map(m=>{
     // 監督は**右に丸**。左右で誰の発言かが形だけで分かる
     if(m.w==="mgr")return '<div class="ch-row me"><div class="ch-b">'+esc(m.t)+'</div>'
       +chatAvatar("mgr")+'</div>';
-    const nm=m.w==="sec"?"秘書":shortOf(m.w);
+    // **選手はポジションも添える**(→docs/06 §6.24)。誰を育てるかの手掛かりになる
+    const pc=m.w==="sec"?null:cardById(m.w);
+    const nm=m.w==="sec"?"秘書":esc(shortOf(m.w))
+      +(pc?' <i class="ch-pos">'+esc(primarySub(pc))+'</i>':"");
     return '<div class="ch-row">'+chatAvatar(m.w)
-      +'<div class="ch-b"><span class="ch-nm">'+esc(nm)+'</span>'+esc(m.t)+'</div></div>';
+      +'<div class="ch-b"><span class="ch-nm">'+nm+'</span>'+esc(m.t)+'</div></div>';
   }).join("");
   const o=chatOptions();
   if(ch.step==="ready"){
     $("chatAsk").className="ch-ask";
-    $("chatAsk").innerHTML='<button class="btn" id="chatGo">試合へ向かう</button>';
+    $("chatAsk").innerHTML='<button class="btn" id="chatGo">KICK OFF</button>';
     $("chatGo").onclick=()=>startMatch();
   }else if(o){
     $("chatAsk").className="ch-ask"+(o.grid?" grid":"");

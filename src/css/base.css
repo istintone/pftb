@@ -1592,19 +1592,32 @@ body{
 .news-x{ color:oklch(0.72 0.15 25) }      /* 治療中の選手名 */
 .cm-body{ color:var(--accent) }   /* 体つき(→docs/03 §3.27)。持つ選手にだけ付く */
 .news-up{ color:var(--accent) }           /* 施設の完成(→docs/03 §3.5)。1節だけ出る */
-/* クラブチャット(→docs/06 §6.23)。モックの秘書チャットを踏襲した吹き出し */
+/* クラブチャット(→docs/06 §6.23)。モックの秘書チャットを踏襲した吹き出し。
+   **この画面だけ地をクリーム寄りの白にする**(→docs/06 §6.24)。暗い地の上に暗い吹き出しを
+   置くと輪郭が沈んで、誰が何を言ったのかが読み取れなかった。色は画面の中だけで閉じるので、
+   ここで作った変数を .ch-* 側が参照する。 */
+#scr-chat{
+  --ch-bg:oklch(0.968 0.014 92);        /* クリーム寄りの白(地) */
+  --ch-card:oklch(0.995 0.004 92);      /* 吹き出し */
+  --ch-ink:oklch(0.30 0.02 80);         /* 本文 */
+  --ch-ink2:oklch(0.50 0.02 80);        /* 補助(名前・注記) */
+  --ch-line:oklch(0.885 0.016 90);
+  --ch-me:oklch(0.90 0.075 88);         /* 監督の吹き出し */
+  min-height:100%;
+  background:var(--ch-bg); color:var(--ch-ink);
+}
 .ch-head{
   display:flex; align-items:center; gap:10px;
-  padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--line-2);
+  padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--ch-line);
 }
 .ch-av{ width:54px; height:54px; flex-shrink:0 }
 .ch-av-in{ width:100%; height:100% }
 
-.ch-hn{ font:600 14px/1.2 var(--f-head); color:var(--text) }
-.ch-hs{ font-size:10px; color:var(--text-dim); margin-top:1px }
+.ch-hn{ font:600 14px/1.2 var(--f-head); color:var(--ch-ink) }
+.ch-hs{ font-size:10px; color:var(--ch-ink2); margin-top:1px }
 .ch-day{
   text-align:center; margin-bottom:14px;
-  font:400 9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-mute);
+  font:400 9px/1 var(--f-mono); letter-spacing:1px; color:var(--ch-ink2);
 }
 .ch-log{ display:flex; flex-direction:column; gap:10px }
 .ch-row{ display:flex; align-items:flex-end; gap:7px }
@@ -1615,11 +1628,13 @@ body{
   width:36px; height:36px; border-radius:50%; flex-shrink:0; overflow:hidden;
   display:flex; align-items:center; justify-content:center; position:relative;
 }
-.ch-sm.sec, .ch-av-in.sec{ background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300);
-  color:oklch(0.62 0.06 300) }
-.ch-sm.mgr{ background:oklch(0.30 0.05 85); border:1px solid var(--accent-dim);
-  color:oklch(0.62 0.09 85) }
-.ch-sm.pl{ background:var(--panel-2); border:1px solid var(--line); color:var(--text-mute) }
+/* 地が明るくなったので、丸も明るい側でそろえる(暗い円盤が浮いて見えるため) */
+.ch-sm.sec, .ch-av-in.sec{ background:oklch(0.90 0.035 300); border:1px solid oklch(0.80 0.05 300);
+  color:oklch(0.55 0.08 300) }
+.ch-sm.mgr{ background:oklch(0.91 0.06 88); border:1px solid oklch(0.80 0.09 85);
+  color:oklch(0.52 0.10 85) }
+.ch-sm.pl{ background:oklch(0.93 0.008 90); border:1px solid var(--ch-line);
+  color:oklch(0.62 0.02 90) }
 /* 絵が無い間のシルエット。**丸に対する割合で描く**ので大きさを変えても崩れない */
 .ch-ph{ position:absolute; inset:0; overflow:hidden }
 .ch-ph::before{
@@ -1645,37 +1660,43 @@ body{
 }
 .ch-b{
   max-width:74%; padding:10px 12px; font-size:12px; line-height:1.65;
-  background:var(--panel); color:var(--text-2); border-radius:12px 12px 12px 4px;
+  background:var(--ch-card); color:var(--ch-ink); border-radius:12px 12px 12px 4px;
+  border:1px solid var(--ch-line); box-shadow:0 1px 2px oklch(0.5 0.02 90 / .10);
 }
 .ch-row.me .ch-b{
-  background:oklch(0.32 0.06 85); color:oklch(0.96 0.01 90);
-  border-radius:12px 12px 4px 12px;
+  background:var(--ch-me); color:oklch(0.28 0.03 80);
+  border-color:oklch(0.82 0.09 85); border-radius:12px 12px 4px 12px;
 }
-.ch-nm{ display:block; font:400 9px/1 var(--f-mono); color:var(--text-mute); margin-bottom:4px }
+.ch-nm{ display:block; font:400 9px/1 var(--f-mono); color:var(--ch-ink2); margin-bottom:4px }
+/* 発言者のポジション(→docs/06 §6.24)。名前の右に小さく置く */
+.ch-pos{
+  font-style:normal; letter-spacing:1px; color:oklch(0.46 0.09 85);
+  background:oklch(0.94 0.045 88); border-radius:4px; padding:1px 4px; margin-left:3px;
+}
 /* 選択肢。**吹き出しの続きに見えるよう**下からせり出す */
 .ch-ask{ margin-top:16px; display:flex; flex-direction:column; gap:6px }
-.ch-q{ font-size:11px; color:var(--text-dim); margin-bottom:2px }
+.ch-q{ font-size:11px; color:var(--ch-ink2); margin-bottom:2px }
 .ch-op{
   width:100%; text-align:left; padding:12px 14px; border-radius:10px; cursor:pointer;
-  background:var(--panel); border:1px solid var(--accent-dim); color:var(--text);
-  font:400 13px/1.3 var(--f-body);
+  background:var(--ch-card); border:1px solid oklch(0.80 0.09 85); color:var(--ch-ink);
+  font:400 13px/1.3 var(--f-body); box-shadow:0 1px 2px oklch(0.5 0.02 90 / .10);
 }
-.ch-op:active{ background:oklch(0.26 0.05 85) }
-.ch-op .ch-os{ display:block; font-size:10px; color:var(--text-dim); margin-top:3px }
+.ch-op:active{ background:oklch(0.94 0.05 88) }
+.ch-op .ch-os{ display:block; font-size:10px; color:var(--ch-ink2); margin-top:3px }
 /* **覚醒の合図は枠の光だけ**(→docs/03 §3.30)。「覚醒」と書くと種明かしになる。
    光は**緑**。カード詳細の満タンのバーと同じ色にして、同じ合図だと分かるようにする
    (地のゴールドと同じ色で光らせても、ただ強調しているようにしか見えない)。 */
-.ch-op.hot{ border-color:oklch(0.72 0.16 150); animation:awkGlow 1.8s ease-in-out infinite }
+.ch-op.hot{ border-color:oklch(0.62 0.16 150); animation:awkGlow 1.8s ease-in-out infinite }
 @keyframes awkGlow{
-  0%,100%{ box-shadow:0 0 6px 0 oklch(0.75 0.14 150 / .22);
-           background:oklch(0.24 0.04 150 / .28) }
-  50%    { box-shadow:0 0 20px 3px oklch(0.82 0.18 150 / .62);
-           background:oklch(0.30 0.07 150 / .55) }
+  0%,100%{ box-shadow:0 0 6px 0 oklch(0.62 0.16 150 / .22);
+           background:oklch(0.95 0.05 150) }
+  50%    { box-shadow:0 0 18px 3px oklch(0.66 0.18 150 / .45);
+           background:oklch(0.90 0.10 150) }
 }
 /* 止まっていても分かるよう、常時ぶんの光は残す */
 @media (prefers-reduced-motion:reduce){ .ch-op.hot{ animation:none;
-  box-shadow:0 0 16px 2px oklch(0.82 0.18 150 / .50);
-  background:oklch(0.28 0.06 150 / .45) } }
+  box-shadow:0 0 14px 2px oklch(0.66 0.18 150 / .40);
+  background:oklch(0.92 0.08 150) } }
 /* 段のタグ(カード見本と同じ)。名前の前に置く */
 .ch-op .gl-abbr{ margin-right:7px; vertical-align:1px }
 /* 選手を選ぶときだけ2列にして、名前とポジションを並べる */
