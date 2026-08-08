@@ -2284,6 +2284,38 @@ const STEPS = [
     await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
     await ctx.wait(200);
   }],
+  ["任期満了の導線(総括 → 振り返り → 就任先)", async ctx => {
+    // **画面のつながりを実際に踏む**。任期が明けたあと、どこで次のクラブを選ぶのか
+    ctx.log("  最終節の総括:", await ctx.js(`(()=>{
+      S.career.node=S.career.limit+1; S.career.closing=false; S.career.over=false;
+      S.world.matchday=S.world.fixtures.length+1;
+      const j=judgeSeason();
+      _review={ kind:"season", j };
+      show('board'); renderBoard();
+      return '任期終了?'+S.career.over+' / ボタン: '+document.getElementById('boardGo').textContent;
+    })()`));
+    await ctx.shot("18a-last-review");
+    await ctx.js("document.getElementById('boardGo').click()");
+    await ctx.wait(400);
+    ctx.log("  総括のボタンの先:", await ctx.screen(),
+      "/ ボタン:", await ctx.js("(document.getElementById('btnNewCareer')||{}).textContent"));
+    await ctx.shot("18b-career-end");
+    await ctx.js("document.getElementById('btnNewCareer').click()");
+    await ctx.wait(600);
+    ctx.log("  その先:", await ctx.screen(),
+      "/ オファー:", await ctx.js("document.querySelectorAll('#offerList [data-club]').length"));
+    await ctx.shot("18c-offers");
+    ctx.log("  クラブを選ぶ:", await ctx.js(`(()=>{
+      const el=document.querySelector('#offerList [data-club]');
+      el.click();
+      return '選んだ: '+el.dataset.club;
+    })()`));
+    await ctx.wait(700);
+    ctx.log("  選んだ先:", await ctx.screen(),
+      "/ クラブ:", await ctx.js("document.getElementById('hdClubName').textContent"));
+    await ctx.shot("18d-joined");
+  }],
+
   ["任期満了 → 次の任期へ(師弟を連れていく)", async ctx => {
     // **周回そのものの検査**(→docs/03 §3.39)。任期が明けても player は畳まない
     ctx.log("  任期満了:", await ctx.js(`(()=>{
