@@ -601,7 +601,11 @@ function coverOf(D,h,x){
   for(const q of D.players){
     if(q.role==="GK")continue;
     const dh=(heightOf(q)-th)/C.covH, dx=((q.x-tx)/100)/C.covX;
-    n+=Math.exp(-(dh*dh+dx*dx))*q.stam*skK(q,"cover");      // 消耗した選手は寄せきれない
+    // **人数だけでなく質も数える**(→docs/03 §3.38)。頭数だけだと、守備の選手は
+    // 自分が当たった競り合いでしか効かず、**同じOVRでも FW の1/10 の価値**しか出なかった。
+    // eff にはスタミナとコンディションが入っているので、ここで別に掛けない
+    const qw=C.covQ0+eff(q,"def")/STAT_MAX*C.covQ;          // 並の守備者で約1.0
+    n+=Math.exp(-(dh*dh+dx*dx))*qw*skK(q,"cover");
   }
   // **支援のぶんだけ**に掛ける。素の1に掛けると「誰も居なくても厚い」になってしまう
   return 1+Math.max(0,n-C.covBase)*C.covK*skK(pickGK(D),"marshal");
@@ -1140,10 +1144,12 @@ function matchRating(p,conceded){
   }
   let r=4.0+2.05*Math.log10(1+(s.inv||0));
   r+=(s.goals||0)*0.9+(s.assists||0)*0.55
-    +(s.duelW||0)*0.10-(s.duelL||0)*0.10
-    +(s.blocks||0)*0.16
+    +(s.duelW||0)*0.12-(s.duelL||0)*0.12
+    +(s.blocks||0)*0.22
     -((s.shots||0)-(s.goals||0))*0.06;
-  if(p.role==="DF")r+=conceded===0?0.5:-Math.min(0.8,conceded*0.18);
+  // **守った仕事にも点を付ける**(→docs/03 §3.38)。関与の数と得点だけで見ると
+  // 前線が構造的に1点高くなり、DFはどれだけ止めても上に行けない
+  if(p.role==="DF"||p.sub==="DMF")r+=conceded===0?0.6:-Math.min(0.5,conceded*0.12);
   return clamp(Math.round(r*10)/10,3.0,10);
 }
 /** チーム単位の集計。イベントを数えるだけなので、描画してもしなくても同じ。 */

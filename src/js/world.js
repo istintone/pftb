@@ -479,17 +479,42 @@ function bestFormFor(roster){
 function bestXI(roster,form){
   const slots=FORMATIONS[form||DEFAULT_FORM];
   const used=new Set();
-  const xi=slots.map(([sub])=>{
-    let best=null,bs=-1;
-    for(const c of roster){
-      if(used.has(c.id))continue;
-      const v=slotFit(c,sub)*c.ovr;
-      if(v>bs){ bs=v; best=c; }
-    }
-    if(best)used.add(best.id);
-    return best;
-  });
+  const xi=fillSlots(slots,roster,c=>c,used);
   return xi.concat(benchOrder(roster.filter(c=>!used.has(c.id))));
+}
+/**
+ * 枠を埋める。**枠の順ではなく、いちばん収まりのいい組から決める**(→docs/03 §3.38)。
+ *
+ * 枠の順に貪欲だと、**先に並んでいる枠が得をする**。FORMATIONS は左を先に書いてあり、
+ * さらに LSB と RSB のあいだに CB が挟まるので、右SBだけ候補を先に取られていた。
+ * 実測で LSB 平均72.5 に対して RSB 66.5(適性一致も 89% 対 80%)まで開いていた。
+ * 毎回すべての(枠 × 選手)から最大の組を取れば、順番の有利不利が消える。
+ */
+function fillSlots(slots,pool,pick,used){
+  const out=new Array(slots.length).fill(null);
+  const left=slots.map((s,i)=>i);
+  while(left.length){
+    // **取られたときに一番困る枠から埋める**(最良と次善の差 = 惜しさ)。
+    // 単純に「最大の組から」だと同点のときに**先に見た枠が勝つ**ので、
+    // 左右で同じ値になったとき必ず左が取っていた(実測 LSB 71.1 / RSB 68.1、
+    // 見る順を逆にすると 67.8 / 70.7 と反転した)
+    let bi=-1,bc=null,bg=-1,bv=-1;
+    for(const i of left){
+      let b1=-1,b2=-1,c1=null;
+      for(const c of pool){
+        if(used.has(c.id))continue;
+        const v=slotFit(c,slots[i][0])*c.ovr;
+        if(v>b1){ b2=b1; b1=v; c1=c; } else if(v>b2){ b2=v; }
+      }
+      if(c1==null)continue;
+      const gap=b1-Math.max(b2,0);
+      if(gap>bg||(gap===bg&&b1>bv)){ bg=gap; bv=b1; bi=i; bc=c1; }
+    }
+    if(bc==null)break;
+    used.add(bc.id); out[bi]=pick(bc);
+    left.splice(left.indexOf(bi),1);
+  }
+  return out;
 }
 
 /** 使える選手 = 手持ちカード(恒久) + クラブからの貸与(任期中だけ)。 */
@@ -510,16 +535,8 @@ function autoSquad(){
   const slots=FORMATIONS[S.form||DEFAULT_FORM];
   const pool=availableCards().slice();
   const used=new Set();
-  const xi=slots.map(([sub])=>{
-    let best=null,bestScore=-1;
-    for(const c of pool){
-      if(used.has(c.id))continue;
-      const score=slotFit(c,sub)*c.ovr;
-      if(score>bestScore){ bestScore=score; best=c; }
-    }
-    if(best)used.add(best.id);
-    return best?best.id:null;
-  });
+  // 自動編成も**枠の順で有利不利が出ない**ように(→bestXI と同じ埋め方)
+  const xi=fillSlots(slots,pool,c=>c.id,used);
   return xi.concat(pickBench(pool.filter(c=>!used.has(c.id))));
 }
 /**

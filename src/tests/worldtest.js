@@ -170,16 +170,13 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
     for (const club of E.CLUBS) {
       const roster = E.clubRoster(12345, club.id);
       const hasGK = roster.some(c => c.pos === "GK");
-      const used = new Set();
-      E.FORMATIONS["4-4-2"].forEach(([sub]) => {   // autoSquad と同じ貪欲法
-        let best = null, bs = -1;
-        for (const c of roster) {
-          if (used.has(c.id)) continue;
-          const v = E.slotFit(c, sub) * c.ovr;
-          if (v > bs) { bs = v; best = c; }
-        }
+      // **本番と同じ埋め方で測る**(→docs/03 §3.38)。テスト側で貪欲法を書き写すと、
+      // 実装を直したときに検査だけが古いまま残る(実際に左右の偏りを見落とした)
+      const xi = E.bestXI(roster, "4-4-2");
+      E.FORMATIONS["4-4-2"].forEach(([sub], ix) => {
+        const best = xi[ix];
         if (!best) return;
-        used.add(best.id); slots++; tier[E.fitTier(best, sub)]++;
+        slots++; tier[E.fitTier(best, sub)]++;
         byDiv[club.div] = byDiv[club.div] || { n: 0, c: 0 };
         byDiv[club.div].n++; if (E.fitTier(best, sub) === "c") byDiv[club.div].c++;
         if (hasGK && sub === "GK" && best.pos !== "GK") wrongGK++;
@@ -193,6 +190,31 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
       "不一致の配置は3%未満: " + tier.c + "/" + slots);
     console.log("  部ごとの不一致:", E.DIVS.map(d =>
       E.divName(d) + " " + (byDiv[d].c / byDiv[d].n * 100).toFixed(1) + "%").join(" / "));
+    {
+      // **左右で不利が出ない**こと(→docs/03 §3.38)。枠の順に貪欲だと、先に並んだ枠が
+      // 得をする。実測で LSB 72.5 に対し RSB 66.5 まで開いていた
+      const per = {};
+      for (const club of E.CLUBS) {
+        const form = "4-4-2", xi = E.bestXI(E.clubRoster(12345, club.id), form);
+        E.FORMATIONS[form].forEach(([sub], ix) => {
+          if (!xi[ix]) return;
+          const t = per[sub] || (per[sub] = { n: 0, ovr: 0, a: 0 });
+          t.n++; t.ovr += xi[ix].ovr; if (E.fitTier(xi[ix], sub) === "a") t.a++;
+        });
+      }
+      for (const [l, r] of [["LSB", "RSB"], ["LMF", "RMF"]]) {
+        const L = per[l], R = per[r];
+        const d = Math.abs(L.ovr / L.n - R.ovr / R.n);
+        assert.ok(d < 1.5, l + " と " + r + " に入る選手の質がほぼ同じ: "
+          + (L.ovr / L.n).toFixed(1) + " / " + (R.ovr / R.n).toFixed(1)
+          + "(差 " + d.toFixed(1) + ")");
+        assert.ok(Math.abs(L.a / L.n - R.a / R.n) < 0.08,
+          l + " と " + r + " の適性一致率がほぼ同じ: "
+          + (L.a / L.n * 100).toFixed(0) + "% / " + (R.a / R.n * 100).toFixed(0) + "%");
+      }
+      console.log("  左右の均等:", ["LSB", "RSB", "LMF", "RMF"]
+        .map(k => k + " " + (per[k].ovr / per[k].n).toFixed(1)).join(" / "));
+    }
     console.log("  自動編成:", clubs, "クラブ / 完全一致",
       (tier.a / slots * 100).toFixed(1) + "% ・メインのみ",
       (tier.b / slots * 100).toFixed(1) + "% ・不一致", tier.c, "件 / GK枠の誤り", wrongGK);

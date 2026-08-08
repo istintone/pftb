@@ -1254,7 +1254,7 @@ const TUNING={
   // 攻撃1回がシュートまで到達する率(連鎖を実装するまでの暫定の入口)。
   // 起点で稼いだ前進(prog)が高いほど届きやすい: toShot × (progLo + prog×progK)
   // originK は起点の攻撃側スコア全体に掛かる係数(ORIGINS の表は相対値のままにする)
-  atk:{ toShot:0.70, homeAdv:1.06, progLo:0.45, progK:1.10, originK:3.22 },
+  atk:{ toShot:0.70, homeAdv:1.06, progLo:0.45, progK:1.10, originK:3.34 },
   // 起点のマッチアップ(→docs/07 §7.8)。座標が近い相手ほど対応しやすい。
   //   sigmaH/sigmaX … 高さ/左右のばらつき(大きいほど遠くの選手も関与する)
   //   atkW/defW     … 攻守スコアの「総合力(atk/def)」の比率。**残りはチャンネルと同じ能力**。
@@ -1264,6 +1264,7 @@ const TUNING={
   //   cov*  … 守備の厚み(→§7.14)。ボール周辺の守備者数で守備スコアを底上げする。
   //           covBase を超えた**支援の人数**だけが効く(マーカー本人は勘定に入れない)
   matchup:{ sigmaH:0.22, sigmaX:0.30, atkW:0.25, defW:0.60, markSpd:0.55,
+            covQ0:0.30, covQ:1.10,
             covH:0.26, covX:0.34, covBase:1.00, covK:0.085 },
   // --- 連鎖(→docs/07 §7.9) ---
   //   maxLinks  1回の攻撃でつなげる上限(これを超えたら撃つ)
