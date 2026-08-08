@@ -1163,7 +1163,8 @@ const TUNING={
   //   great/fail … 支援の打ち手の手応え(通常は chat の 0.18 / 0.22)
   //   coin       … 段ごとの賞金。streak は段ごとの連勝数
   //   fameFail   … 課題を落としたときに引かれる名声。**名声が減る唯一の経路**
-  spon:{ term:24, pick:3, great:0.34, fail:0.12,
+  //   least … 任期の残りがこれ未満なら相談が来ない(罰の無い契約を作らない)
+  spon:{ term:24, pick:3, great:0.34, fail:0.12, least:12,
          coin:[6000,14000,30000,60000],
          streak:[3,4,5,6],
          fameFail:[100,260,600,1200],

@@ -362,8 +362,27 @@ function runSeason(hand) {
     assert.strictEqual(S7.player.fame, fame0 - end2.lost, "名声が減っている");
     E.fameLose(999999);
     assert.strictEqual(S7.player.fame, 0, "名声は0より下に行かない");
+
+    // --- 任期の終わりに契約を残さない(→docs/03 §3.40) ---
+    S7.player.fame = 5000; S7.club.sponsor = null;
+    C7.node = C7.limit - T.least + 2;                  // 残り least-1 節
+    assert.ok(!E.sponPending(), "任期の残りが " + T.least + "節を切ったら相談は来ない");
+    C7.node = C7.limit - T.term + 4;                   // 24節ぶんは残っていない
+    assert.ok(E.sponPending(), "残っていれば相談は来る");
+    const late = E.sponSign(E.sponOffers()[0].id);
+    assert.strictEqual(late.until, C7.limit, "期限は任期の上限で止まる: 第" + late.until + "節");
+
+    // **任期の終わりで清算される**。未達成なら名声が下がる(流して逃げられない)
+    C7.node = C7.limit + 1; C7.closing = false;
+    const fame1 = S7.player.fame;
+    const t3 = E.judgeTenure();
+    assert.ok(S7.career.over, "任期が明ける");
+    assert.ok(t3.sponsor && !t3.sponsor.hit, "契約は未達成のまま閉じる");
+    assert.ok(S7.player.fame < fame1, "名声が下がる: " + fame1 + " → " + S7.player.fame);
+    assert.strictEqual(E.sponsor(), null, "契約は任期と一緒に外れる");
     console.log("スポンサーOK 候補" + T.pick + "社 ／ " + T.term + "節契約 ／ 打ち手4つ目 ／"
-      + " 報酬は一度きり ／ 未達成で名声 -" + T.fameFail[sp2.tier - 1]);
+      + " 報酬は一度きり ／ 未達成で名声 -" + T.fameFail[sp2.tier - 1]
+      + " ／ 任期の終わりで清算");
   }
 
   // ---------- 信頼と師弟(→docs/03 §3.39) ----------

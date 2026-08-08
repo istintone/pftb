@@ -698,7 +698,10 @@ function checkTenureClosing(){
 function judgeTenure(){
   if(!checkTenureClosing())return null;
   S.career.over=true;
-  return { extended:false };
+  // **契約は任期と一緒に閉じる**(→docs/03 §3.40)。期限は任期の上限を越えないので、
+  // ここに来た時点で必ず決着している。未達成なら名声が下がる
+  const sp=sponTick(true);
+  return { extended:false, sponsor:sp };
 }
 
 // ---------- 訓練(→docs/03 §3.30) ----------
@@ -815,14 +818,20 @@ function sponAidFor(x){
   const rng=mulberry32((S.world.seed^hashStr("spa:"+x.id+":"+S.career.node))>>>0);
   return SPONSOR_AID[Math.floor(rng()*SPONSOR_AID.length)].id;
 }
-/** いま相談が起きるか。**契約が無いときだけ**。 */
-const sponPending=()=>!!S.club&&!sponsor()&&sponOffers().length>0;
-/** 契約する。 */
+/**
+ * いま相談が起きるか。**契約が無いときだけ**。
+ * **任期の残りが少なければ声も掛からない**(→§3.40)。任期の終わりに結んだ契約が
+ * 未達成のまま流れると、罰の無い宝くじになってしまう。
+ */
+const sponPending=()=>!!S.club&&!sponsor()
+  &&tenureLeft()>=TUNING.spon.least&&sponOffers().length>0;
+/** 契約する。**期限は任期の上限を越えない**(必ず任期の中で決着する)。 */
 function sponSign(id){
   const o=sponOffers().find(x=>x.id===id);
   if(!o)return null;
   S.club.sponsor={ id:o.id, tier:o.tier, aid:o.aid, goal:o.goal,
-    node0:S.career.node, until:S.career.node+TUNING.spon.term,
+    node0:S.career.node,
+    until:Math.min(S.career.node+TUNING.spon.term,S.career.limit),
     hit:false, paid:false };
   return S.club.sponsor;
 }
@@ -847,9 +856,11 @@ function streakAdd(res){
   return S.career.streak;
 }
 /** 期限を過ぎた契約を閉じる。**未達成なら名声が下がる**(→§3.9)。 */
-function sponTick(){
+function sponTick(end){
   const sp=sponsor();
-  if(!sp||S.career.node<=sp.until)return null;
+  if(!sp)return null;
+  // end = 任期の終わり。**期限が来ていなくてもそこで清算する**(持ち越さない)
+  if(!end&&S.career.node<=sp.until)return null;
   if(sp.hit&&!sp.paid)return null;                 // 報酬をまだ渡していない間は閉じない
   const lost=sp.hit?0:TUNING.spon.fameFail[sp.tier-1];
   if(lost)fameLose(lost);
