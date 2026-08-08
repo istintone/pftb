@@ -517,6 +517,49 @@ const STEPS = [
     })()`));
     await ctx.wait(200);
     await ctx.shot("05d-chat-rest");
+    // 師弟の相談(→docs/03 §3.39)。**打ち手のあと**に選手から話しかけてくる
+    ctx.log("  師弟の相談:", await ctx.js(`(()=>{
+      const id=S.squad[9];
+      S.career.trust={}; S.career.mentor=[]; S.career.mentorSeen={};
+      S.career.trust[id]=TUNING.trust.need;
+      const news=document.getElementById('homeNews');
+      show('home');
+      if(news.textContent.indexOf('相談があるそうです')<0)
+        throw new Error('CLUB NEWS に予兆が出ない');
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      show('chat');
+      let guard=0;
+      while(S.career.chat.step&&S.career.chat.step!=='event'&&guard++<8){
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        const st=S.career.chat.step;
+        const b=st==='cup'?bs.find(x=>x.dataset.pick==='no')
+          :st==='hand'?bs.find(x=>x.dataset.pick==='rest'):bs[0];
+        if(!b)throw new Error(st+' で選択肢が出ない');
+        b.click(); renderChat();
+      }
+      if(S.career.chat.step!=='event')throw new Error('相談まで進まない: '+S.career.chat.step);
+      const ops=[...document.querySelectorAll('#chatAsk [data-pick]')].map(b=>b.dataset.pick);
+      if(ops.join(',')!=='yes,no')throw new Error('2択が出ない: '+ops);
+      const last=S.career.chat.log[S.career.chat.log.length-1];
+      if(last.w!=='sec'&&last.w!=='mgr'&&last.w!==id)throw new Error('選手が話していない');
+      return '第'+S.career.node+'節 / '+cardById(id).name+' / '+ops.join('・');
+    })()`));
+    await ctx.shot("05j-chat-mentor");
+    ctx.log("  師弟を結ぶ:", await ctx.js(`(()=>{
+      const id=S.squad[9];
+      [...document.querySelectorAll('#chatAsk [data-pick]')]
+        .find(b=>b.dataset.pick==='yes').click();
+      renderChat();
+      if(!isMentor(id))throw new Error('師弟にならない');
+      if(mentorPending())throw new Error('同じ選手にもう一度相談される');
+      // **一度きり**。同じ選手の信頼をどれだけ上げても二度目は来ない
+      S.career.trust[id]=999;
+      if(mentorPending())throw new Error('答えた選手がまた相談してくる');
+      const out=cardById(id).name+' と師弟 / 上限 '+TUNING.trust.max+'人';
+      S.career.trust={}; S.career.mentor=[]; S.career.mentorSeen={};
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      return out;
+    })()`));
     // ケガと休息(→docs/03 §3.32)。治療中なら CLUB NEWS と秘書が知らせる
     ctx.log("  ケガと休息:", await ctx.js(`(()=>{
       const id=S.squad.find(Boolean), C=TUNING.cond;
@@ -2135,6 +2178,51 @@ const STEPS = [
     await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
     await ctx.wait(200);
   }],
+  ["任期満了 → 次の任期へ(師弟を連れていく)", async ctx => {
+    // **周回そのものの検査**(→docs/03 §3.39)。任期が明けても player は畳まない
+    ctx.log("  任期満了:", await ctx.js(`(()=>{
+      const id=S.squad[9], name=cardById(id).name;
+      S.career.trust={}; S.career.mentorSeen={}; S.career.mentor=[id];
+      trainAwake(id,"atk");
+      window.__before={ fame:S.player.fame, coll:S.player.coll.length,
+        trophies:S.player.trophies.length, name:name, star:trainStar(id),
+        own:S.player.coll.some(c=>c.id===id) };
+      S.career.over=true;
+      show('career');
+      const t=document.getElementById('endBody').textContent;
+      if(t.indexOf(name.split(' ').pop())<0)
+        throw new Error('連れていく選手が出ない: '+name);
+      return name+' ★'+trainStar(id)+' を連れて任期満了';
+    })()`));
+    await ctx.shot("19-career-end");
+    await ctx.js("document.getElementById('btnNewCareer').click()");
+    await ctx.wait(600);
+    ctx.log("  次の就任先:", await ctx.js(`(()=>{
+      const b=window.__before;
+      const now=(document.querySelector('.screen.on')||{}).id;
+      if(now!=='scr-offer')throw new Error('就任先の選択に来ない: '+now);
+      if(S.player.fame!==b.fame)throw new Error('名声が消えた');
+      if(S.player.trophies.length!==b.trophies)throw new Error('実績が消えた');
+      if(!S.player.legacy)throw new Error('持ち越しが作られていない');
+      return '名声 '+S.player.fame+' / 実績 '+S.player.trophies.length
+        +' / 持ち越し '+(S.player.legacy.cards.length)+'枚';
+    })()`));
+    await ctx.shot("19b-offer-next");
+    ctx.log("  就任後:", await ctx.js(`(()=>{
+      const b=window.__before;
+      const el=document.querySelector('#offerList [data-club]');
+      if(!el)throw new Error('オファーが無い');
+      startTenure(el.dataset.club); headUI(); show('home');
+      const c=S.player.coll.find(x=>x.name===b.name);
+      if(!c)throw new Error('連れてきた選手が手元に居ない: '+b.name);
+      if(trainStar(c.id)!==b.star)throw new Error('★が引き継がれていない: '+trainStar(c.id));
+      if(S.player.legacy)throw new Error('持ち越しが残り続けている');
+      if(trustOf(c.id)!==0)throw new Error('信頼が0に戻っていない');
+      return b.name+' ★'+trainStar(c.id)+' / 所持 '+S.player.coll.length+'枚 / 信頼 0 から';
+    })()`));
+    await ctx.shot("19c-next-tenure");
+  }],
+
   ["リロード → RETURN TO CAREER で再開", async ctx => {
     await ctx.reload();
     await ctx.wait(1500);

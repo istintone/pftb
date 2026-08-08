@@ -389,7 +389,11 @@ function clubNews(){
     const f=facById(b.id);
     fac.push(esc(f.label)+' を <b>Lv.'+b.to+'</b> へ建設中　完成まで <b>'+b.left+'節</b>');
   }
-  return fac.slice(0,1).concat(hurt,fac.slice(1),[
+  // 師弟の予兆(→docs/03 §3.39)。**相談が来る前に名前を出す**ので、
+  // 「誰との関係が育っているか」がここで分かる
+  const talk=trustNews().map(id=>
+    '<b class="news-up">'+esc(shortName(cardById(id)))+'</b> からブリーフィングで相談があるそうです');
+  return fac.slice(0,1).concat(talk,hurt,fac.slice(1),[
     "今季の目標は<b>"+S.club.expect+"位以内</b>。現在 <b>"+r+"位</b>（"+t.w+"勝"+t.d+"分"+t.l+"敗）",
     lg.name+"は<b>"+lg.style+"</b>のチームが多い。",
     "チーム熟練度 <span class='num'>"+fmtNum(S.club.exp)+"</span> ／ オーナーの評価 "+evalLabel(S.club.eval),
@@ -701,6 +705,11 @@ function openCard(x,opts){
       +'<div class="cm-facts">'
         +'<div><span>年齢</span><b>'+c.age+'歳</b></div>'
         +'<div><span>得意ポジション</span><b>'+c.subs.join(" / ")+'</b></div>'
+        // 信頼(→docs/03 §3.39)。**師弟になれば任期をまたいで連れていける**ので、
+        // どこまで育っているかが見えないと、育てる理由が見えない
+        +'<div><span>信頼</span><b>'+(isMentor(c.id)
+          ?'<i class="cm-mt">師弟</i>'
+          :trustOf(c.id)+' / '+TUNING.trust.need)+'</b></div>'
       +'</div>'
       +'<div class="cm-k">ABILITY <span class="cm-cap">/ '+STAT_MAX+'</span></div>'
       // 訓練の経験点(→docs/03 §3.30)は**バーそのものを左から緑に塗って**見せる。
@@ -1438,6 +1447,7 @@ function chatEnter(st){
         ?AWAKES[0].id:AWAKES[1].id;
       const k=sel.awake;
       sel.res=sel.menu===win?"awake":"keep";
+      trustHand(sel.who,"train",sel.res);          // 信頼(→docs/03 §3.39)
       if(sel.res==="awake"){
         trainAwake(sel.who,k);
         chatSay(sel.who,CHAT.awakeOk);
@@ -1453,6 +1463,8 @@ function chatEnter(st){
       const win=mulberry32((S.world.seed^hashStr("bawake:"+C.node+":"+sel.who+":"+sel.who2))>>>0)()<0.5
         ?BOND_AWAKES[0].id:BOND_AWAKES[1].id;
       sel.res=sel.menu===win?"awake":"keep";
+      // 連携の覚醒は**2人とも**の信頼が動く(→docs/03 §3.39)
+      trustHand(sel.who,"bond",sel.res); trustHand(sel.who2,"bond",sel.res);
       const m={ m:shortOf(sel.who2) };
       if(sel.res==="awake"){
         bondAwake(sel.who,sel.who2);
@@ -1473,6 +1485,9 @@ function chatEnter(st){
       :(sel.res==="great"?"great":sel.res==="fail"?"fail":"ok");
     chatSay(sel.who,chatText(CHAT[key],"res:"+C.node+sel.res,
       { m:sel.who2?shortOf(sel.who2):"" }));
+    // **信頼は打ち手のたびに動く**(→docs/03 §3.39)。交流は相方にも同じだけ入る
+    trustHand(sel.who,sel.hand,sel.res);
+    if(sel.hand==="bond"&&sel.who2)trustHand(sel.who2,"bond",sel.res);
     // **交流は連携になる**(→docs/03 §3.31)。両者に同じだけ入る
     if(sel.hand==="bond"&&sel.who&&sel.who2){
       const B=TUNING.bond;
@@ -1494,7 +1509,16 @@ function chatEnter(st){
     }
     return false;
   }
-  if(st==="event"){ chatSay("sec",chatText(CHAT.eventNone,"ev:"+C.node)); return false; }
+  if(st==="event"){
+    // **師弟の相談**(→docs/03 §3.39)。打ち手のあと、秘書ではなく選手が話しかけてくる
+    const m=mentorPending();
+    if(m){
+      sel.mentor=m;
+      chatSay(m,chatText(CHAT.mentorAsk,"mt:"+C.node+":"+m));
+      return true;
+    }
+    chatSay("sec",chatText(CHAT.eventNone,"ev:"+C.node)); return false;
+  }
   if(st==="ready"){ chatSay("sec",chatText(CHAT.ready,"rd:"+C.node)); return true; }
   return false;
 }
@@ -1516,6 +1540,13 @@ function chatPick(id,label){
     }
     chatSay("sec",chatText(CHAT.cupNo,"cupNo:"+C.node));
     pickComp("league");
+  }
+  else if(st==="event"){
+    const who=sel.mentor;
+    const ok=mentorAnswer(who,id==="yes");
+    chatSay(who,chatText(ok?CHAT.mentorYes:CHAT.mentorNo,"mr:"+C.node+":"+who));
+    chatSay("sec",chatText(ok?CHAT.mentorSecYes:CHAT.mentorSecNo,"ms:"+C.node,
+      { n:shortOf(who) }));
   }
   else if(st==="hand"){ sel.hand=id; pickHand(id); }
   else if(st==="who"){
@@ -1550,6 +1581,8 @@ function chatOptions(){
       .concat([{ id:"no", label:"今節は見送る", say:chatText(CHAT.sayCupNo,"sn:"+N),
         sub:"リーグ戦に集中します" }]) };
   }
+  if(st==="event")return { q:"どう答えますか", items:MENTORS.map(m=>({
+    id:m.id, label:m.label, sub:m.sub, say:m.label+"。" })) };
   if(st==="hand")return { q:"打ち手を選ぶ",
     items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc,
       say:chatText(CHAT[h.id==="train"?"sayTrain":h.id==="bond"?"sayBond":"sayRest"],
@@ -2992,12 +3025,21 @@ function renderCareerEnd(){
   const l=C.log.filter(e=>e.res==="lose").length;
   $("endBody").innerHTML=
     '<div class="end-t">任期満了</div>'
-    +'<div class="lg" style="margin-bottom:14px">'+esc(S.coach||"監督")+' のキャリアが幕を閉じました。</div>'
+    // **キャリアの終わりではなく任期の終わり**(→docs/03 §3.2.3)。
+    // 名声・実績・カードは持ったまま次のクラブへ移る
+    +'<div class="lg" style="margin-bottom:14px">'+esc(S.coach||"監督")
+      +' の任期が満了しました。名声と実績、集めたカードは次のクラブへ持っていけます。</div>'
     +kv("戦った節",C.log.length+" 節")
     +kv("通算成績",w+"勝 "+d+"分 "+l+"敗")
     +kv("渡り歩いたクラブ",new Set(h.map(x=>x.clubId)).size+" クラブ")
     +kv("最終的な名声",fmtNum(S.player.fame))
     +kv("集めたカード",S.player.coll.length+" 枚")
+    // **連れていく選手をここで見せる**(→docs/03 §3.39)。次の任期の頭で
+    // 「なぜ強いのか」が分かるように、送り出す画面で名前を出しておく
+    +kv("連れていく選手",(C.mentor||[]).length
+      ?(C.mentor||[]).map(id=>{ const c=cardById(id);
+          return c?esc(shortName(c))+(trainStar(id)?"★"+trainStar(id):""):"—"; }).join(" / ")
+      :"—")
     +'<div class="sect-t" style="margin-top:14px">CAREER</div>'
     +h.map(x=>'<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))
       +(x.div?' '+divName(x.div):"")+'</span><b>'
@@ -3111,7 +3153,8 @@ $("mSpeed").onclick=()=>{
 };
 $("mSkip").onclick=mSkip;
 $("mDone").onclick=doMatchday;
+// **任期が明けたら次の任期へ**(→docs/03 §3.2.3)。名声・実績・カードは持ち越す。
+// ここで newGame() を呼ぶと、積み上げたものが毎回消えて周回にならない
 $("btnNewCareer").onclick=async()=>{
-  if(!confirm("新しいキャリアを始めます。よろしいですか?"))return;
-  await newGame(); _pickedClub=null; show("offer");
+  newTenure(); _pickedClub=null; await save(); show("offer");
 };

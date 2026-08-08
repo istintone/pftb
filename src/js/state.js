@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=24;
+const SAVE_VER=25;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -21,6 +21,9 @@ function defaultState(){
       coll:[],                      // 集めた選手カード = プレイヤーの資産(→§3.2.2)
       tactics:[],                   // 習得した采配(→§3.7)
       trophies:[],                  // 獲得トロフィー(→§3.9)
+      // 師弟の持ち越し(→docs/03 §3.39)。任期が明けるときに作られ、
+      // **次の就任で1度だけ**使われて消える。{ cards, train, bond, gold }
+      legacy:null,
       history:[],                   // キャリアの軌跡 [{season,clubId,rank,result}]
     },
     club:null,                      // 就任するまで null(→startTenure で作る)
@@ -60,6 +63,11 @@ function defaultState(){
       // 覚醒した組(→docs/03 §3.31)。{ "<小さいID>:<大きいID>": true }。
       // **黄金線**になり、パスの倍率が1段上がる。連携と同じく任期が明ければ消える。
       bondGold:{},
+      // 信頼(→docs/03 §3.39)。{ "<カードID>": 値 }。**任期のあいだだけ**積む。
+      // 師弟を結んだ選手だけが、任期をまたいで成果を持ち越す。
+      trust:{},
+      mentor:[],                    // 師弟を結んだカードID(上限 TUNING.trust.max)
+      mentorSeen:{},                // 相談が起きた選手(結果によらず二度目は無い)
       // コンディション(→docs/03 §3.32)。{ "<カードID>": 0..4 }。
       // **無ければ2(普通)**。任期の頭は全員が普通から始まる。
       cond:{},
@@ -268,6 +276,13 @@ function migrate(){
   if(S.v<23&&S.career&&S.career.cupRest==null)S.career.cupRest=0;
   // v23 → v24: 実績トロフィー(→docs/03 §3.36)。カップの初優勝しか無かったので、
   // 種別と回数を足す。**季は残っているので数え直さない**(初回の季が実績の意味)
+  // v24 → v25: 信頼と師弟(→docs/03 §3.39)。任期をまたぐ持ち越しは player 側に置く
+  if(S.v<25&&S.career){
+    if(!S.career.trust)S.career.trust={};
+    if(!S.career.mentor)S.career.mentor=[];
+    if(!S.career.mentorSeen)S.career.mentorSeen={};
+  }
+  if(S.v<25&&S.player&&S.player.legacy===undefined)S.player.legacy=null;
   if(S.v<24&&S.player&&S.player.trophies)
     for(const t of S.player.trophies){ if(!t.kind)t.kind="cup"; if(!t.n)t.n=1;
       if(!t.last)t.last=t.season; }

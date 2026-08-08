@@ -364,7 +364,12 @@ function applyPromotion(myRank){
  * **集めたカード・名声・実績は監督のもの**なので持ち越し、任期の記録だけを畳む。
  * クラブを移れるのはここだけ(シーズンの区切りでは移らない)。
  */
+/**
+ * 次の任期へ移る(→docs/03 §3.2.3)。**player は持ち越す**(名声・実績・カード)。
+ * 師弟を結んだ選手はここで持ち越しに畳まれ、次の就任で戻ってくる(→§3.39)。
+ */
 function newTenure(){
+  S.player.legacy=makeLegacy();
   S.career=defaultState().career;
   return true;
 }
@@ -398,6 +403,9 @@ function startTenure(clubId){
   // **就任時の陣形も名簿に合わせる**(→docs/07 §7.14)。CPUが名簿に合う陣形を選ぶのに
   // 自分だけ既定の 4-4-2 のままだと、枠適性のロスを一方的に背負って始めることになる。
   // もちろん DECK でいつでも変えられる。
+  // **師弟の持ち越しはここで戻す**(→§3.39)。編成を組む前に入れないと、
+  // 連れてきた選手が控えにも並ばない
+  applyLegacy();
   S.form=bestFormFor(availableCards());
   S.squad=autoSquad();
   S.club.expect=expectedRank(seed,clubId,squadPower(squadCards().slice(0,TUNING.squad.starters)));
@@ -735,6 +743,102 @@ function trainAdd(id,k,n){
   const r=trainMake(id);
   r.exp[k]=(r.exp[k]||0)+n;
   return r.exp[k];
+}
+
+// ---------- 信頼と師弟(→docs/03 §3.39) ----------
+// **周回の入口**。任期のあいだに信頼を積んだ選手は、覚醒の成果と連携を持ったまま
+// 次の任期へ付いてくる。信頼は全員0から始まり、試合と打ち手で動く(下がりもする)。
+const trustOf=id=>(S.career.trust||{})[id]||0;
+const isMentor=id=>(S.career.mentor||[]).includes(id);
+const mentorFull=()=>(S.career.mentor||[]).length>=TUNING.trust.max;
+/** 信頼を足す。**0未満にはしない**(嫌われ続けても関係が「負」にはならない)。 */
+function trustAdd(id,n){
+  if(!id||!n)return 0;
+  if(!S.career.trust)S.career.trust={};
+  return S.career.trust[id]=Math.max(0,trustOf(id)+n);
+}
+/** スタメンで出た選手に入る(→§3.39)。カップもリーグも同じ。 */
+function trustMatch(){
+  const N=TUNING.squad.starters;
+  for(const id of (S.squad||[]).slice(0,N))if(id)trustAdd(id,TUNING.trust.startXI);
+}
+/**
+ * 打ち手ぶんの信頼。**訓練のほうが厚い**(手を掛けた相手ほど懐く)。
+ * 覚醒の挑戦は成功を大成功・失敗を失敗として扱う(結果が2値しか無いため)。
+ */
+function trustHand(id,hand,res){
+  const T=TUNING.trust;
+  const key=(hand==="bond"?"bond":"train")
+    +(res==="great"||res==="awake"?"Great":res==="fail"||res==="keep"?"Fail":"Ok");
+  return trustAdd(id,T[key]||0);
+}
+/** CLUB NEWS に出す予兆(→§3.39)。**まだ相談が起きていない選手だけ**。 */
+function trustNews(){ return trustOver(TUNING.trust.news); }
+/**
+ * しきい値を越えていて、まだ相談が起きていない選手(信頼の高い順)。
+ * **カードの側から引く**。career.trust のキーは文字列になるので、そこから
+ * cardById を引くと数値IDと一致せず、いつまでも空になる(実際にそうなった)。
+ */
+function trustOver(n){
+  if(mentorFull())return [];
+  const seen=S.career.mentorSeen||{};
+  return availableCards().filter(c=>!seen[c.id]&&trustOf(c.id)>=n)
+    .sort((a,b)=>trustOf(b.id)-trustOf(a.id)).map(c=>c.id);
+}
+/** いま相談してくる選手(→§3.39)。**1人だけ**。居なければ null。 */
+function mentorPending(){ return trustOver(TUNING.trust.need)[0]||null; }
+/** 相談に答える。**受けても断ても二度目は無い**。 */
+function mentorAnswer(id,yes){
+  if(!id)return false;
+  if(!S.career.mentorSeen)S.career.mentorSeen={};
+  S.career.mentorSeen[id]=true;
+  if(!yes)return false;
+  if(mentorFull())return false;
+  if(!S.career.mentor)S.career.mentor=[];
+  if(!isMentor(id))S.career.mentor.push(id);
+  return true;
+}
+/**
+ * 任期の終わりに持ち越しを作る(→§3.39)。**貸与の選手は写しを取って連れていく**。
+ * IDを引き直すのは、同じクラブにまた就任したときに名簿が同じIDで作り直されて
+ * 二重になるため。連携は**師弟どうしの組だけ**が残る(相手が居なければ意味が無い)。
+ */
+function makeLegacy(){
+  const ids=(S.career.mentor||[]).filter(id=>cardById(id));
+  if(!ids.length)return null;
+  const map={}, cards=[], train={};
+  for(const id of ids){
+    const c=cardById(id);
+    const own=S.player.coll.some(x=>x.id===id);
+    const nc=own?c:{ ...c, id:nextCardId() };
+    map[id]=nc.id;
+    if(!own)cards.push(nc);
+    const r=(S.career.train||{})[id];
+    // **経験点(次の覚醒までの進み)は持ち越さない**。持ち越すのは済んだ成果だけ
+    if(r&&((r.star||0)||Object.keys(r.up||{}).length))
+      train[nc.id]={ up:{ ...(r.up||{}) }, star:r.star||0 };
+  }
+  const bond={}, gold={};
+  for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){
+    const k=bondKey(map[ids[i]],map[ids[j]]);
+    const v=bondOf(ids[i],ids[j]);
+    if(v)bond[k]=v;
+    if(bondIsGold(ids[i],ids[j]))gold[k]=1;
+  }
+  return { cards, train, bond, gold };
+}
+/** 就任のときに1度だけ効かせる(→§3.39)。使ったら消す。 */
+function applyLegacy(){
+  const L=S.player.legacy;
+  if(!L)return null;
+  for(const c of L.cards||[])
+    if(!S.player.coll.some(x=>x.id===c.id))S.player.coll.push(c);
+  for(const id of Object.keys(L.train||{}))
+    S.career.train[id]={ exp:{}, up:{ ...L.train[id].up }, star:L.train[id].star||0 };
+  S.career.bond=Object.assign({},L.bond||{});
+  S.career.bondGold=Object.assign({},L.gold||{});
+  S.player.legacy=null;
+  return L;
 }
 
 // ---------- 連携(→docs/03 §3.31) ----------
@@ -1314,6 +1418,7 @@ function playMatchday(done){
       evalMatch(squadPowerAt(squadCards(),S.form),
         squadPowerAt(cpuSquad(out.my.opp).cards,formFor(out.my.opp)),gf>ga,gf<ga);
       bondMatch();                                         // 連携(→§3.31)。一戦ごとに積む
+      trustMatch();                                        // 信頼(→§3.39)。スタメンに入る
       condAfterMatch(out.M,home?"H":"A",seed);             // 出来(→§3.32)
       out.hurt=applyInjuries(out.M,home?"H":"A");          // ケガ(→§3.32)
     }else out.others.push({ h:m.h, a:m.a, hg, ag });
@@ -1352,6 +1457,7 @@ function playCupDay(done){
   cupResolveRound(C.cup,f.round,{ gf, ga, win, pso });
   S.club.exp+=win?350:150;
   bondMatch();                                             // カップも1試合(→§3.31)
+  trustMatch();                                            // 信頼(→§3.39)
   condAfterMatch(M,"H",seed);                              // 出来(→§3.32)。カップは常にホーム
 
   const out={ my:{ opp:null, oppName:f.side.name, home:true, gf, ga,

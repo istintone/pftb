@@ -1289,6 +1289,8 @@ body{
 .trophy.off{ background:var(--panel-2); border-color:var(--line) }
 .trophy.off i{ filter:grayscale(1); opacity:.5 }
 .trophy.off b{ color:var(--text-2) }
+/* 師弟の印(→docs/03 §3.39)。カード詳細の「信頼」欄に出る */
+.cm-mt{ font-style:normal; color:var(--accent-hi); letter-spacing:1px }
 .tr-sum{ font:600 12px/1 var(--f-head); color:var(--text-2); letter-spacing:1px }
 .tr-sum b{ font-size:20px; color:var(--accent-hi); letter-spacing:0; margin-right:2px }
 .tr-grp{ margin:12px 0 0; font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--text-dim) }

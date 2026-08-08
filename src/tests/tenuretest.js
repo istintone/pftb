@@ -292,6 +292,91 @@ function runSeason(hand) {
     C.cup = null;
   }
 
+  // ---------- 信頼と師弟(→docs/03 §3.39) ----------
+  {
+    await E.newGame();
+    const S6 = E.getS(); S6.coach = "検証"; E.startTenure("sam-8");
+    const T = E.TUNING.trust;
+    const xi = S6.squad.slice(0, E.TUNING.squad.starters).filter(Boolean);
+    assert.ok(xi.length >= 11, "先発が揃っている");
+    assert.strictEqual(E.trustOf(xi[0]), 0, "信頼は0から始まる");
+
+    // --- 試合と打ち手で動く。**下がりもする** ---
+    E.trustMatch();
+    assert.strictEqual(E.trustOf(xi[0]), T.startXI, "スタメンで出ると上がる");
+    const bench = S6.squad[E.TUNING.squad.starters];
+    if (bench) assert.strictEqual(E.trustOf(bench), 0, "出ていない選手は動かない");
+    E.trustHand(xi[0], "train", "great");
+    E.trustHand(xi[0], "train", "fail");
+    assert.strictEqual(E.trustOf(xi[0]), T.startXI + T.trainGreat + T.trainFail,
+      "訓練は大成功で" + T.trainGreat + " / 失敗で" + T.trainFail);
+    S6.career.trust[xi[1]] = 0;                        // 試合ぶんを除いて見る
+    E.trustHand(xi[1], "bond", "ok");
+    assert.strictEqual(E.trustOf(xi[1]), T.bondOk, "交流は成功で" + T.bondOk);
+    S6.career.trust[xi[1]] = 0;
+    E.trustAdd(xi[1], -50);
+    assert.strictEqual(E.trustOf(xi[1]), 0, "0より下には行かない");
+
+    // --- 予兆 → 相談。**しきい値を跨ぐまで来ない** ---
+    S6.career.trust[xi[0]] = T.news - 1;
+    assert.strictEqual(E.trustNews().length, 0, "予兆はしきい値の手前では出ない");
+    S6.career.trust[xi[0]] = T.news;
+    assert.deepStrictEqual(E.trustNews(), [xi[0]], "予兆が CLUB NEWS に出る");
+    assert.strictEqual(E.mentorPending(), null, "予兆だけでは相談は来ない");
+    S6.career.trust[xi[0]] = T.need;
+    assert.strictEqual(E.mentorPending(), xi[0], "しきい値を越えると相談が来る");
+
+    // --- 断っても二度目は来ない ---
+    assert.strictEqual(E.mentorAnswer(xi[0], false), false, "断れば師弟にならない");
+    assert.strictEqual(E.mentorPending(), null, "断った選手は二度と相談してこない");
+    assert.ok(!E.isMentor(xi[0]), "師弟の一覧にも入らない");
+
+    // --- 受けると師弟。上限に達したらもう起きない ---
+    const mentors = [];
+    for (let i = 1; i <= T.max + 1 && i < xi.length; i++) {
+      S6.career.trust[xi[i]] = T.need + 10;
+      const p2 = E.mentorPending();
+      if (mentors.length >= T.max) { assert.strictEqual(p2, null, "上限に達したら相談は来ない"); break; }
+      assert.strictEqual(p2, xi[i], "次の選手が相談してくる");
+      assert.ok(E.mentorAnswer(xi[i], true), "受ければ師弟になる");
+      mentors.push(xi[i]);
+    }
+    assert.strictEqual(mentors.length, T.max, "師弟は " + T.max + "人まで");
+    assert.ok(E.mentorFull(), "上限に達している");
+
+    // --- 覚醒と連携を持って次の任期へ ---
+    E.trainAwake(mentors[0], "atk"); E.trainAwake(mentors[0], "atk");
+    E.bondAdd(mentors[0], mentors[1], 300);
+    E.bondAdd(mentors[0], xi[0], 300);                 // 師弟でない相手との線
+    const star0 = E.trainStar(mentors[0]), up0 = E.trainUp(mentors[0], "atk");
+    const loanMentor = mentors.filter(id => !S6.player.coll.some(c => c.id === id));
+    const coll0 = S6.player.coll.length;
+    // **名前は任期を畳む前に控える**。畳んだあとは貸与の名簿が入れ替わり、
+    // 古いIDでは引けなくなる(引けないまま★0を見て落ちた)
+    const names = mentors.map(id => E.cardById(id).name);
+
+    E.newTenure();
+    assert.ok(S6.player.legacy, "持ち越しが作られる");
+    assert.deepStrictEqual(S6.career.mentor, [], "任期の中身は畳まれる");
+    assert.strictEqual(E.trustOf(mentors[0]), 0, "信頼は次の任期で0に戻る");
+
+    E.startTenure("sam-12");                            // 別のクラブへ就任
+    assert.strictEqual(S6.player.legacy, null, "持ち越しは一度使うと消える");
+    assert.strictEqual(S6.player.coll.length, coll0 + loanMentor.length,
+      "貸与だった師弟はカードとして手元に残る");
+    // 持ち越したカードのIDは引き直されるので、名前で探す
+    const byName = n => S6.player.coll.find(c => c.name === n);
+    const m0 = byName(names[0]), m1 = byName(names[1]);
+    assert.ok(m0 && m1, "連れてきた選手が手元に居る: " + names.join(" / "));
+    assert.strictEqual(E.trainStar(m0.id), star0, "覚醒の★が残る: ★" + star0);
+    assert.strictEqual(E.trainUp(m0.id, "atk"), up0, "伸びた能力も残る");
+    assert.ok(E.bondOf(m0.id, m1.id) > 0, "師弟どうしの連携は残る: " + E.bondOf(m0.id, m1.id));
+    assert.strictEqual(Object.keys(S6.career.bond).length, 1,
+      "師弟でない相手との連携は残らない");
+    console.log("師弟OK 信頼", T.need, "で相談 ／ " + T.max + "人まで ／ 一度きり ／"
+      + " ★" + star0 + "と連携を持って次の任期へ");
+  }
+
   // ---------- 実績トロフィー(→docs/03 §3.36) ----------
   {
     await E.newGame();
