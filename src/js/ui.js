@@ -1584,7 +1584,8 @@ function chatOptions(){
   if(st==="event")return { q:"どう答えますか", items:MENTORS.map(m=>({
     id:m.id, label:m.label, sub:m.sub, say:m.label+"。" })) };
   if(st==="hand")return { q:"打ち手を選ぶ",
-    items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label, sub:h.desc,
+    // **説明は添えない**(→docs/06 §6.24)。3つの違いは覚えるもので、毎節読むものではない
+    items:HANDS.map(h=>({ id:h.id, label:h.icon+" "+h.label,
       say:chatText(CHAT[h.id==="train"?"sayTrain":h.id==="bond"?"sayBond":"sayRest"],
         "sh:"+N+h.id) })) };
   // **★とチャンスを一覧に並べる**(→docs/03 §3.30)。誰を伸ばしてきたかが選ぶ前に分かる
@@ -1606,7 +1607,7 @@ function chatOptions(){
     if(sel.bawake)return { q:"二人にどう声をかけますか",
       items:BOND_AWAKES.map(a=>({ id:a.id, label:a.label, say:a.label+"。" })) };
     return sel.hand==="train"
-      ? { q:"メニューを指示する", items:TRAININGS.map(t=>({ id:t.id, label:t.label, sub:t.ask,
+      ? { q:"メニューを指示する", items:TRAININGS.map(t=>({ id:t.id, label:t.label,
           say:chatText(CHAT.sayMenu,"sm:"+N+t.id,{ t:t.label }) })) }
       : { q:"何をさせますか", items:BONDS.map(b=>({ id:b.id, label:b.label,
           say:b.label+"。" })) };
@@ -1645,7 +1646,7 @@ function renderChat(){
   const foe=f?f.side.name:m?clubName(m.opp):null;
   $("chatClub").textContent=foe?"VS "+foe:clubName(S.club.id);
   $("chatSub").textContent="第"+C.node+"節";
-  $("chatDay").textContent="SEASON "+S.world.season+" ・ NODE "+C.node;
+  // 節は見出しの副題に出ているので、ここでは繰り返さない(→docs/06 §6.24)
   $("chatAv").innerHTML=chatAvatar("sec","ch-av-in");
   $("chatLog").innerHTML=ch.log.map(m=>{
     // 監督は**右に丸**。左右で誰の発言かが形だけで分かる
