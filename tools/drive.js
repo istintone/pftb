@@ -1152,6 +1152,34 @@ const STEPS = [
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
       if (tab === "clubhouse") {
+        // 実績の棚(→docs/03 §3.36)。**獲っていない実績も並ぶ**
+        ctx.log("  実績の棚:", await ctx.js(`(()=>{
+          const defs=trophyDefs();
+          const cup=defs.filter(d=>d.kind==='cup').length;
+          const lg=defs.filter(d=>d.kind==='league').length;
+          if(cup!==CUPS.length)throw new Error('カップの枠が合わない: '+cup);
+          if(lg!==LEAGUES.length*DIVS.length)throw new Error('リーグの枠が合わない: '+lg);
+          if(new Set(defs.map(d=>d.id)).size!==defs.length)throw new Error('IDが重複している');
+          // 2つ刻んで、獲った枠と鍵つきの枠が並ぶところを見る
+          S.player.trophies=[];
+          trophyAdd('kings',cupById('kings').trophy,'cup');
+          trophyAdd('kings',cupById('kings').trophy,'cup');       // 2度目は回数だけ増える
+          trophyAdd(lgTrophyId('sam',3),'カンピオナート DIV3 制覇','league');
+          renderClubhouse();
+          const tiles=[...document.querySelectorAll('#clubTrophies .trophy')];
+          if(tiles.length!==defs.length)throw new Error('棚の枠が合わない: '+tiles.length);
+          const on=tiles.filter(e=>!e.classList.contains('off'));
+          if(on.length!==2)throw new Error('獲った実績の数が合わない: '+on.length);
+          if(on[0].textContent.indexOf('2')<0)throw new Error('回数が出ていない: '+on[0].textContent);
+          // **テンプレート文字列の中で正規表現のバックスラッシュは使えない**
+          // (\s が s に潰れて、空白ではなく文字の s が消える)。split/join で書く
+          const sum=document.querySelector('#clubTrophies .tr-sum').textContent
+            .split(' ').join('');
+          if(sum.indexOf('2/'+defs.length)<0)throw new Error('合計が合わない: '+sum);
+          return defs.length+'枠（カップ'+cup+' / リーグ'+lg+'）／ '+sum;
+        })()`));
+        await ctx.shot("12e-trophies");
+        await ctx.js("S.player.trophies=[]; renderClubhouse()");
         // 施設(→docs/03 §3.5)。**同時に建てられるのは1つだけ**
         ctx.log("  施設:", await ctx.js(`(()=>{
           S.club.coins=999999; S.club.build=null;
@@ -2031,8 +2059,18 @@ const STEPS = [
       const cc=[...document.querySelectorAll('.ev-w')]
         .find(w=>w.textContent.indexOf('カップ優勝')===0);
       if(cc.querySelector('s'))throw new Error('カップ優勝に名声が二重に付いている');
+      // **実績は総括で知らせる**(→docs/03 §3.36)。棚を開かないと気づかないのでは重みが出ない
+      const keep=_review.j.trophy;
+      _review.j.trophy={ id:'lg:sam:3', name:'カンピオナート DIV3 制覇', n:1, first:true };
+      renderBoard();
+      if(document.getElementById('boardBox').textContent.indexOf('DIV3 制覇')<0)
+        throw new Error('総括に実績が出ない');
+      _review.j.trophy=keep;
       renderBoard();                       // 検査用に差し替えた中身を戻してから撮る
-      return '季の名声 +'+_review.j.fameGain+' ／ 札: '+got.join(' / ');
+      if(keep&&document.getElementById('boardBox').textContent.indexOf('実績')<0)
+        throw new Error('実績を刻んだのに総括に出ていない');
+      return '季の名声 +'+_review.j.fameGain+' ／ 札: '+got.join(' / ')
+        +' ／ 実績の行: '+(keep?'あり':'この季は無し');
     })()`));
     await ctx.shot("15-board-review");
   }],

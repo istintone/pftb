@@ -984,6 +984,39 @@ const cupEnterable=()=>cupEnterables()[0]||null;
 const cupWins=()=>(S.player.trophies||[]).filter(t=>cupById(t.id)).length;
 /** DIV1 でリーグを制した経験があるか。**最終目標の大会の鍵**。 */
 const wonDiv1=()=>(S.player.history||[]).some(h=>h.div===1&&h.rank===1);
+
+// ---------- 実績トロフィー(→docs/03 §3.36) ----------
+// **カップ8 + リーグ18(6リーグ × 3部) = 26。** 監督の恒久資産なので、
+// クラブを移っても任期が明けても消えない(S.player に置く)。
+/** リーグのトロフィーID。カップは大会IDそのままなので、頭を分けて衝突を避ける。 */
+const lgTrophyId=(lg,div)=>"lg:"+lg+":"+div;
+/** 陳列棚の定義。**獲っていない分も並べる**ので、これが目標の一覧そのものになる。 */
+function trophyDefs(){
+  const out=CUPS.map(c=>({ id:c.id, kind:"cup", name:c.trophy, short:c.name,
+    note:c.rounds+"回戦を勝ち抜く", rank:c.prize[0] }));
+  for(const lg of LEAGUES)for(const d of DIVS)
+    out.push({ id:lgTrophyId(lg.id,d), kind:"league",
+      name:lg.name+" "+divName(d)+" 制覇", short:lg.name+" "+divName(d),
+      note:"1位でシーズンを終える",
+      // **易しい順に並べる**。棚がそのまま上への階段に見えるようにする
+      rank:lg.tier*10+(4-d) });
+  return out.sort((a,b)=>a.kind===b.kind?a.rank-b.rank:(a.kind==="cup"?-1:1));
+}
+const trophyOf=id=>(S.player.trophies||[]).find(t=>t.id===id);
+const trophyCount=()=>(S.player.trophies||[]).length;
+/**
+ * 実績を刻む。**2度目からは回数だけ増える**(初回の季を残したいので上書きしない)。
+ * 返り値の `first` が「初めて獲った」かどうか。
+ */
+function trophyAdd(id,name,kind){
+  const list=S.player.trophies||(S.player.trophies=[]);
+  const t=list.find(x=>x.id===id);
+  if(t){ t.n=(t.n||1)+1; t.last=S.world.season; return { t, first:false }; }
+  const nt={ id, name, kind, n:1, season:S.world.season, last:S.world.season,
+    node:S.career?S.career.node:0, club:S.club?S.club.id:null };
+  list.push(nt);
+  return { t:nt, first:true };
+}
 /** 参加条件を満たしているか。**開催日とは別に判定する**(予告に使う)。 */
 function cupOpen(cup){
   if((S.club&&S.club.exp||0)<cup.needExp)return false;
@@ -1172,8 +1205,7 @@ function closeCup(){
     // 任期カレンダーの決勝の行に王冠を立てる
     const last=[...S.career.log].reverse().find(e=>e.comp==="cup"&&e.cup===cup.id);
     if(last)last.champ=true;
-    if(!S.player.trophies.some(t=>t.id===cup.id))
-      S.player.trophies.push({ id:cup.id, name:cup.trophy, season:S.world.season, node:S.career.node });
+    trophyAdd(cup.id,cup.trophy,"cup");
   }
   // **オーナーの評価**(→docs/03 §3.9)。優勝は上げ、**初戦敗退は下げる**。
   // 賞金や名声と違って、ここは順位ではなく「どう戦ったか」を見ている
@@ -1354,7 +1386,15 @@ function judgeSeason(){
   const diff=goal-rank;                          // 正なら目標を上回った
   const evLog=S.club.evLog||{};
   // **リーグ優勝は評価に乗る**(→§3.9)。目標達成は金の話で、優勝は内容の話
-  if(rank===1)evalAdd("lChamp",TUNING.eval.lChamp);
+  let trophy=null;
+  if(rank===1){
+    evalAdd("lChamp",TUNING.eval.lChamp);
+    // **実績は部を上げる前に刻む**(→§3.36)。applyPromotion の後だと
+    // DIV3 を制した実績が DIV2 のものとして残ってしまう
+    const lg=leagueById(clubById(S.club.id).league);
+    const d=trophyAdd(lgTrophyId(lg.id,W.div),lg.name+" "+divName(W.div)+" 制覇","league");
+    trophy={ id:d.t.id, name:d.t.name, n:d.t.n, first:d.first };
+  }
   // **順位が確定したこの時点で入れ替えを行う**。世界のほうも同時に動く
   const move=applyPromotion(rank);
   // 昇格も内容の話。金(昇格報酬)とは別に、評価と経歴に残る
@@ -1378,7 +1418,7 @@ function judgeSeason(){
   const nextGoal=S.career.over?null
     :expectedRank(W.seed,S.club.id,squadPower(squadCards().slice(0,TUNING.squad.starters)));
   if(nextGoal)S.club.expect=nextGoal;
-  return { rank, goal, diff, fameGain, move, tenure, coin, goalCoin, nextGoal,
+  return { rank, goal, diff, fameGain, move, tenure, coin, goalCoin, nextGoal, trophy,
     eval:S.club.eval, evLog };
 }
 /**

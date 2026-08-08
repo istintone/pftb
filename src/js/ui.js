@@ -1799,12 +1799,22 @@ function renderClubhouse(){
     '<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'
     +(x.rank?x.rank+"位 ":"")+x.result+'</b></div>').join(""):'<div class="lg">まだ記録がありません</div>';
   const F={ training:"練習場", medical:"医療施設", stadium:"スタジアム", scouting:"スカウト網" };
-  // トロフィー(→docs/03 §3.23)。**初優勝だけが実績**になるので、並ぶと重みがある
-  const tr=S.player.trophies||[];
-  $("clubTrophies").innerHTML=tr.length
-    ?'<div class="trophies">'+tr.map(t=>'<div class="trophy"><i>🏆</i><div>'
-      +'<b>'+esc(t.name)+'</b><span>SEASON '+t.season+'</span></div></div>').join("")+'</div>'
-    :'<div class="lg">まだありません。カップ戦を制すると刻まれます。</div>';
+  // 実績トロフィー(→docs/03 §3.36)。**獲っていない分も並べる**。
+  // 棚が目標の一覧そのものになり、次に何を狙うかがここで決まる
+  const defs=trophyDefs();
+  const got=defs.filter(d=>trophyOf(d.id)).length;
+  const tile=d=>{
+    const t=trophyOf(d.id);
+    // 2度目からは回数だけ増える。**初めて獲った季**が実績の中身なので消さない
+    const sub=t?("SEASON "+t.season+(t.n>1?" ・ ×"+t.n:"")):d.note;
+    return '<div class="trophy'+(t?"":" off")+'"><i>'+(t?"🏆":"🔒")+'</i><div>'
+      +'<b>'+esc(d.short)+'</b><span>'+esc(sub)+'</span></div></div>';
+  };
+  const grp=(k,label)=>'<div class="tr-grp">'+label+'</div><div class="trophies">'
+    +defs.filter(d=>d.kind===k).map(tile).join("")+'</div>';
+  $("clubTrophies").innerHTML=
+    '<div class="tr-sum"><b>'+got+'</b> / '+defs.length+' 実績</div>'
+    +grp("cup","カップ戦")+grp("league","リーグ");
   renderFac();
 }
 /**
@@ -2959,6 +2969,10 @@ function renderBoard(){
       +(j.rank===1?"（優勝 +"+fmtNum(TUNING.reward.season.champ)+"）":""))
     +kv("所持コイン",fmtNum(S.club.coins))
     +kv("名声","+"+fmtNum(j.fameGain)+" ／ 通算 "+fmtNum(S.player.fame))
+    // **実績はここでしか知らせない**(→docs/03 §3.36)。CLUB の棚を開かないと
+    // 気づかないのでは、制覇の重みが出ない
+    +(j.trophy?kv("実績","🏆 "+esc(j.trophy.name)
+      +(j.trophy.first?"（初）":"（×"+j.trophy.n+"）")):"")
     +kv("任期","残り "+tenureLeft()+" 節（上限 "+S.career.limit+"）")
     +ownerRating(j.evLog)
     +(S.career.over?'<div class="lg" style="margin-top:10px">任期が明けました。次のクラブを選べます。</div>':"");

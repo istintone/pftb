@@ -292,6 +292,61 @@ function runSeason(hand) {
     C.cup = null;
   }
 
+  // ---------- 実績トロフィー(→docs/03 §3.36) ----------
+  {
+    await E.newGame();
+    const S5 = E.getS(); S5.coach = "検証";
+    // **DIV3 のクラブから始める**。昇格させて「刻んだのは昇格前の部」を見たい
+    E.startTenure(E.clubsOfDiv("sam", 3)[0].id);
+    assert.strictEqual(S5.world.div, 3, "DIV3 から始める");
+    const defs = E.trophyDefs();
+    assert.strictEqual(defs.length, E.CUPS.length + E.LEAGUES.length * E.DIVS.length,
+      "棚はカップ + 各リーグ各部: " + defs.length);
+    assert.strictEqual(new Set(defs.map(d => d.id)).size, defs.length, "IDが重複しない");
+    // **カップのIDと衝突しない**。cupWins() はカップだけを数える
+    assert.ok(!defs.filter(d => d.kind === "league").some(d => E.cupById(d.id)),
+      "リーグの実績がカップとして数えられない");
+    assert.deepStrictEqual(S5.player.trophies, [], "はじめは空");
+
+    // --- リーグ制覇で刻まれる。**部を上げる前の部**で記録すること ---
+    const div0 = S5.world.div;
+    for (const id of Object.keys(S5.world.table)) {          // 自分だけ勝たせる
+      const t = S5.world.table[id];
+      if (id === S5.club.id) { t.w = 99; t.d = 0; t.l = 0; t.gf = 99; t.ga = 0; }
+      else { t.w = 0; t.d = 0; t.l = 99; t.gf = 0; t.ga = 99; }
+    }
+    S5.world.matchday = S5.world.fixtures.length + 1;        // 全日程を終えた状態
+    const j5 = E.judgeSeason();
+    assert.strictEqual(j5.rank, 1, "1位で終えている");
+    assert.ok(j5.trophy && j5.trophy.first, "総括に実績が返る");
+    const lgId = E.lgTrophyId(E.clubById(S5.club.id).league, div0);
+    const t1 = E.trophyOf(lgId);
+    assert.ok(t1, "リーグの実績が刻まれる: " + lgId);
+    assert.strictEqual(t1.n, 1, "1回目");
+    assert.strictEqual(t1.kind, "league", "種別はリーグ");
+    assert.ok(j5.move.promoted, "昇格している(次の季は上の部)");
+    assert.ok(!E.trophyOf(E.lgTrophyId(E.clubById(S5.club.id).league, S5.world.div)),
+      "昇格後の部の実績にはなっていない");
+
+    // --- 2度目は回数だけ増える。初めて獲った季は残る ---
+    const s0 = t1.season;
+    S5.world.season += 3;
+    const d2 = E.trophyAdd(lgId, t1.name, "league");
+    assert.strictEqual(d2.first, false, "2度目は初回ではない");
+    assert.strictEqual(E.trophyOf(lgId).n, 2, "回数が増える");
+    assert.strictEqual(E.trophyOf(lgId).season, s0, "初めて獲った季は動かない");
+    assert.strictEqual(E.trophyOf(lgId).last, S5.world.season, "最後に獲った季は更新される");
+    assert.strictEqual(E.trophyCount(), 1, "同じ実績で枠は増えない");
+
+    // --- カップも同じ扱い。cupWins() は種類数のまま ---
+    E.trophyAdd("kings", E.cupById("kings").trophy, "cup");
+    E.trophyAdd("kings", E.cupById("kings").trophy, "cup");
+    assert.strictEqual(E.trophyOf("kings").n, 2, "カップも回数が増える");
+    assert.strictEqual(E.trophyCount(), 2, "枠は2つ");
+    console.log("実績OK", defs.length + "枠（カップ" + E.CUPS.length
+      + " / リーグ" + E.LEAGUES.length * E.DIVS.length + "）／ 重複は回数だけ増える");
+  }
+
   // ---------- 大陸大会は DIV1 に上がるまで開かない(→docs/03 §3.24) ----------
   {
     // **部で解禁される大会は複数ある**(スーパーキングズは DIV2、コンチネンタルは DIV1)。

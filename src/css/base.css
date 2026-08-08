@@ -1274,14 +1274,24 @@ body{
 /* カップ(→docs/03 §3.23)。優勝した節と、獲ったトロフィー。 */
 .cal.champ{ border-color:var(--accent-dim); background:oklch(0.22 0.04 85) }
 .cc-t{ font-style:normal; margin-left:3px }
-.trophies{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px }
+/* **2列の棚**(→docs/03 §3.36)。26枠を1列に積むと CLUB が延々と伸びる */
+.trophies{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px }
 .trophy{
   display:flex; align-items:center; gap:8px; padding:9px 11px; border-radius:10px;
   background:oklch(0.22 0.04 85); border:1px solid var(--accent-dim);
 }
-.trophy i{ font-style:normal; font-size:17px }
-.trophy b{ display:block; font:600 12px/1.3 var(--f-head); color:var(--accent-hi) }
+.trophy>div{ min-width:0 }                      /* 長い大会名で枠を押し広げない */
+.trophy i{ font-style:normal; font-size:17px; flex:none }
+.trophy b{ display:block; font:600 11px/1.3 var(--f-head); color:var(--accent-hi);
+  overflow-wrap:anywhere }
 .trophy span{ display:block; font-size:10px; color:var(--text-dim) }
+/* **未達成の実績も並べる**(→docs/03 §3.36)。棚が目標の一覧になる */
+.trophy.off{ background:var(--panel-2); border-color:var(--line) }
+.trophy.off i{ filter:grayscale(1); opacity:.5 }
+.trophy.off b{ color:var(--text-2) }
+.tr-sum{ font:600 12px/1 var(--f-head); color:var(--text-2); letter-spacing:1px }
+.tr-sum b{ font-size:20px; color:var(--accent-hi); letter-spacing:0; margin-right:2px }
+.tr-grp{ margin:12px 0 0; font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--text-dim) }
 
 /* NEXT MATCH のタイル(→docs/06 §6.8)。モックの構成。
    **ボタンを置かず、タイルごとタップ**して日程へ送る。 */
