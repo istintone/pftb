@@ -322,6 +322,8 @@ function renderHome(){
       +'<div class="nx-vs"><b>'+esc(clubName(S.club.id))+'</b>'
         +'<span>VS</span><b>'+esc(clubName(f.opp))+'</b></div>'
       +'<div class="nx-sub">'+(f.home?"HOME":"AWAY")+' ／ 第'+W.matchday+'節</div>'
+      // **スポンサーの名前を看板のように置く**(→docs/06 §6.25)。契約中だけ出る
+      +sponBoard()
       // **ボタンは置かない**。タイルごとリンクなので、行き先を右下に一言添えるだけ
       +'<div class="nx-go">&gt; See Schedule</div>'
     +'</div>';
@@ -367,6 +369,16 @@ function secretaryLine(){
   const r=rankOf(S.world.table,S.club.id);
   if(r<=S.club.expect)return "現在"+r+"位。期待を上回っています、この調子で。";
   return "現在"+r+"位。オーナーの目標は"+S.club.expect+"位です。巻き返しましょう。";
+}
+/**
+ * 次戦タイルの下に出すスポンサーの看板(→docs/06 §6.25)。
+ * **契約中だけ**。ピッチ脇の広告板と同じで、居るときにだけ静かに映り込む。
+ */
+function sponBoard(){
+  const sp=sponsor();
+  if(!sp)return "";
+  return '<div class="nx-spon"><i>OFFICIAL PARTNER</i>'
+    +'<b>'+esc(sponsorById(sp.id).name)+'</b></div>';
 }
 function clubNews(){
   const r=rankOf(S.world.table,S.club.id), t=S.world.table[S.club.id];

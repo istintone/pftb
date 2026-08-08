@@ -561,6 +561,20 @@ const STEPS = [
       return sponsorById(sp.id).name+' ／ '+sponGoalText(sp)+' ／ 支援 '+sponAidById(sp.aid).label;
     })()`));
     await ctx.shot("05l-chat-hand4");
+    // 看板(→docs/06 §6.25)。**契約中だけ**次戦タイルに出る
+    ctx.log("  スポンサーの看板:", await ctx.js(`(()=>{
+      show('home');
+      const t=document.getElementById('homeNext').textContent;
+      const nm=sponsorById(sponsor().id).name;
+      if(t.indexOf('OFFICIAL PARTNER')<0||t.indexOf(nm)<0)
+        throw new Error('次戦タイルに看板が出ない');
+      const keep=S.club.sponsor; S.club.sponsor=null; show('home');
+      if(document.getElementById('homeNext').textContent.indexOf('OFFICIAL PARTNER')>=0)
+        throw new Error('契約が無いのに看板が残る');
+      S.club.sponsor=keep; show('home');
+      return 'OFFICIAL PARTNER '+nm+'（契約が無ければ出ない）';
+    })()`));
+    await ctx.shot("03c-home-sponsor");
     ctx.log("  支援の打ち手:", await ctx.js(`(()=>{
       // **メニューは聞かれない**。伸ばす能力は契約で決まっている
       [...document.querySelectorAll('#chatAsk [data-pick]')]

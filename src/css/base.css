@@ -1327,6 +1327,15 @@ body{
 .nx-vs b:last-of-type{ text-align:left }
 .nx-vs span{ font:700 12px/1 var(--f-head); letter-spacing:1px; color:var(--accent) }
 .nx-sub{ font-size:11px; color:var(--text-dim); margin-top:7px }
+/* スポンサーの看板(→docs/06 §6.25)。ピッチ脇の広告板のつもりで、
+   タイルの下に細い帯として敷く。**契約中だけ**出る */
+.nx-spon{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-top:13px; padding-top:10px; border-top:1px solid oklch(0.32 0.04 255);
+}
+.nx-spon i{ font-style:normal; font:9px/1 var(--f-mono); letter-spacing:2px;
+  color:var(--text-mute) }
+.nx-spon b{ font:600 12px/1 var(--f-head); letter-spacing:.5px; color:oklch(0.80 0.09 85) }
 /* **タイルごとリンクなのでボタンは置かない**(→docs/06 §6.8)。
    行き先を右下に文字だけ添えて、押せる面はタイル全体にする。 */
 .nx-go{
