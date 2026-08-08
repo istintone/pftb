@@ -1597,11 +1597,11 @@ body{
    置くと輪郭が沈んで、誰が何を言ったのかが読み取れなかった。色は画面の中だけで閉じるので、
    ここで作った変数を .ch-* 側が参照する。 */
 #scr-chat{
-  --ch-bg:oklch(0.968 0.014 92);        /* クリーム寄りの白(地) */
+  --ch-bg:oklch(0.938 0.026 91);        /* クリーム(地)。白より少し落として黄に寄せる */
   --ch-card:oklch(0.995 0.004 92);      /* 吹き出し */
   --ch-ink:oklch(0.30 0.02 80);         /* 本文 */
   --ch-ink2:oklch(0.50 0.02 80);        /* 補助(名前・注記) */
-  --ch-line:oklch(0.885 0.016 90);
+  --ch-line:oklch(0.860 0.022 90);
   --ch-me:oklch(0.90 0.075 88);         /* 監督の吹き出し */
   min-height:100%;
   background:var(--ch-bg); color:var(--ch-ink);
@@ -1668,7 +1668,8 @@ body{
   background:oklch(0.32 0.06 85); color:oklch(0.96 0.01 90);
   border-radius:12px 12px 4px 12px;
 }
-.ch-nm{ display:block; font:400 9px/1 var(--f-mono); color:var(--text-mute); margin-bottom:4px }
+/* 名前は**発言と同じ白**。落とすと吹き出しの紺に沈んで誰の発言か読み取れない */
+.ch-nm{ display:block; font:400 9px/1 var(--f-mono); color:var(--text-2); margin-bottom:4px }
 /* 発言者のポジション(→docs/06 §6.24)。名前の右に小さく置く */
 .ch-pos{
   font-style:normal; letter-spacing:1px; color:oklch(0.80 0.10 85);
