@@ -47,6 +47,13 @@ try:
 except ImportError:
     sys.exit("Pillow が必要です: pip install Pillow")
 
+# Windows のコンソールは既定が cp932 で、⚠ のような記号で落ちる。
+# **警告が出る場面ほど落ちて読めない**ので、出力側を UTF-8 に寄せておく。
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ART = ROOT / "src/assets/art"                 # 素材(埋め込まれない)
 # 書き出し先。**素材の種別ごとに分ける**(→docs/03 §3.19)
@@ -58,10 +65,8 @@ POSITIONS = {"gk", "df", "mf", "fw", "out"}
 
 # 実在のスポンサー名がはっきり読める絵。**商標方針に反するので使わない**(→docs/03 §3.13)。
 # 描き直したものに差し替えたら、この行を消せばそのままプールに戻る。
-SKIP = {
-    "Gemini_Generated_Image_ufhnm5ufhnm5ufhn (1).png",   # 胸に実在スポンサーの文字
-    "Gemini_Generated_Image_x4lceux4lceux4lc.png",       # 同上
-}
+# (2026-08-09: ここに挙げていた2枚は素材ごと差し替わったので空にした)
+SKIP = set()
 
 QUALITY = 82          # カード上では 120〜200px なので、署名カードより軽くしてよい
 
