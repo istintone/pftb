@@ -341,10 +341,14 @@ function renderHome(){
   // どちらでもタップで受信箱へ行けるようにして、入口を1つにする
   const mm=mailLatest(), un=mailUnread();
   const def=mm?mailById(mm.id):null;
-  $("homeSec").innerHTML='<div class="bubble sec-go'+(un?" unread":"")+'" id="homeSecGo">'
-    +(un?'<i class="sec-dot">'+un+'</i>':"")
-    +esc(def?def.text:secretaryLine())
-    +(def?'<span class="sec-more">受信箱を開く ›</span>':"")+'</div>';
+  // **顔もここに出す**(→docs/06 §6.27)。丸はチャットと同じ部品を使う。
+  // 未読の印は**丸の肩に付ける**(通知の印はアイコンに付くもの)
+  $("homeSec").innerHTML='<div class="sec-row sec-go'+(un?" unread":"")+'" id="homeSecGo">'
+    +'<div class="sec-face">'+chatAvatar("sec")
+      +(un?'<i class="sec-dot">'+un+'</i>':"")+'</div>'
+    +'<div class="bubble">'+esc(def?def.text:secretaryLine())
+      +(def?'<span class="sec-more">受信箱を開く ›</span>':"")+'</div>'
+  +'</div>';
   $("homeSecGo").onclick=()=>show("secretary",{push:1});
   // CLUB NEWS: クラブの今(一時的なコンディションの表示でもある)
   $("homeNews").innerHTML=clubNews().map(n=>'<div class="news">'+n+'</div>').join("");

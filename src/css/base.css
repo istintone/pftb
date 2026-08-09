@@ -1307,11 +1307,16 @@ body{
   color:var(--accent-hi); border-color:var(--accent);
   background:linear-gradient(135deg, oklch(0.30 0.06 85), oklch(0.24 0.04 80));
 }
-/* 秘書のひとこと(→docs/03 §3.42)。**押せる**ので、その手掛かりを添える */
-.sec-go{ position:relative; cursor:pointer }
-.sec-go.unread{ border-color:var(--accent-dim) }
+/* 秘書のひとこと(→docs/03 §3.42 / §6.27)。**顔 + 吹き出し**で1行。押せる */
+.sec-go{ cursor:pointer }
+/* 見出し「秘書」の真下に丸が来る。**未読の印が見出しに被る**ので少し下げる */
+.sec-row{ display:flex; align-items:flex-start; gap:9px; margin-top:6px }
+.sec-row .bubble{ flex:1; min-width:0 }
+.sec-row.unread .bubble{ border-color:var(--accent-dim) }
+/* 未読の印は**丸の肩**に付ける(通知の印はアイコンに付くもの) */
+.sec-face{ position:relative; flex:none }
 .sec-dot{
-  position:absolute; top:-7px; right:-6px; min-width:18px; height:18px; padding:0 5px;
+  position:absolute; top:-5px; right:-5px; min-width:18px; height:18px; padding:0 5px;
   display:flex; align-items:center; justify-content:center; font-style:normal;
   font:700 10px/1 var(--f-head); color:var(--surface); background:var(--accent);
   border-radius:999px; box-shadow:0 0 10px oklch(0.75 0.15 85 / .55);
