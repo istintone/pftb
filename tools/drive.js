@@ -847,6 +847,9 @@ const STEPS = [
       if(tec.querySelector('s').textContent!=='★')
         throw new Error('TECの★が1つになっていない');
       S.career.train={};
+      // **開いた詳細は閉じる**。開けっぱなしだと、このあとの試合のカットインが
+      // ずっとこのカードに隠れて写る(スクリーンショットで気付いた)
+      closeCard();
       return '★'+star.length+' ／ 表示 '+tec0+' のまま ／ 内訳はバー右の★';
     })()`));
     await ctx.js("(()=>{S.career.chat=null;show('season');})()");
@@ -902,6 +905,34 @@ const STEPS = [
     })()`));
     await ctx.wait(250);
     await ctx.shot("07d-cutin-vs-1");   // 両者が入ってきたところ
+    // **発動した札が名前で出る**(→docs/06 §6.26)。固有スキルは金で光る
+    ctx.log("  発動した札:", await ctx.js(`(()=>{
+      const H=_M.home,A=_M.away;
+      const atk=H.players.find(p=>p.role==='FW'), df=A.players.find(p=>p.role==='DF');
+      const dch=(COUNTERS[df.sub]||COUNTERS.CB)[0];
+      // **自分側の札だけを出す**(→docs/06 §6.26)。攻めているのが相手なら守備側の札
+      cutVs({side:'H',label:'マエストロの一差し',ch:'cfRun',vs:df.c.id,
+        dch:dch.id,dlabel:dch.label,
+        sk:['マエストロ','決定力'], dsk:['対人守備']},atk,df,'突破!',true);
+      const ally=(_M.fixture.h===S.club.id);
+      const want=ally?['マエストロ','決定力']:['対人守備'];
+      const tags=[...document.querySelectorAll('#mCut .cut-sk i')];
+      if(tags.map(t=>t.textContent).join()!==want.join())
+        throw new Error('自分側の札が出ていない: '+tags.map(t=>t.textContent));
+      const sig=tags.filter(t=>t.classList.contains('sig')).map(t=>t.textContent);
+      if(sig.join()!==(ally?'マエストロ':''))
+        throw new Error('金にする札が違う: '+sig);
+      const out=tags.map(t=>t.textContent+(t.classList.contains('sig')?'(金)':'')).join(' / ')
+        +' ／ 見出し: '+document.querySelector('#mCut .cut-hd').textContent;
+      // **撮るのは金の側**。自分が攻めている向きで出し直す(見た目の確認用)
+      const mySide=(_M.fixture.h===S.club.id)?'H':'A';
+      cutVs({side:mySide,label:'マエストロの一差し',ch:'cfRun',vs:df.c.id,
+        dch:dch.id,dlabel:dch.label,
+        sk:['マエストロ','決定力'], dsk:['マエストロ','決定力']},atk,df,'突破!',true);
+      return out;
+    })()`));
+    await ctx.wait(250);
+    await ctx.shot("07d2-cutin-skill");
     await ctx.wait(600);
     await ctx.shot("07d-cutin-vs-2");   // 勝敗が表れ、決着語が出たところ
     ctx.log("  シュートの見出し:", await ctx.js(`(()=>{ const H=_M.home;
@@ -1905,7 +1936,29 @@ const STEPS = [
           return out.join(' / ');
         })()`));
         // スキルの効果は**タップで浮かせる**(→docs/03 §3.21)
-        ctx.log("  スキルの吹き出し:", await ctx.js(`(()=>{
+        // 固有スキル(→docs/03 §3.41)。**発動がカットインに名前で出る**
+      ctx.log("  固有スキル:", await ctx.js(`(()=>{
+        const sig=SKILLS_SIG;
+        if(!sig.length)throw new Error('固有スキルが無い');
+        const owner={};
+        for(const c of signatureCards())for(const n of c.skills)
+          if(SKILL_FX[n]&&SKILL_FX[n].sig)owner[n]=c.name;
+        if(Object.keys(owner).length!==sig.length)
+          throw new Error('持ち主の居ない固有スキルがある: '+sig.filter(n=>!owner[n]));
+        // 詳細では金縁になる
+        const c=signatureCards().find(x=>x.sig==='zidane');
+        closeCard(); openCard(c);
+        const gold=[...document.querySelectorAll('#cardModalBody .skill.sig')]
+          .map(e=>e.textContent);
+        if(gold.length!==1)throw new Error('固有スキルの金縁が1枚でない: '+gold);
+        const note=skillNote(gold[0]);
+        if(note.indexOf('／')<0)throw new Error('複数の効果が説明に出ない: '+note);
+        closeCard();
+        return sig.length+'種 / '+c.name+' = '+gold[0]+' 「'+note+'」';
+      })()`));
+      await ctx.js("closeCard()");
+      await ctx.wait(150);
+      ctx.log("  スキルの吹き出し:", await ctx.js(`(()=>{
           const chips=[...document.querySelectorAll('#cardModalBody .skill')];
           const pop=document.getElementById('skPop');
           if(!chips.length)throw new Error('スキルが出ていない');
@@ -1997,7 +2050,8 @@ const STEPS = [
       for(const p of Object.keys(SKILLS))for(const n of skillPool(p))(pos[n]=pos[n]||[]).push(p);
       const all=Object.keys(pos);
       const noFx=all.filter(n=>!SKILL_FX[n]);
-      const noPool=Object.keys(SKILL_FX).filter(n=>!pos[n]);
+      // **固有スキルは引けなくて正しい**(→docs/03 §3.41)。持ち主だけが持つ
+      const noPool=Object.keys(SKILL_FX).filter(n=>!pos[n]&&!SKILL_FX[n].sig);
       if(noFx.length)throw new Error('効果が無いスキル: '+noFx.join(','));
       if(noPool.length)throw new Error('誰も引けないスキル: '+noPool.join(','));
       // グループは必ず SK_GRP にあること

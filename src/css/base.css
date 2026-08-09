@@ -1289,6 +1289,24 @@ body{
 .trophy.off{ background:var(--panel-2); border-color:var(--line) }
 .trophy.off i{ filter:grayscale(1); opacity:.5 }
 .trophy.off b{ color:var(--text-2) }
+/* 発動した札の帯(→docs/06 §6.26)。カットインの見出しの下に小さく並べる */
+.cut-sk{ display:flex; justify-content:center; gap:6px; margin:-4px 0 6px; flex-wrap:wrap }
+.cut-sk i{
+  font-style:normal; font:600 10px/1 var(--f-head); letter-spacing:1px;
+  padding:4px 8px; border-radius:999px;
+  color:var(--text-2); background:oklch(0.28 0.02 255); border:1px solid var(--line);
+}
+/* **固有スキルは金で光らせる**(→docs/03 §3.41)。普通の札と一目で違う */
+.cut-sk i.sig{
+  color:oklch(0.96 0.06 88); border-color:var(--accent);
+  background:linear-gradient(135deg, oklch(0.52 0.13 85), oklch(0.36 0.09 80));
+  box-shadow:0 0 10px oklch(0.75 0.15 85 / .45);
+}
+/* カード詳細の札。**固有だけ金縁**にする */
+.skill.sig{
+  color:var(--accent-hi); border-color:var(--accent);
+  background:linear-gradient(135deg, oklch(0.30 0.06 85), oklch(0.24 0.04 80));
+}
 /* 師弟の印(→docs/03 §3.39)。カード詳細の「信頼」欄に出る */
 .cm-mt{ font-style:normal; color:var(--accent-hi); letter-spacing:1px }
 .tr-sum{ font:600 12px/1 var(--f-head); color:var(--text-2); letter-spacing:1px }

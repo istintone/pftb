@@ -235,7 +235,45 @@ const SKILL_FX={
   "セットプレーの名手":{ at:"spDeliver",k:1.15, at2:"finish", grp:"set", s:1.08 },
   "スーパーサブ":   { at:"joker",   k:1.90 },   // 交代直後だけボールが集まる
   "鉄人":           { at:"iron",    k:0.45 },   // 好不調の振れ幅が縮む
+
+  // ---- 固有スキル(→docs/03 §3.41) ----
+  // **その選手だけが持つ1枚**。SKILLS / SKILLS_ANY に入れないので、
+  // 抽選プールには絶対に入らない(生成カードが持つことはない)。
+  //
+  //   sig  … 持ち主(signatures.js の id)。テストと画面がこれで見分ける
+  //   fx   … **1枚で複数の効果**。普通の札は1つだけなので fx を持たない
+  //   move … 技名。その札が発動した局面では、チャンネルの呼び名がこれに変わる
+  //
+  // **効果は1つずつ見れば普通の札と同じ強さ**にしてある(→docs/08 §8.6④)。
+  // 特別なのは「1枠で2つ働く」ことと、局面が名前で呼ばれることの2点。
+  "不動の門番":     { sig:"buffon",
+    fx:[{ at:"psoGk", k:1.30 },{ at:"gk", k:1.10 }] },
+  "皇帝のフィード": { sig:"beckenbauer", move:"皇帝のフィード",
+    fx:[{ at:"origin", grp:"long", s:1.09 },{ at:"counter", grp:"tec", s:1.14 }] },
+  "弾丸の左足":     { sig:"rcarlos", move:"弾丸の左足",
+    fx:[{ at:"finish", grp:"set", s:1.08 },{ at:"spDeliver", k:1.15 }] },
+  "不動の右":       { sig:"zanetti",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"stam", k:0.80 }] },
+  "中盤の掌握":     { sig:"matthaus", move:"一撃のミドル",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"finish", grp:"far", s:1.08 }] },
+  "不屈の心臓":     { sig:"schweinsteiger",
+    fx:[{ at:"comeback", k:1.35 },{ at:"stam", k:0.85 }] },
+  "疾風の推進":     { sig:"nedved", move:"止まらない推進",
+    fx:[{ at:"origin", grp:"carry", w:1.55, s:1.04 },{ at:"stam", k:0.82 }] },
+  "マエストロ":     { sig:"zidane", move:"マエストロの一差し",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"recv", k:1.35 }] },
+  "精密機械":       { sig:"beckham", move:"ベンドイット",
+    fx:[{ at:"origin", grp:"cross", s:1.13 },{ at:"spDeliver", k:1.15 }] },
+  "魔法の足":       { sig:"ronaldinho", move:"エラシコ",
+    fx:[{ at:"origin", grp:"cut", w:1.85, s:1.08 },{ at:"mood", k:1.06 }] },
+  "無回転の弾道":   { sig:"ronaldo", move:"無回転ミドル",
+    fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"origin", grp:"spd", s:1.07 }] },
+  "オフサイドの掟": { sig:"inzaghi", move:"一瞬の抜け出し",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"recv", k:1.30 }] },
 };
+/** 固有スキル(持ち主つき)。**抽選プールには入らない**ので skillPool は触らない。 */
+const SKILLS_SIG=Object.keys(SKILL_FX).filter(n=>SKILL_FX[n].sig);
+const sigSkillOf=id=>SKILLS_SIG.find(n=>SKILL_FX[n].sig===id)||null;
 
 // --- 画面ごとの説明(HELPタブの中身 → docs/06 §6.16) ---
 // **UIを説明文で埋めないための収納先**。盤面には状態だけを出し、

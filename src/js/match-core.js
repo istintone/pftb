@@ -25,10 +25,39 @@ function skillsOf(card){
   const ch=[], k={};
   for(const name of card.skills||[]){
     const fx=SKILL_FX[name]; if(!fx)continue;
-    if(fx.grp)ch.push({ at:fx.at2||fx.at, grp:fx.grp, w:fx.w||1, s:fx.s||1 });
-    if(fx.k!=null)k[fx.at]=(k[fx.at]||1)*fx.k;
+    // **固有スキルは1枚で複数の効果を持てる**(→docs/03 §3.41)。
+    // 普通の札は fx.fx を持たないので、自分1つだけの配列として同じ道を通す
+    for(const e of (fx.fx||[fx])){
+      // **名前を残す**。畳んだ時点で捨てていたので、何が効いたのかを画面に出せなかった
+      if(e.grp)ch.push({ name, at:e.at2||e.at, grp:e.grp, w:e.w||1, s:e.s||1,
+        move:fx.move||null });
+      if(e.k!=null)k[e.at]=(k[e.at]||1)*e.k;
+    }
   }
   return { ch, k };
+}
+/**
+ * その場面で**実際に発動した札の名前**(→docs/06 §6.26)。カットインに出す。
+ * 倍率が1のものは数えない(持っているだけで効いていない札を光らせないため)。
+ */
+function skFired(p,at,ch){
+  const f=p&&p.sk; if(!f||!ch)return null;
+  let out=null;
+  for(const x of f.ch){
+    if(x.at!==at&&x.at!=="both")continue;
+    if(x.w===1&&x.s===1)continue;
+    if(!SK_GRP[x.grp](ch))continue;
+    if(!out)out=[];
+    if(!out.includes(x.name))out.push(x.name);
+  }
+  return out;
+}
+/** 発動した固有スキルの**技名**。あればチャンネルの呼び名を差し替える(→§3.41)。 */
+function skMove(p,at,ch){
+  const f=p&&p.sk; if(!f||!ch)return null;
+  for(const x of f.ch)
+    if((x.at===at||x.at==="both")&&x.move&&SK_GRP[x.grp](ch))return x.move;
+  return null;
 }
 /** 札を引く重みの倍率。at は "origin" / "counter" / "finish"。 */
 function skW(p,at,ch){
@@ -288,13 +317,15 @@ function onTarget(rng,atk,gk,h,fin){
  * それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.10)。
  * 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
  */
-function resolveShot(rng,atk,gk,h,fin){
+function resolveShot(rng,atk,gk,h,fin,pso){
   const S=TUNING.shot;
   const pk=fin.id==="pk";
   const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)
     *skS(atk,"finish",fin)*(pk?skK(atk,"pkKick"):1)*rr(rng);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)
-    *skK(gk,"gk")*skS(gk,"gkFin",fin)*(pk?skK(gk,"pkGk"):1)*rr(rng);
+    *skK(gk,"gk")*skS(gk,"gkFin",fin)*(pk?skK(gk,"pkGk"):1)
+    // **PK戦のときだけ**効く札(→docs/03 §3.41)。試合中のPKには掛からない
+    *(pso?skK(gk,"psoGk"):1)*rr(rng);
   return sSc>gSc*TUNING.th.shot;
 }
 // ---------- セットプレー(→docs/07 §7.11) ----------
@@ -478,7 +509,12 @@ function momGain(T){
 }
 function addMom(M,side,v){
   const F=TUNING.mom;
-  if(v>0)v*=momGain(side==="H"?M.home:M.away);
+  if(v>0){
+    const T=side==="H"?M.home:M.away, D=side==="H"?M.away:M.home;
+    v*=momGain(T);
+    // **負けているときだけ**効く札(→docs/03 §3.41)。追いかける展開が作れる
+    if(T.score<D.score)for(const p of T.players)v*=skK(p,"comeback");
+  }
   M.mom=clamp(M.mom+(side==="H"?v:-v),-F.cap,F.cap);
 }
 /** キックオフ時のモメンタム。**強いチームが前から始められる**。 */
@@ -893,7 +929,10 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
     const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x,bondK(carrier,recv)):true;
     carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
-      by:carrier.c.id, sub:carrier.sub, ch:ch.id, label:ch.label, kind:ch.kind,
+      by:carrier.c.id, sub:carrier.sub, ch:ch.id, kind:ch.kind,
+      // **技名があれば呼び名を差し替える**(→docs/03 §3.41)
+      label:skMove(carrier,"origin",ch)||ch.label,
+      sk:skFired(carrier,"origin",ch), dsk:marker?skFired(marker,"counter",dch):null,
       ok, vs:marker?marker.c.id:null, run:carryRun,
       dch:dch?dch.id:null, dlabel:dch?dch.label:null, dsub:marker?marker.sub:null,
       stray:Math.round(stray*100)/100,
@@ -968,7 +1007,9 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
   // **どう撃つか**をここで1回だけ引く。以降の3段はすべてこの札を見る(→docs/07 §7.13)
   const fin=sp?SET_FINISH[sp]:pickFinish(rng,shooter,tg.h);
   const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100, depth:d,
-    sp:sp||null, fin:fin.id, flabel:fin.label };
+    sp:sp||null, fin:fin.id,
+    flabel:skMove(shooter,"finish",fin)||fin.label,
+    sk:skFired(shooter,"finish",fin) };
   shooter.stat.shots++;
   const more=A.sp<SP.maxSp;                                  // まだセットプレーを重ねてよいか
 
@@ -1056,7 +1097,8 @@ function shootout(M){
     const p=list[(n-1)%list.length];
     // resolveShot は**true が得点**(→shoot と同じ向き)。ここを反転させると
     // 「GKが止めたときだけ入る」になり、PK戦が 0-1 のような点になる
-    const ok=onTarget(rng,p,gk[D.side],SP.pkH,fin)&&resolveShot(rng,p,gk[D.side],SP.pkH,fin);
+    const ok=onTarget(rng,p,gk[D.side],SP.pkH,fin)
+      &&resolveShot(rng,p,gk[D.side],SP.pkH,fin,true);   // true = PK戦(→§3.41)
     if(ok)sc[side]++;
     const e={ min:90, half:2, at:false, side, type:"pso", n,
       by:p.c.id, gk:gk[D.side].c.id, ok, hg:sc.H, ag:sc.A };

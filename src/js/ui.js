@@ -204,6 +204,7 @@ const SK_SOLO={
   captaincy:"腕章を巻くと勢いに乗りやすい", mood:"チームが勢いに乗りやすい",
   spDeliver:"セットプレーの球が良い", joker:"交代直後はボールが集まる",
   iron:"調子の good/bad に振り回されない",
+  psoGk:"PK戦で止めやすい", comeback:"負けているときに勢いが乗りやすい",
 };
 /**
  * スキルの効果を**タップで浮かせる**(→docs/03 §3.21)。
@@ -238,7 +239,12 @@ function bindSkillPop(skills){
   hide();
 }
 function skillNote(name){
-  const fx=SKILL_FX[name]; if(!fx)return "";
+  const fx0=SKILL_FX[name]; if(!fx0)return "";
+  // **固有スキルは1枚で複数の効果**(→docs/03 §3.41)。全部つなげて出す
+  if(fx0.fx)return fx0.fx.map(e=>noteOf(e)).filter(Boolean).join("／");
+  return noteOf(fx0);
+}
+function noteOf(fx){
   // k を持つ札は SK_SOLO に文が要る。無ければ掛かり先の名前をそのまま出して、
   // **空の吹き出しにはしない**(気付かないまま出荷されるのを防ぐ)
   const solo=fx.k!=null?(SK_SOLO[fx.at]||fx.at):"";
@@ -754,7 +760,9 @@ function openCard(x,opts){
       +'<div class="cm-k">SKILLS</div>'
       // 効果は**タップで浮かせる**(→docs/03 §3.21)。常に添えると説明が4行並んで、
       // 肝心の「何を持っているか」が読み取れなくなる
-      +'<div class="skills">'+c.skills.map((s,i)=>'<span class="skill" data-sk="'+i+'">'
+      // **固有スキルは金縁**(→docs/03 §3.41)。並びの中で一目で分かるようにする
+      +'<div class="skills">'+c.skills.map((s,i)=>'<span class="skill'
+        +((SKILL_FX[s]&&SKILL_FX[s].sig)?" sig":"")+'" data-sk="'+i+'">'
         +esc(s)+'</span>').join("")
         +'<div class="skill-pop" id="skPop" hidden></div></div>'
       +'<div class="cm-k">COMBINATION</div>'
@@ -2391,6 +2399,7 @@ function cutVs(e,atk,df,word,atkWon){
   // (同時に出すと速すぎて何が起きたか読めない → docs/06 §6.19)。
   const ms=cutShow('<div class="cut">'
     +'<div class="cut-hd">'+esc(e.label||"MATCH UP")+'</div>'
+    +cutSkills(mineSide===e.side?e.sk:e.dsk)
     +'<div class="cut-row">'
       +cutFig(mine,mineSide,"L",statNote(mine,e))
       +'<div class="cut-vs">VS</div>'
@@ -2419,10 +2428,21 @@ function statNote(p,e){
   const head=isDf&&e.dlabel?e.dlabel:p.sub;
   return head+" "+STAT_LABEL[k]+" "+p.c[k];
 }
+/**
+ * 発動した札の帯(→docs/06 §6.26)。**何が効いたのかを言葉で見せる**。
+ * 固有スキル(→docs/03 §3.41)は金で光らせ、普通の札と見分けが付くようにする。
+ */
+function cutSkills(list){
+  const a=(list||[]).filter(n=>SKILL_FX[n]);
+  if(!a.length)return "";
+  return '<div class="cut-sk">'+a.slice(0,2).map(n=>
+    '<i class="'+(SKILL_FX[n].sig?"sig":"")+'">'+esc(n)+'</i>').join("")+'</div>';
+}
 /** パス成功。左に出し手、右から受け手がスライドインする。 */
 function cutPass(e,from,to){
   return cutShow('<div class="cut">'
     +'<div class="cut-hd">'+esc(e.label||"PASS")+'</div>'
+    +cutSkills(e.sk)
     +'<div class="cut-row">'
       +cutFig(from,e.side,"L")
       +'<div class="cut-arrow">▶</div>'
@@ -2442,6 +2462,7 @@ function cutShot(e,sc,keeper,word,scored,assist){
   const ms=(e.type==="goal"?P.goalMs:P.cutMs)+P.shotHold;
   cutShow('<div class="cut">'
     +'<div class="cut-hd">'+esc(e.flabel||"SHOT")+'</div>'
+    +cutSkills(e.sk)
     +'<div class="cut-row">'
       +cutFig(sc,e.side,"L","ATK "+sc.c.atk+" / POW "+sc.c.pow)
       +'<div class="cut-vs">VS</div>'

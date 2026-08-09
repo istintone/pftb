@@ -587,8 +587,12 @@ function runSeason() {
     // gkFin は GK 側から終点の札を見るので、広さは finish のもの
     share.gkFin = share.finish;
     const fireOf = (p, w) => w * p / (w * p + 1 - p);
-    const vals = {};
-    for (const [name, fx] of Object.entries(E.SKILL_FX)) {
+    const vals = {}, sigVals = [];
+    for (const [name, fx0] of Object.entries(E.SKILL_FX)) {
+      // 固有スキルは**成分ごとに**帯へ入れる。1枚で2つ働くぶん、合計は倍まで許す
+      // (→docs/03 §3.41)。**成分1つずつは普通の札と同じ強さ**であること
+      let sigSum = 0;
+      for (const fx of (fx0.fx || [fx0])) {
       if (!fx.grp) continue;
       const layer = fx.at2 || fx.at;
       // both は起点と守備の**両方**で発動する。合計を2層の平均目標と比べる
@@ -614,24 +618,48 @@ function runSeason() {
       (vals[layer === "gkFin" ? "finish" : layer] = vals[layer === "gkFin" ? "finish" : layer] || []).push(val);
       // w を持つ札は s が小さい(w が発動率を押し上げているぶん)
       if (fx.w) assert.ok(fx.s <= 1.13, name + " は w を持つので s は控えめ: " + fx.s);
+      sigSum += val / tgt;
+      }
+      // **2枚ぶんまで**。成分1つずつは帯の中(±30%)なので、上振れの余地を見て 2.2 に置く
+      if (fx0.sig){ sigVals.push(name + " " + sigSum.toFixed(2));
+        assert.ok(sigSum <= 2.2,
+          name + " の合計が2枚ぶんを超えている: " + sigSum.toFixed(2) + "枚ぶん"); }
     }
     console.log("スキルの公平さOK", Object.entries(vals).map(([k, v]) =>
       k + " " + v.length + "枚 開き" + (Math.max(...v) / Math.min(...v)).toFixed(1) + "倍").join(" / "));
+    console.log("  固有スキルの重み:", sigVals.join(" / "), "(枚ぶん・上限2.2)");
   }
 
   // ---------- スキル(D39 → docs/03 §3.21) ----------
   {
-    // 表の形が守られていること。**w と s は必ずセット**(引けるだけでは強くならない)
+    // 表の形が守られていること。**w と s は必ずセット**(引けるだけでは強くならない)。
+    // 固有スキル(→docs/03 §3.41)は1枚で複数の効果を持つので、**成分ごとに**見る
     for (const [name, fx] of Object.entries(E.SKILL_FX)) {
-      assert.ok(fx.at, name + " に掛かり先がある");
-      if (fx.grp) {
-        assert.ok(E.SK_GRP[fx.grp], name + " のグループが定義されている: " + fx.grp);
-        assert.ok(fx.s, name + " は s を持つ（引けるだけでは強くならない）");
-        // **強さの上限下限はここでは見ない**。グループの広さで決まるので、
-        // 実効価値のほうで揃っているかを見る(→上の「スキルの公平さ」)
-      } else {
-        assert.ok(fx.k != null, name + " は単独の倍率を持つ");
+      for (const e of (fx.fx || [fx])) {
+        assert.ok(e.at, name + " に掛かり先がある");
+        if (e.grp) {
+          assert.ok(E.SK_GRP[e.grp], name + " のグループが定義されている: " + e.grp);
+          assert.ok(e.s, name + " は s を持つ（引けるだけでは強くならない）");
+          // **強さの上限下限はここでは見ない**。グループの広さで決まるので、
+          // 実効価値のほうで揃っているかを見る(→上の「スキルの公平さ」)
+        } else {
+          assert.ok(e.k != null, name + " は単独の倍率を持つ");
+        }
       }
+      // **固有スキルは持ち主が居る**。誰の札でもないものを固有にしない
+      if (fx.sig) assert.ok(E.signatureCards().some(c => c.sig === fx.sig),
+        name + " の持ち主 " + fx.sig + " が居ない");
+    }
+    // **固有スキルは抽選プールに絶対入らない**(生成カードが持つことはない)
+    for (const n of E.SKILLS_SIG)
+      for (const pos of Object.keys(E.SKILLS))
+        assert.ok(!E.skillPool(pos).includes(n), pos + " が固有スキル " + n + " を引ける");
+    // 持ち主だけが持っている
+    for (const c of E.signatureCards()) {
+      const own = c.skills.filter(n => E.SKILL_FX[n] && E.SKILL_FX[n].sig);
+      assert.ok(own.length <= 1, c.name + " が固有スキルを2枚持っている: " + own);
+      for (const n of own) assert.strictEqual(E.SKILL_FX[n].sig, c.sig,
+        c.name + " が他人の固有スキル " + n + " を持っている");
     }
     // プールの全スキルに効果が定義されている(名前だけの飾りを残さない)
     for (const [pos, list] of Object.entries(E.SKILLS))
