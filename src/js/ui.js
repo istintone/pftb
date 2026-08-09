@@ -1782,6 +1782,18 @@ function chatSquad(except){
 }
 const shortOf=id=>{ const c=cardById(id); return c?shortName(c):"—"; };
 /**
+ * 秘書の絵(→docs/06 §6.27)。**クラブごとに決まっていて、移れば替わる**。
+ * 誰になるかはクラブIDから決まるので、同じクラブなら毎回同じ人が座っている。
+ * **絵を足しても JS は触らない** — ASSETS の並びをそのまま候補にする。
+ */
+function secretaryArt(clubId){
+  const A=(window.ASSETS&&window.ASSETS.secretary)||{};
+  const keys=Object.keys(A).sort();
+  if(!keys.length)return null;
+  const id=clubId||(S.club&&S.club.id)||"";
+  return A[keys[Math.abs(hashStr("sec:"+id))%keys.length]];
+}
+/**
  * 話し手のアイコン(→docs/06 §6.23)。**秘書も監督も選手と同じ丸**。
  * 秘書と監督の絵はまだ無いので、シルエットのプレースホルダーを出す。
  * `src/assets/faces/sec.png` / `mgr.png` を置けば**そのまま差し替わる**
@@ -1791,7 +1803,7 @@ function chatAvatar(w,cls){
   const box=(kind,src)=>'<div class="'+(cls||"ch-sm")+' '+kind+'">'
     +(src?'<img src="'+src+'" alt="">':'<i class="ch-ph"></i>')+'</div>';
   const F=(window.ASSETS&&window.ASSETS.faces)||{};
-  if(w==="sec")return box("sec",F.sec);
+  if(w==="sec")return box("sec",secretaryArt()||F.sec);
   if(w==="mgr")return box("mgr",F.mgr);
   const c=cardById(w);
   const art=c&&artKeyOf(c);

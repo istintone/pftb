@@ -626,6 +626,23 @@ const STEPS = [
     // 師弟の相談まで進まない(1節に出るイベントは1つ)
     await ctx.js("S.player.fame=0; S.career.chat=null; S.career.hand=null; S.career.comp=null;");
     // 師弟の相談(→docs/03 §3.39)。**打ち手のあと**に選手から話しかけてくる
+    // 秘書はクラブごと(→docs/06 §6.27)。**移れば替わる / 同じクラブなら同じ人**
+    ctx.log("  秘書の顔:", await ctx.js(`(()=>{
+      const A=(window.ASSETS&&window.ASSETS.secretary)||{};
+      const n=Object.keys(A).length;
+      if(!n)throw new Error('秘書の絵が埋め込まれていない');
+      const mine=secretaryArt();
+      if(!mine)throw new Error('秘書の絵が引けない');
+      if(secretaryArt()!==mine)throw new Error('同じクラブで顔が変わる');
+      // クラブが違えば全員が同じ顔にはならない
+      const seen=new Set(CLUBS.slice(0,40).map(c=>secretaryArt(c.id)));
+      if(seen.size<2)throw new Error('どのクラブでも同じ顔になる');
+      // チャットの丸に実際に出ている
+      const img=document.querySelector('#chatAv img');
+      if(!img)throw new Error('チャットの丸に絵が出ない');
+      if(img.getAttribute('src')!==mine)throw new Error('丸の絵がクラブの秘書と違う');
+      return n+'人から / 40クラブで'+seen.size+'種 / 同じクラブなら不変';
+    })()`));
     ctx.log("  師弟の相談:", await ctx.js(`(()=>{
       const id=S.squad[9];
       S.career.trust={}; S.career.mentor=[]; S.career.mentorSeen={};
