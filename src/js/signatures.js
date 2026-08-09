@@ -15,6 +15,8 @@
 // 直したので、**型の違いがそのまま持ち味になる**(速い / 強い / 巧い)。
 //
 // 札は4枚(LEGENDS)。いまは**既存の札から選ぶ**だけで、固有スキルはまだ持たせていない。
+// subs[0] がプライマリ。**複数の枠をこなす選手は、そのぶん編成の自由が利く**
+// (枠適性が下がらないので、陣形を変えても置き場所が残る →§3.16)。
 // nat … NATIONS に無い国籍の表示名(チェコなど)。書けばそのまま出る。
 const SIGNATURES=[
   // ---------- GK ----------
@@ -47,7 +49,7 @@ const SIGNATURES=[
     id:"zanetti", art:"le_rsb01_zanetti", rarity:"LEG",
     name:"J. サネッティ", short:"サネッティ",
     club:"ミラノ・ネラッズーリ", nation:"arg",
-    pos:"DF", subs:["RSB","CMF"], age:29,
+    pos:"DF", subs:["RSB","LSB","DMF","CMF"], age:29,
     atk:8, def:18, pow:14, tec:14, spd:16, sta:20,               // 90
     skills:["対人守備","厳しい寄せ","推進力","鉄人"],
   },
@@ -56,7 +58,7 @@ const SIGNATURES=[
     id:"matthaus", art:"le_dmf01_matthaus", rarity:"LEG",
     name:"L. マテウス", short:"マテウス",
     club:"ミュンヘン・レーヴェン", nation:"ger",
-    pos:"MF", subs:["DMF","CB"], age:29,
+    pos:"MF", subs:["DMF","CMF","CB"], age:29,
     atk:12, def:17, pow:16, tec:15, spd:13, sta:16,              // 89
     skills:["ボール奪取","ロングシュート","展開力","キャプテンシー"],
   },
@@ -64,7 +66,7 @@ const SIGNATURES=[
     id:"schweinsteiger", art:"le_cmf01_schweinsteiger", rarity:"LEG",
     name:"B. シュヴァインシュタイガー", short:"シュヴァイニー",
     club:"ミュンヘン・レーヴェン", nation:"ger",
-    pos:"MF", subs:["CMF","DMF"], age:28,
+    pos:"MF", subs:["CMF","DMF","LMF","RMF"], age:28,
     atk:11, def:16, pow:15, tec:18, spd:12, sta:17,              // 89
     skills:["キープ力","展開力","運動量","ムードメーカー"],
   },

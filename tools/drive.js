@@ -1749,6 +1749,23 @@ const STEPS = [
         ctx.log("  実在選手:", await ctx.js("document.querySelector('#cardModalBody .cm-name').textContent"),
           "/ イラスト:", await ctx.js("!!document.querySelector('#cardModalBody .pc-img')"));
         await ctx.shot("09f-signature-detail");
+        // **枠をいちばん多く持つ選手**で詳細を確認する。得意ポジションの行は
+        // 増えるほど溢れやすいので、絵と札が揃うかを見ておく
+        ctx.log("  複数ポジション:", await ctx.js(`(()=>{
+          const list=signatureCards().slice().sort((a,b)=>b.subs.length-a.subs.length);
+          const c=list[0];
+          closeCard(); openCard(c);
+          const row=[...document.querySelectorAll('#cardModalBody .cm-facts div')]
+            .find(e=>e.textContent.indexOf('得意ポジション')===0);
+          if(!row)throw new Error('得意ポジションの行が無い');
+          if(row.scrollWidth>row.clientWidth+1)
+            throw new Error('得意ポジションが枠から溢れた: '+row.scrollWidth+'>'+row.clientWidth);
+          if(!document.querySelector('#cardModalBody .pc-img'))throw new Error('絵が出ない');
+          return c.name+' ['+c.subs.join('/')+'] / 札 '
+            +document.querySelectorAll('#cardModalBody .skill').length+'枚';
+        })()`));
+        await ctx.wait(200);
+        await ctx.shot("09g-signature-subs");
         await ctx.js("closeCard()");
         await ctx.wait(150);
         await ctx.js("goBack()");
