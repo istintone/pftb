@@ -296,8 +296,16 @@ function runSeason(hand) {
   {
     await E.newGame();
     const S8 = E.getS(); S8.coach = "検証"; E.startTenure("sam-8");
-    // 就任した時点で届く。**同じ連絡は二度来ない**
-    assert.ok(E.mailUnread() > 0, "就任すると連絡が届く");
+    // **条件を満たすまで届かない**。テストの連絡は初勝利がきっかけ
+    assert.strictEqual(E.mailUnread(), 0, "就任しただけでは届かない");
+    E.mailTick();
+    assert.strictEqual(S8.player.mail.length, 0, "条件が立つまで届かない");
+    S8.career.log.push({ node:1, res:"lose" });
+    E.mailTick();
+    assert.strictEqual(S8.player.mail.length, 0, "負けでは届かない");
+    S8.career.log.push({ node:2, res:"win" });
+    E.mailTick();
+    assert.ok(E.mailUnread() > 0, "初勝利で届く");
     const n0 = S8.player.mail.length;
     E.mailTick(); E.mailTick();
     assert.strictEqual(S8.player.mail.length, n0, "同じ連絡は二度届かない");
@@ -336,7 +344,7 @@ function runSeason(hand) {
     assert.strictEqual(over.rarity, "LEG", "全員そろっても引ける(自動生成に落ちる)");
     assert.ok(!over.sig, "そのときは手で作った選手ではない");
     S8.player.coll = [];
-    console.log("連絡と引換券OK 就任で届く ／ 受け取りは一度きり ／"
+    console.log("連絡と引換券OK 初勝利で届く ／ 受け取りは一度きり ／"
       + " 券でLEGENDS(手で作った12人から)");
   }
 

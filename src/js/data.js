@@ -1012,10 +1012,12 @@ const AWAKES=[
 const MAILS=[
   {
     id:"leTest", from:"sec", title:"LEGENDS の引換券",
-    text:"監督、上から預かりものです。LEGENDS の選手をひとり招ける券だそうですよ。"
-        +"スカウトの画面で使えます。……本当に来るんでしょうか、こんな人が。",
+    text:"監督、初勝利おめでとうございます。上から預かりものが届いていますよ。"
+        +"LEGENDS の選手をひとり招ける券だそうです。スカウトの画面で使えます。"
+        +"……本当に来るんでしょうか、こんな人が。",
     gift:{ ticket:"scoutLe" },
-    when:()=>true,                     // **テスト配布**。就任していれば届く
+    // **初勝利のあと**に届く。連絡は id で一度きりなので、キャリアを通して1回だけ
+    when:S=>(S.career.log||[]).some(e=>e.res==="win"),
   },
 ];
 const mailById=id=>MAILS.find(m=>m.id===id);

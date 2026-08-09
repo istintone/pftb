@@ -1331,8 +1331,14 @@ const STEPS = [
     // **HOME の秘書のひとことが受信箱の最新を映す**(→docs/03 §3.42)
     ctx.log("  未読の知らせ:", await ctx.js(`(()=>{
       S.player.mail=[]; S.player.tickets={};
+      // **きっかけが立つまで届かない**(→docs/03 §3.42)。テストの連絡は初勝利
+      const keep=S.career.log.slice();
+      S.career.log=keep.filter(e=>e.res!=='win');
       mailTick();
-      if(!mailUnread())throw new Error('連絡が届かない');
+      if(S.player.mail.length)throw new Error('勝つ前に届いている');
+      S.career.log=keep.concat([{ node:S.career.node, res:'win' }]);
+      mailTick();
+      if(!mailUnread())throw new Error('初勝利で届かない');
       show('home');
       const b=document.getElementById('homeSecGo');
       if(!b)throw new Error('秘書のひとことが押せない');
@@ -1341,7 +1347,7 @@ const STEPS = [
       const latest=mailById(mailLatest().id);
       if(b.textContent.indexOf(latest.text.slice(0,12))<0)
         throw new Error('最新の連絡を映していない');
-      return '未読 '+dot.textContent+' 件 ／ 「'+latest.title+'」';
+      return '未読 '+dot.textContent+' 件 ／ 「'+latest.title+'」（初勝利で到着）';
     })()`));
     await ctx.shot("20-home-mail");
     await ctx.js("document.getElementById('homeSecGo').click()");
