@@ -253,7 +253,9 @@ function noteOf(fx){
   const at=fx.at2||fx.at;
   const act=at==="origin"?"を仕掛け":at==="finish"?"を選び":"で守り";
   const body=what?(what+(fx.w?act+"、成功しやすい":"が成功しやすい")):"すべての判定に強い";
-  return solo?solo+"／"+body:body;
+  // **条件は先に言う**(→docs/03 §3.41)。いつ効くのかが分からないと使い道が読めない
+  const when=fx.when?("【"+(SK_WHEN_WHAT[fx.when]||fx.when)+"】"):"";
+  return when+(solo?solo+"／"+body:body);
 }
 
 /**

@@ -30,7 +30,7 @@ function skillsOf(card){
     for(const e of (fx.fx||[fx])){
       // **名前を残す**。畳んだ時点で捨てていたので、何が効いたのかを画面に出せなかった
       if(e.grp)ch.push({ name, at:e.at2||e.at, grp:e.grp, w:e.w||1, s:e.s||1,
-        move:fx.move||null });
+        move:fx.move||null, when:e.when||null });
       if(e.k!=null)k[e.at]=(k[e.at]||1)*e.k;
     }
   }
@@ -40,12 +40,13 @@ function skillsOf(card){
  * その場面で**実際に発動した札の名前**(→docs/06 §6.26)。カットインに出す。
  * 倍率が1のものは数えない(持っているだけで効いていない札を光らせないため)。
  */
-function skFired(p,at,ch){
+function skFired(p,at,ch,min){
   const f=p&&p.sk; if(!f||!ch)return null;
   let out=null;
   for(const x of f.ch){
     if(x.at!==at&&x.at!=="both")continue;
     if(x.w===1&&x.s===1)continue;
+    if(!skOn(x,p,min))continue;                 // 条件が立っていない札は光らせない
     if(!SK_GRP[x.grp](ch))continue;
     if(!out)out=[];
     if(!out.includes(x.name))out.push(x.name);
@@ -53,26 +54,28 @@ function skFired(p,at,ch){
   return out;
 }
 /** 発動した固有スキルの**技名**。あればチャンネルの呼び名を差し替える(→§3.41)。 */
-function skMove(p,at,ch){
+function skMove(p,at,ch,min){
   const f=p&&p.sk; if(!f||!ch)return null;
   for(const x of f.ch)
-    if((x.at===at||x.at==="both")&&x.move&&SK_GRP[x.grp](ch))return x.move;
+    if((x.at===at||x.at==="both")&&x.move&&skOn(x,p,min)&&SK_GRP[x.grp](ch))return x.move;
   return null;
 }
 /** 札を引く重みの倍率。at は "origin" / "counter" / "finish"。 */
-function skW(p,at,ch){
+/** 条件付きの成分が**いま立っているか**(→docs/03 §3.41)。条件が無ければ常に真。 */
+const skOn=(x,p,min)=>!x.when||(SK_WHEN[x.when]?SK_WHEN[x.when](p,min):false);
+function skW(p,at,ch,min){
   const f=p.sk; if(!f||!ch)return 1;
   let m=1;
   for(const x of f.ch)
-    if((x.at===at||x.at==="both")&&x.w!==1&&SK_GRP[x.grp](ch))m*=x.w;
+    if((x.at===at||x.at==="both")&&x.w!==1&&skOn(x,p,min)&&SK_GRP[x.grp](ch))m*=x.w;
   return m;
 }
 /** 判定スコアの倍率。 */
-function skS(p,at,ch){
+function skS(p,at,ch,min){
   const f=p.sk; if(!f||!ch)return 1;
   let m=1;
   for(const x of f.ch)
-    if((x.at===at||x.at==="both")&&x.s!==1&&SK_GRP[x.grp](ch))m*=x.s;
+    if((x.at===at||x.at==="both")&&x.s!==1&&skOn(x,p,min)&&SK_GRP[x.grp](ch))m*=x.s;
   return m;
 }
 /** 札を持たない掛かり先(GK・空中戦・スタミナなど)。 */
@@ -289,10 +292,10 @@ function resolveBlock(rng,atk,df,D,fin,h,x){
  * 終点チャンネルを選ぶ。**その選手が得意な手ほど選ばれやすい**。
  * minH を持つ手(ヘディング・流し込み)は、近くまで入っていないと選べない。
  */
-function pickFinish(rng,p,h){
+function pickFinish(rng,p,h,min){
   const all=FINISHES[p.sub]||FINISHES[p.role==="GK"?"GK":"CMF"]||FINISHES.CMF;
   const list=all.filter(f=>f.minH==null||h>=f.minH);
-  return pickW(rng,list.length?list:all,f=>eff(p,f.stat)*skW(p,"finish",f));
+  return pickW(rng,list.length?list:all,f=>eff(p,f.stat)*skW(p,"finish",f,min));
 }
 /** 攻撃側のシュートスコア。**atk が幹、チャンネルの能力が枝**(起点と同じ形)。 */
 function finishScore(atk,fin){
@@ -317,11 +320,11 @@ function onTarget(rng,atk,gk,h,fin){
  * それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.10)。
  * 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
  */
-function resolveShot(rng,atk,gk,h,fin,pso){
+function resolveShot(rng,atk,gk,h,fin,pso,min){
   const S=TUNING.shot;
   const pk=fin.id==="pk";
   const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)
-    *skS(atk,"finish",fin)*(pk?skK(atk,"pkKick"):1)*rr(rng);
+    *skS(atk,"finish",fin,min)*(pk?skK(atk,"pkKick"):1)*rr(rng);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)
     *skK(gk,"gk")*skS(gk,"gkFin",fin)*(pk?skK(gk,"pkGk"):1)
     // **PK戦のときだけ**効く札(→docs/03 §3.41)。試合中のPKには掛からない
@@ -565,7 +568,7 @@ function laneW(T,p){
  * 起点のチャンネルを選ぶ。**その選手のサブポジが持つ3種**から、
  * 得意な能力のものほど選ばれやすい(→docs/07 §7.7)。
  */
-function pickOriginCh(rng,p,lastCh,stray){
+function pickOriginCh(rng,p,lastCh,stray,min){
   const C=TUNING.chain;
   const list=ORIGINS[p.sub]||ORIGINS.CMF;
   const away=stray||0;                                       // 自分の枠からの離れ具合(0..1)
@@ -577,7 +580,7 @@ function pickOriginCh(rng,p,lastCh,stray){
     if(ch.kind==="carry")w*=Math.max(C.strayFloor,1-away/C.strayFull);
     else if(ch.kind==="pass")w*=1+away*C.strayPass;
     if(lastCh&&ch.id===lastCh)w*=C.repeatW;                  // 同じ札の連発を避ける
-    return w*skW(p,"origin",ch);
+    return w*skW(p,"origin",ch,min);
   });
 }
 /**
@@ -652,14 +655,14 @@ function coverOf(D,h,x){
  * これが無いと守備側は「相手が選んだ能力に付き合うだけの数字」になり、
  * 何をして止めたのかが残らない(実況にも采配にも使えない)。
  */
-function pickCounterCh(rng,p){
+function pickCounterCh(rng,p,min){
   const list=COUNTERS[p.sub]||COUNTERS[p.role==="GK"?"GK":"CMF"]||COUNTERS.CMF;
   // **警告を受けた選手は慎重になる**。反則になりやすい手ほど選ばなくなるので、
   // 2枚目の退場が減り、そのぶん守備も緩む。カードが戦力に効く経路がここ。
   // 累乗にするのは、線形だと「少し避ける」程度にしかならないため。
   // 一度警告を受けた選手は、荒い手をはっきり選ばなくなる。
   const shy=p.cards?TUNING.sp.bookedShy:0;
-  return pickW(rng,list,ch=>eff(p,ch.stat)*(shy?Math.pow(1-ch.foul,shy):1)*skW(p,"counter",ch));
+  return pickW(rng,list,ch=>eff(p,ch.stat)*(shy?Math.pow(1-ch.foul,shy):1)*skW(p,"counter",ch,min));
 }
 /**
  * チャンネルが成立するか。**攻撃側スコア > 守備側スコア × 閾値**(→docs/07 §7.4)。
@@ -668,15 +671,15 @@ function pickCounterCh(rng,p){
  *   守備側 … def を主軸に、**自分が選んだ守備チャンネルの能力**を副次で足す。
  *            思い切った手ほど強い(k)が、そのぶん反則になりやすい(foul)。
  */
-function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX,bk){
+function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX,bk,min){
   const M=TUNING.matchup;
   // **連携はパス系にだけ効く**(→docs/03 §3.31)。渡す相手が決まっている手だから
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
-    *ch.risk*TUNING.atk.originK*skS(atk,"origin",ch)*(bk||1)*rr(rng);
+    *ch.risk*TUNING.atk.originK*skS(atk,"origin",ch,min)*(bk||1)*rr(rng);
   // **一発(long)はGKの飛び出しで摘まれる**。マーカーではなくGKが持つスキル
   const gkStop=ch.to!=null?skK(pickGK(D),"longStop"):1;
   const dSc=(eff(df,"def")*M.defW+eff(df,dch.stat)*(1-M.defW))
-    *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*skS(df,"counter",dch)/gkStop*rr(rng);
+    *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*skS(df,"counter",dch,min)/gkStop*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }
 
@@ -917,22 +920,23 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
   let lastCh=null, carryRun=0;                              // 同じ選手が連続で運んだ回数
   while(true){
     const stray=strayOf(carrier,h,x);
-    const ch=pickOriginCh(rng,carrier,lastCh,stray);
+    const ch=pickOriginCh(rng,carrier,lastCh,stray,min);
     const marker=matchupDefender(rng,h,x,D);                // 対応する相手(位置が近いほど)
     // **守備側も自分の手を選ぶ**(→docs/07 §7.12)。選んだ手が強さと反則率の両方を決める
-    const dch=marker?pickCounterCh(rng,marker):null;
+    const dch=marker?pickCounterCh(rng,marker,min):null;
     carrier.stat.inv++; if(marker)marker.stat.inv++;
     // **パスは渡す相手を先に決める**(→docs/03 §3.31)。誰に出すかが決まらないと
     // 連携が判定に乗らない。撃つかどうかの判断だけは、収めたあとに回す(→§7.9)
     const tg=ballTarget(rng,h,x,ch);
     const recv=ch.kind==="pass"?receiverAt(rng,T,tg,carrier,min):null;
-    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x,bondK(carrier,recv)):true;
+    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x,bondK(carrier,recv),min):true;
     carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
       by:carrier.c.id, sub:carrier.sub, ch:ch.id, kind:ch.kind,
       // **技名があれば呼び名を差し替える**(→docs/03 §3.41)
-      label:skMove(carrier,"origin",ch)||ch.label,
-      sk:skFired(carrier,"origin",ch), dsk:marker?skFired(marker,"counter",dch):null,
+      label:skMove(carrier,"origin",ch,min)||ch.label,
+      sk:skFired(carrier,"origin",ch,min),
+      dsk:marker?skFired(marker,"counter",dch,min):null,
       ok, vs:marker?marker.c.id:null, run:carryRun,
       dch:dch?dch.id:null, dlabel:dch?dch.label:null, dsub:marker?marker.sub:null,
       stray:Math.round(stray*100)/100,
@@ -1005,11 +1009,11 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
   const pos=[Math.round(tg.x),yOfH(tg.h)];
   const d=depth||0, A=att||{ sp:0 };
   // **どう撃つか**をここで1回だけ引く。以降の3段はすべてこの札を見る(→docs/07 §7.13)
-  const fin=sp?SET_FINISH[sp]:pickFinish(rng,shooter,tg.h);
+  const fin=sp?SET_FINISH[sp]:pickFinish(rng,shooter,tg.h,min);
   const base={ side:T.side, by:shooter.c.id, pos, h:Math.round(tg.h*100)/100, depth:d,
     sp:sp||null, fin:fin.id,
-    flabel:skMove(shooter,"finish",fin)||fin.label,
-    sk:skFired(shooter,"finish",fin) };
+    flabel:skMove(shooter,"finish",fin,min)||fin.label,
+    sk:skFired(shooter,"finish",fin,min) };
   shooter.stat.shots++;
   const more=A.sp<SP.maxSp;                                  // まだセットプレーを重ねてよいか
 
@@ -1037,7 +1041,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
   gk.stat.inv++;
 
   // ③ GK
-  if(resolveShot(rng,shooter,gk,tg.h,fin)){
+  if(resolveShot(rng,shooter,gk,tg.h,fin,false,min)){
     T.score++; shooter.stat.goals++;
     if(assist)assist.stat.assists++;
     addMom(M,T.side,F.goal);

@@ -258,19 +258,33 @@ const SKILL_FX={
     fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"finish", grp:"far", s:1.08 }] },
   "不屈の心臓":     { sig:"schweinsteiger",
     fx:[{ at:"comeback", k:1.35 },{ at:"stam", k:0.85 }] },
+  // **終盤だけ跳ねる**。絞られるぶん s は「いつでも効く札」の上限の外に置く
   "疾風の推進":     { sig:"nedved", move:"止まらない推進",
-    fx:[{ at:"origin", grp:"carry", w:1.55, s:1.04 },{ at:"stam", k:0.82 }] },
+    fx:[{ at:"origin", grp:"carry", w:1.55, s:1.23, when:"late" },{ at:"stam", k:0.82 }] },
   "マエストロ":     { sig:"zidane", move:"マエストロの一差し",
     fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"recv", k:1.35 }] },
   "精密機械":       { sig:"beckham", move:"ベンドイット",
     fx:[{ at:"origin", grp:"cross", s:1.13 },{ at:"spDeliver", k:1.15 }] },
+  // **脚が残っているあいだだけ**。前半に仕掛けさせる札
   "魔法の足":       { sig:"ronaldinho", move:"エラシコ",
-    fx:[{ at:"origin", grp:"cut", w:1.85, s:1.08 },{ at:"mood", k:1.06 }] },
+    fx:[{ at:"origin", grp:"cut", w:1.85, s:1.36, when:"fresh" },{ at:"mood", k:1.06 }] },
   "無回転の弾道":   { sig:"ronaldo", move:"無回転ミドル",
     fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"origin", grp:"spd", s:1.07 }] },
-  "オフサイドの掟": { sig:"inzaghi", move:"一瞬の抜け出し",
+  "本能":           { sig:"inzaghi", move:"一瞬の抜け出し",
     fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"recv", k:1.30 }] },
 };
+/**
+ * 固有スキルの発動条件(→docs/03 §3.41)。**文脈が分からなければ発動しない**
+ * (安全側に倒す)。条件付きの成分は、絞られるぶんだけ効果を大きく置いてある。
+ */
+const SK_WHEN={
+  late: (p,min)=>min!=null&&min>=TUNING.skillCond.late,
+  fresh:(p)=>!!p&&p.stam!=null&&p.stam>=TUNING.skillCond.fresh,
+};
+// **実際に立つ割合**(実測 200試合・14,880件の起点/連鎖)。
+// テストがこれを掛けて「絞られたぶん強い」を検算する。条件を足したら測り直す。
+const SK_WHEN_SHARE={ late:0.256, fresh:0.337 };
+const SK_WHEN_WHAT={ late:"残り15分だけ", fresh:"脚が残っているあいだだけ" };
 /** 固有スキル(持ち主つき)。**抽選プールには入らない**ので skillPool は触らない。 */
 const SKILLS_SIG=Object.keys(SKILL_FX).filter(n=>SKILL_FX[n].sig);
 const sigSkillOf=id=>SKILLS_SIG.find(n=>SKILL_FX[n].sig===id)||null;
@@ -1202,6 +1216,10 @@ const TUNING={
   //   coin       … 段ごとの賞金。streak は段ごとの連勝数
   //   fameFail   … 課題を落としたときに引かれる名声。**名声が減る唯一の経路**
   //   least … 任期の残りがこれ未満なら相談が来ない(罰の無い契約を作らない)
+  // 固有スキルの発動条件(→docs/03 §3.41)
+  //   late  … この分以降(90分+ロスタイムなので、およそ残り15分)
+  //   fresh … スタミナがこの割合以上
+  skillCond:{ late:75, fresh:0.70 },
   spon:{ term:24, pick:3, great:0.34, fail:0.12, least:12,
          coin:[6000,14000,30000,60000],
          streak:[3,4,5,6],

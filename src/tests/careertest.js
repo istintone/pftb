@@ -609,15 +609,27 @@ function runSeason() {
       // set(セットプレー専用)は FINISHES から引かれないので、この物差しに乗らない
       if (!p) { assert.strictEqual(fx.grp, "set", name + " のグループが層に無い: " + fx.grp); continue; }
       const W = fx.w || 1, fire = fireOf(p, W);
-      const val = fire * (fx.s - 1);
+      // **条件付きの成分は、立つ割合を掛けてから比べる**(→docs/03 §3.41)。
+      // 絞られるぶん強く置いてあるので、生の値で見ると必ず帯から外れる
+      const when = fx.when ? E.SK_WHEN_SHARE[fx.when] : 1;
+      assert.ok(when, name + " の条件 " + fx.when + " に立つ割合が無い");
+      const val = fire * (fx.s - 1) * when;
       const tgt = V[layer === "gkFin" ? "finish" : layer];
       assert.ok(tgt, layer + " の目標価値が無い");
-      assert.ok(Math.abs(val - tgt) <= tgt * V.band,
-        name + " の価値が目標から外れている: " + (val * 1000).toFixed(1)
-        + " (目標 " + (tgt * 1000).toFixed(1) + " ±" + (V.band * 100) + "%)");
-      (vals[layer === "gkFin" ? "finish" : layer] = vals[layer === "gkFin" ? "finish" : layer] || []).push(val);
-      // w を持つ札は s が小さい(w が発動率を押し上げているぶん)
-      if (fx.w) assert.ok(fx.s <= 1.13, name + " は w を持つので s は控えめ: " + fx.s);
+      if (fx.when) {
+        // **条件付きは 1.2〜1.8枚ぶん**。絞られる代わりに、立った場面では効く
+        assert.ok(val >= tgt * 1.2 && val <= tgt * 1.8,
+          name + " の条件付きの価値が範囲外: " + (val / tgt).toFixed(2)
+          + "枚ぶん (1.2〜1.8)");
+      } else {
+        assert.ok(Math.abs(val - tgt) <= tgt * V.band,
+          name + " の価値が目標から外れている: " + (val * 1000).toFixed(1)
+          + " (目標 " + (tgt * 1000).toFixed(1) + " ±" + (V.band * 100) + "%)");
+        (vals[layer === "gkFin" ? "finish" : layer] = vals[layer === "gkFin" ? "finish" : layer] || []).push(val);
+      }
+      // w を持つ札は s が小さい(w が発動率を押し上げているぶん)。
+      // **条件付きは対象外** — この上限は「いつでも効く札」のための決まり
+      if (fx.w && !fx.when) assert.ok(fx.s <= 1.13, name + " は w を持つので s は控えめ: " + fx.s);
       sigSum += val / tgt;
       }
       // **2枚ぶんまで**。成分1つずつは帯の中(±30%)なので、上振れの余地を見て 2.2 に置く
@@ -660,6 +672,32 @@ function runSeason() {
       assert.ok(own.length <= 1, c.name + " が固有スキルを2枚持っている: " + own);
       for (const n of own) assert.strictEqual(E.SKILL_FX[n].sig, c.sig,
         c.name + " が他人の固有スキル " + n + " を持っている");
+    }
+    // **条件付きは、条件が立っていないと本当に効かない**(→docs/03 §3.41)
+    {
+      const mk = (skills, stam) => { const p = { sub:"LMF", role:"MF", fit:1, stam,
+        c:{ atk:14, def:14, pow:14, tec:14, spd:14, sta:14, skills } };
+        p.sk = E.skillsOf(p.c); return p; };
+      const carry = E.ORIGINS.LMF.find(c => c.kind === "carry");
+      const late = E.TUNING.skillCond.late;
+      const n = mk(["疾風の推進"], 1);
+      assert.strictEqual(E.skS(n, "origin", carry, late - 10), 1, "残り15分の前は効かない");
+      assert.ok(E.skS(n, "origin", carry, late) > 1, "残り15分に入ると効く");
+      assert.strictEqual(E.skS(n, "origin", carry), 1, "分が分からなければ効かない");
+      // 発動の帯にも出ない/出る
+      assert.strictEqual(E.skFired(n, "origin", carry, late - 10), null, "前は帯に出ない");
+      assert.ok((E.skFired(n, "origin", carry, late) || []).includes("疾風の推進"), "帯に出る");
+      assert.strictEqual(E.skMove(n, "origin", carry, late - 10), null, "前は技名も出ない");
+      assert.ok(E.skMove(n, "origin", carry, late), "技名が出る");
+
+      const cut = E.ORIGINS.LWG.find(c => c.lane === "in");
+      const r = mk(["魔法の足"], 1), tired = mk(["魔法の足"], 0.5);
+      const rr = { ...r, sub:"LWG" }; rr.sk = r.sk;
+      const tt = { ...tired, sub:"LWG" }; tt.sk = tired.sk;
+      assert.ok(E.skS(rr, "origin", cut, 10) > 1, "脚が残っていれば効く");
+      assert.strictEqual(E.skS(tt, "origin", cut, 10), 1, "脚が落ちたら効かない");
+      console.log("  条件付きOK 疾風の推進=" + late + "分以降 ／ 魔法の足=スタミナ"
+        + Math.round(E.TUNING.skillCond.fresh * 100) + "%以上");
     }
     // プールの全スキルに効果が定義されている(名前だけの飾りを残さない)
     for (const [pos, list] of Object.entries(E.SKILLS))

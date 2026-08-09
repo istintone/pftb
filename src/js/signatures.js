@@ -119,7 +119,7 @@ const SIGNATURES=[
     club:"ミラノ・ロッソネリ", nation:"ita",
     pos:"FW", subs:["ST","CF"], age:28,
     atk:20, def:4, pow:13, tec:14, spd:17, sta:14,               // 82
-    skills:["オフサイドの掟","オフザボール","詰めの速さ","決定力"],
+    skills:["本能","オフザボール","詰めの速さ","決定力"],
   },
 ];
 const signatureById=id=>SIGNATURES.find(s=>s.id===id);

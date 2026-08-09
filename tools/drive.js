@@ -1946,6 +1946,10 @@ const STEPS = [
         if(Object.keys(owner).length!==sig.length)
           throw new Error('持ち主の居ない固有スキルがある: '+sig.filter(n=>!owner[n]));
         // 詳細では金縁になる
+        // 条件付きの札は**いつ効くのか**を先に言う(→docs/03 §3.41)
+        const nd=signatureCards().find(x=>x.sig==='nedved');
+        const ndNote=skillNote(nd.skills[0]);
+        if(ndNote.indexOf('【')!==0)throw new Error('条件が先頭に出ない: '+ndNote);
         const c=signatureCards().find(x=>x.sig==='zidane');
         closeCard(); openCard(c);
         const gold=[...document.querySelectorAll('#cardModalBody .skill.sig')]
@@ -1954,7 +1958,8 @@ const STEPS = [
         const note=skillNote(gold[0]);
         if(note.indexOf('／')<0)throw new Error('複数の効果が説明に出ない: '+note);
         closeCard();
-        return sig.length+'種 / '+c.name+' = '+gold[0]+' 「'+note+'」';
+        return sig.length+'種 / '+c.name+' = '+gold[0]+' 「'+note+'」'
+          +' ／ 条件付き: '+nd.skills[0]+' 「'+ndNote+'」';
       })()`));
       await ctx.js("closeCard()");
       await ctx.wait(150);
