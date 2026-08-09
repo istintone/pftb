@@ -356,10 +356,12 @@ const STEPS = [
         +' / 積まれた行 '+document.querySelectorAll('#psoRows .pso-r').length;
     })()`));
     await ctx.shot("07o2-pso-cutin");
-    // 本数は毎回変わる(サドンデスもある)ので、**出そろうまで待つ**
-    // 1本あたり psoMs+psoHold+psoGap ≒ 2.3秒。サドンデスで16本まで伸びると
-    // 40回(28秒)では足りず、途中で数えて落ちる。**最長の試合に合わせて待つ**
-    for (let i = 0; i < 90; i++) {
+    // 本数は毎回変わる(サドンデスもある)ので、**出そろうまで待つ**。
+    // 1本あたり psoMs+psoHold+psoGap ≒ 2.3秒。固定の回数だと、伸びた試合で
+    // 途中で数えて落ちる(16本→28秒不足、30本→63秒不足を実際に踏んだ)。
+    // **本数から必要な待ちを出す**
+    const psoN = await ctx.js("window.__psoWait||0");
+    for (let i = 0, lim = Math.max(60, psoN * 5); i < lim; i++) {
       // 決着の帯が出るのは**最後の1本のさらに次のコマ**なので、そこまで待つ
       const done = await ctx.js("!!document.getElementById('psoSum').textContent.trim()");
       if (done) break;
@@ -1325,6 +1327,72 @@ const STEPS = [
     await ctx.wait(900);
     await ctx.shot("21b-scout-pro");
   }],
+  ["秘書の連絡 → LEの引換券 → スカウト", async ctx => {
+    // **HOME の秘書のひとことが受信箱の最新を映す**(→docs/03 §3.42)
+    ctx.log("  未読の知らせ:", await ctx.js(`(()=>{
+      S.player.mail=[]; S.player.tickets={};
+      mailTick();
+      if(!mailUnread())throw new Error('連絡が届かない');
+      show('home');
+      const b=document.getElementById('homeSecGo');
+      if(!b)throw new Error('秘書のひとことが押せない');
+      const dot=b.querySelector('.sec-dot');
+      if(!dot)throw new Error('未読の印が出ない');
+      const latest=mailById(mailLatest().id);
+      if(b.textContent.indexOf(latest.text.slice(0,12))<0)
+        throw new Error('最新の連絡を映していない');
+      return '未読 '+dot.textContent+' 件 ／ 「'+latest.title+'」';
+    })()`));
+    await ctx.shot("20-home-mail");
+    await ctx.js("document.getElementById('homeSecGo').click()");
+    await ctx.wait(400);
+    ctx.log("  受信箱:", await ctx.js(`(()=>{
+      const now=(document.querySelector('.screen.on')||{}).id;
+      if(now!=='scr-secretary')throw new Error('受信箱に来ない: '+now);
+      const rows=document.querySelectorAll('#mailLog .ch-b');
+      if(!rows.length)throw new Error('連絡が並ばない');
+      if(!document.querySelector('#mailLog [data-mail]'))throw new Error('受け取るボタンが無い');
+      return rows.length+'件 / 受け取り前';
+    })()`));
+    await ctx.shot("20b-inbox");
+    ctx.log("  受け取り:", await ctx.js(`(()=>{
+      document.querySelector('#mailLog [data-mail]').click();
+      return '券 '+ticketCount('scoutLe')+'枚 / 未読 '+mailUnread()+'件';
+    })()`));
+    await ctx.wait(400);
+    ctx.log("  既読と重複:", await ctx.js(`(()=>{
+      if(ticketCount('scoutLe')!==1)throw new Error('券が1枚でない: '+ticketCount('scoutLe'));
+      if(document.querySelector('#mailLog [data-mail]'))throw new Error('二度受け取れる');
+      if(mailUnread())throw new Error('開いても既読にならない');
+      mailTick();
+      if(S.player.mail.length!==1)throw new Error('同じ連絡が二度届く: '+S.player.mail.length);
+      show('home');
+      if(document.querySelector('#homeSecGo .sec-dot'))throw new Error('未読の印が消えない');
+      return '受け取りは一度きり / 同じ連絡は二度来ない / HOMEの印も消える';
+    })()`));
+    await ctx.shot("20c-inbox-done");
+    await ctx.js("show('gacha')");
+    await ctx.wait(300);
+    await ctx.shot("20c2-scout-ticket");     // 使う前(券が一番上に並ぶ)
+    ctx.log("  LE確定スカウト:", await ctx.js(`(()=>{
+      const row=document.querySelector('#scoutList [data-ticket]');
+      if(!row)throw new Error('引換券が並ばない');
+      const coin0=S.club.coins, n0=S.player.coll.length;
+      row.click();
+      if(S.club.coins!==coin0)throw new Error('コインが減っている');
+      if(S.player.coll.length!==n0+1)throw new Error('カードが増えない');
+      const c=S.player.coll[S.player.coll.length-1];
+      if(c.rarity!=='LEG')throw new Error('LEGENDS が出ない: '+c.rarity);
+      if(!c.sig)throw new Error('手で作った選手ではない: '+c.name);
+      if(ticketCount('scoutLe'))throw new Error('券が減っていない');
+      if(document.querySelector('#scoutList [data-ticket]'))throw new Error('使い切った券が残る');
+      return c.name+'（'+c.subs.join('/')+'・OVR'+c.ovr+'）／ 固有 '
+        +c.skills.filter(n=>SKILL_FX[n]&&SKILL_FX[n].sig).join(',');
+    })()`));
+    await ctx.wait(400);
+    await ctx.shot("20d-scout-le");
+  }],
+
   ["タブ巡回", async ctx => {
     for (const [tab, name] of [["cards", "09-cards"], ["deck", "10-deck"], ["season", "11-season"], ["clubhouse", "12-club"]]) {
       await ctx.js(`document.querySelector('#tabs button[data-s="${tab}"]').click()`);
@@ -1803,7 +1871,9 @@ const STEPS = [
         await ctx.wait(250);
         // 絵の引き当て(→docs/03 §3.19)。段×ポジションのプールから、IDで決まる
         ctx.log("  絵の引き当て:", await ctx.js(`(()=>{
-          const cs=availableCards();
+          // **実在選手は手で絵を指定している**(→docs/03 §3.19)ので、
+          // 自動の引き当ての検査からは外す(キーの形が違う)
+          const cs=availableCards().filter(c=>!c.sig);
           const gk=cs.find(c=>c.pos==='GK'), fp=cs.find(c=>c.pos!=='GK');
           const key=c=>artKeyOf(c);
           if(gk&&!/^(any|std|reg|spe)-gk-/.test(key(gk)))

@@ -416,6 +416,7 @@ function startTenure(clubId){
   S.career.opened=false;
   S.career.tenureDone=false;
   S.player.history.push({ season:S.world.season, clubId, div:S.world.div, result:"在任" });
+  mailTick();                                             // 就任した時点の連絡(→§3.42)
 }
 
 /**
@@ -762,6 +763,58 @@ function trainAdd(id,k,n){
   return r.exp[k];
 }
 
+// ---------- 秘書からの連絡(→docs/03 §3.42) ----------
+// **クラブチャットとは別のチャット**。1節の判断ではなく、溜まっていく連絡を扱う。
+// 配布物とチュートリアルの入口で、HOME の秘書のひとことがその最新を映す。
+const mailAll=()=>S.player.mail||(S.player.mail=[]);
+const mailHas=id=>mailAll().some(m=>m.id===id);
+const mailUnread=()=>mailAll().filter(m=>!m.read).length;
+/** 新しい順。**画面も HOME のひとこともこの並びを見る**。 */
+const mailList=()=>mailAll().slice().sort((a,b)=>(b.at||0)-(a.at||0));
+const mailLatest=()=>mailList()[0]||null;
+/** 届く条件を見て、まだ届いていない連絡を入れる。**同じ連絡は一度きり**。 */
+function mailTick(){
+  if(!S.club)return 0;
+  let n=0;
+  for(const m of MAILS){
+    if(mailHas(m.id))continue;
+    if(m.when&&!m.when(S))continue;
+    mailAll().push({ id:m.id, at:S.career.node, read:false, got:false });
+    n++;
+  }
+  return n;
+}
+const mailRead=id=>{ const m=mailAll().find(x=>x.id===id); if(m)m.read=true; return !!m; };
+/** 添えられた引換券を受け取る。**一度きり**。 */
+function mailTake(id){
+  const m=mailAll().find(x=>x.id===id), def=mailById(id);
+  if(!m||!def||!def.gift||m.got)return null;
+  m.got=true; m.read=true;
+  if(def.gift.ticket)ticketAdd(def.gift.ticket,1);
+  return def.gift;
+}
+// --- 引換券(→docs/03 §3.42) ---
+const ticketsOf=()=>S.player.tickets||(S.player.tickets={});
+const ticketCount=id=>ticketsOf()[id]||0;
+const ticketTotal=()=>Object.values(ticketsOf()).reduce((a,b)=>a+b,0);
+const ticketAdd=(id,n)=>ticketsOf()[id]=ticketCount(id)+(n||1);
+function ticketUse(id){
+  if(ticketCount(id)<=0)return false;
+  ticketsOf()[id]--;
+  if(!ticketsOf()[id])delete ticketsOf()[id];
+  return true;
+}
+/**
+ * LEGENDS を1枚引く(→docs/03 §3.42)。**手で作った12人から、まだ持っていない人**。
+ * 全員そろっていたら、段だけ名指しした自動生成に落とす(引けない状態を作らない)。
+ */
+function drawLegend(rng){
+  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+  const pool=signatureCards().filter(c=>c.rarity==="LEG"&&!mine.has(c.sig));
+  if(pool.length)return pool[Math.floor(rng()*pool.length)];
+  return makeCard(rng,rpick(rng,POS),{ rarity:"LEG" });
+}
+
 // ---------- スポンサー(→docs/03 §3.40) ----------
 // **クラブを支える企業と契約する**。契約は24節前後で、任期のあいだに何度か入れ替わる。
 // 価値は2つ: 期限つきの課題(達成で大きな報酬)と、契約中だけ使える4つ目の打ち手。
@@ -880,9 +933,10 @@ function sponPay(pos){
     return { kind:"coin", coin:v };
   }
   // **段を名指しして1枚引く**(→docs/03 §3.26 のプロスカウトと同じ作り)
-  const rar=P.kind==="scoutLe"?"LEG":P.kind==="scoutWc"?"WC"
-    :(rng()<T.wcInPos?"WC":"SPE");
-  const card=makeCard(rng,pos||rpick(rng,POS),{ rarity:rar });
+  // **LEGENDS は手で作った12人から**(→docs/03 §3.42)。自動生成に落とすのは全員そろってから
+  const card=P.kind==="scoutLe"?drawLegend(rng)
+    :makeCard(rng,pos||rpick(rng,POS),
+      { rarity:P.kind==="scoutWc"?"WC":(rng()<T.wcInPos?"WC":"SPE") });
   S.player.coll.push(card);
   return { kind:P.kind, card };
 }
@@ -1638,6 +1692,7 @@ function playCupDay(done){
  */
 function advanceNode(){
   sponTick();                                             // 契約の満了(→§3.40)
+  mailTick();                                             // 秘書からの連絡(→§3.42)
   const C=S.career, c=C.cup;
   // 敗退したあとも大会は進む。**その節の回戦を裏で確定させる**(表を見に行けば分かる)
   if(c&&!c.done){

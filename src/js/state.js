@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=26;
+const SAVE_VER=27;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -17,7 +17,11 @@ function defaultState(){
     form:DEFAULT_FORM,              // 使用フォーメーション
     player:{
       fame:0,                       // 名声 = 次にどのクラブへ行けるか(→§3.9)
-      tickets:0,                    // チケット(報酬券)。コインを使わずパックを引ける
+      // 引換券(→docs/03 §3.42)。{ "<種類>": 枚数 }。コインを使わずに引ける
+      tickets:{},
+      // 秘書からの連絡(→docs/03 §3.42)。**溜まっていく**。クラブチャットとは別物
+      // [{ id, at, read, got }] … at=届いた節 / got=受け取り済み
+      mail:[],
       coll:[],                      // 集めた選手カード = プレイヤーの資産(→§3.2.2)
       tactics:[],                   // 習得した采配(→§3.7)
       trophies:[],                  // 獲得トロフィー(→§3.9)
@@ -285,6 +289,12 @@ function migrate(){
   }
   if(S.v<25&&S.player&&S.player.legacy===undefined)S.player.legacy=null;
   // v25 → v26: スポンサー(→docs/03 §3.40)
+  // v26 → v27: 秘書からの連絡と引換券(→docs/03 §3.42)。
+  // 券は数だけの数値だったが、種類ごとに持てるようにした(使い道が無かったので捨てる)
+  if(S.v<27&&S.player){
+    if(typeof S.player.tickets!=="object"||!S.player.tickets)S.player.tickets={};
+    if(!S.player.mail)S.player.mail=[];
+  }
   if(S.v<26){
     if(S.club&&S.club.sponsor===undefined)S.club.sponsor=null;
     if(S.career&&S.career.streak==null)S.career.streak=0;

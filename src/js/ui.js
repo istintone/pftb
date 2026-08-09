@@ -31,7 +31,7 @@ const SCREENS={
   foe:       { title:"OPPONENT",  under:"season",  chrome:"back", render:()=>renderFoe() },
   gallery:   { title:"GALLERY",   under:"clubhouse", chrome:"back", render:()=>renderGallery() },
   gacha:     { title:"SCOUT",     under:"home",    chrome:"back", render:()=>renderScout() },
-  secretary: { title:"SECRETARY", under:"home",    chrome:"back" },
+  secretary: { title:"SECRETARY", under:"home",    chrome:"back", render:()=>renderMail() },
   match:     { title:"MATCH",     chrome:"bare" },
   result:    { title:"RESULT",    chrome:"bare",   render:()=>renderResult() },
   career:    { title:"CAREER",    chrome:"bare",   render:()=>renderCareerEnd() },
@@ -337,8 +337,15 @@ function renderHome(){
     +'</div>';
     $("nxTile").onclick=()=>show("season");
   }
-  // 秘書: 次に何をすればよいかを示す(ナラティブ誘導)
-  $("homeSec").innerHTML='<div class="bubble">'+esc(secretaryLine())+'</div>';
+  // 秘書: **連絡が来ていればその最新**、無ければ次の一手の案内(→docs/03 §3.42)。
+  // どちらでもタップで受信箱へ行けるようにして、入口を1つにする
+  const mm=mailLatest(), un=mailUnread();
+  const def=mm?mailById(mm.id):null;
+  $("homeSec").innerHTML='<div class="bubble sec-go'+(un?" unread":"")+'" id="homeSecGo">'
+    +(un?'<i class="sec-dot">'+un+'</i>':"")
+    +esc(def?def.text:secretaryLine())
+    +(def?'<span class="sec-more">受信箱を開く ›</span>':"")+'</div>';
+  $("homeSecGo").onclick=()=>show("secretary",{push:1});
   // CLUB NEWS: クラブの今(一時的なコンディションの表示でもある)
   $("homeNews").innerHTML=clubNews().map(n=>'<div class="news">'+n+'</div>').join("");
 }
@@ -377,6 +384,39 @@ function secretaryLine(){
   const r=rankOf(S.world.table,S.club.id);
   if(r<=S.club.expect)return "現在"+r+"位。期待を上回っています、この調子で。";
   return "現在"+r+"位。オーナーの目標は"+S.club.expect+"位です。巻き返しましょう。";
+}
+/**
+ * 秘書からの連絡(→docs/03 §3.42)。**クラブチャットと同じ吹き出し**で並べる。
+ * 開いた時点で既読にする(未読の印は HOME にだけ残す意味が無い)。
+ */
+function renderMail(){
+  const list=mailList();
+  $("mailAv").innerHTML=chatAvatar("sec","ch-av-in");
+  $("mailSub").textContent=list.length?list.length+"件の連絡":"連絡はありません";
+  $("mailLog").innerHTML=list.length?list.map(m=>{
+    const d=mailById(m.id); if(!d)return "";
+    const gift=d.gift&&d.gift.ticket?ticketById(d.gift.ticket):null;
+    return '<div class="ch-row"><div class="ch-b ml-b">'
+      +'<span class="ch-nm">秘書　第'+m.at+'節'+(m.read?"":'　<i class="ml-new">NEW</i>')+'</span>'
+      +esc(d.text)
+      +(gift?'<div class="ml-gift">'
+        +'<b>'+esc(gift.name)+'</b>'
+        +(m.got?'<span class="ml-done">受け取り済み</span>'
+          :'<button class="btn ml-take" data-mail="'+esc(m.id)+'">受け取る</button>')
+        +'</div>':"")
+    +'</div></div>';
+  }).join(""):'<div class="lg">まだ何も届いていません。</div>';
+  $("mailLog").querySelectorAll("[data-mail]").forEach(el=>{
+    el.onclick=async()=>{
+      const g=mailTake(el.dataset.mail);
+      if(!g)return;
+      await save(); headUI(); renderMail();
+      toast(ticketById(g.ticket).name+" を受け取りました");
+    };
+  });
+  // 開いたら既読。**HOME の未読の印はここで消える**
+  list.forEach(m=>mailRead(m.id));
+  save();
 }
 /**
  * 次戦タイルの下に出すスポンサーの看板(→docs/06 §6.25)。
@@ -1041,7 +1081,17 @@ const shortName=c=>c.sur||c.name.split(" ").slice(-1)[0];
 let _scoutGot=null;                    // 直前に引いたカード(画面を出し直しても残す)
 function renderScout(){
   $("scoutCoins").innerHTML="所持コイン <b class=\"num\">"+fmtNum(S.club?S.club.coins:0)+"</b>";
-  $("scoutList").innerHTML=TUNING.scout.map((pk,i)=>{
+  // **引換券はコインの上に置く**(→docs/03 §3.42)。持っているときだけ出る
+  const tk=Object.keys(ticketsOf()).filter(id=>ticketById(id)).map(id=>{
+    const t=ticketById(id);
+    return '<div class="sc-row tk">'
+      +'<div class="sc-b"><div class="sc-nm">'+esc(t.name)
+        +'　<i class="sc-n">×'+ticketCount(id)+'</i></div>'
+        +'<div class="sc-de">'+esc(t.note)+'</div></div>'
+      +'<button class="btn sc-buy" data-ticket="'+esc(id)+'">使う</button>'
+    +'</div>';
+  }).join("");
+  $("scoutList").innerHTML=tk+TUNING.scout.map((pk,i)=>{
     const can=S.club&&S.club.coins>=pk.cost;
     return '<div class="sc-row'+(i?" hi":"")+'">'
       +'<div class="sc-b"><div class="sc-nm">'+esc(pk.name)
@@ -1054,6 +1104,9 @@ function renderScout(){
   $("scoutList").querySelectorAll("[data-pack]").forEach(el=>{
     el.onclick=()=>buyScout(el.dataset.pack);
   });
+  $("scoutList").querySelectorAll("[data-ticket]").forEach(el=>{
+    el.onclick=()=>useTicket(el.dataset.ticket);
+  });
   drawScoutGot();
 }
 function drawScoutGot(){
@@ -1061,6 +1114,19 @@ function drawScoutGot(){
   $("scoutOpen").querySelectorAll("[data-card]").forEach((el,i)=>{
     el.onclick=()=>openCard(_scoutGot[i]);
   });
+}
+/**
+ * 引換券を使う(→docs/03 §3.42)。**コインは減らない**。
+ * LEGENDS の券は、手で作った12人からまだ持っていない選手を招く。
+ */
+function useTicket(id){
+  const t=ticketById(id); if(!t||!ticketUse(id))return;
+  const rng=mulberry32((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0);
+  const card=id==="scoutLe"?drawLegend(rng):openScout(t,rng,1)[0];
+  _scoutGot=[card];
+  S.player.coll.push(card);
+  save(); headUI(); renderScout();
+  toast(RARITY[card.rarity].label+"　"+shortName(card)+" が加入しました");
 }
 function buyScout(id){
   const pk=TUNING.scout.find(x=>x.id===id); if(!pk||!S.club)return;
@@ -1931,7 +1997,7 @@ function renderStandings(){
 function renderClubhouse(){
   $("clubMgrName").textContent=S.coach||"監督";
   $("clubFame").textContent=fmtNum(S.player.fame);
-  $("clubTickets").textContent=S.player.tickets;
+  $("clubTickets").textContent=ticketTotal();
   const h=S.player.history;
   $("clubHistory").innerHTML=h.length?h.slice().reverse().map(x=>
     '<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'

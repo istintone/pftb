@@ -292,6 +292,54 @@ function runSeason(hand) {
     C.cup = null;
   }
 
+  // ---------- 秘書からの連絡と引換券(→docs/03 §3.42) ----------
+  {
+    await E.newGame();
+    const S8 = E.getS(); S8.coach = "検証"; E.startTenure("sam-8");
+    // 就任した時点で届く。**同じ連絡は二度来ない**
+    assert.ok(E.mailUnread() > 0, "就任すると連絡が届く");
+    const n0 = S8.player.mail.length;
+    E.mailTick(); E.mailTick();
+    assert.strictEqual(S8.player.mail.length, n0, "同じ連絡は二度届かない");
+
+    const m = E.mailLatest();
+    assert.ok(m, "最新の連絡が取れる");
+    const def = E.mailById(m.id);
+    assert.ok(def && def.gift && def.gift.ticket, "テストの連絡には引換券が付く");
+
+    // --- 受け取りは一度きり。券が増える ---
+    assert.strictEqual(E.ticketCount(def.gift.ticket), 0, "受け取る前は0枚");
+    assert.ok(E.mailTake(m.id), "受け取れる");
+    assert.strictEqual(E.ticketCount(def.gift.ticket), 1, "券が1枚入る");
+    assert.strictEqual(E.mailTake(m.id), null, "二度は受け取れない");
+    assert.strictEqual(E.ticketCount(def.gift.ticket), 1, "枚数も増えない");
+    assert.strictEqual(E.mailUnread(), 0, "受け取ると既読になる");
+
+    // --- 券を使うと LEGENDS が1枚。**手で作った選手から**出る ---
+    const coin0 = S8.club.coins, coll0 = S8.player.coll.length;
+    const rng = E.mulberry32(7);
+    const got = E.drawLegend(rng);
+    assert.strictEqual(got.rarity, "LEG", "LEGENDS が出る");
+    assert.ok(got.sig, "手で作った選手から出る: " + got.name);
+    assert.ok(E.ticketUse(def.gift.ticket), "券を使える");
+    assert.strictEqual(E.ticketCount(def.gift.ticket), 0, "券が減る");
+    assert.strictEqual(E.ticketUse(def.gift.ticket), false, "無い券は使えない");
+    assert.strictEqual(S8.club.coins, coin0, "コインは減らない");
+
+    // --- 持っている選手は出ない(全員そろうまで重複しない) ---
+    S8.player.coll = E.signatureCards().filter(c => c.rarity === "LEG").slice(0, 11);
+    const rest = E.drawLegend(E.mulberry32(3));
+    assert.ok(rest.sig, "残り1人が出る: " + rest.name);
+    assert.ok(!S8.player.coll.some(c => c.sig === rest.sig), "持っていない選手が出る");
+    S8.player.coll = E.signatureCards().filter(c => c.rarity === "LEG");
+    const over = E.drawLegend(E.mulberry32(3));
+    assert.strictEqual(over.rarity, "LEG", "全員そろっても引ける(自動生成に落ちる)");
+    assert.ok(!over.sig, "そのときは手で作った選手ではない");
+    S8.player.coll = [];
+    console.log("連絡と引換券OK 就任で届く ／ 受け取りは一度きり ／"
+      + " 券でLEGENDS(手で作った12人から)");
+  }
+
   // ---------- スポンサー(→docs/03 §3.40) ----------
   {
     await E.newGame();

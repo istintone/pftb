@@ -1307,6 +1307,38 @@ body{
   color:var(--accent-hi); border-color:var(--accent);
   background:linear-gradient(135deg, oklch(0.30 0.06 85), oklch(0.24 0.04 80));
 }
+/* 秘書のひとこと(→docs/03 §3.42)。**押せる**ので、その手掛かりを添える */
+.sec-go{ position:relative; cursor:pointer }
+.sec-go.unread{ border-color:var(--accent-dim) }
+.sec-dot{
+  position:absolute; top:-7px; right:-6px; min-width:18px; height:18px; padding:0 5px;
+  display:flex; align-items:center; justify-content:center; font-style:normal;
+  font:700 10px/1 var(--f-head); color:var(--surface); background:var(--accent);
+  border-radius:999px; box-shadow:0 0 10px oklch(0.75 0.15 85 / .55);
+}
+.sec-more{ display:block; margin-top:6px; font-size:10px; color:var(--accent) }
+/* 受信箱(→docs/03 §3.42)。吹き出しはクラブチャットと同じ形 */
+/* **クラブチャットと同じ色の組**を使う。変数を1つでも落とすと文字が消える
+   (見出しの「秘書」が地に沈んで見えなくなった) */
+#scr-secretary{
+  --ch-bg:oklch(0.938 0.026 91);
+  --ch-ink:oklch(0.30 0.02 80);
+  --ch-ink2:oklch(0.50 0.02 80);
+  --ch-line:oklch(0.860 0.022 90);
+  min-height:100%; background:var(--ch-bg); color:var(--ch-ink);
+}
+#scr-secretary .ch-b{ max-width:100% }
+.ml-new{ font-style:normal; color:var(--accent-hi); letter-spacing:1px }
+.ml-gift{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-top:10px; padding-top:10px; border-top:1px solid var(--line);
+}
+.ml-gift b{ font:600 12px/1.4 var(--f-head); color:var(--accent-hi) }
+.ml-take{ width:auto; padding:9px 16px; flex:none }
+.ml-done{ font-size:10px; color:var(--text-dim) }
+/* 引換券の枠(→docs/03 §3.42)。コインで買う枠と見分けが付くよう金で縁取る */
+.sc-row.tk{ border-color:var(--accent); background:oklch(0.24 0.04 85) }
+.sc-row.tk .sc-n{ font-style:normal; color:var(--accent-hi) }
 /* 師弟の印(→docs/03 §3.39)。カード詳細の「信頼」欄に出る */
 .cm-mt{ font-style:normal; color:var(--accent-hi); letter-spacing:1px }
 .tr-sum{ font:600 12px/1 var(--f-head); color:var(--text-2); letter-spacing:1px }
