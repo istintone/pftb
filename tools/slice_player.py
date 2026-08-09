@@ -21,7 +21,11 @@ try:
 except ImportError:
     sys.exit("Pillow が必要です: pip install Pillow")
 
+# シートは**3コマ**。切り出しの幅計算はこの数で決まるので、減らしてはいけない。
 CELLS = ["stand", "play", "goal"]     # ①立ち絵 ②プレイ絵 ③ゴールモーション
+# **書き出すのは2コマだけ**(2026-08-09)。③ゴールモーションは使い道が無く、
+# 単一HTMLに埋め込むぶんだけ重くなる。使う場面ができたらここに足せば戻る。
+KEEP = ["stand", "play"]
 OUT_W, OUT_H = 420, 500               # 1枚あたりの出力サイズ(依頼書と同じ)
 BG_TH = 238                           # これ以上明るい画素を背景候補とみなす
 
@@ -176,6 +180,8 @@ def main():
     print("入力: %s  %dx%d  → 1セル %dx%d" % (src.name, W, H, cw, H))
 
     for i, name in enumerate(CELLS):
+        if name not in KEEP:
+            continue
         cell = sheet.crop((i * cw, 0, (i + 1) * cw, H))
         cell = keyout_white(cell)
         if "--keep-pockets" not in sys.argv:

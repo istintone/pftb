@@ -23,6 +23,10 @@
 いま置いてある汎用の絵は段を選ばないので `any/gk` と `any/out` に入っている。
 段やポジション専用の絵を足したくなったら、その名前のフォルダへ入れるだけでよい。
 
+シートは**3コマ**だが、**書き出すのは ①立ち絵 と ②プレイ絵 の2コマだけ**。
+③ゴールモーションは使い道が無く、単一HTMLに埋め込むぶんだけ重くなる
+(使う場面ができたら slice_player.py の KEEP に足せば戻る)。
+
 書き出し名はそのまま**引き当てのキー**になる。
 
     players/any-gk-e5bde2_play.webp     ← 汎用(どの段でも / GK)
@@ -39,7 +43,7 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from slice_player import (CELLS, OUT_W, OUT_H, keyout_white, keyout_pockets,
+from slice_player import (CELLS, KEEP, OUT_W, OUT_H, keyout_white, keyout_pockets,
                           content_box, defringe, resize_rgba)
 
 try:
@@ -119,7 +123,7 @@ def main():
             continue
         alive[sheet_path.relative_to(ART).parts[0]].add(pid)
         dst = out_dir(sheet_path)
-        paths = [dst / ("%s_%s.webp" % (pid, n)) for n in CELLS]
+        paths = [dst / ("%s_%s.webp" % (pid, n)) for n in KEEP]
         if all(p.exists() for p in paths) and not force:
             kept += 1
             total += sum(p.stat().st_size for p in paths)
@@ -137,6 +141,8 @@ def main():
         inset = max(2, int(cw * 0.014))
         sizes = []
         for i, name in enumerate(CELLS):
+            if name not in KEEP:
+                continue                      # 使わないコマは書き出さない
             cell = keyout_white(sheet.crop((i * cw + inset, 0, (i + 1) * cw - inset, H)))
             cell, _ = keyout_pockets(cell)
             if not content_box(cell):
@@ -154,8 +160,10 @@ def main():
 
     # 素材が消えた / 別のフォルダへ移ったときに、古い書き出しが残ると
     # プールに幽霊が混ざる。--prune で掃除する。
+    # **使わなくなったコマも掃除する**。素材は生きているので ID では引っ掛からない
     stale = sorted(p for g in GROUPS for p in OUT[g].glob("*.webp")
-                   if p.stem.rsplit("_", 1)[0] not in alive[g])
+                   if p.stem.rsplit("_", 1)[0] not in alive[g]
+                   or p.stem.rsplit("_", 1)[1] not in KEEP)
     if stale:
         if "--prune" in sys.argv and not dry:
             for p in stale:

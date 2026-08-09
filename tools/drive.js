@@ -2480,7 +2480,9 @@ const STEPS = [
       S.career.over=true;
       show('career');
       const t=document.getElementById('endBody').textContent;
-      if(t.indexOf(name.split(' ').pop())<0)
+      // **名前の切り出しを自前でやらない**。日本の選手は姓が先なので、
+      // 空白で切って後ろを取ると名(諒)を探してしまい、姓(小早川)と一致しない
+      if(t.indexOf(shortName(cardById(id)))<0)
         throw new Error('連れていく選手が出ない: '+name);
       return name+' ★'+trainStar(id)+' を連れて任期満了';
     })()`));
