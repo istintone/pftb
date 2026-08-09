@@ -243,10 +243,19 @@ function makeCard(rng,pos,opts={}){
 // カードに art を持たせない(=セーブに残さない)のも要点。描画のたびに引き直すので、
 // **絵を足すとその場で手持ちの選手にも新しい絵が回る**。誰がどれになるかは変わるが、
 // カードの中身は変わらないので、これは意図した挙動(→§3.19)。
+/**
+ * 絵の在処(→docs/03 §3.19)。**自動生成の汎用は players、手で足した実在選手は sig**。
+ * 書き出し先を分けているのは、手で足した1枚が60枚の自動生成に埋もれないため。
+ */
+const artOf=key=>{
+  const W=(typeof window!=="undefined"&&window.ASSETS)||{};
+  return (W.sig&&W.sig[key])||(W.players&&W.players[key])||null;
+};
 const _artPool={};
 function artPool(rar,pos){
   const key=rar+":"+pos;
   if(_artPool[key])return _artPool[key];
+  // **汎用のプールは players だけ**。実在選手が抽選で回ってきてはいけない
   const A=(typeof window!=="undefined"&&window.ASSETS&&window.ASSETS.players)||{};
   const all=Object.keys(A).filter(k=>k.endsWith("_play")).map(k=>k.slice(0,-5));
   const r=(rar||"").toLowerCase(), p=(pos||"").toLowerCase();
@@ -274,8 +283,7 @@ function commonArt(c){
 }
 /** そのカードが実際に使う絵。**手で指定した絵(署名カード)が最優先**。 */
 function artKeyOf(c){
-  const A=(typeof window!=="undefined"&&window.ASSETS&&window.ASSETS.players)||{};
-  if(c.art&&A[c.art+"_play"])return c.art;   // 素材が消えていたら汎用へ落とす
+  if(c.art&&artOf(c.art+"_play"))return c.art;   // 素材が消えていたら汎用へ落とす
   return commonArt(c);
 }
 /** プライマリのサブポジション(表示の既定)。 */

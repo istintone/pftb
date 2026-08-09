@@ -274,7 +274,7 @@ function gradeWord(c){
  */
 function playerArt(c,kind){
   const art=artKeyOf(c);
-  const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_"+(kind||"play")];
+  const src=art&&artOf(art+"_"+(kind||"play"));
   return src?'<img class="pc-img" src="'+src+'" alt="">'
             :'<span class="pc-ph">PLAYER</span>';
 }
@@ -723,7 +723,7 @@ function openCard(x,opts){
     +'<div class="pcard cm-card '+rarClass(c)+'"'+cardBgStyle(c)+'>'+cardFace(c)+'</div>'
     +'<div class="cm-b">'
       +'<div class="cm-name">'+esc(c.name)+'</div>'
-      +'<div class="cm-sub">'+c.pos+' · '+esc(c.club||"—")+' · '+esc(nation?nation.name:c.nation)
+      +'<div class="cm-sub">'+c.pos+' · '+esc(c.club||"—")+' · '+esc(nation?nation.name:(c.nat||c.nation))
         // **体つき**(→docs/03 §3.27)。素の重みの選手には何も付かない
         +(c.body?' · <b class="cm-body">'+esc(c.body)+'</b>':'')+'</div>'
       +'<div class="cm-facts">'
@@ -790,7 +790,7 @@ function kitStyle(c){
 /** プレー絵(→docs/03 §3.19)。無ければ null。 */
 const playArt=c=>{
   const art=c&&artKeyOf(c);
-  return (art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_play"])||null;
+  return (art&&artOf(art+"_play"))||null;
 };
 /**
  * 編成画面に置く選手の姿(→docs/06 §6.15)。**丸の代わりに立ち絵**を出す。
@@ -1719,7 +1719,7 @@ function chatAvatar(w,cls){
   if(w==="mgr")return box("mgr",F.mgr);
   const c=cardById(w);
   const art=c&&artKeyOf(c);
-  return box("pl",art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_stand"]);
+  return box("pl",art&&artOf(art+"_stand"));
 }
 function renderChat(){
   const C=S.career;
@@ -2158,7 +2158,7 @@ function mDrawSquads(){
       // 足元の影をチームカラーにして、どちらのチームかを影で見分ける。
       const art=artKeyOf(p.c);
       // **立ち絵ではなくプレイ絵**。棒立ちが22人並ぶと試合が止まって見える
-      const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_play"];
+      const src=art&&artOf(art+"_play");
       html.push('<div class="mp" data-side="'+T.side+'" data-ix="'+i+'"'
         +' data-rx="'+p.x+'" data-ry="'+p.y+'"'          // 陣形そのままの座標(写像前)
         +' data-x="'+x+'" data-y="'+y+'" data-ph="'+((i*2.4+(T.side==="A"?1.1:0))%6.28).toFixed(2)+'"'
@@ -2359,7 +2359,7 @@ function mBallShot(e,delay){
 /** カットインに出す選手の顔。イラストがあれば使い、無ければクラブカラーの丸にOVR。 */
 function cutAvatar(p,side){
   const art=artKeyOf(p.c);
-  const src=art&&(window.ASSETS&&window.ASSETS.players||{})[art+"_play"];
+  const src=art&&artOf(art+"_play");
   const col=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
   return '<div class="cut-av" style="--kit:'+col+'">'
     +(src?'<img src="'+src+'" alt="">':p.c.ovr)+'</div>';

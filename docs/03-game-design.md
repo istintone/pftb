@@ -916,6 +916,32 @@ WORLD CLASS / LEGENDS は実在の人物をモチーフにする。本作は Git
 > なお、これで外せるのは商標の問題であって、**人物の肖像そのものは変わらない**。
 > 公開範囲を広げるときは改めて判断すること。
 
+#### いま入っている LEGENDS(2026-08-09)
+
+**12人**。GK1 / DF3 / MF5 / FW3 で、11人の枠がひととおり埋まる並びにしてある。
+
+| 枠 | 選手 | OVR | 尖り |
+|---|---|---|---|
+| GK | ブッフォン | 84 | DEF20 POW18 |
+| CB | ベッケンバウアー | 89 | DEF20 TEC18 |
+| LSB | R. カルロス | 89 | **SPD20** POW18 |
+| RSB | サネッティ | 90 | **STA20** DEF18 |
+| DMF | マテウス | 89 | DEF17 POW16 |
+| CMF | シュヴァインシュタイガー | 89 | TEC18 STA17 |
+| LMF | ネドヴェド | 90 | STA17 SPD16 |
+| OMF | ジダン | 85 | **TEC20** |
+| RMF | ベッカム | 85 | TEC19 |
+| LWG | ロナウジーニョ | 82 | **TEC20** |
+| RWG | C. ロナウド | 88 | ATK18 SPD19 |
+| ST | インザーギ | 82 | **ATK20** |
+
+- **C. ロナウドは WORLD CLASS から昇格**した。同じ絵が LEGENDS の素材として届いたので、
+  同じ人物を2枚に分けず LEGENDS に寄せた。いま WORLD CLASS の実在選手は**0人**
+  (`art/signature/wc/` は空のまま置いてある)
+- 札は**既存のものから4枚ずつ**。固有スキルはまだ持たせていない(→§5.2)
+- **ユニフォームの商標は未処理**。上の表のとおり実在のスポンサー名やエンブレムが
+  残っている絵がある。公開範囲を広げる前に描き直すこと
+
 #### どこに置くか
 
 実在選手カードは自動生成の経路に混ぜず、**`src/js/signatures.js` の `SIGNATURES` に手で書く**。
@@ -925,7 +951,7 @@ WORLD CLASS / LEGENDS は実在の人物をモチーフにする。本作は Git
 | もの | 置き場所 |
 |---|---|
 | カードの定義 | `src/js/signatures.js` の `SIGNATURES`(`art` がイラストのキー) |
-| イラスト | `src/assets/players/<art>_stand|play|goal.webp` |
+| イラスト | `src/assets/sig/<art>_stand|play|goal.webp`(素材は `src/assets/art/signature/`) |
 | 取り出し | `signatureCards()` → 通常のカードと同じ形。ID は 8,000,000 番台 |
 
 イラストは **3枚セットのシートを `python tools/slice_player.py <シート> <art>` で切り出す**
@@ -1161,12 +1187,18 @@ card-eleven には **`KEYPOS`**(陣形ごとに「その形の特徴を担う枠
 **少数の汎用の絵を使い回す**。
 
 ```
-src/assets/players/
-  commons/<レアリティ>/<ポジション>/*.png    ← 3枚組シート(立ち絵/プレイ絵/ゴール)を置くだけ
-  signature/<レアリティ>/<ポジション>/*.png  ← WORLD CLASS / LEGENDS
+src/assets/art/                              ← **素材**。埋め込まれない(build.py の ASSET_SKIP)
+  commons/<レアリティ>/<ポジション>/*.png      3枚組シート(立ち絵/プレイ絵/ゴール)を置くだけ
+  signature/<レアリティ>/<ポジション>/*.png    WORLD CLASS / LEGENDS(手で1人ずつ)
        ↓ python tools/slice_commons.py
-src/assets/players/any-out-045a04_play.webp …
+src/assets/players/any-out-045a04_play.webp  ← 汎用の書き出し(自動生成)
+src/assets/sig/le_omf01_zidane_play.webp     ← 実在選手の書き出し(自動生成)
 ```
+
+> **素材と書き出しを混ぜない**(2026-08-09 に分けた)。以前は素材も書き出しも
+> `players/` に同居していて、**手で足した1枚が60枚の自動生成に埋もれた**。
+> いまは素材が `art/`、書き出しが `players/`(汎用)と `sig/`(実在選手)に分かれる。
+> **どちらの書き出しフォルダも手で触らない**(`slice_commons.py --prune` が掃除する)。
 
 | | 値 | 意味 |
 |---|---|---|
@@ -2081,7 +2113,8 @@ DIV1 の相手は WORLD CLASS が主体(→§3.25)なので、そこへ挑むに
 
 - **WORLD CLASS 専用の絵が無い**。いまは汎用プール(`any-out` / `any-gk`)から
   引いているので、地の色(虹のホロ)以外は STANDARD と同じ見た目になる。
-  `src/assets/players/commons/wc/<ポジション>/` に素材を置けば自動で振り分く
+  `src/assets/art/commons/wc/<ポジション>/` に素材を置けば自動で振り分く
+  (`art/signature/wc/` に1人ずつ描いて置くこともできる。フォルダは用意済み)
 - プレミア DIV1 の WORLD CLASS は OVR 106〜117 で、**上限120に張り付きかけている**。
   能力の伸びしろが無いので、段をさらに足すなら OVR の設計から見直す必要がある
 

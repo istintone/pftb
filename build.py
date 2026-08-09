@@ -58,7 +58,8 @@ def _join(dirpath, names):
 # 実行時アセットではないディレクトリ(埋め込むと index.html が肥大化する)
 #   design … デザインモックと参照画像。人が見るためのもの
 #   fonts  … @font-face として別途注入する(_font_block)
-ASSET_SKIP = {"design", "fonts"}
+# art … 素材(3枚組シート)。切り出す前の絵なので埋め込まない(→docs/03 §3.19)
+ASSET_SKIP = {"design", "fonts", "art"}
 
 
 def _asset_block():
