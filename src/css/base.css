@@ -219,49 +219,60 @@ body{
   filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff)
          drop-shadow(0 0 1.5px #fff) drop-shadow(0 3px 6px oklch(0 0 0 / .55));
 }
-/* 文字を読ませるための覆い。**中央ほど濃く**して、端はステッカーを見せる */
+/* 文字を読ませるための覆い。**中央ほど濃く**して、端はステッカーを見せる。
+   題字と打ち手が明るい札になったぶん(→§6.33)、覆いは薄くして壁を見せる */
 .t-scrim{
   position:absolute; inset:0; pointer-events:none;
   background:radial-gradient(ellipse 86% 52% at 50% 45%,
-    oklch(0.09 0.015 255 / .97) 0%, oklch(0.09 0.015 255 / .90) 38%,
-    oklch(0.09 0.015 255 / .58) 68%, oklch(0.09 0.015 255 / .20) 100%);
+    oklch(0.09 0.015 255 / .74) 0%, oklch(0.09 0.015 255 / .66) 38%,
+    oklch(0.09 0.015 255 / .42) 68%, oklch(0.09 0.015 255 / .14) 100%);
 }
 /* 題字は**貼り紙**として置く。壁の上に文字を直に置くと、どれだけ覆いを濃くしても
-   ステッカーの線と喧嘩して読めない(実際に読めなくなった)。 */
+   ステッカーの線と喧嘩して読めない(実際に読めなくなった)。
+   **札そのものを明るいクリームにする**(→§6.33)。暗い札だと、壁に穴が開いたように
+   見えて画面がしぼむ。白フチを回すと壁のステッカーと同じ「貼ってある」形になる。 */
 .t-plate{
-  z-index:1; position:relative; padding:16px 26px 14px; border-radius:4px;
-  background:oklch(0.13 0.02 255 / .92);
-  border:1px solid oklch(0.40 0.07 85 / .55);
-  box-shadow:0 10px 30px oklch(0 0 0 / .6), 0 0 0 6px oklch(0.09 0.015 255 / .55);
+  z-index:1; position:relative; padding:17px 28px 15px; border-radius:5px;
+  background:linear-gradient(180deg, oklch(0.97 0.02 88), oklch(0.92 0.035 82));
+  border:none;
+  box-shadow:0 0 0 7px oklch(0.99 0.005 90), 0 12px 30px oklch(0 0 0 / .55);
   transform:rotate(-1.4deg);
 }
 .t-name{
   z-index:1; text-align:center;
-  font:700 40px/1.1 var(--f-head); letter-spacing:1px; color:oklch(0.98 0.01 90);
-  /* 壁の上に乗るので、**滲みではなく縁**で立たせる */
-  text-shadow:0 2px 0 oklch(0 0 0 / .55), 0 0 26px oklch(0.60 0.14 85 / .45);
+  font:700 40px/1.1 var(--f-head); letter-spacing:1px; color:oklch(0.24 0.03 255);
+  /* 明るい札の上なので、**縁も影も要らない**。色の差だけで立つ */
 }
-.t-name span{ color:var(--accent) }
-.t-sub{ z-index:1; margin-top:8px; font:10px/1 var(--f-mono); letter-spacing:5px; color:var(--text-dim) }
+.t-name span{ color:oklch(0.60 0.17 58) }
+.t-sub{ z-index:1; margin-top:8px; font:10px/1 var(--f-mono); letter-spacing:5px;
+  color:oklch(0.48 0.03 80) }
+/* 打ち手も**明るい札**にする。細い金の線に薄い字だと、壁の前では消えてしまう */
 .t-start{
-  z-index:1; margin-top:14px; padding:10px 26px; border-radius:24px;
-  border:1px solid var(--accent-dim); color:var(--accent-hi);
-  font:400 12px/1 var(--f-head); letter-spacing:2px;
-  animation:tpulse 2s ease-in-out infinite;
+  z-index:1; margin-top:18px; padding:12px 30px; border-radius:24px;
+  background:var(--accent); border:none; color:oklch(0.20 0.03 80);
+  box-shadow:0 0 0 4px oklch(0.99 0.005 90 / .92), 0 8px 20px oklch(0 0 0 / .45);
+  font:600 12px/1 var(--f-head); letter-spacing:2px;
+  animation:tpulse 2.2s ease-in-out infinite;
 }
-.t-menu{ z-index:1; display:flex; flex-direction:column; gap:10px; width:236px; margin-top:10px }
+.t-menu{ z-index:1; display:flex; flex-direction:column; gap:12px; width:236px; margin-top:16px }
 .t-btn{
   width:100%; padding:13px 0; cursor:pointer; border-radius:24px;
-  background:var(--accent); border:1px solid var(--accent); color:var(--surface);
+  background:var(--accent); border:none; color:oklch(0.20 0.03 80);
+  box-shadow:0 0 0 4px oklch(0.99 0.005 90 / .92), 0 8px 20px oklch(0 0 0 / .45);
   font:600 12px/1 var(--f-head); letter-spacing:2px;
 }
-.t-btn.ghost{ background:transparent; border-color:var(--accent-dim); color:var(--accent-hi); font-weight:400 }
+.t-btn.ghost{ background:oklch(0.96 0.02 88); color:oklch(0.26 0.03 255) }
 .t-btn:active{ transform:translateY(1px) }
 .t-foot{ position:absolute; bottom:14px; left:50%; transform:translateX(-50%); z-index:1;
   padding:5px 12px; border-radius:999px;
-  background:oklch(0.09 0.015 255 / .82);
-  font:9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-mute); white-space:nowrap }
-@keyframes tpulse{ 0%,100%{opacity:.55} 50%{opacity:1} }
+  background:oklch(0.09 0.015 255 / .88);
+  font:9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-dim); white-space:nowrap }
+/* **明るさは落とさない**。薄くする脈動は「暗い」と読まれるので、光の輪だけを呼吸させる */
+@keyframes tpulse{
+  0%,100%{ box-shadow:0 0 0 4px oklch(0.99 0.005 90 / .92), 0 8px 20px oklch(0 0 0 / .45) }
+  50%{ box-shadow:0 0 0 4px oklch(0.99 0.005 90 / .92), 0 8px 20px oklch(0 0 0 / .45),
+       0 0 26px 6px oklch(0.85 0.15 85 / .45) }
+}
 
 /* =========================================================================
    就任契約書 — 暗い画面の中に「紙の書類」を置く。
