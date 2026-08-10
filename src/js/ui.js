@@ -838,7 +838,8 @@ function bioOf(c){
 // ---------- DECK(編成) ----------
 /** 選手の地色と枠色。地 = クラブカラー / 枠 = レアリティ(→docs/06 §6.15)。 */
 function kitStyle(c){
-  return ' style="--kit:'+clubColor(S.club?S.club.id:"")+';--rar:var(--rar-'
+  return ' style="--kit:'+clubColor(S.club?S.club.id:"")
+    +';--kit-ink:'+clubInk(S.club?S.club.id:"")+';--rar:var(--rar-'
     +c.rarity.toLowerCase()+')"';
 }
 /** プレー絵(→docs/03 §3.19)。無ければ null。 */
@@ -1974,10 +1975,19 @@ function cupInfoBox(cup,c){
 SCREENS.season.after=()=>setTimeout(scrollToCurrent,30);
 /** クラブごとの識別色(モックの丸いクラブカラーに相当)。
  *  ハッシュの剰余だと色相が固まって数色しか出ないので、CLUBS の並び順から
- *  黄金角(137.5°)で回して均等に散らす。 */
+ *  黄金角(137.5°)で回して均等に散らす。
+ *
+ *  **明るく・鮮やかに**(→docs/06 §6.28)。暗い盤面の上に暗い丸を置くと
+ *  クラブの見分けが付かなかったので、パステル寄りのネオンに寄せてある。
+ *  **文字を載せる丸は clubInk() を使う**(白では読めなくなる)。 */
+const CLUB_L=0.80, CLUB_C=0.17;
+const clubHue=clubId=>((CLUBS.findIndex(c=>c.id===clubId)*137.5+20)%360).toFixed(1);
 function clubColor(clubId){
-  const i=CLUBS.findIndex(c=>c.id===clubId);
-  return "oklch(0.58 0.14 "+((i*137.5+20)%360).toFixed(1)+")";
+  return "oklch("+CLUB_L+" "+CLUB_C+" "+clubHue(clubId)+")";
+}
+/** その丸の上に載せる字の色。明るい地なので**暗い側**で取る。 */
+function clubInk(clubId){
+  return "oklch(0.26 0.06 "+clubHue(clubId)+")";
 }
 /** 消化済みの節のスコア表示。順位表からは復元できないので保存済みの結果を使う。 */
 function scoreOf(md){
@@ -2243,7 +2253,8 @@ const slotXY=(p,side,restart)=>mFlip(side)
 function mDrawSquads(){
   const html=[];
   for(const T of [_M.home,_M.away]){
-    const col=clubColor(T.side==="H"?_M.fixture.h:_M.fixture.a);
+    const side0=T.side==="H"?_M.fixture.h:_M.fixture.a;
+    const col=clubColor(side0);
     T.players.forEach((p,i)=>{
       const [x,y]=slotXY(p,T.side,true);   // 開始はキックオフ隊形
       // **点ではなく全身を出す**(→docs/06 §6.17)。絵にはクラブカラーが無いので、
@@ -2452,8 +2463,9 @@ function mBallShot(e,delay){
 function cutAvatar(p,side){
   const art=artKeyOf(p.c);
   const src=art&&artOf(art+"_play");
-  const col=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
-  return '<div class="cut-av" style="--kit:'+col+'">'
+  const cid=side==="H"?_M.fixture.h:_M.fixture.a;
+  const col=clubColor(cid), ink=clubInk(cid);
+  return '<div class="cut-av" style="--kit:'+col+';--kit-ink:'+ink+'">'
     +(src?'<img src="'+src+'" alt="">':p.c.ovr)+'</div>';
 }
 /** 選手1人ぶんの枠。cls に L/R と win/dim を渡す。 */

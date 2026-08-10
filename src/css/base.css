@@ -712,7 +712,7 @@ body{
 .rs-pos{ width:24px; height:24px; border-radius:50%; flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
   background:var(--kit, oklch(0.30 0.03 255)); border:1.5px solid var(--rar, var(--line));
-  font:7px/1 var(--f-mono); color:#fff }
+  font:7px/1 var(--f-mono); color:var(--kit-ink, #fff) }
 .rs-nm{ flex:1; min-width:0 }
 .rs-nm b{ display:block; font-size:11px; font-weight:600; color:oklch(0.92 0.01 90);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
@@ -835,7 +835,8 @@ body{
   position:relative; width:46px; height:46px; border-radius:50%; margin:0 auto 6px;
   background:var(--kit, oklch(0.30 0.03 255));
   display:flex; align-items:center; justify-content:center;
-  font:700 15px/1 var(--f-head); color:#fff; text-shadow:0 1px 3px oklch(0 0 0 / .7);
+  font:700 15px/1 var(--f-head); color:var(--kit-ink, #fff);
+  text-shadow:0 1px 2px oklch(1 0 0 / .35);
 }
 .cut-av img{
   position:absolute; left:50%; bottom:-2px; transform:translateX(-50%);
@@ -1141,11 +1142,13 @@ body{
   width:46%; aspect-ratio:1; border-radius:50%;
   background:var(--kit, oklch(0.30 0.03 255)); border:2px solid var(--rar, var(--line));
 }
-.fig-star{ font-size:9px; line-height:1; color:#fff; letter-spacing:-1px; margin-top:1px }
+/* ★は**クラブカラーの丸の上**に乗る。明るい丸になったので字は暗い側で取る */
+.fig-star{ font-size:9px; line-height:1; color:var(--kit-ink, #fff);
+  letter-spacing:-1px; margin-top:1px }
 /* **★が上限まで並んだら金**(→docs/03 §3.30)。黄金の連携線と同じ色にして、
    「仕上がった選手」と「噛み合った組」が同じ意味の金だと分かるようにする */
-.fig-star.full{ color:oklch(0.85 0.16 88);
-  text-shadow:0 0 4px oklch(0.80 0.17 85 / .9), 0 1px 3px oklch(0 0 0 / .9) }
+.fig-star.full{ color:oklch(0.52 0.15 78);
+  text-shadow:0 0 4px oklch(0.92 0.14 88 / .95), 0 1px 2px oklch(1 0 0 / .5) }
 /* コンディションのオーラ(→docs/03 §3.32)。**選手の後ろから放射状に光る**。
    印を並べるより、盤面を見渡したときに「誰が来ているか」が一目で分かる。
    立ち絵より先に置いて**背後に敷く**(同じ z なので DOM の順が前後を決める)。 */
@@ -1697,12 +1700,14 @@ body{
   width:36px; height:36px; border-radius:50%; flex-shrink:0; overflow:hidden;
   display:flex; align-items:center; justify-content:center; position:relative;
 }
-/* 丸は**吹き出しと同じ側**でそろえる。地はクリームでも、会話の塊は暗いまま */
-.ch-sm.sec, .ch-av-in.sec{ background:oklch(0.30 0.04 300); border:1px solid oklch(0.42 0.04 300);
-  color:oklch(0.62 0.06 300) }
-.ch-sm.mgr{ background:oklch(0.30 0.05 85); border:1px solid var(--accent-dim);
-  color:oklch(0.62 0.09 85) }
-.ch-sm.pl{ background:var(--panel-2); border:1px solid var(--line); color:var(--text-mute) }
+/* 丸も**パステル寄りのネオン**でそろえる(→docs/06 §6.28)。暗い地の上で、
+   誰が話しているかが色だけで分かる。絵はこの上に乗るので文字の読みは関わらない */
+.ch-sm.sec, .ch-av-in.sec{ background:oklch(0.78 0.11 300); border:1px solid oklch(0.86 0.09 300);
+  color:oklch(0.40 0.09 300) }
+.ch-sm.mgr{ background:oklch(0.80 0.13 85); border:1px solid oklch(0.88 0.11 85);
+  color:oklch(0.38 0.10 85) }
+.ch-sm.pl{ background:oklch(0.76 0.08 220); border:1px solid oklch(0.85 0.07 220);
+  color:oklch(0.38 0.07 220) }
 /* 絵が無い間のシルエット。**丸に対する割合で描く**ので大きさを変えても崩れない */
 .ch-ph{ position:absolute; inset:0; overflow:hidden }
 .ch-ph::before{
