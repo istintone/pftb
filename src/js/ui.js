@@ -378,6 +378,15 @@ function stickerArt(key){
   const A=(window.ASSETS&&window.ASSETS.sticker)||{};
   return A[key]?'<img class="stk" src="'+A[key]+'" alt="">':"";
 }
+/** 予定の行に貼るトロフィー(→docs/06 §6.31)。**出られる大会にだけ**付ける。
+ *  **行の右に大きく置いて、枠で切り落とす**。アイコンの枠(22px)に収めると豆粒になり、
+ *  何の絵かも分からない。絵が無ければ左のアイコン枠の絵文字に落ちる。 */
+const cupMark=()=>{
+  const a=stickerArt("trophy");
+  return a?'<span class="cal-tr">'+a+'</span>':"";
+};
+/** 絵が使えないときの控え。左のアイコン枠に絵文字を戻す。 */
+const cupMarkFb=()=>stickerArt("trophy")?"":'<span class="cal-h">🏆</span>';
 /** 次戦のタイルに貼る絵。**試合ごとに変わるが、描き直しでは変わらない**
  *  (毎描画で引き直すと、HOMEに戻るたびに絵が飛ぶ)。 */
 const NX_STICKERS=["stadium","coach","fans"];
@@ -1297,11 +1306,15 @@ function renderTenureCalendar(){
       +'<span class="lg">'+(p.comp==="cup"?"カップ戦":"リーグ戦")+'（予定確定）</span></span>'
       +'<span class="cal-r">▣</span></div>');
     // **カップの開催日は先に見せる**。エントリー後は大会の予定がそのまま並ぶ(→docs/03 §3.23)
-    else if(cu)rows.push('<div class="cal fut '+cu.cls+'"><span class="cal-n num">'+n+'</span>'
-      +'<span class="cal-h">🏆</span>'
+    // **出られない大会はトーンを落とす**(→docs/06 §6.31)。トロフィーも付けない。
+    // 予定は見せるが、いま狙えるものと同じ強さで並べると選べる大会が埋もれる
+    else if(cu)rows.push('<div class="cal fut '+cu.cls+(cu.open?" tr":" dim")+'">'
+      +'<span class="cal-n num">'+n+'</span>'
+      +(cu.open?cupMarkFb():'<span class="cal-h">·</span>')
       +'<span class="cal-b"><b>'+esc(cu.label)+'</b>'
       +'<span class="lg">'+esc(cu.sub)+'</span></span>'
-      +'<span class="cal-r">'+cu.mark+'</span></div>');
+      +'<span class="cal-r">'+cu.mark+'</span>'
+      +(cu.open?cupMark():"")+'</div>');
     else rows.push('<div class="cal none"><span class="cal-n num">'+n+'</span>'
       +'<span class="cal-b"><b>未定</b></span></div>');
   }
@@ -1319,7 +1332,8 @@ function cupCalNote(n){
     const cup=cupById(c.id), i=cupNodes().indexOf(n);
     if(i>=0)return { label:cup.name+" "+cupRoundName(cup,i+1),
       sub:c.alive?"エントリー中の大会":"敗退のため不参加（進行は確認できます）",
-      cls:c.alive?"planned cup":"planned cup out", mark:c.alive?"▣":"—" };
+      cls:c.alive?"planned cup":"planned cup out", mark:c.alive?"▣":"—",
+      open:!!c.alive };
   }
   // 同じ節に重なったら格の高いほうを出す(エントリーの判定と揃える)
   const on=CUPS.filter(cup=>cupDay(cup,n)).sort((a,b)=>b.prize[0]-a.prize[0]);
@@ -1331,10 +1345,14 @@ function cupCalNote(n){
   const nodes=(c&&!c.done)?cupNodes():null, last=nodes?nodes[nodes.length-1]:0;
   const rest=nodes?last+TUNING.cup.rest:(S.career.cupRest||0);
   const also=on.length>1?"（他"+(on.length-1)+"大会と同日・選べます）":"";
+  // **その節に出られるか**。塞いでいるもの(進行中の大会・間隔・参加条件)が
+  // ひとつでもあれば「見えるだけの予定」で、見た目のトーンもそこで分かれる
+  const open=n>last&&n>=rest&&cupOpen(on[0]);
   const sub=n<=last?"開催予定（大会が終わるまで参加できません）"
     :n<rest?"開催予定（前の大会から"+TUNING.cup.rest+"節あきます）"
     :cupOpen(on[0])?"開催予定（エントリーできます）":"開催予定（条件を満たせば参加できます）";
-  return { label:on[0].name+(on.length>1?" 他":""), sub:sub+also, cls:"cup soon", mark:"◇" };
+  return { label:on[0].name+(on.length>1?" 他":""), sub:sub+also, cls:"cup soon",
+    mark:"◇", open:open };
 }
 const seasonDivider=(season,clubId)=>
   '<div class="cal-div"><span>SEASON '+season+'</span><b>'+esc(clubName(clubId))+'</b></div>';
@@ -1400,12 +1418,14 @@ function logRow(e){
   const name=cup?e.oppName:clubName(e.opp);
   const sub=cup?e.label+(e.champ?" ／ 優勝":"")
             :"S"+e.season+" 第"+e.md+"節 ／ "+(e.home?"HOME":"AWAY");
-  return '<div class="cal done'+(e.champ?" champ":"")+'">'
+  return '<div class="cal done'+(e.champ?" champ":"")+(cup?" tr":"")+'">'
     +'<span class="cal-n num">'+e.node+'</span>'
-    +'<span class="cal-h" title="'+(h?h.label:"")+'">'+(cup?"🏆":(h?h.icon:"—"))+'</span>'
+    +(cup?cupMarkFb()
+       :'<span class="cal-h" title="'+(h?h.label:"")+'">'+(h?h.icon:"—")+'</span>')
     +'<span class="cal-b"><b>'+esc(name)+'</b>'
     +'<span class="lg">'+esc(sub)+'</span></span>'
-    +'<span class="cal-s num '+cls+'">'+mark+' '+e.gf+'-'+e.ga+'</span></div>';
+    +'<span class="cal-s num '+cls+'">'+mark+' '+e.gf+'-'+e.ga+'</span>'
+    +(cup?cupMark():"")+'</div>';
 }
 
 /**
@@ -1424,15 +1444,20 @@ function currentRow(){
   const foe=f?{ name:f.side.name, sub:f.label, col:f.elite?"var(--rar-spe)":"var(--accent-dim)" }
     :m?{ name:clubName(m.opp), sub:"リーグ 第"+S.world.matchday+"節 ／ "+(m.home?"HOME":"AWAY"),
          col:clubColor(m.opp) }:null;
-  // **タイルごとリンク**。ボタンは置かず、行き先を一言だけ添える(→docs/06 §6.8)
+  // **タイルごとリンク**。ボタンは置かず、行き先を見出しそのものにする(→docs/06 §6.8)。
+  // 前は見出しが「この節の準備」で、行き先は右下に小さく置いていた。
+  // タイルの用は1つしかないので、**押したら何が起きるか**を見出しに上げた(→docs/06 §6.31)
   return '<div class="cal cur" id="calCur" role="button" tabindex="0">'
     +'<div class="cal-cur-h"><span class="cal-n num">'+C.node+'</span>'
-    +'<span class="cal-b"><b>この節の準備</b><span class="lg">'+esc(state)+'</span></span>'
+    +'<span class="cal-b"><b class="cur-go">第'+C.node+'節を開始する</b>'
+    // 話しかけた後だけ、どこまで進んだかを添える(まだなら見出しだけでいい)
+    +(ch?'<span class="lg">'+esc(state)+'</span>':"")+'</span>'
     +'<span class="cal-r">›</span></div>'
     +(foe?'<div class="cal-target"><span class="cal-c" style="background:'+foe.col+'"></span>'
       +'<span class="cal-b"><b>'+esc(foe.name)+'</b>'
       +'<span class="lg">'+esc(foe.sub)+'</span></span></div>':"")
-    +'<div class="cur-go">第'+C.node+'節を開始する</div></div>';
+    // **いまの節はロッカーの絵で示す**(→docs/06 §6.31)。並んだ枠の中で1枚だけ絵が入る
+    +'<div class="cur-st">'+stickerArt("locker")+'</div></div>';
 }
 const cupJoinedName=()=>{ const c=cupJoined(); return c?c.name:"カップ戦"; };
 /** カップに出られない理由。**条件が見えないと待つ理由が分からない**。 */
@@ -1932,11 +1957,12 @@ function renderCupSchedule(){
     $("schedList").innerHTML=open.length
       ? open.map(x=>{
           const next=(Math.floor(C.node/x.every)+1)*x.every;
-          return '<div class="cal">'
-            +'<span class="cal-h">🏆</span>'
+          return '<div class="cal tr">'
+            +cupMarkFb()
             +'<span class="cal-b"><b>'+esc(x.name)+'</b>'
             +'<span class="lg">'+esc(x.note)+'</span></span>'
-            +'<span class="cal-r">第'+next+'節</span></div>';
+            +'<span class="cal-r">第'+next+'節</span>'
+            +cupMark()+'</div>';
         }).join("")
       : '<div class="cal none"><span class="cal-b"><b>出場できる大会がありません</b>'
         +'<span class="lg">'+esc(cupWhy())+'</span></span></div>';

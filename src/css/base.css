@@ -1929,10 +1929,31 @@ body{
 /* **タイルは入口だけ**(→docs/03 §3.29)。中身の操作はクラブチャットが持つ */
 .cal.cur{ cursor:pointer }
 .cal.cur .cal-r{ margin-left:auto; font-size:18px; color:var(--accent) }
-.cur-go{
-  margin-top:10px; text-align:right;
-  color:var(--accent); font:600 13px/1 var(--f-head); letter-spacing:1px;
-}
+/* **押したら何が起きるか**が見出し(→docs/06 §6.31)。右下の小さな案内から昇格した */
+.cur-go{ color:var(--accent); font:600 14px/1.3 var(--f-head); letter-spacing:1px }
+/* いまの節にだけロッカーの絵を貼る。**並んだ枠の中で1枚だけ絵が入る**ので、
+   どこが「いま」かが、数字を読まなくても分かる */
+.cal.cur{ position:relative; overflow:hidden }
+.cal-cur-h,.cal-target{ position:relative; z-index:1 }
+.cur-st{ position:absolute; right:-16px; top:50%; width:124px; z-index:0;
+  transform:translateY(-50%) rotate(4deg); pointer-events:none }
+.cur-st .stk{ opacity:.40 }
+/* 予定の行のトロフィー(→docs/06 §6.31)。**行の右に大きく置いて、枠で切り落とす**。
+   アイコンの枠(22px)に収めると豆粒で何の絵か分からない。行の高さは変えずに、
+   はみ出たぶんは overflow で切る(タイトルの壁と同じ「貼ってある」見せ方) */
+.cal.tr{ position:relative; overflow:hidden }
+.cal.tr>span:not(.cal-tr){ position:relative; z-index:1 }
+/* **行の幅で決めて、上下は行の枠で切る**。行は50px弱しかないので、絵全体を
+   収めようとするとトロフィーが豆粒になる。貼り紙が枠からのぞいている形にする。
+   ※ この素材はトロフィーも飛沫も同じ黄緑で、**この大きさでは形までは読めない**
+   (拡大しても contrast を上げても変わらない。読ませたいなら絵の側に濃淡が要る) */
+.cal-tr{ position:absolute; right:-8px; top:50%; width:76px; z-index:0;
+  transform:translateY(-50%) rotate(-6deg); pointer-events:none }
+.cal-tr .stk{ opacity:.92;
+  filter:drop-shadow(0 0 1px #fff) drop-shadow(1px 2px 3px oklch(0 0 0 / .55)) }
+/* **出られない大会はトーンを落とす**。予定は見せるが、狙える大会と同じ強さでは並べない */
+.cal.dim .cal-b b{ color:var(--text-dim) }
+.cal.dim .cal-b .lg,.cal.dim .cal-r,.cal.dim .cal-h{ color:var(--text-mute) }
 .step-k{ margin:10px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
 .comps{ display:flex; gap:6px }
 .compbtn{
