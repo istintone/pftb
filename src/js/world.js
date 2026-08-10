@@ -802,10 +802,10 @@ function mailTake(id){
 const seenAll=()=>S.player.seen||(S.player.seen={});
 const seenHas=k=>!!seenAll()[k];
 /** 「見た」を立てて、**その場で連絡を配り直す**。届いた通数を返す。
- *  節が進むのを待たないので、CARDS を開いた瞬間に次の案内が届く。 */
+ *  節が進むのを待たないので、スカウトを引いたその場で次の案内が届く。
+ *  **立っていても配り直す**。きっかけは他にもあるので、ここで打ち切ってはいけない。 */
 function seeNow(k){
   if(!S.player)return 0;
-  if(seenAll()[k])return 0;
   seenAll()[k]=1;
   return mailTick();
 }

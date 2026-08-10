@@ -2571,16 +2571,21 @@ const STEPS = [
     await ctx.js("document.getElementById('homeSecGo').click()");
     await ctx.wait(400);
     await ctx.shot("22b-tut-inbox");
+    // **本物の導線でオーナーに会う**。ここが飛ばされていて、
+    // 「シーズンをはじめる」を押しても案内が2通目に進まなかった
+    await ctx.js("show('home');document.getElementById('nxTile').click()");
+    await ctx.wait(400);
+    await ctx.js("document.getElementById('boardGo').click()");
+    await ctx.wait(400);
     ctx.log("  順に進む:", await ctx.js(`(()=>{
       const tut=()=>mailList().filter(m=>mailById(m.id).tut).length;
-      const n0=tut();
-      S.career.opened=true; mailTick();
-      if(tut()!==n0+1)throw new Error('あいさつで2通目が来ない');
+      if(!S.career.opened)throw new Error('あいさつが済んでいない');
+      if(tut()!==2)throw new Error('シーズンをはじめても2通目が来ない: '+tut());
       // **画面を開いた瞬間に次が届く**(節が進むのを待たない)
-      show('cards'); if(tut()!==n0+2)throw new Error('CARDS で3通目が来ない');
-      show('deck');  if(tut()!==n0+3)throw new Error('DECK で4通目が来ない');
-      S.career.log.push({ node:1, res:'lose' }); mailTick();
-      if(tut()!==n0+4)throw new Error('初戦で5通目が来ない');
+      show('cards'); if(tut()!==3)throw new Error('CARDS で3通目が来ない');
+      show('deck');  if(tut()!==4)throw new Error('DECK で4通目が来ない');
+      S.career.log.push({ node:1, res:'lose' }); show('home');
+      if(tut()!==5)throw new Error('初戦で5通目が来ない');
       seeNow('scoutDone');
       if(tut()!==TUT_ALL)throw new Error('補強で最後が来ない: '+tut());
       show('secretary');

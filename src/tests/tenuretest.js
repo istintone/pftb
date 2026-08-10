@@ -311,19 +311,22 @@ function runSeason(hand) {
     assert.strictEqual(step(), 1, "就任した時点で1通目が届く");
 
     // **きっかけが立つまで次は来ない**。順番どおりに1通ずつ進む
-    E.mailTick(); E.mailTick();
+    E.show("home"); E.show("home");
     assert.strictEqual(step(), 1, "オーナーに会うまで2通目は来ない");
-    C9.opened = true; E.mailTick();
-    assert.strictEqual(step(), 2, "あいさつが済むと2通目");
-    assert.strictEqual(E.seeNow("cards") > 0, true, "CARDS を開いた瞬間に3通目が届く");
+    // **画面の外で立つきっかけ**。あいさつは HOME のタイルから始まって HOME に戻ってくる。
+    // 「初めて見た画面」でだけ配っていたときは、ここで案内が止まっていた
+    C9.opened = true; E.show("home");
+    assert.strictEqual(step(), 2, "あいさつが済んで HOME に戻ると2通目");
+    E.show("cards");
     assert.strictEqual(step(), 3, "顔合わせで3通目");
-    assert.strictEqual(E.seeNow("cards"), 0, "同じ画面を開き直しても増えない");
-    E.seeNow("deck");
+    E.show("cards");
+    assert.strictEqual(step(), 3, "同じ画面を開き直しても増えない");
+    E.show("deck");
     assert.strictEqual(step(), 4, "編成で4通目");
-    E.seeNow("season");
+    E.show("season");
     assert.strictEqual(step(), 4, "試合をしていなければ5通目は来ない");
     C9.log.push({ node: 1, res: "lose" });
-    E.mailTick();
+    E.show("home");
     assert.strictEqual(step(), 5, "初戦を終えれば5通目(勝ち負けは問わない)");
     E.seeNow("scoutDone");
     assert.strictEqual(step(), E.TUT_ALL, "補強をやり切って最後の1通");
