@@ -1427,6 +1427,14 @@ body{
 .nx-spon i{ font-style:normal; font:9px/1 var(--f-mono); letter-spacing:2px;
   color:var(--text-mute) }
 .nx-spon b{ font:600 12px/1 var(--f-head); letter-spacing:.5px; color:oklch(0.80 0.09 85) }
+/* スポンサーの看板(→docs/06 §6.32)。**ピッチ脇の広告板**として置く。
+   絵そのものが横長なので、枠を作らず**帯として置くだけ**にする。 */
+.ad{ overflow:hidden; border-radius:4px; line-height:0 }
+.ad img{ display:block; width:100%; height:auto }
+/* 次戦タイル: 社名があった場所に、そのまま置き換わる */
+.ad-nx{ width:58%; max-width:210px; flex:none }
+/* キックオフ: 帯の下辺に沿わせる。**画面の主役は選手**なので、少し落として置く */
+.ad-cut{ width:72%; margin:14px auto 0; opacity:.86 }
 /* **タイルごとリンクなのでボタンは置かない**(→docs/06 §6.8)。
    行き先を右下に文字だけ添えて、押せる面はタイル全体にする。 */
 .nx-go{

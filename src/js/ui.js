@@ -477,11 +477,22 @@ function renderMail(){
  * 次戦タイルの下に出すスポンサーの看板(→docs/06 §6.25)。
  * **契約中だけ**。ピッチ脇の広告板と同じで、居るときにだけ静かに映り込む。
  */
+/** 契約中のスポンサーの看板の絵(→docs/06 §6.32)。**無ければ空**。
+ *  絵はスポンサーの id で引く(src/assets/banner/<id>.webp)。
+ *  23社ぶんを一度に描けるわけではないので、**ある会社だけ絵になる**作りにしてある。 */
+function sponAd(cls){
+  const sp=sponsor(); if(!sp)return "";
+  const A=(window.ASSETS&&window.ASSETS.banner)||{};
+  return A[sp.id]?'<div class="ad '+(cls||"")+'"><img src="'+A[sp.id]+'" alt=""></div>':"";
+}
 function sponBoard(){
   const sp=sponsor();
   if(!sp)return "";
+  // **OFFICIAL PARTNER の見出しは常に出す**。その右が、絵のある会社なら看板、
+  // 無ければ社名になる。23社ぶんの絵が揃うまでは**混ざる**ので、枠だけは揃えておく
+  const ad=sponAd("ad-nx");
   return '<div class="nx-spon"><i>OFFICIAL PARTNER</i>'
-    +'<b>'+esc(sponsorById(sp.id).name)+'</b></div>';
+    +(ad||'<b>'+esc(sponsorById(sp.id).name)+'</b>')+'</div>';
 }
 function clubNews(){
   const r=rankOf(S.world.table,S.club.id), t=S.world.table[S.club.id];
@@ -2782,10 +2793,12 @@ function cutKick(){
       +'<span>'+(cap?"C "+esc(shortName(cap.c))+" · "+cap.sub:"")+'</span>'
     +'</div>';
   };
+  // **ピッチ脇の看板**(→docs/06 §6.32)。契約中で、その会社の絵があるときだけ出る
   return cutShow('<div class="cut">'
     +'<div class="cut-hd">KICK OFF</div>'
     +'<div class="cut-row">'+f(_M.home,"H","L")
       +'<div class="cut-vs">VS</div>'+f(_M.away,"A","R")+'</div>'
+    +sponAd("ad-cut")
   +'</div>',TUNING.play.kickMs);
 }
 

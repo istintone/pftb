@@ -568,13 +568,15 @@ const STEPS = [
       show('home');
       const t=document.getElementById('homeNext').textContent;
       const nm=sponsorById(sponsor().id).name;
-      if(t.indexOf('OFFICIAL PARTNER')<0||t.indexOf(nm)<0)
-        throw new Error('次戦タイルに看板が出ない');
+      if(t.indexOf('OFFICIAL PARTNER')<0)throw new Error('次戦タイルに看板が出ない');
+      // **絵のある会社は看板の画像、無ければ社名**(→docs/06 §6.32)
+      const ad=document.querySelector('#homeNext .ad-nx img');
+      if(!ad&&t.indexOf(nm)<0)throw new Error('社名が出ない');
       const keep=S.club.sponsor; S.club.sponsor=null; show('home');
       if(document.getElementById('homeNext').textContent.indexOf('OFFICIAL PARTNER')>=0)
         throw new Error('契約が無いのに看板が残る');
       S.club.sponsor=keep; show('home');
-      return 'OFFICIAL PARTNER '+nm+'（契約が無ければ出ない）';
+      return 'OFFICIAL PARTNER '+(ad?'看板の絵':nm)+'（契約が無ければ出ない）';
     })()`));
     await ctx.shot("03c-home-sponsor");
     ctx.log("  支援の打ち手:", await ctx.js(`(()=>{
@@ -2542,6 +2544,11 @@ const STEPS = [
       if(S.player.fame!==b.fame)throw new Error('名声が消えた');
       if(S.player.trophies.length!==b.trophies)throw new Error('実績が消えた');
       if(!S.player.legacy)throw new Error('持ち越しが作られていない');
+      // **連れていく選手は id で押さえる。** 名前で探すと、スカウトで引いた
+      // 同名の別人に当たって「★が引き継がれていない」と誤検知する(実際に出た)
+      // Object.keys は文字列を返すが、カードのidは数値。cardById は厳密比較なので戻す
+      b.newId=Number(Object.keys(S.player.legacy.train)[0]);
+      if(!b.newId)throw new Error('持ち越しに成果が乗っていない');
       return '名声 '+S.player.fame+' / 実績 '+S.player.trophies.length
         +' / 持ち越し '+(S.player.legacy.cards.length)+'枚';
     })()`));
@@ -2551,8 +2558,9 @@ const STEPS = [
       const el=document.querySelector('#offerList [data-club]');
       if(!el)throw new Error('オファーが無い');
       startTenure(el.dataset.club); headUI(); show('home');
-      const c=S.player.coll.find(x=>x.name===b.name);
+      const c=cardById(b.newId);
       if(!c)throw new Error('連れてきた選手が手元に居ない: '+b.name);
+      if(c.name!==b.name)throw new Error('別人が来ている: '+c.name+' ≠ '+b.name);
       if(trainStar(c.id)!==b.star)throw new Error('★が引き継がれていない: '+trainStar(c.id));
       if(S.player.legacy)throw new Error('持ち越しが残り続けている');
       if(trustOf(c.id)!==0)throw new Error('信頼が0に戻っていない');
