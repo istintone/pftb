@@ -292,17 +292,77 @@ function runSeason(hand) {
     C.cup = null;
   }
 
+  // ---------- チュートリアル(→docs/03 §3.43) ----------
+  {
+    await E.newGame();
+    const S9 = E.getS(); S9.coach = "案内";
+    const tut = E.MAILS.filter(m => m.tut);
+    assert.strictEqual(tut.length, E.TUT_ALL, "案内の通数");
+    assert.deepStrictEqual(tut.map(m => m.tut), tut.map((_, i) => i + 1),
+      "番号が1から抜けなく振られている");
+    // **行き先のある案内は、実在する画面を指す**(飛べない案内を出さない)
+    for (const m of tut) if (m.go)
+      assert.ok(E.SCREENS[m.go], m.id + " の行き先が無い画面: " + m.go);
+
+    assert.strictEqual(S9.player.mail.length, 0, "就任する前は何も届かない");
+    E.startTenure("sam-8");
+    const C9 = S9.career;
+    const step = () => E.mailList().filter(m => E.mailById(m.id).tut).length;
+    assert.strictEqual(step(), 1, "就任した時点で1通目が届く");
+
+    // **きっかけが立つまで次は来ない**。順番どおりに1通ずつ進む
+    E.mailTick(); E.mailTick();
+    assert.strictEqual(step(), 1, "オーナーに会うまで2通目は来ない");
+    C9.opened = true; E.mailTick();
+    assert.strictEqual(step(), 2, "あいさつが済むと2通目");
+    assert.strictEqual(E.seeNow("cards") > 0, true, "CARDS を開いた瞬間に3通目が届く");
+    assert.strictEqual(step(), 3, "顔合わせで3通目");
+    assert.strictEqual(E.seeNow("cards"), 0, "同じ画面を開き直しても増えない");
+    E.seeNow("deck");
+    assert.strictEqual(step(), 4, "編成で4通目");
+    E.seeNow("season");
+    assert.strictEqual(step(), 4, "試合をしていなければ5通目は来ない");
+    C9.log.push({ node: 1, res: "lose" });
+    E.mailTick();
+    assert.strictEqual(step(), 5, "初戦を終えれば5通目(勝ち負けは問わない)");
+    E.seeNow("scoutDone");
+    assert.strictEqual(step(), E.TUT_ALL, "補強をやり切って最後の1通");
+
+    // **HOME のひとことは最新を映す**。同じ節に2通あっても、あとから届いたほうが上
+    const last = E.mailById(E.mailLatest().id);
+    assert.strictEqual(last.tut, E.TUT_ALL, "最新は最後の案内: " + last.title);
+
+    // --- 二度目の就任では案内は出ない(キャリアで一度きり) ---
+    const n1 = S9.player.mail.length;
+    C9.node = C9.limit + 1; C9.closing = false;
+    E.judgeTenure();
+    S9.player.fame = 3000;
+    E.startTenure("sam-8");
+    E.mailTick();
+    assert.strictEqual(S9.player.mail.length, n1, "次の任期でもう一度は届かない");
+    assert.ok(E.seenHas("cards"), "見たことは任期をまたいでも残る");
+    console.log("チュートリアルOK " + E.TUT_ALL + "通 ／ 就任→あいさつ→CARDS→DECK→試合→スカウト"
+      + " ／ 1通ずつ順に ／ キャリアで一度きり");
+  }
+
   // ---------- 秘書からの連絡と引換券(→docs/03 §3.42) ----------
   {
     await E.newGame();
     const S8 = E.getS(); S8.coach = "検証"; E.startTenure("sam-8");
+    // **就任した時点でチュートリアルの1通目が届く**(→§3.43)。
+    // ここで見たいのは配布物のほうなので、案内は済んだことにしておく
+    assert.strictEqual(E.mailUnread(), 1, "就任で届くのは案内の1通目だけ");
+    for (const d of E.MAILS) if (d.tut && !E.mailHas(d.id))
+      S8.player.mail.push({ id: d.id, at: 0, read: true, got: true });
+    S8.player.mail.forEach(x => { x.read = true; });        // 届いていた1通目も読んだ扱い
+    const base = S8.player.mail.length;
+
     // **条件を満たすまで届かない**。テストの連絡は初勝利がきっかけ
-    assert.strictEqual(E.mailUnread(), 0, "就任しただけでは届かない");
     E.mailTick();
-    assert.strictEqual(S8.player.mail.length, 0, "条件が立つまで届かない");
+    assert.strictEqual(S8.player.mail.length, base, "条件が立つまで届かない");
     S8.career.log.push({ node:1, res:"lose" });
     E.mailTick();
-    assert.strictEqual(S8.player.mail.length, 0, "負けでは届かない");
+    assert.strictEqual(S8.player.mail.length, base, "負けでは届かない");
     S8.career.log.push({ node:2, res:"win" });
     E.mailTick();
     assert.ok(E.mailUnread() > 0, "初勝利で届く");

@@ -1348,11 +1348,15 @@ const STEPS = [
     // **HOME の秘書のひとことが受信箱の最新を映す**(→docs/03 §3.42)
     ctx.log("  未読の知らせ:", await ctx.js(`(()=>{
       S.player.mail=[]; S.player.tickets={};
+      // **チュートリアルは済ませた扱いにする**(→docs/03 §3.43)。
+      // ここで見たいのは配布物のほうなので、案内が混ざると数が合わなくなる
+      for(const d of MAILS)if(d.tut)S.player.mail.push({ id:d.id, at:0, read:true, got:true });
+      const base=S.player.mail.length;
       // **きっかけが立つまで届かない**(→docs/03 §3.42)。テストの連絡は初勝利
       const keep=S.career.log.slice();
       S.career.log=keep.filter(e=>e.res!=='win');
       mailTick();
-      if(S.player.mail.length)throw new Error('勝つ前に届いている');
+      if(S.player.mail.length!==base)throw new Error('勝つ前に届いている');
       S.career.log=keep.concat([{ node:S.career.node, res:'win' }]);
       mailTick();
       if(!mailUnread())throw new Error('初勝利で届かない');
@@ -1375,7 +1379,11 @@ const STEPS = [
       const rows=document.querySelectorAll('#mailLog .ch-b');
       if(!rows.length)throw new Error('連絡が並ばない');
       if(!document.querySelector('#mailLog [data-mail]'))throw new Error('受け取るボタンが無い');
-      return rows.length+'件 / 受け取り前';
+      window.__mailN=S.player.mail.length;
+      // **チャットと同じで古い順**。最新(=引換券の連絡)が一番下に来る
+      if(rows[rows.length-1].textContent.indexOf('引換券')<0)
+        throw new Error('最新が一番下に来ない: '+rows[rows.length-1].textContent.slice(0,20));
+      return rows.length+'件 / 受け取り前 / 最新が下';
     })()`));
     await ctx.shot("20b-inbox");
     ctx.log("  受け取り:", await ctx.js(`(()=>{
@@ -1388,7 +1396,8 @@ const STEPS = [
       if(document.querySelector('#mailLog [data-mail]'))throw new Error('二度受け取れる');
       if(mailUnread())throw new Error('開いても既読にならない');
       mailTick();
-      if(S.player.mail.length!==1)throw new Error('同じ連絡が二度届く: '+S.player.mail.length);
+      if(S.player.mail.length!==window.__mailN)
+        throw new Error('同じ連絡が二度届く: '+S.player.mail.length);
       show('home');
       if(document.querySelector('#homeSecGo .sec-dot'))throw new Error('未読の印が消えない');
       return '受け取りは一度きり / 同じ連絡は二度来ない / HOMEの印も消える';
@@ -2546,6 +2555,50 @@ const STEPS = [
     await ctx.wait(700);
     ctx.log("再開後:", await ctx.screen(), "/ クラブ:", await ctx.js("document.getElementById('hdClubName').textContent"));
     await ctx.shot("18-continue");
+  }],
+
+  // **最後に置く**。ここで新しいキャリアを始めてしまうので、後ろに手順を足さないこと
+  ["チュートリアル(秘書のウォークスルー)", async ctx => {
+    ctx.log("  就任直後:", await ctx.js(`(async()=>{
+      await newGame(); S.coach='案内'; startTenure('sam-8'); show('home');
+      const b=document.getElementById('homeSecGo');
+      if(!b.querySelector('.sec-dot'))throw new Error('未読の印が出ない');
+      const d=mailById(mailLatest().id);
+      if(!d.tut)throw new Error('1通目が案内ではない: '+d.title);
+      return '未読1件 ／ 「'+d.title+'」';
+    })()`));
+    await ctx.shot("22-tut-home");
+    await ctx.js("document.getElementById('homeSecGo').click()");
+    await ctx.wait(400);
+    await ctx.shot("22b-tut-inbox");
+    ctx.log("  順に進む:", await ctx.js(`(()=>{
+      const tut=()=>mailList().filter(m=>mailById(m.id).tut).length;
+      const n0=tut();
+      S.career.opened=true; mailTick();
+      if(tut()!==n0+1)throw new Error('あいさつで2通目が来ない');
+      // **画面を開いた瞬間に次が届く**(節が進むのを待たない)
+      show('cards'); if(tut()!==n0+2)throw new Error('CARDS で3通目が来ない');
+      show('deck');  if(tut()!==n0+3)throw new Error('DECK で4通目が来ない');
+      S.career.log.push({ node:1, res:'lose' }); mailTick();
+      if(tut()!==n0+4)throw new Error('初戦で5通目が来ない');
+      seeNow('scoutDone');
+      if(tut()!==TUT_ALL)throw new Error('補強で最後が来ない: '+tut());
+      show('secretary');
+      const rows=[...document.querySelectorAll('#mailLog .ml-ti')].map(e=>e.textContent);
+      if(rows.length!==TUT_ALL)throw new Error('受信箱に全部残らない: '+rows.length);
+      return TUT_ALL+'通 ／ 上から: '+rows.slice(0,3).join(' / ')+' …';
+    })()`));
+    await ctx.wait(300);
+    await ctx.shot("22c-tut-done");
+    ctx.log("  行き先ボタン:", await ctx.js(`(()=>{
+      const bs=[...document.querySelectorAll('#mailLog [data-go]')];
+      if(!bs.length)throw new Error('行き先のボタンが無い');
+      const go=bs[0].dataset.go;
+      bs[0].click();
+      const now=(document.querySelector('.screen.on')||{}).id;
+      if(now!=='scr-'+go)throw new Error(go+' へ飛ばない: '+now);
+      return bs.length+'件に付く ／ 押すと '+go+' へ飛ぶ';
+    })()`));
   }],
 ];
 

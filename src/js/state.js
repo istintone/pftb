@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=27;
+const SAVE_VER=28;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -22,6 +22,9 @@ function defaultState(){
       // 秘書からの連絡(→docs/03 §3.42)。**溜まっていく**。クラブチャットとは別物
       // [{ id, at, read, got }] … at=届いた節 / got=受け取り済み
       mail:[],
+      // 見たもの・やったこと(→docs/03 §3.43)。チュートリアルの進み具合はこれで決まる。
+      // **キャリアで1つ**。任期をまたいでも消えない(二度目の就任で案内は出ない)
+      seen:{},
       coll:[],                      // 集めた選手カード = プレイヤーの資産(→§3.2.2)
       tactics:[],                   // 習得した采配(→§3.7)
       trophies:[],                  // 獲得トロフィー(→§3.9)
@@ -294,6 +297,14 @@ function migrate(){
   if(S.v<27&&S.player){
     if(typeof S.player.tickets!=="object"||!S.player.tickets)S.player.tickets={};
     if(!S.player.mail)S.player.mail=[];
+  }
+  // v27 → v28: チュートリアル(→docs/03 §3.43)。**進み具合を持つ入れ物を足しただけ**。
+  // 既存のセーブは案内が済んだ扱いにする(いまさら「まずはオーナーへ」とは言わない)
+  if(S.v<28&&S.player){
+    if(!S.player.seen)S.player.seen={};
+    if(!S.player.mail)S.player.mail=[];
+    for(const m of MAILS)if(m.tut&&!S.player.mail.some(x=>x.id===m.id))
+      S.player.mail.push({ id:m.id, at:0, read:true, got:true });
   }
   if(S.v<26){
     if(S.club&&S.club.sponsor===undefined)S.club.sponsor=null;

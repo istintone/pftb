@@ -31,7 +31,10 @@ const SCREENS={
   foe:       { title:"OPPONENT",  under:"season",  chrome:"back", render:()=>renderFoe() },
   gallery:   { title:"GALLERY",   under:"clubhouse", chrome:"back", render:()=>renderGallery() },
   gacha:     { title:"SCOUT",     under:"home",    chrome:"back", render:()=>renderScout() },
-  secretary: { title:"SECRETARY", under:"home",    chrome:"back", render:()=>renderMail() },
+  // 受信箱は**チャットとして読む**(→docs/03 §3.43)。上が古く、下が最新。
+  // 開いたら一番下(=いま言われていること)まで送る
+  secretary: { title:"SECRETARY", under:"home",    chrome:"back", render:()=>renderMail(),
+               after:()=>{ $("appBody").scrollTop=$("appBody").scrollHeight; } },
   match:     { title:"MATCH",     chrome:"bare" },
   result:    { title:"RESULT",    chrome:"bare",   render:()=>renderResult() },
   career:    { title:"CAREER",    chrome:"bare",   render:()=>renderCareerEnd() },
@@ -74,6 +77,11 @@ function show(id,opts){
   if(def.render)def.render();
   $("appBody").scrollTop=0;
   if(def.after)def.after();      // 描画後の後処理(現在節へスクロール等)
+
+  // **開いた画面を覚える**(→docs/03 §3.43)。次の案内はこれをきっかけに届く。
+  // 節が進むのを待たないので、CARDS を開いた瞬間に DECK の案内が入る。
+  // 就任前(タイトル・オファー・契約書)は数えない
+  if(S&&S.club&&S.player&&def.tab&&seeNow(id))save();
 }
 /** ヘルプの開閉。中身は開くたびに作り直す(TUNINGの値を参照する項目があるため)。 */
 function openHelp(){
@@ -394,15 +402,24 @@ function secretaryLine(){
  * 開いた時点で既読にする(未読の印は HOME にだけ残す意味が無い)。
  */
 function renderMail(){
-  const list=mailList();
+  // **古い順に積む**。連絡はやりとりの記録なので、チャットと同じで上から下へ読む
+  // (HOME のひとことだけは mailLatest() = 一番新しいものを映す)
+  const list=mailList().slice().reverse();
   $("mailAv").innerHTML=chatAvatar("sec","ch-av-in");
   $("mailSub").textContent=list.length?list.length+"件の連絡":"連絡はありません";
   $("mailLog").innerHTML=list.length?list.map(m=>{
     const d=mailById(m.id); if(!d)return "";
     const gift=d.gift&&d.gift.ticket?ticketById(d.gift.ticket):null;
+    // **案内は行き先まで連れていく**(→docs/03 §3.43)。読んで終わりにさせない
+    const go=d.go&&SCREENS[d.go]?d.go:null;
     return '<div class="ch-row"><div class="ch-b ml-b">'
-      +'<span class="ch-nm">秘書　第'+m.at+'節'+(m.read?"":'　<i class="ml-new">NEW</i>')+'</span>'
+      +'<span class="ch-nm">秘書　'+(d.tut?"はじめかた "+d.tut+"/"+TUT_ALL:"第"+m.at+"節")
+        +(m.read?"":'　<i class="ml-new">NEW</i>')+'</span>'
+      // **件名を出す**。溜まった連絡をあとから辿るとき、本文だけでは探せない
+      +'<b class="ml-ti">'+esc(d.title)+'</b>'
       +esc(d.text)
+      +(go?'<div class="ml-go"><button class="btn ml-jump" data-go="'+esc(go)+'">'
+        +esc(SCREENS[go].title||go)+' をひらく ›</button></div>':"")
       +(gift?'<div class="ml-gift">'
         +'<b>'+esc(gift.name)+'</b>'
         +(m.got?'<span class="ml-done">受け取り済み</span>'
@@ -410,6 +427,9 @@ function renderMail(){
         +'</div>':"")
     +'</div></div>';
   }).join(""):'<div class="lg">まだ何も届いていません。</div>';
+  $("mailLog").querySelectorAll("[data-go]").forEach(el=>{
+    el.onclick=()=>show(el.dataset.go);
+  });
   $("mailLog").querySelectorAll("[data-mail]").forEach(el=>{
     el.onclick=async()=>{
       const g=mailTake(el.dataset.mail);
@@ -1142,6 +1162,7 @@ function buyScout(id){
   const rng=mulberry32((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0);
   _scoutGot=openScout(pk,rng,facScoutK());       // スカウト網(→docs/03 §3.5)
   S.player.coll.push(..._scoutGot);
+  seeNow("scoutDone");                           // 補強を「やった」(→docs/03 §3.43)
   save(); headUI(); renderScout();
   const best=_scoutGot.reduce((b,c)=>RAR_KEYS.indexOf(c.rarity)>RAR_KEYS.indexOf(b.rarity)?c:b);
   toast(pk.name+"：最高 "+RARITY[best.rarity].label+" "+shortName(best));

@@ -769,8 +769,11 @@ function trainAdd(id,k,n){
 const mailAll=()=>S.player.mail||(S.player.mail=[]);
 const mailHas=id=>mailAll().some(m=>m.id===id);
 const mailUnread=()=>mailAll().filter(m=>!m.read).length;
-/** 新しい順。**画面も HOME のひとこともこの並びを見る**。 */
-const mailList=()=>mailAll().slice().sort((a,b)=>(b.at||0)-(a.at||0));
+/** 新しい順。**画面も HOME のひとこともこの並びを見る**。
+ *  同じ節に2通届くことがある(チュートリアルと配布物)ので、**届いた順を同点の決着に使う**。
+ *  これが無いと、同じ節の中では先に届いたほうが「最新」として上に出てしまう。 */
+const mailList=()=>mailAll().map((m,i)=>({ m, i }))
+  .sort((a,b)=>(b.m.at||0)-(a.m.at||0)||b.i-a.i).map(x=>x.m);
 const mailLatest=()=>mailList()[0]||null;
 /** 届く条件を見て、まだ届いていない連絡を入れる。**同じ連絡は一度きり**。 */
 function mailTick(){
@@ -793,6 +796,20 @@ function mailTake(id){
   if(def.gift.ticket)ticketAdd(def.gift.ticket,1);
   return def.gift;
 }
+// --- 見たもの・やったこと(→docs/03 §3.43) ---
+// **キャリアで1つの覚え書き**。チュートリアルの進み具合はここだけを見る。
+// 画面を開いたら画面のidが、行為をしたら決めた名前が立つ。
+const seenAll=()=>S.player.seen||(S.player.seen={});
+const seenHas=k=>!!seenAll()[k];
+/** 「見た」を立てて、**その場で連絡を配り直す**。届いた通数を返す。
+ *  節が進むのを待たないので、CARDS を開いた瞬間に次の案内が届く。 */
+function seeNow(k){
+  if(!S.player)return 0;
+  if(seenAll()[k])return 0;
+  seenAll()[k]=1;
+  return mailTick();
+}
+
 // --- 引換券(→docs/03 §3.42) ---
 const ticketsOf=()=>S.player.tickets||(S.player.tickets={});
 const ticketCount=id=>ticketsOf()[id]||0;

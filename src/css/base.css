@@ -1371,6 +1371,12 @@ body{
 .ml-gift b{ font:600 12px/1.4 var(--f-head); color:var(--accent-hi) }
 .ml-take{ width:auto; padding:9px 16px; flex:none }
 .ml-done{ font-size:10px; color:var(--text-dim) }
+/* チュートリアルの行き先(→docs/03 §3.43)。**読んで終わりにさせない**ので、
+   贈り物と同じ位置に置いて、吹き出しの中から次の画面へ送り出す */
+.ml-ti{ display:block; margin-bottom:3px; font:600 13px/1.5 var(--f-head) }
+.ml-go{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line) }
+.ml-jump{ width:100%; padding:9px 14px; font-size:12px }
+#scr-secretary .ml-go{ border-top-color:var(--ch-line) }
 /* 引換券の枠(→docs/03 §3.42)。コインで買う枠と見分けが付くよう金で縁取る */
 .sc-row.tk{ border-color:var(--accent); background:oklch(0.24 0.04 85) }
 .sc-row.tk .sc-n{ font-style:normal; color:var(--accent-hi) }

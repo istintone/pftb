@@ -1021,6 +1021,51 @@ const AWAKES=[
 //   when … 届く条件。true を返した節に1度だけ届く(id で二度目を防ぐ)
 //   gift … 受け取れるもの。いまは引換券だけ
 const MAILS=[
+  // --- チュートリアル(→docs/03 §3.43) ---
+  // **画面のツアーではなく、秘書との一連のやりとり**にしてある。HOME に出しっぱなしの
+  // 案内は読み飛ばされるうえ、あとから「何を言われたか」を辿れない。連絡なら受信箱に残る。
+  //   tut … 何番目の案内か(見出しの「はじめかた n/N」に出る)
+  //   go  … 「行ってみる」で飛ぶ画面。**次にどこを触るか**を1つに絞る
+  // 進み具合は S.player.seen(→docs/03 §3.43)。**キャリアで一度きり**なので、
+  // 二度目の就任では届かない。
+  {
+    id:"tut1", from:"sec", tut:1, title:"ようこそ、監督",
+    text:"監督、就任おめでとうございます。秘書として、これからお手伝いさせていただきます。"
+        +"まずはオーナーがお待ちです。HOME の一番上のタイルから、ごあいさつに向かいましょう。",
+    when:S=>!!S.club,
+  },
+  {
+    id:"tut2", from:"sec", tut:2, title:"クラブのみんなに会いましょう", go:"cards",
+    text:"ごあいさつ、おつかれさまでした。次は選手たちです。"
+        +"CARDS にクラブから預かった選手が並んでいます。"
+        +"誰がいるのか、まずは顔ぶれを見ておきましょう。",
+    when:S=>mailHas("tut1")&&!!S.career.opened,
+  },
+  {
+    id:"tut3", from:"sec", tut:3, title:"はじめての編成", go:"deck",
+    text:"選手は見ていただけましたか。では DECK で先発11人と役割を決めましょう。"
+        +"枠に合った選手ほど力を出せます。迷ったら、いまのままでも構いませんよ。",
+    when:S=>mailHas("tut2")&&seenHas("cards"),
+  },
+  {
+    id:"tut4", from:"sec", tut:4, title:"はじめての試合", go:"season",
+    text:"編成ができましたね。いよいよ試合です。SCHEDULE から次の一戦へ向かってください。"
+        +"試合の前には、私から相手の話をさせていただきます。",
+    when:S=>mailHas("tut3")&&seenHas("deck"),
+  },
+  {
+    id:"tut5", from:"sec", tut:5, title:"はじめての補強", go:"gacha",
+    text:"初戦おつかれさまでした。勝っても負けても、チームは強くしていきましょう。"
+        +"SCOUT でコインを使えば、新しい選手が来てくれます。",
+    when:S=>mailHas("tut4")&&(S.career.log||[]).length>0,
+  },
+  {
+    id:"tut6", from:"sec", tut:6, title:"それでは監督",
+    text:"ひととおりご案内しました。ここからは監督のクラブです。"
+        +"オーナーの目標、カップ戦、スポンサー……やることは尽きませんが、"
+        +"私はいつでもここにいます。クラブの躍進を、おねがいします。",
+    when:S=>mailHas("tut5")&&seenHas("scoutDone"),
+  },
   {
     id:"leTest", from:"sec", title:"LEGENDS の引換券",
     text:"監督、初勝利おめでとうございます。上から預かりものが届いていますよ。"
@@ -1032,6 +1077,8 @@ const MAILS=[
   },
 ];
 const mailById=id=>MAILS.find(m=>m.id===id);
+/** チュートリアルの案内は何通あるか(見出しの「n/N」に出す)。 */
+const TUT_ALL=MAILS.filter(m=>m.tut).length;
 // 引換券(→docs/03 §3.42)。**コインでは買えないパック**。スカウト画面に並ぶ。
 const TICKETS={
   scoutLe:{ id:"scoutLe", name:"LEGENDS 確定スカウト", cards:1, floor:"LEG", w:{ LEG:100 },
