@@ -1635,7 +1635,8 @@ function chatEnter(st){
       sel.spon="pay";
       chatSay("sec",chatText(CHAT.sponHit,"sh:"+C.node,{ n:sponsorById(sp.id).name }));
       // ポジション確定スカウトだけは**どこを厚くするか**を監督が選ぶ
-      if(sponPrize(sp.tier).kind==="scoutPos"){
+      // **ポジションを選ぶ段**(2段と4段)だけ、監督にどこを呼ぶか聞く
+      if(sponPrize(sp.tier).pick){
         chatSay("sec",chatText(CHAT.sponPos,"sp:"+C.node));
         return true;
       }

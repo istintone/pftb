@@ -829,11 +829,16 @@ function sponGoalText(sp){
   if(g.kind==="league")return to+" リーグで優勝する";
   return to+" "+g.n+"連勝する";
 }
+/** コインの額。**会社ごとの指定があればそちらが優先**(→§3.40)。 */
+function sponCoin(sp){
+  const c=sponsorById(sp.id);
+  return (c&&c.coin)||TUNING.spon.coin[sp.tier-1];
+}
 /** 報酬の文。 */
 function sponPrizeText(sp){
   if(!sp)return "";
   const P=sponPrize(sp.tier);
-  return P.kind==="coin"?fmtNum(TUNING.spon.coin[sp.tier-1])+" コイン":P.label;
+  return P.kind==="coin"?fmtNum(sponCoin(sp))+" コイン":P.label;
 }
 /**
  * 候補を出す(→§3.40)。**リーグと名声で絞る**。名声が届いていて、いまのリーグに
@@ -928,15 +933,17 @@ function sponPay(pos){
   const P=sponPrize(sp.tier), T=TUNING.spon;
   const rng=mulberry32((S.world.seed^hashStr("spp:"+sp.id+":"+sp.node0))>>>0);
   if(P.kind==="coin"){
-    const v=T.coin[sp.tier-1];
+    const v=sponCoin(sp);
     S.club.coins+=v;
     return { kind:"coin", coin:v };
   }
   // **段を名指しして1枚引く**(→docs/03 §3.26 のプロスカウトと同じ作り)
   // **LEGENDS は手で作った12人から**(→docs/03 §3.42)。自動生成に落とすのは全員そろってから
+  // WORLD CLASS 確定は2種類ある。**ポジションまで選べるのが上の段**(→§3.40)
+  const wc=P.kind==="scoutWc"||P.kind==="scoutWcPos";
   const card=P.kind==="scoutLe"?drawLegend(rng)
     :makeCard(rng,pos||rpick(rng,POS),
-      { rarity:P.kind==="scoutWc"?"WC":(rng()<T.wcInPos?"WC":"SPE") });
+      { rarity:wc?"WC":(rng()<T.wcInPos?"WC":"SPE") });
   S.player.coll.push(card);
   return { kind:P.kind, card };
 }

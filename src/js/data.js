@@ -955,12 +955,18 @@ const sponAidById=id=>SPONSOR_AID.find(a=>a.id===id);
  * スポンサーの候補。**段(tier)が課題の重さと報酬を決める**。
  *   need   … 声が掛かるのに要る名声
  *   league … そのリーグに居るときだけ現れる(無ければどこでも)
- * 段の報酬は SPON_PRIZE(1段=コイン … 4段=LEGENDS)。
+ *   coin   … 1段だけ。**会社ごとに額が違う**(無ければ TUNING.spon.coin の段の値)
+ * 段の報酬は SPON_PRIZE(1段=コイン … 5段=LEGENDS)。
  */
 const SPONSORS=[
-  { id:"shoutengai", name:"駅前商店会",           tier:1, need:0 },
-  { id:"kobo",       name:"ボルタ工房",           tier:1, need:0 },
-  { id:"seed",       name:"シードスポーツ用品",   tier:1, need:0 },
+  // 1段 … 街の会社。**額は会社ごとに違う**ので、名声0でも「どれと組むか」の判断になる
+  { id:"shoutengai", name:"駅前商店会",           tier:1, need:0, coin:6000 },
+  { id:"kobo",       name:"ボルタ工房",           tier:1, need:0, coin:5000 },
+  { id:"seed",       name:"シードスポーツ用品",   tier:1, need:0, coin:7000 },
+  { id:"bento",      name:"大盛り弁当センター",   tier:1, need:0, coin:4000 },
+  { id:"clinic",     name:"みどり接骨院",         tier:1, need:0, coin:5500 },
+  { id:"taxi",       name:"ホタル交通",           tier:1, need:0, coin:8000 },
+  { id:"paint",      name:"サンライズ塗装",       tier:1, need:0, coin:9000 },
   { id:"lager",      name:"ノルドラガー",         tier:2, need:1200 },
   { id:"telco",      name:"リンクテレコム",       tier:2, need:1800 },
   { id:"airline",    name:"アズーレ航空",         tier:2, need:2400 },
@@ -973,16 +979,21 @@ const SPONSORS=[
   { id:"bank",       name:"メリディアン銀行",     tier:3, need:5000 },
   { id:"auto",       name:"アウレリア・モーターズ", tier:3, need:6500 },
   { id:"stream",     name:"グローブ・ストリーム", tier:3, need:8000 },
-  { id:"world",      name:"ワールドワイド・グループ", tier:4, need:14000 },
-  { id:"dynasty",    name:"ダイナスティ財団",     tier:4, need:18000 },
+  { id:"energy",     name:"ヘリオス・エナジー",   tier:4, need:10000 },
+  { id:"ocean",      name:"トランスオーシャン海運", tier:4, need:12000 },
+  { id:"world",      name:"ワールドワイド・グループ", tier:5, need:14000 },
+  { id:"dynasty",    name:"ダイナスティ財団",     tier:5, need:18000 },
 ];
 const sponsorById=id=>SPONSORS.find(s=>s.id===id);
 /** 段ごとの報酬。**最上位が LEGENDS の入手経路**(→docs/03 §3.13)。 */
 const SPON_PRIZE=[
-  { kind:"coin",     label:"コイン" },
-  { kind:"scoutPos", label:"ポジション確定スカウト",   note:"SPECIALS か WORLD CLASS" },
-  { kind:"scoutWc",  label:"WORLD CLASS 確定スカウト", note:"世界屈指の1枚" },
-  { kind:"scoutLe",  label:"LEGENDS 確定スカウト",     note:"歴史に残る1枚" },
+  // pick … 受け取るときに**どのポジションを呼ぶか**を監督が選ぶ
+  { kind:"coin",       label:"コイン" },
+  { kind:"scoutPos",   label:"ポジション確定スカウト",   note:"SPECIALS か WORLD CLASS", pick:true },
+  { kind:"scoutWc",    label:"WORLD CLASS 確定スカウト", note:"世界屈指の1枚" },
+  { kind:"scoutWcPos", label:"WORLD CLASS ポジション確定スカウト",
+                       note:"欲しい枠の、世界屈指の1枚", pick:true },
+  { kind:"scoutLe",    label:"LEGENDS 確定スカウト",     note:"歴史に残る1枚" },
 ];
 const sponPrize=tier=>SPON_PRIZE[Math.min(tier,SPON_PRIZE.length)-1];
 /**
@@ -1251,9 +1262,11 @@ const TUNING={
   //   fresh … スタミナがこの割合以上
   skillCond:{ late:75, fresh:0.70 },
   spon:{ term:24, pick:3, great:0.34, fail:0.12, least:12,
-         coin:[6000,14000,30000,60000],
-         streak:[3,4,5,6],
-         fameFail:[100,260,600,1200],
+         // coin は1段だけが使う。**会社ごとの coin があればそちらが優先**
+         coin:[6000,14000,30000,60000,120000],
+         // 4段と5段が同じなのは**わざと**。LEGENDS の重さを動かさずに段を挟んだ
+         streak:[3,4,5,6,6],
+         fameFail:[100,260,600,900,1200],
          wcInPos:0.30 },                        // ポジション確定スカウトが WC になる率
   // 訓練(→docs/03 §3.30)。**任期のあいだだけの伸び**で、任期が明けるとリセットされる。
   //   ok/great … 手応えごとにもらえる経験点の幅(失敗は0)

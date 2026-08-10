@@ -419,6 +419,43 @@ function runSeason(hand) {
     E.fameLose(999999);
     assert.strictEqual(S7.player.fame, 0, "名声は0より下に行かない");
 
+    // --- 段の階段(→docs/03 §3.40)。**5段。4段はポジションまで選べる WORLD CLASS** ---
+    assert.deepStrictEqual(E.SPON_PRIZE.map(x => x.kind),
+      ["coin", "scoutPos", "scoutWc", "scoutWcPos", "scoutLe"], "報酬の段の並び");
+    const kinds = [];
+    for (let tier = 1; tier <= E.SPON_PRIZE.length; tier++) {
+      const co = E.SPONSORS.find(x => x.tier === tier);
+      assert.ok(co, tier + "段の会社がある");
+      const P = E.sponPrize(tier);
+      S7.club.sponsor = { id: co.id, tier: tier, aid: "atk", goal: { kind: "league" },
+        node0: 1 + tier, until: 90, hit: true, paid: false };
+      // **ポジションを選ぶ段だけ**監督に聞く。それ以外は null で渡る(ui と同じ)
+      const r = E.sponPay(P.pick ? "FW" : null);
+      assert.ok(r, tier + "段の報酬が出る");
+      assert.strictEqual(r.kind, P.kind, tier + "段は " + P.kind);
+      if (P.pick) assert.strictEqual(r.card.pos, "FW",
+        tier + "段は呼んだポジションで来る: " + r.card.pos);
+      if (P.kind === "scoutWc" || P.kind === "scoutWcPos")
+        assert.strictEqual(r.card.rarity, "WC", tier + "段は WORLD CLASS 確定");
+      if (P.kind === "scoutLe") assert.strictEqual(r.card.rarity, "LEG", "5段は LEGENDS 確定");
+      kinds.push(P.label);
+    }
+    // **LEGENDS の重さは動かさない**。4段を挟んでも5段の課題は前のままにしてある
+    assert.strictEqual(T.streak[4], T.streak[3], "4段と5段の連勝数は同じ");
+    assert.ok(T.fameFail[3] < T.fameFail[4], "落としたときの痛みは段で増える");
+
+    // --- 1段は**会社ごとに額が違う**。名声0でも「どれと組むか」の判断になる ---
+    const t1 = E.SPONSORS.filter(x => x.tier === 1);
+    const coins = [...new Set(t1.map(x => x.coin))];
+    assert.ok(t1.length >= 5, "1段の会社が " + t1.length + "社");
+    assert.ok(coins.length >= 5, "額が " + coins.length + " 通り: " + coins.join("/"));
+    S7.player.fame = 0; S7.club.sponsor = null;
+    const seen = new Set();
+    for (let n = 1; n <= 40; n++) { C7.node = n; E.sponOffers().forEach(o => seen.add(o.id)); }
+    assert.ok(seen.size > T.pick, "名声0でも顔ぶれが入れ替わる: " + seen.size + "社");
+    console.log("スポンサーの段OK " + kinds.map((l, i) => (i + 1) + "段=" + l).join(" / "));
+    console.log("  1段の額: " + t1.map(x => x.name + " " + x.coin).join(" / "));
+
     // --- 任期の終わりに契約を残さない(→docs/03 §3.40) ---
     S7.player.fame = 5000; S7.club.sponsor = null;
     C7.node = C7.limit - T.least + 2;                  // 残り least-1 節
