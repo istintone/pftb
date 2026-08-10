@@ -1289,6 +1289,26 @@ const STEPS = [
       return t.map(e=>e.querySelector('.tile-t').textContent+'('
         +e.querySelector('.tile-s').textContent+')').join(' / ');
     })()`));
+    // HOME のステッカー(→docs/06 §6.30)
+    ctx.log("  ステッカー:", await ctx.js(`(()=>{
+      const one=sel=>{ const e=document.querySelector(sel+' img');
+        if(!e)throw new Error(sel+' に絵が無い'); return e.src.length; };
+      one('#tileScoutArt'); one('#tileDeckArt');
+      if(document.querySelector('#tileScoutArt img').src
+        ===document.querySelector('#tileDeckArt img').src)
+        throw new Error('2枚のタイルが同じ絵');
+      // **次戦のタイルは試合ごとに変わるが、描き直しでは変わらない**
+      const nx=()=>{ const e=document.querySelector('#homeNext .nx-st img');
+        return e?e.src.slice(-40):'なし'; };
+      show('home'); const a=nx(); show('home');
+      if(a!==nx())throw new Error('描き直すたびに絵が変わる');
+      const md=S.world.matchday, seen=new Set();
+      for(let i=1;i<=8;i++){ S.world.matchday=i; show('home'); seen.add(nx()); }
+      S.world.matchday=md; show('home');
+      if(seen.has('なし'))throw new Error('次戦のタイルに絵が無い節がある');
+      if(seen.size<3)throw new Error('試合が変わっても絵が変わらない: '+seen.size);
+      return 'タイル2枚は固定 ／ 次戦は8節で '+seen.size+' 種 ／ 描き直しても不変';
+    })()`));
     await ctx.shot("19-home-tiles");
     await ctx.js("document.getElementById('tileScout').click()");
     await ctx.wait(300);

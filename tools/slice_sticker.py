@@ -6,7 +6,12 @@
 
     src/assets/art/sticker/*.png   ← 素材(白背景の大きな画像。埋め込まれない)
          ↓
-    src/assets/sticker/st01.webp …  ← 書き出し(自動生成。手で触らない)
+    src/assets/sticker/scout.webp … ← 書き出し(自動生成。手で触らない)
+
+**書き出し名は素材のファイル名がそのまま**。`ASSETS.sticker["scout"]` で引ける。
+タイトルの壁は全部を混ぜて使うが、**HOME の飾りは絵を名指しで使う**(→docs/06 §6.30)ので、
+通し番号で振ると素材を1枚足しただけで絵が入れ替わってしまう。
+素材の名前は中身が分かるものにして、**一度決めたら変えない**。
 
 **白い縁はステッカーの一部**なので、単純に白を消してはいけない。
 画像の縁から届く白だけをフラッドフィルで抜き、内側の白(ダイカットの縁)は残す
@@ -133,8 +138,12 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     total = 0
     alive = set()
-    for i, path in enumerate(srcs, 1):
-        name = "st%02d" % i
+    for path in srcs:
+        # **ファイル名がそのままキー**。名指しで使うので通し番号にはしない
+        name = path.stem
+        if not name.isascii() or " " in name:
+            print("  ⚠ %s は名前に使えない文字がある(英数字とハイフンだけ)" % path.name)
+            continue
         alive.add(name)
         if dry:
             print("would %s ← %s" % (name, path.name[:40]))
@@ -154,8 +163,8 @@ def main():
         dst = OUT / (name + ".webp")
         out.save(dst, "WEBP", quality=QUALITY, method=6)
         total += dst.stat().st_size
-        print("%-5s ← %-40s %4dx%-4d %5.1f KB  影 %d / 汚れ %d px"
-              % (name, path.name[:40], width, h, dst.stat().st_size / 1024, gone, specks))
+        print("%-10s ← %-24s %4dx%-4d %5.1f KB  影 %d / 汚れ %d px"
+              % (name, path.name[:24], width, h, dst.stat().st_size / 1024, gone, specks))
     stale = [p for p in OUT.glob("*.webp") if p.stem not in alive]
     for p in stale:
         if not dry:

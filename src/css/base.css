@@ -1442,6 +1442,20 @@ body{
 .tile-i{ font-size:20px; margin-bottom:6px; color:var(--accent) }
 .tile-t{ font:600 13px/1 var(--f-head); color:var(--text) }
 .tile-s{ font-size:11px; color:var(--text-dim); margin-top:3px }
+/* タイルとマッチタイルに貼るステッカー(→docs/06 §6.30)。
+   **文字の下に潜らせて、枠から少しはみ出させる**。きれいに収めると
+   絵が枠の中の飾りになってしまい、「貼ってある」感じが出ない。 */
+.tile{ position:relative; overflow:hidden }
+.tile-t,.tile-s,.tile-i{ position:relative; z-index:1 }
+.tile-st,.nx-st{ position:absolute; pointer-events:none; z-index:0 }
+.tile-st{ right:-16px; bottom:-14px; width:84px; transform:rotate(-7deg) }
+.nx-st{ right:-14px; top:50%; width:132px; transform:translateY(-50%) rotate(5deg) }
+.stk{ display:block; width:100%; height:auto;
+  /* 白い縁は素材に無いので、白の drop-shadow を重ねて型抜きの縁を作る(→§6.29) */
+  filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)
+         drop-shadow(1px 2px 3px oklch(0 0 0 / .55)); }
+.tile-st .stk{ opacity:.42 }
+.nx-st .stk{ opacity:.30 }
 
 /* スカウト(→docs/03 §3.22)。コインで引くパック。 */
 .sc-row{

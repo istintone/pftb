@@ -314,6 +314,9 @@ function renderHome(){
   const start=squadCards().slice(0,TUNING.squad.starters);
   $("tileScoutSub").textContent=fmtNum(S.club?S.club.coins:0)+" コイン";
   $("tileDeckSub").textContent="総合力 "+squadPowerAt(squadCards(),S.form);
+  // タイルの余白にステッカーを貼る(→docs/06 §6.30)。**絵は固定**で、その行き先を表す
+  $("tileScoutArt").innerHTML=stickerArt("scout");
+  $("tileDeckArt").innerHTML=stickerArt("board");
   const md="SEASON "+W.season+" · MATCHDAY "
     +String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0");
 
@@ -343,6 +346,7 @@ function renderHome(){
       +'<div class="nx-vs"><b>'+esc(clubName(S.club.id))+'</b>'
         +'<span>VS</span><b>'+esc(clubName(f.opp))+'</b></div>'
       +'<div class="nx-sub">'+(f.home?"HOME":"AWAY")+' ／ 第'+W.matchday+'節</div>'
+      +'<div class="nx-st">'+matchSticker()+'</div>'
       // **スポンサーの名前を看板のように置く**(→docs/06 §6.25)。契約中だけ出る
       +sponBoard()
       // **ボタンは置かない**。タイルごとリンクなので、行き先を右下に一言添えるだけ
@@ -366,6 +370,19 @@ function renderHome(){
   // CLUB NEWS: クラブの今(一時的なコンディションの表示でもある)
   $("homeNews").innerHTML=clubNews().map(n=>'<div class="news">'+n+'</div>').join("");
 }
+/**
+ * ステッカーを1枚(→docs/06 §6.30)。**素材が無ければ何も出さない**ので、
+ * 絵を消しても画面が崩れない。キーは書き出しのファイル名(→tools/slice_sticker.py)。
+ */
+function stickerArt(key){
+  const A=(window.ASSETS&&window.ASSETS.sticker)||{};
+  return A[key]?'<img class="stk" src="'+A[key]+'" alt="">':"";
+}
+/** 次戦のタイルに貼る絵。**試合ごとに変わるが、描き直しでは変わらない**
+ *  (毎描画で引き直すと、HOMEに戻るたびに絵が飛ぶ)。 */
+const NX_STICKERS=["stadium","coach","fans"];
+const matchSticker=()=>stickerArt(NX_STICKERS[
+  hashStr(S.club.id+":"+S.world.season+":"+S.world.matchday)%NX_STICKERS.length]);
 /**
  * 試合の煽り(→docs/06 §6.8)。**状況から1つ選ぶ**。
  * 上から順に見て最初に当たったものを使う。同じ節なら毎回同じ文になる
