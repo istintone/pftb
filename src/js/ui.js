@@ -1323,7 +1323,7 @@ function renderTenureCalendar(){
       +'<span class="cal-n num">'+n+'</span>'
       +(cu.open?cupMarkFb():'<span class="cal-h">·</span>')
       +'<span class="cal-b"><b>'+esc(cu.label)+'</b>'
-      +'<span class="lg">'+esc(cu.sub)+'</span></span>'
+      +(cu.sub?'<span class="lg">'+esc(cu.sub)+'</span>':"")+'</span>'
       +'<span class="cal-r">'+cu.mark+'</span>'
       +(cu.open?cupMark():"")+'</div>');
     else rows.push('<div class="cal none"><span class="cal-n num">'+n+'</span>'
@@ -1355,14 +1355,14 @@ function cupCalNote(n){
   // そこから間隔があく節では待つ理由が違う。全部同じ文にすると先の予定まで嘘になる
   const nodes=(c&&!c.done)?cupNodes():null, last=nodes?nodes[nodes.length-1]:0;
   const rest=nodes?last+TUNING.cup.rest:(S.career.cupRest||0);
-  const also=on.length>1?"（他"+(on.length-1)+"大会と同日・選べます）":"";
+  const also=on.length>1?"他"+(on.length-1)+"大会と同日・選べます":"";
   // **その節に出られるか**。塞いでいるもの(進行中の大会・間隔・参加条件)が
   // ひとつでもあれば「見えるだけの予定」で、見た目のトーンもそこで分かれる
   const open=n>last&&n>=rest&&cupOpen(on[0]);
-  const sub=n<=last?"開催予定（大会が終わるまで参加できません）"
-    :n<rest?"開催予定（前の大会から"+TUNING.cup.rest+"節あきます）"
-    :cupOpen(on[0])?"開催予定（エントリーできます）":"開催予定（条件を満たせば参加できます）";
-  return { label:on[0].name+(on.length>1?" 他":""), sub:sub+also, cls:"cup soon",
+  // **理由は書かない**(→docs/06 §6.31)。出られるかどうかは文字のトーンで分かり、
+  // 条件そのものは日程タブ(大会と参加条件)が持っている。96行ぜんぶに但し書きを
+  // 添えると、カレンダーが注意書きの列になってしまう
+  return { label:on[0].name+(on.length>1?" 他":""), sub:also, cls:"cup soon",
     mark:"◇", open:open };
 }
 const seasonDivider=(season,clubId)=>
@@ -1421,7 +1421,7 @@ function renderTenureBar(){
 function logRow(e){
   // **スポンサーの打ち手も記録に出す**(→docs/03 §3.40)。契約が切れたあとに
   // 過去の行を開いても名前が出るよう、handsNow ではなく汎用の呼び名で拾う
-  const h=handById(e.hand)||(e.hand==="spon"?{ icon:"📣", label:"スポンサー支援" }:null);
+  const h=handById(e.hand)||(e.hand==="spon"?{ label:"スポンサー支援" }:null);
   const cls=e.res==="win"?"w":e.res==="draw"?"d":"l";
   const mark=e.res==="win"?"○":e.res==="draw"?"△":"●";
   // カップは相手がクラブ一覧に居ないので、記録側が持っている名前をそのまま出す
@@ -1429,14 +1429,13 @@ function logRow(e){
   const name=cup?e.oppName:clubName(e.opp);
   const sub=cup?e.label+(e.champ?" ／ 優勝":"")
             :"S"+e.season+" 第"+e.md+"節 ／ "+(e.home?"HOME":"AWAY");
-  return '<div class="cal done'+(e.champ?" champ":"")+(cup?" tr":"")+'">'
+  // **済んだ節に飾りは要らない**(→docs/06 §6.31)。ここで読みたいのはスコアなので、
+  // トロフィーの絵も打ち手の絵文字も置かない。打ち手は title に残す
+  return '<div class="cal done'+(e.champ?" champ":"")+'">'
     +'<span class="cal-n num">'+e.node+'</span>'
-    +(cup?cupMarkFb()
-       :'<span class="cal-h" title="'+(h?h.label:"")+'">'+(h?h.icon:"—")+'</span>')
-    +'<span class="cal-b"><b>'+esc(name)+'</b>'
+    +'<span class="cal-b" title="'+esc(h?h.label:"")+'"><b>'+esc(name)+'</b>'
     +'<span class="lg">'+esc(sub)+'</span></span>'
-    +'<span class="cal-s num '+cls+'">'+mark+' '+e.gf+'-'+e.ga+'</span>'
-    +(cup?cupMark():"")+'</div>';
+    +'<span class="cal-s num '+cls+'">'+mark+' '+e.gf+'-'+e.ga+'</span></div>';
 }
 
 /**
@@ -1831,7 +1830,7 @@ function chatOptions(){
   if(st==="hand")return { q:"打ち手を選ぶ",
     // **説明は添えない**(→docs/06 §6.24)。違いは覚えるもので、毎節読むものではない。
     // スポンサーが付いていれば4つ目が増える(→docs/03 §3.40)
-    items:handsNow().map(h=>({ id:h.id, label:h.icon+" "+h.label,
+    items:handsNow().map(h=>({ id:h.id, label:h.label,
       say:h.id==="spon"?chatText(CHAT.sponAid,"sa:"+N,{ a:h.label })
         :chatText(CHAT[h.id==="train"?"sayTrain":h.id==="bond"?"sayBond":"sayRest"],
         "sh:"+N+h.id) })) };

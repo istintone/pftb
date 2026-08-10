@@ -1424,7 +1424,13 @@ const STEPS = [
       S.career.log=keep.filter(e=>e.res!=='win');
       mailTick();
       if(S.player.mail.length!==base)throw new Error('勝つ前に届いている');
-      S.career.log=keep.concat([{ node:S.career.node, res:'win' }]);
+      // **記録の形を崩さない**。node と res だけの偽物を足すと、任期カレンダーに
+      // 「SEASON undefined」の行が出て、あとで撮る画面が汚れる。
+      // 実物をまるごと写して結果だけ勝ちに変える
+      const last=keep[keep.length-1];
+      S.career.log=keep.concat([last
+        ?{ ...last, node:S.career.node, res:'win', gf:1, ga:0 }
+        :{ node:S.career.node, res:'win' }]);
       mailTick();
       if(!mailUnread())throw new Error('初勝利で届かない');
       show('home');
