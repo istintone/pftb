@@ -576,8 +576,29 @@ const STEPS = [
       if(document.getElementById('homeNext').textContent.indexOf('OFFICIAL PARTNER')>=0)
         throw new Error('契約が無いのに看板が残る');
       S.club.sponsor=keep; show('home');
-      return 'OFFICIAL PARTNER '+(ad?'看板の絵':nm)+'（契約が無ければ出ない）';
+      // **絵のある会社に差し替えて、看板が出ることも見る**。名声99999だと最上段の
+      // 会社が来るが、そこはまだ絵が無いので社名の側しか通らない
+      const A=(window.ASSETS&&window.ASSETS.banner)||{};
+      const withArt=SPONSORS.find(x=>A[x.id]);
+      let shown='なし';
+      if(withArt){
+        const keep=sponsor().id; sponsor().id=withArt.id; show('home');
+        const im=document.querySelector('#homeNext .ad-nx img');
+        if(!im)throw new Error('絵のある会社でも看板が出ない: '+withArt.id);
+        shown=withArt.name;
+        sponsor().id=keep; show('home');
+        if(document.querySelector('#homeNext .ad-nx img'))
+          throw new Error('絵の無い会社に看板が残る');
+      }
+      window.__adId=withArt?withArt.id:null;
+      return 'OFFICIAL PARTNER '+(ad?'看板の絵':nm)
+        +' ／ 絵のある会社: '+shown+'（契約が無ければ出ない）';
     })()`));
+    // **看板の絵が出ている状態**も1枚残す(→docs/06 §6.32)
+    await ctx.js("if(window.__adId){sponsor().id=window.__adId;show('home');}");
+    await ctx.wait(200);
+    await ctx.shot("03d-home-banner");
+    await ctx.js("if(window.__adId){sponsor().id='dynasty';show('home');}");
     await ctx.shot("03c-home-sponsor");
     ctx.log("  支援の打ち手:", await ctx.js(`(()=>{
       // **メニューは聞かれない**。伸ばす能力は契約で決まっている
@@ -907,6 +928,20 @@ const STEPS = [
         +' (中央線は50%。どちらも越えていない)';
     })()`));
     await ctx.shot("07a-cutin-kickoff");
+    // ピッチ脇の看板(→docs/06 §6.32)。**絵のある会社に差し替えて**1枚残す
+    ctx.log("      ピッチ脇の看板:", await ctx.js(`(()=>{
+      const A=(window.ASSETS&&window.ASSETS.banner)||{};
+      const w=SPONSORS.find(x=>A[x.id]); if(!w||!sponsor())return '契約が無い';
+      const keep=sponsor().id; sponsor().id=w.id;
+      cutKick();                                   // 帯を出し直す(mCut に描かれる)
+      const im=document.querySelector('#mCut .ad-cut img');
+      window.__cutKeep=keep;
+      if(!im)throw new Error('キックオフに看板が出ない');
+      return w.name+'（カットインの下辺に出る）';
+    })()`));
+    await ctx.wait(200);
+    await ctx.shot("07a2-cutin-banner");
+    await ctx.js("if(window.__cutKeep)sponsor().id=window.__cutKeep");
     await ctx.wait(9000);
     ctx.log("  カットイン:", await ctx.js("window.__cutN||0"), "回");
     // 各カットインの見た目を確かめる(実戦では出る局面が毎回変わるので直接呼ぶ)

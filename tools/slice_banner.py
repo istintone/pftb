@@ -4,7 +4,7 @@
 
     python tools/slice_banner.py <シート画像> <id> <id> <id> <id> [--rows=N] [--w=640]
 
-    src/assets/art/banner/<シート>.png   ← 素材(埋め込まれない)
+    src/assets/art/company/<シート>.png  ← 素材(埋め込まれない)
          ↓
     src/assets/banner/<id>.webp          ← 書き出し(自動生成。手で触らない)
 
@@ -15,7 +15,11 @@
 縦N等分する**ことで正規化する。守ってもらうのはサイズではなく「N段に割り付けること」。
 
 看板は**矩形の広告そのもの**なので、選手の立ち絵と違って背景を抜かない。
-代わりに、段の境目に残りがちな縁を少しだけ内側へ詰める(依頼書で余白を空けてもらっている)。
+代わりに、段の境目に残りがちな縁を少しだけ内側へ詰める。
+
+**左端の添え書きを自動で落とす。** 生成AIは頼んでいない注記(「y: 0-160」のような
+段の座標)を左の余白に描いてくることがある。段ごとの色を比べて、**4段とも同じ色の列**が
+続くあいだは中身ではないと判断して切り落とす(実測36px)。
 
 id はスポンサーの id(→docs/03 §3.40)と同じにする。画面はこの名前で絵を引く。
 """
@@ -36,7 +40,37 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "src/assets/banner"
 WIDTH = 640           # 書き出しの幅。画面では 350〜390px なので倍もあれば足りる
 QUALITY = 84
-INSET = 0.012         # 段の上下左右を詰める割合(境目の線と滲みを落とす)
+INSET = 0.012         # 段の上下を詰める割合(境目の線と滲みを落とす)
+GUT = 40              # 添え書きとみなす色差。これ未満なら「4段とも同じ色」
+GUT_MAX = 0.14        # 添え書きを探す範囲(左右それぞれ画像の何割まで)
+
+
+def trim_gutter(im, rows):
+    """**段の中身が始まる位置**まで左右を詰める。
+
+    4段はそれぞれ違う色で塗られているので、**段をまたいで色が変わらない列**は
+    看板の中身ではない(黒い余白と、そこに描かれた添え書き)。横方向は文字が
+    端まで来ていることがあるので、**中身に入ったら即やめる**。"""
+    import statistics
+    W, H = im.size
+    px = im.load()
+
+    def med(x, i):
+        vals = [px[x, int(H * (i + f) / rows)]
+                for f in (0.10, 0.18, 0.26, 0.34, 0.50, 0.66, 0.74, 0.82, 0.90)]
+        return tuple(statistics.median(v[k] for v in vals) for k in range(3))
+
+    def same(x):
+        m = [med(x, i) for i in range(rows)]
+        return max(max(abs(a[k] - b[k]) for k in range(3)) for a in m for b in m) < GUT
+
+    l = 0
+    while l < W * GUT_MAX and same(l):
+        l += 1
+    r = W - 1
+    while r > W * (1 - GUT_MAX) and same(r):
+        r -= 1
+    return l, r
 
 
 def main():
@@ -53,15 +87,21 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
 
     sheet = Image.open(src).convert("RGB")
-    W, H = sheet.size
+    W0, H = sheet.size
+    l, r = trim_gutter(sheet, rows)
+    if l or r < W0 - 1:
+        sheet = sheet.crop((l, 0, r + 1, H))
+        print("添え書きを落とした: 左%dpx / 右%dpx" % (l, W0 - 1 - r))
+    W = sheet.size[0]
     bh = H / rows
-    print("入力: %s  %dx%d  → %d段 / 1段 %dx%d" % (src.name, W, H, rows, W, round(bh)))
+    print("入力: %s  %dx%d  → %d段 / 1段 %dx%d" % (src.name, W0, H, rows, W, round(bh)))
 
     total = 0
     for i, sid in enumerate(ids):
-        # **段の内側を少し詰める**。等分の切れ目には隣の段の色が1〜2px残る
-        dx, dy = int(W * INSET), int(bh * INSET)
-        box = (dx, int(round(i * bh)) + dy, W - dx, int(round((i + 1) * bh)) - dy)
+        # **上下だけ詰める**。等分の切れ目には隣の段の色が1〜2px残る。
+        # 左右は詰めない(社名が端まで来ている看板があり、削ると文字が欠ける)
+        dy = int(bh * INSET)
+        box = (0, int(round(i * bh)) + dy, W, int(round((i + 1) * bh)) - dy)
         cell = sheet.crop(box)
         h = max(1, int(round(cell.height * width / cell.width)))
         out = cell.resize((width, h), Image.LANCZOS)
