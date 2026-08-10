@@ -580,19 +580,29 @@ const STEPS = [
       // 会社が来るが、そこはまだ絵が無いので社名の側しか通らない
       const A=(window.ASSETS&&window.ASSETS.banner)||{};
       const withArt=SPONSORS.find(x=>A[x.id]);
+      const noArt=SPONSORS.find(x=>!A[x.id]);
+      const back=sponsor().id;
       let shown='なし';
       if(withArt){
-        const keep=sponsor().id; sponsor().id=withArt.id; show('home');
-        const im=document.querySelector('#homeNext .ad-nx img');
-        if(!im)throw new Error('絵のある会社でも看板が出ない: '+withArt.id);
+        sponsor().id=withArt.id; show('home');
+        if(!document.querySelector('#homeNext .ad-nx img'))
+          throw new Error('絵のある会社でも看板が出ない: '+withArt.id);
         shown=withArt.name;
-        sponsor().id=keep; show('home');
-        if(document.querySelector('#homeNext .ad-nx img'))
-          throw new Error('絵の無い会社に看板が残る');
       }
+      // **絵の無い会社では社名に落ちる**。23社そろえば居なくなるので、居るときだけ見る
+      if(noArt){
+        sponsor().id=noArt.id; show('home');
+        if(document.querySelector('#homeNext .ad-nx img'))
+          throw new Error('絵の無い会社に看板が出る: '+noArt.id);
+        if(document.getElementById('homeNext').textContent.indexOf(noArt.name)<0)
+          throw new Error('絵の無い会社の社名が出ない: '+noArt.id);
+      }
+      sponsor().id=back; show('home');
       window.__adId=withArt?withArt.id:null;
       return 'OFFICIAL PARTNER '+(ad?'看板の絵':nm)
-        +' ／ 絵のある会社: '+shown+'（契約が無ければ出ない）';
+        +' ／ 絵のある会社: '+shown
+        +' ／ 絵の無い会社: '+(noArt?noArt.name+'(社名に落ちる)':'無し(23社そろっている)')
+        +'（契約が無ければ出ない）';
     })()`));
     // **看板の絵が出ている状態**も1枚残す(→docs/06 §6.32)
     await ctx.js("if(window.__adId){sponsor().id=window.__adId;show('home');}");

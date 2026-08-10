@@ -4,6 +4,10 @@
 
     python tools/slice_banner.py <シート画像> <id> <id> <id> <id> [--rows=N] [--w=640]
 
+id に `-` を渡すとその段は書き出さない。**段の数は割り付けどおりに数える必要がある**
+(等分の位置がずれるため)ので、要らない段も数だけは埋める。
+生成AIが頼んでいない会社を1段ぶん足してくることがある。
+
     src/assets/art/company/<シート>.png  ← 素材(埋め込まれない)
          ↓
     src/assets/banner/<id>.webp          ← 書き出し(自動生成。手で触らない)
@@ -98,6 +102,9 @@ def main():
 
     total = 0
     for i, sid in enumerate(ids):
+        if sid == "-":                            # 使わない段(数だけ埋めてある)
+            print("  %-10s   (書き出さない)" % "-")
+            continue
         # **上下だけ詰める**。等分の切れ目には隣の段の色が1〜2px残る。
         # 左右は詰めない(社名が端まで来ている看板があり、削ると文字が欠ける)
         dy = int(bh * INSET)
