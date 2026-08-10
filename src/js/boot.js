@@ -18,6 +18,9 @@ window.addEventListener("unhandledrejection",ev=>showErr(ev.reason));
 // 続きがあるのに誤タップで消えては困るので、セーブがある間は全画面タップを無効にする。
 function setupTitle(exists){
   const t=document.getElementById("scr-title");
+  // ステッカーの壁(→docs/06 §6.29)。**画面の大きさが決まってから**敷く
+  const wall=document.getElementById("tWall");
+  if(wall)wall.innerHTML=titleWall();
   const start=document.getElementById("tStart"), menu=document.getElementById("tMenu");
   start.style.display=exists?"none":"";
   menu.style.display=exists?"flex":"none";

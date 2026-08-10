@@ -1973,6 +1973,47 @@ function cupInfoBox(cup,c){
 }
 /** 任期カレンダーを開いたら現在節へ寄せる(96節あるので必須)。 */
 SCREENS.season.after=()=>setTimeout(scrollToCurrent,30);
+/**
+ * タイトルのステッカーの壁(→docs/06 §6.29)。**決定論的に敷き詰める**ので、
+ * 開くたびに絵面が変わることはない。枚数は画面の大きさから決める。
+ * **絵を足しても JS は触らない** — ASSETS の並びをそのまま使う。
+ */
+function titleWall(){
+  const A=(window.ASSETS&&window.ASSETS.sticker)||{};
+  const keys=Object.keys(A).sort();
+  if(!keys.length)return "";
+  const el=$("scr-title");
+  // **要素の実測をあてにしない**。起動直後は高さが確定しておらず、
+  // 実測だけで行数を決めると壁が画面の途中で切れて下が真っ黒になった。
+  // ビューポートと突き合わせて大きいほうを採り、さらに2行ぶん多めに敷く。
+  const W=Math.max(el?el.clientWidth:0, window.innerWidth||390);
+  const H=Math.max(el?el.clientHeight:0, window.innerHeight||844);
+  const cols=4, cell=W/cols, rows=Math.ceil(H/(cell*0.86))+2;
+  // **毎回ちがう壁でよい**(2026-08-10)。貼り替えられる壁のほうが街らしいので、
+  // 種は起動ごとに振る。揃えるのは大きさだけ(セルの 0.95〜1.35 倍)。
+  const rng=mulberry32((Math.random()*0x7fffffff)>>>0);
+  // **同じ絵が隣り合わないように順に配る**。乱数で毎回引くと同じ絵が固まって、
+  // 貼り重ねた壁ではなく壁紙に見える
+  let bag=[], take=()=>{
+    if(!bag.length){ bag=keys.slice();
+      for(let i=bag.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1));
+        const t=bag[i]; bag[i]=bag[j]; bag[j]=t; } }
+    return bag.pop();
+  };
+  const out=[];
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const k=take();
+    // **升目から少しずらす**。きれいに並ぶと壁紙になってしまう
+    const x=(c+0.5)*cell+(rng()-0.5)*cell*0.50+(r%2?cell*0.26:-cell*0.26);
+    const y=(r+0.5)*cell*0.86+(rng()-0.5)*cell*0.34;
+    const w=cell*(0.95+rng()*0.40);
+    const rot=(rng()-0.5)*50;
+    out.push('<img src="'+A[k]+'" alt="" style="left:'+x.toFixed(0)+'px;top:'+y.toFixed(0)+'px'
+      +';width:'+w.toFixed(0)+'px;transform:translate(-50%,-50%) rotate('+rot.toFixed(1)+'deg)'
+      +';opacity:'+(0.58+rng()*0.34).toFixed(2)+'">');
+  }
+  return out.join("");
+}
 /** クラブごとの識別色(モックの丸いクラブカラーに相当)。
  *  ハッシュの剰余だと色相が固まって数色しか出ないので、CLUBS の並び順から
  *  黄金角(137.5°)で回して均等に散らす。

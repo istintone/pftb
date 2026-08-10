@@ -34,6 +34,7 @@ headless Chrome を自動操作してスクリーンショットを撮り、**PN
 | JS/CSSファイルを増やす | `build.py` の `JS_FILES`/`CSS_FILES`(JSは `src/tests/_setup.js` の `JS_FILES` も**両方**更新) |
 | 画像を足す | `src/assets/<グループ>/<名前>.png` に置く → `window.ASSETS["グループ"]["名前"]` で参照 |
 | 秘書の絵を足す | 立ち絵のシートを `src/assets/art/secretary/` に置く → `python tools/slice_secretary.py`(既定は上段のみ。`--rows=N` で増やす) → `python build.py`。**クラブIDから決まる**ので、増やせばその日から配られる先が増える(→[docs/06 §6.27](docs/06-design-system.md)) |
+| ステッカーを足す | 白地の絵を `src/assets/art/sticker/` に置く → `python tools/slice_sticker.py` → `python build.py`。タイトルの壁に自動で混ざる。**素材を `src/assets/sticker/` に直接置かない**(10MB級がそのまま index.html に埋まる)(→[docs/06 §6.29](docs/06-design-system.md)) |
 | 選手の絵を足す | 3枚組シートを `src/assets/art/commons/<段>/<ポジション>/`(汎用)または `src/assets/art/signature/<段>/<ポジション>/`(実在選手)に置く(段は std/reg/spe/wc/leg/any、ポジションは gk/df/mf/fw/out。**GKは必ず gk**) → `python tools/slice_commons.py` → `python build.py`。書き出しは `src/assets/players/`(汎用)と `src/assets/sig/`(実在選手)に分かれる。**書き出しフォルダは手で触らない**(→[docs/03 §3.19](docs/03-game-design.md)) |
 
 ## 姉妹プロジェクト card-eleven の参照方針
