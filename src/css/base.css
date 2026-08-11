@@ -1362,6 +1362,35 @@ body{
   background:linear-gradient(135deg, oklch(0.52 0.13 85), oklch(0.36 0.09 80));
   box-shadow:0 0 10px oklch(0.75 0.15 85 / .45);
 }
+/* 固有スキルが出た帯(→docs/06 §6.34)。**金の縁・強い掃引・きらめき・揺れ**。
+   バッジだけだと「何か出た」が試合の速さに埋もれる。帯ごと様子を変える */
+.cut.sig{
+  border-color:var(--accent);
+  background:linear-gradient(90deg, transparent, oklch(0.16 0.05 80 / .97) 12%,
+    oklch(0.13 0.03 70 / .97) 88%, transparent);
+  box-shadow:inset 0 0 34px oklch(0.62 0.14 85 / .28);
+}
+/* 掃引の光を金にして、少し速く走らせる */
+.cut.sig::after{
+  /* 掃引が濃すぎると、通った瞬間に選手が飛ぶ。**顔が見える濃さ**に留める */
+  background:linear-gradient(90deg, transparent, oklch(0.92 0.14 88 / .38), transparent);
+  animation-duration:.7s;
+}
+.cut.sig .cut-hd{ color:var(--accent-hi); letter-spacing:4px;
+  text-shadow:0 0 12px oklch(0.80 0.15 85 / .8) }
+/* きらめき。**位置と間は固定**(毎回散らすと帯がちらついて読めない) */
+.cut-spk{ position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:2 }
+.cut-spk i{
+  position:absolute; width:7px; height:7px; margin:-3px 0 0 -3px; border-radius:50%;
+  background:radial-gradient(circle, oklch(1 0 0), oklch(0.90 0.16 88) 38%, transparent 70%);
+  opacity:0; animation:cutSpk 1.05s ease-out infinite;
+}
+@keyframes cutSpk{
+  0%{ opacity:0; transform:scale(.3) }
+  25%{ opacity:1; transform:scale(1.25) }
+  60%{ opacity:.55; transform:scale(.8) }
+  100%{ opacity:0; transform:scale(.35) }
+}
 /* カード詳細の札。**固有だけ金縁**にする */
 .skill.sig{
   color:var(--accent-hi); border-color:var(--accent);

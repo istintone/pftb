@@ -1205,26 +1205,26 @@ const STEPS = [
     // 軸(→docs/03 §3.44)。**試合中に何度でも指名し直せる**
     await ctx.js("document.getElementById('kpTab').click()");
     await ctx.wait(350);
-    ctx.log("  軸タブ:", await ctx.js(`(()=>{
+    ctx.log("  KPタブ:", await ctx.js(`(()=>{
       const rows=[...document.querySelectorAll('#kpBody [data-kp]')];
       if(rows.length!==11)throw new Error('ピッチの11人が並ばない: '+rows.length);
       const note=document.getElementById('kpNote').textContent;
-      if(note.indexOf('相手の軸')<0)throw new Error('相手の軸が出ない');
+      if(note.indexOf('相手の KP')<0)throw new Error('相手のKPが出ない');
       const sig=document.querySelectorAll('#kpBody .kp-sig').length;
       const none=document.querySelectorAll('#kpBody .kp-none').length;
       if(sig+none!==11)throw new Error('固有スキルの欄が全員に無い');
       rows[10].click();
       const T=mMine()==='H'?_M.home:_M.away;
       const id=S.career.kp;
-      if(!id)throw new Error('軸が入らない');
+      if(!id)throw new Error('KPが入らない');
       const p=T.players.find(x=>x.c.id===id);
       if(!p||!p.c.kp)throw new Error('写しに反映されていない');
-      if(T.players.filter(x=>x.c.kp).length!==1)throw new Error('軸が2人以上いる');
+      if(T.players.filter(x=>x.c.kp).length!==1)throw new Error('KPが2人以上いる');
       rows[10].click();                                  // もう一度押すと外れる
       if(S.career.kp)throw new Error('同じ選手を押しても外れない');
       rows[9].click();
       return '11人 / 固有スキルあり '+sig+'人 / '
-        +note.slice(note.indexOf('相手の軸')).slice(0,18)
+        +note.slice(note.indexOf('相手の KP')).slice(0,20)
         +' / 指名: '+shortName(cardById(S.career.kp));
     })()`));
     await ctx.wait(250);

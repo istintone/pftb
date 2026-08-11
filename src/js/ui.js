@@ -2612,6 +2612,11 @@ function cutShow(html,ms,extra){
   const c=$("mCut");
   c.className="mcut on"+(extra||"");
   c.innerHTML=html;
+  // **固有スキルの帯は一度だけ揺らす**(→docs/06 §6.34)。
+  // 出た瞬間に画面が動くので、札のバッジより先に「何か起きた」が伝わる
+  if(c.querySelector(".cut.sig")){
+    c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake");
+  }
   clearTimeout(_mCutT);
   _mCutT=setTimeout(()=>{ c.classList.remove("on"); },ms);
   return ms;
@@ -2625,7 +2630,10 @@ function cutVs(e,atk,df,word,atkWon){
   const mineWon=ally?atkWon:!atkWon;
   // **勝敗は最初から見せない。** 両者が出そろってから決着させる
   // (同時に出すと速すぎて何が起きたか読めない → docs/06 §6.19)。
-  const ms=cutShow('<div class="cut">'
+  // **固有スキルが出た帯は特別扱い**(→docs/06 §6.34)。金の縁・きらめき・揺れ
+  const sg=sigIn(mineSide===e.side?e.sk:e.dsk);
+  const ms=cutShow('<div class="cut'+(sg?" sig":"")+'">'
+    +(sg?cutSparks():"")
     +'<div class="cut-hd">'+esc(e.label||"MATCH UP")+'</div>'
     +cutSkills(mineSide===e.side?e.sk:e.dsk)
     +'<div class="cut-row">'
@@ -2660,6 +2668,13 @@ function statNote(p,e){
  * 発動した札の帯(→docs/06 §6.26)。**何が効いたのかを言葉で見せる**。
  * 固有スキル(→docs/03 §3.41)は金で光らせ、普通の札と見分けが付くようにする。
  */
+/** その札のなかに固有スキルが混ざっているか(→docs/06 §6.34)。 */
+const sigIn=list=>(list||[]).some(n=>SKILL_FX[n]&&SKILL_FX[n].sig);
+/** きらめき(→docs/06 §6.34)。**位置と間は固定**。毎回散らすと帯がちらついて読めない。 */
+const SPARKS=[[12,26,0],[27,68,.18],[41,18,.34],[56,74,.09],[68,32,.46],
+              [79,62,.26],[88,22,.4],[47,44,.55]];
+const cutSparks=()=>'<div class="cut-spk">'+SPARKS.map(([x,y,d])=>
+  '<i style="left:'+x+'%;top:'+y+'%;animation-delay:'+d+'s"></i>').join("")+'</div>';
 function cutSkills(list){
   const a=(list||[]).filter(n=>SKILL_FX[n]);
   if(!a.length)return "";
@@ -2688,7 +2703,9 @@ function cutShot(e,sc,keeper,word,scored,assist){
   const P=TUNING.play;
   const kSide=e.side==="H"?"A":"H";
   const ms=(e.type==="goal"?P.goalMs:P.cutMs)+P.shotHold;
-  cutShow('<div class="cut">'
+  const sg=sigIn(e.sk);                                   // 固有スキルの一撃(→docs/06 §6.34)
+  cutShow('<div class="cut'+(sg?" sig":"")+'">'
+    +(sg?cutSparks():"")
     +'<div class="cut-hd">'+esc(e.flabel||"SHOT")+'</div>'
     +cutSkills(e.sk)
     +'<div class="cut-row">'
@@ -2998,7 +3015,7 @@ function setKp(id){
   for(const p of T.players)p.c.kp=(p.c.id===now);
   for(const b of T.bench||[])if(b.c)b.c.kp=false;
   save(); renderKp(); kpTabUI();
-  toast(now?shortName(cardById(now))+" を軸にしました":"軸を外しました");
+  toast(now?shortName(cardById(now))+" を KP にしました":"KP を外しました");
 }
 /** ピッチから居なくなったら自動で外す(交代・退場 →docs/03 §3.44)。 */
 function kpSync(){
@@ -3009,7 +3026,7 @@ function kpSync(){
   S.career.kp=null;
   kpTabUI();
   if(kpOpen())renderKp();
-  toast("軸の選手がピッチを離れました");
+  toast("KP の選手がピッチを離れました");
 }
 function kpTabUI(){
   const t=$("kpTab"); if(!t)return;
@@ -3022,7 +3039,7 @@ function renderKp(){
   $("kpNote").innerHTML="ボールが集まり、札も出やすくなります。"
     +"かわりに<b>消耗が早く、相手のマークも厳しく</b>なります。"
     +"<br>何度でも指名し直せますが、<b>軸を張った時間ぶんの消耗は残ります</b>。"
-    +(fk?'<br>相手の軸は <b>'+esc(shortName(fk.c))+'</b> です。':"");
+    +(fk?'<br>相手の KP は <b>'+esc(shortName(fk.c))+'</b> です。':"");
   $("kpBody").innerHTML='<div class="sb-sec">ピッチ</div>'
     +T.players.map((p,i)=>{
       const on=p.c.id===cur, sig=sigOf(p.c);
@@ -3033,7 +3050,7 @@ function renderKp(){
         +'<div class="sb-b"><div class="sb-nm">'+esc(shortName(p.c))+'</div>'
         +(sig?'<i class="kp-sig">'+esc(sig)+'</i>':'<span class="kp-none">固有スキルなし</span>')
         +'</div>'
-        +(on?'<div class="sb-tag">軸</div>':"")
+        +(on?'<div class="sb-tag">KP</div>':"")
         +'<div class="sb-v">'+Math.round((p.stam==null?1:p.stam)*100)+'%</div></div>';
     }).join("");
   $("kpBody").querySelectorAll("[data-kp]").forEach(el=>{
