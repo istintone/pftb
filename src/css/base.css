@@ -974,6 +974,30 @@ body{
 }
 #ordTab:active{ background:oklch(0.32 0.08 85) }
 #ordTab.off{ display:none }
+/* 軸タブ(→docs/06 §6.33)。指示の**上**に置く。色は固有スキルと同じ金 */
+#kpTab{
+  position:absolute; left:0; top:34%; transform:translateY(-50%); z-index:48;
+  writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
+  padding:12px 5px; border-radius:0 9px 9px 0;
+  border:1px solid var(--accent); border-left:none;
+  background:linear-gradient(90deg, oklch(0.34 0.09 85), oklch(0.20 0.03 255));
+  color:var(--accent-hi); font:600 10px/1 var(--f-head); letter-spacing:2px;
+  box-shadow:2px 0 12px oklch(0 0 0 / .5);
+}
+#kpTab:active{ background:oklch(0.40 0.11 85) }
+#kpTab.off{ display:none }
+#kpTab.on{ border-color:var(--accent-hi); box-shadow:2px 0 16px oklch(0.70 0.14 85 / .6) }
+#kpDrawer{
+  position:absolute; left:0; top:50%; z-index:70; width:min(88%,340px); height:74%;
+  transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
+#kpDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
+#kpDrawer .sb-in{ border-radius:0 14px 14px 0 }
+/* 軸に選ばれている行 */
+.sb-r.kp-on{ border-color:var(--accent); background:oklch(0.26 0.05 85) }
+.kp-sig{ font-style:normal; font-size:10px; color:var(--accent-hi); letter-spacing:.5px }
+.kp-none{ font-size:10px; color:var(--text-mute) }
 #ordDrawer{
   position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
   transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);

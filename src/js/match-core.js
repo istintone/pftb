@@ -62,10 +62,27 @@ function skMove(p,at,ch,min){
 }
 /** 札を引く重みの倍率。at は "origin" / "counter" / "finish"。 */
 /** 条件付きの成分が**いま立っているか**(→docs/03 §3.41)。条件が無ければ常に真。 */
-const skOn=(x,p,min)=>!x.when||(SK_WHEN[x.when]?SK_WHEN[x.when](p,min):false);
+/** その選手が「軸」か(→docs/03 §3.44)。 */
+const isKp=p=>!!(p&&p.c&&p.c.kp);
+/**
+ * 軸の効き(→docs/03 §3.44)。**能力そのものに倍率を掛ける**。
+ *
+ * 「ボールが集まりやすい」を選ばれやすさの重みだけで作ったら、
+ * **得失点差がまったく動かなかった**(実測 ±0.03)。関わる回数を増やしても、
+ * 1回あたりのてこは変わらないため(→docs/03 §3.38 で分かっていたこと)。
+ *
+ * 能力に掛けると、**集まりやすさも強さも同時に、しかも本人の持ち味のまま**出る。
+ *   ・atk が上がる → 受け手に選ばれやすくなる(recvAtk)し、決めきる力も上がる
+ *   ・def/spd が上がる → 守備の1:1に呼ばれやすくなる(markDef/markSpd)し、止められる
+ * 攻撃的なSBは前で、守備的なSBは後ろで効く。**配分を表で決めなくていい**。
+ */
+const kpK=p=>isKp(p)?TUNING.kp.power:1;
+/** **軸は条件つきの札を条件なしで使える**(→docs/03 §3.44)。 */
+const skOn=(x,p,min)=>!x.when||isKp(p)||(SK_WHEN[x.when]?SK_WHEN[x.when](p,min):false);
 function skW(p,at,ch,min){
   const f=p.sk; if(!f||!ch)return 1;
-  let m=1;
+  // **軸は札が出やすい**(→docs/03 §3.44)。確定はさせない、選ばれやすくなるだけ
+  let m=isKp(p)?TUNING.kp.skill:1;
   for(const x of f.ch)
     if((x.at===at||x.at==="both")&&x.w!==1&&skOn(x,p,min)&&SK_GRP[x.grp](ch))m*=x.w;
   return m;
@@ -100,7 +117,7 @@ const ironK=p=>1+(condMul(p.c.cond)-1)*skK(p,"iron");
  */
 function eff(p,k){
   const up=(p.c.up&&p.c.up[k])||0;
-  return (p.c[k]+up)*p.fit*p.stam*(p.condK||1)*((p.ordM&&p.ordM[k])||1);
+  return (p.c[k]+up)*p.fit*p.stam*(p.condK||1)*((p.ordM&&p.ordM[k])||1)*kpK(p);
 }
 
 // ---------- スタミナ ----------
@@ -119,7 +136,10 @@ function staminaOf(p,min){
   // **キャプテンは消耗が緩い**(→docs/03 §3.20)。長くピッチに居られるので、
   // 誰に腕章を巻くかが交代計画そのものになる。
   const cap=p.captain?F.capMul:1;
-  const drain=(played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul*cap*skK(p,"stam");
+  // **軸は消耗が早い**(→docs/03 §3.44)。軸を外しても、張っていた時間ぶんは残る
+  // (掛け算にすると、外した瞬間に体力が戻ってしまう)
+  const kp=(p.kpMin||0)*F.perMin*(TUNING.kp.stam-1);
+  const drain=((played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul+kp)*cap*skK(p,"stam");
   return clamp(1-drain,F.minStam,1);
 }
 /**
@@ -143,7 +163,11 @@ function lineMul(D){
 /** ティックの頭で全選手のスタミナを確定する(そのティックの間は動かさない)。 */
 function refreshStamina(M,min){
   for(const T of [M.home,M.away])
-    for(const p of T.players)p.stam=staminaOf(p,min);
+    for(const p of T.players){
+      // **軸を張った時間を数える**。あとから外しても消えない(→staminaOf)
+      if(isKp(p))p.kpMin=(p.kpMin||0)+TUNING.match.tickMin;
+      p.stam=staminaOf(p,min);
+    }
 }
 
 /**
@@ -563,7 +587,7 @@ function pickOrigin(rng,T,mom,min){
   const target=clamp(0.5+mom*F.spread,0,1);
   return pickW(rng,T.players,p=>{
     const d=(heightOf(p)-target)/F.sigma;
-    return Math.exp(-d*d)*skK(p,"start")*freshK(p,min)*laneW(T,p);  // 動き出しでボールを引き出す
+    return Math.exp(-d*d)*skK(p,"start")*freshK(p,min)*laneW(T,p);
   });
 }
 /**
@@ -698,8 +722,10 @@ function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX,bk,min){
     *ch.risk*TUNING.atk.originK*skS(atk,"origin",ch,min)*(bk||1)*rr(rng);
   // **一発(long)はGKの飛び出しで摘まれる**。マーカーではなくGKが持つスキル
   const gkStop=ch.to!=null?skK(pickGK(D),"longStop"):1;
+  // **軸には相手のマークが厳しい**(→docs/03 §3.44)。目立てば消される、の表現
   const dSc=(eff(df,"def")*M.defW+eff(df,dch.stat)*(1-M.defW))
-    *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*skS(df,"counter",dch,min)/gkStop*rr(rng);
+    *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*skS(df,"counter",dch,min)
+    *(isKp(atk)?TUNING.kp.mark:1)/gkStop*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }
 

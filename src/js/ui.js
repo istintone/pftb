@@ -71,8 +71,9 @@ function show(id,opts){
   $("compTab").classList.toggle("off",id!=="season");
   // 交代タブは**試合中だけ**。他の画面に出しても押せることが無い
   $("subTab").classList.toggle("off",id!=="match");
+  $("kpTab").classList.toggle("off",id!=="match");           // 軸(→docs/03 §3.44)
   $("ordTab").classList.toggle("off",id!=="match");
-  if(id!=="match"){ closeSub(); closeOrd(); }
+  if(id!=="match"){ closeSub(); closeOrd(); closeKp(); }
 
   if(def.render)def.render();
   $("appBody").scrollTop=0;
@@ -1088,7 +1089,10 @@ function foeBrief(side){
   // 実際に戦った感触とずれる(→docs/06 §6.15)
   const d=myPower()-squadPowerAt(side.cards,side.form);
   const G=TUNING.brief;
+  // 相手の軸(→docs/03 §3.44)。名前だけを渡す(数字は読み上げない → §3.35)
+  const kc=side.kp?start.find(c=>c.id===side.kp):null;
   return { f:side.form, p:key.pos, n:shortName(key), t:STAT_TRAIT[tk],
+    kp:kc?shortName(kc):null,
     gap:d>=G.big?"up2":d>=G.small?"up":d<=-G.big?"dn2":d<=-G.small?"dn":"even" };
 }
 /** 対戦表から相手を開く。spec は renderFoe がそのまま解釈する。 */
@@ -1593,6 +1597,7 @@ function chatEnter(st){
     const b=side&&foeBrief(side);
     if(b){
       chatSay("sec",chatText(CHAT.foeScout,"scout:"+C.node,b));
+      if(b.kp)chatSay("sec",chatText(CHAT.foeKey,"key:"+C.node,{ n:b.kp }));
       chatSay("sec",chatText(CHAT.foeGap[b.gap],"gap:"+C.node));
     }
     return false;
@@ -2852,6 +2857,7 @@ function mApply(e){
   if(e.hg!=null)$("mSc").textContent=mScore(e.hg,e.ag);
   if(e.type==="card"&&e.off)mDrawSquads();     // 退場した選手は盤面から消える
   mFocus(e); mMoveBall(e); mLayout(e);
+  kpSync();                                    // 軸がピッチを離れていたら外す(→§3.44)
   const hold=mCut(e);
   // シュートは打点に置いてから**実際に飛ばす**。カットインの決着と間を合わせる
   if(["goal","save","miss","block"].includes(e.type))
@@ -2897,6 +2903,7 @@ function mFinish(){
   $("mDone").style.display="";
   $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=true;
   closeSub(); $("subTab").classList.add("off");   // 終わったら交代はできない
+  closeKp(); $("kpTab").classList.add("off");    // 軸の指名も終わり
   closeOrd(); $("ordTab").classList.add("off");   // 指示も同じ
   // **並んだままならPK戦**(→docs/03 §3.33)。決着まで1本ずつ見せる
   if(_M.pso)psoShow();
@@ -2954,6 +2961,85 @@ function psoShow(){
 let _subOut=-1, _subIn=-1, _subWasPaused=false;
 
 function subSide(){ return mMine()==="H"?_M.home:_M.away; }
+
+// ---------- 軸(キープレイヤー → docs/03 §3.44) ----------
+// **試合中に何度でも指名し直せる。** 回数で縛らないのは、軸を張った時間ぶんだけ
+// 消耗が残るから(それ自体がブレーキになる)。切り替えるほど疲れた選手が増える。
+let _kpWasPaused=false;
+/** その選手の固有スキル(持っていなければ null)。タブに出す。 */
+function sigOf(card){
+  for(const n of (card&&card.skills)||[]){
+    const f=SKILL_FX[n];
+    if(f&&f.sig)return n;
+  }
+  return null;
+}
+function openKp(){
+  if(!_M||_M.over)return;
+  _kpWasPaused=_mPaused;
+  if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
+  renderKp();
+  $("kpDrawer").classList.add("on");
+  $("kpDrawer").setAttribute("aria-hidden","false");
+}
+function closeKp(){
+  $("kpDrawer").classList.remove("on");
+  $("kpDrawer").setAttribute("aria-hidden","true");
+  if(!_kpWasPaused&&_M&&!_M.over)mPause(false);
+}
+const kpOpen=()=>$("kpDrawer").classList.contains("on");
+/** 軸を指名する(同じ選手をもう一度押すと解除)。 */
+function setKp(id){
+  if(!_M)return;
+  const T=subSide();
+  const now=S.career.kp===id?null:id;
+  S.career.kp=now;
+  // **写しの側も切り替える**。エンジンはカードの kp しか見ない
+  for(const p of T.players)p.c.kp=(p.c.id===now);
+  for(const b of T.bench||[])if(b.c)b.c.kp=false;
+  save(); renderKp(); kpTabUI();
+  toast(now?shortName(cardById(now))+" を軸にしました":"軸を外しました");
+}
+/** ピッチから居なくなったら自動で外す(交代・退場 →docs/03 §3.44)。 */
+function kpSync(){
+  const id=S.career&&S.career.kp;
+  if(!id||!_M||!_M.home)return;
+  const T=subSide();
+  if(T.players.some(p=>p.c.id===id))return;
+  S.career.kp=null;
+  kpTabUI();
+  if(kpOpen())renderKp();
+  toast("軸の選手がピッチを離れました");
+}
+function kpTabUI(){
+  const t=$("kpTab"); if(!t)return;
+  t.classList.toggle("on",!!(S.career&&S.career.kp));
+}
+function renderKp(){
+  const T=subSide(), cur=S.career.kp;
+  const foe=(mMine()==="H"?_M.away:_M.home);
+  const fk=foe&&foe.players.find(p=>p.c.kp);
+  $("kpNote").innerHTML="ボールが集まり、札も出やすくなります。"
+    +"かわりに<b>消耗が早く、相手のマークも厳しく</b>なります。"
+    +"<br>何度でも指名し直せますが、<b>軸を張った時間ぶんの消耗は残ります</b>。"
+    +(fk?'<br>相手の軸は <b>'+esc(shortName(fk.c))+'</b> です。':"");
+  $("kpBody").innerHTML='<div class="sb-sec">ピッチ</div>'
+    +T.players.map((p,i)=>{
+      const on=p.c.id===cur, sig=sigOf(p.c);
+      // **番号で渡す**。カードのIDは数字のことも文字のこともあり、
+      // data 属性を経由すると全部文字になって比較が壊れる(実際に壊れた)
+      return '<div class="sb-r'+(on?" kp-on":"")+'" data-kp="'+i+'">'
+        +'<div class="sb-pos">'+(p.sub||p.role)+'</div>'
+        +'<div class="sb-b"><div class="sb-nm">'+esc(shortName(p.c))+'</div>'
+        +(sig?'<i class="kp-sig">'+esc(sig)+'</i>':'<span class="kp-none">固有スキルなし</span>')
+        +'</div>'
+        +(on?'<div class="sb-tag">軸</div>':"")
+        +'<div class="sb-v">'+Math.round((p.stam==null?1:p.stam)*100)+'%</div></div>';
+    }).join("");
+  $("kpBody").querySelectorAll("[data-kp]").forEach(el=>{
+    el.onclick=()=>{ const p=T.players[+el.dataset.kp]; if(p)setKp(p.c.id); };
+  });
+}
 function openSub(){
   if(!_M||_M.over)return;
   _subWasPaused=_mPaused;
@@ -3484,6 +3570,8 @@ function mPause(on){
 }
 $("mPlay").onclick=()=>mPause(!_mPaused);
 $("subTab").onclick=()=>{ subOpen()?closeSub():openSub(); };
+$("kpTab").onclick=()=>{ kpOpen()?closeKp():openKp(); };
+$("kpClose").onclick=closeKp;
 $("subClose").onclick=closeSub;
 $("ordTab").onclick=()=>{ ordOpen()?closeOrd():openOrd(); };
 $("ordClose").onclick=closeOrd;

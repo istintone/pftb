@@ -122,5 +122,40 @@ const E=setup({tmpName:"_tmp_ord.js"});
     assert.strictEqual(M.home.order,null,"いつでも解除できる");
     console.log("試合中の指示OK 積む→次のティックで反映→解除まで");
   }
+  // ---------- 軸(キープレイヤー → docs/03 §3.44) ----------
+  {
+    const K = E.TUNING.kp;
+    // **能力に倍率が掛かる**。集まりやすさも強さも、これ1つから出る
+    const mk = kp => ({ c: { atk: 10, def: 10, pow: 10, tec: 10, spd: 10, sta: 10, kp: kp },
+      fit: 1, stam: 1, condK: 1, stat: {} });
+    assert.ok(Math.abs(E.eff(mk(true), "atk") / E.eff(mk(false), "atk") - K.power) < 1e-9,
+      "軸は能力に " + K.power + " 倍が掛かる");
+
+    // **条件つきの札が条件なしで使える**
+    const late = { when: "late" };
+    assert.strictEqual(E.skOn(late, mk(false), 10), false, "軸でなければ条件を見る");
+    assert.strictEqual(E.skOn(late, mk(true), 10), true, "軸なら条件を飛ばす");
+
+    // **軸を張った時間ぶんだけ消耗が残る**(外しても戻らない)
+    const p0 = { c: { sta: 10 }, stat: { inv: 0 }, enter: 0 };
+    const p1 = { c: { sta: 10 }, stat: { inv: 0 }, enter: 0, kpMin: 30 };
+    assert.ok(E.staminaOf(p1, 45) < E.staminaOf(p0, 45), "軸を張った選手のほうが減る");
+    const p2 = { c: { sta: 10, kp: false }, stat: { inv: 0 }, enter: 0, kpMin: 30 };
+    assert.strictEqual(E.staminaOf(p2, 45), E.staminaOf(p1, 45),
+      "軸を外しても、張っていた時間ぶんは戻らない");
+
+    // **相手の軸はクラブと節から決まる**(下見でも試合でも同じ選手)
+    await E.newGame();
+    E.getS().coach = "検証"; E.startTenure("sam-8");
+    const a = E.cpuSquad("sam-1"), b = E.cpuSquad("sam-1");
+    assert.strictEqual(a.kp, b.kp, "何度引いても同じ選手が軸");
+    assert.ok(a.cards.some(c => c.id === a.kp), "軸は先発の中にいる");
+    const side = E.matchSide("sam-1");
+    assert.strictEqual(side.cards.filter(c => c.kp).length, 1, "相手の軸はちょうど1人");
+    assert.strictEqual(side.kp, a.kp, "試合に出てくる軸と下見の軸が一致する");
+    console.log("軸OK 能力 ×" + K.power + " ／ 条件つきの札が常時 ／ 消耗は張った時間ぶん残る"
+      + " ／ 相手の軸も決定的");
+  }
+
   process.exit(0);
 })().catch(e=>{ console.error("FAIL:",e); process.exit(1); });

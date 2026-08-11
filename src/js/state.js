@@ -57,7 +57,10 @@ function defaultState(){
       //   tenureDone … 第80節の去就イベント(契約が伸びたか、当初のままか)
       opened:false,
       tenureDone:false,
-      hand:null,                    // 今節の打ち手(選ぶまで試合に進めない)
+      hand:null,                  // 今節の打ち手(選ぶまで試合に進めない)
+      // キープレイヤー(→docs/03 §3.44)。**その試合のあいだだけ**の指名。
+      // 節が変われば消える(hand と同じ扱い)
+      kp:null,
       // クラブチャット(→docs/03 §3.29)。**節ごとに畳む**ので、節が進めば消える。
       // { log:[{w,t}], i:段の位置, step:入力待ちの段, sel:{選んだもの} }
       chat:null,

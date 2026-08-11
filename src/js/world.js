@@ -423,6 +423,19 @@ function startTenure(clubId){
  * 試合エンジンに渡すチーム(→docs/07)。自クラブは編成、他クラブは名簿の並びをそのまま使う。
  * 他クラブの編成は決定的に再生成されるので、セーブに持たなくても毎回同じ11人になる。
  */
+// --- キープレイヤー(→docs/03 §3.44) ---
+/** いま指名している軸。 */
+const kpOf=()=>(S.career&&S.career.kp)||null;
+/**
+ * 相手の軸。**クラブと節から決まる**ので、下見でも試合でも同じ選手になる。
+ * 「いちばん強い1人」だと毎回エースで読み合いにならないので、**上位3人から1人**。
+ */
+function cpuKp(clubId,cards){
+  const list=cards.filter(c=>c&&c.pos!=="GK").slice().sort((a,b)=>b.ovr-a.ovr).slice(0,3);
+  if(!list.length)return null;
+  const rng=mulberry32((S.world.seed^hashStr("kp:"+clubId+":"+S.career.node))>>>0);
+  return list[Math.floor(rng()*list.length)].id;
+}
 function matchSide(clubId){
   const club=clubById(clubId);
   if(S.club&&clubId===S.club.id){
@@ -437,18 +450,21 @@ function matchSide(clubId){
         }
         const has=Object.keys(bond).length, hasG=Object.keys(gold).length;
         return { ...c, cond:condOf(c.id), ...(up?{ up }:{}),
-          ...(has?{ bond }:{}), ...(hasG?{ gold }:{}) };
+          ...(has?{ bond }:{}), ...(hasG?{ gold }:{}),
+          ...(c.id===kpOf()?{ kp:true }:{}) };                // 軸(→§3.44)
       }),
       form:S.form, name:club.name,
       kickers:S.kickers, captain:S.captain, order:S.order,
       med:facMedK() };                                       // 医療施設(→§3.5)
   }
-  const { cards:base, form }=cpuSquad(clubId);
+  const { cards:base, form, kp }=cpuSquad(clubId);
   // 相手にもコンディションを配る(→docs/03 §3.32)。節ごとに変わり、格で上に寄る
   const rng=mulberry32((S.world.seed^hashStr("cond:"+clubId+":"+S.world.season
     +":"+S.career.node))>>>0);
-  const cards=base.map(c=>({ ...c, cond:condCpu(clubId,rng) }));
-  return { cards, form, name:club.name };
+  // **相手も軸を持つ**(→docs/03 §3.44)。cpuSquad が決めた1人をそのまま使う
+  const cards=base.map(c=>({ ...c, cond:condCpu(clubId,rng),
+    ...(c.id===kp?{ kp:true }:{}) }));
+  return { cards, form, name:club.name, kp };
 }
 /**
  * CPUクラブの編成(→docs/03 §3.34)。**試合も下見もここを通す**ので、
@@ -456,7 +472,9 @@ function matchSide(clubId){
  */
 function cpuSquad(clubId){
   const form=formFor(clubId);
-  return { cards:bestXI(clubRoster(S.world.seed,clubId),form), form };
+  const cards=bestXI(clubRoster(S.world.seed,clubId),form);
+  // **軸もここで決める**(→docs/03 §3.44)。試合も下見も見立ても同じ選手になる
+  return { cards, form, kp:cpuKp(clubId,cards) };
 }
 /** クラブの陣形。クラブIDから決定的に選ぶ(クラブごとに一貫した色になる)。 */
 // 陣形は名簿から決まる = 世界のたねが変わらない限り不変。毎回引き直すと重いので覚えておく。
@@ -1749,7 +1767,7 @@ function advanceNode(){
   hurtTick();                                               // 治療が1節ぶん進む(→§3.32)
   facTick();                                                // 建設が1節ぶん進む(→§3.5)
   S.club.coins+=gateIncome();                               // 観客収入(→§3.5)
-  C.hand=null; C.comp=null; C.chat=null;                    // 次節はまた選び直す
+  C.hand=null; C.comp=null; C.chat=null; C.kp=null;         // 次節はまた選び直す
   checkTenureClosing();
   return closed;                                            // 戻り値は**カップの決着だけ**
 }
