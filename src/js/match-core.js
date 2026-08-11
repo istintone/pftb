@@ -297,6 +297,21 @@ function pickFinish(rng,p,h,min){
   const list=all.filter(f=>f.minH==null||h>=f.minH);
   return pickW(rng,list.length?list:all,f=>eff(p,f.stat)*skW(p,"finish",f,min));
 }
+/**
+ * 決定機の質(→docs/07 §7.21)。**シュートの成否を撃った本人だけで決めない**。
+ *
+ * ボールを渡した選手が、その渡し方(クロスならPOW、スルーパスならTEC)で
+ * どれだけ良い形を作れたか。良い球なら決めやすく、雑な球なら決めにくい。
+ * これが無いと、点は**撃った本人の能力だけ**で決まり、作った側の価値が乗らない
+ * (→docs/03 §3.38 の枠ごとの偏り)。
+ *
+ * 基準(mid)で倍率1。**平均的なアシストなら何も起きない**ように置いてある。
+ */
+function chanceOf(assist,ach){
+  const C=TUNING.chance;
+  if(!assist||!ach)return 1;
+  return clamp(1+(eff(assist,ach.stat)/STAT_MAX-C.mid)*C.k,C.lo,C.hi);
+}
 /** 攻撃側のシュートスコア。**atk が幹、チャンネルの能力が枝**(起点と同じ形)。 */
 function finishScore(atk,fin){
   const w=fin.w!=null?fin.w:TUNING.shot.finStat;
@@ -320,11 +335,12 @@ function onTarget(rng,atk,gk,h,fin){
  * それだけだと守備側がほぼ定数になってGKの質が結果に出ない(→docs/07 §7.10)。
  * 反応(pow)とポジショニング(tec)を混ぜて、GKごとの差を出す。
  */
-function resolveShot(rng,atk,gk,h,fin,pso,min){
+function resolveShot(rng,atk,gk,h,fin,pso,min,cq){
   const S=TUNING.shot;
   const pk=fin.id==="pk";
+  // cq = 決定機の質(→chanceOf)。**渡した側の仕事がここに乗る**
   const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)
-    *skS(atk,"finish",fin,min)*(pk?skK(atk,"pkKick"):1)*rr(rng);
+    *(cq||1)*skS(atk,"finish",fin,min)*(pk?skK(atk,"pkKick"):1)*rr(rng);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)
     *skK(gk,"gk")*skS(gk,"gkFin",fin)*(pk?skK(gk,"pkGk"):1)
     // **PK戦のときだけ**効く札(→docs/03 §3.41)。試合中のPKには掛からない
@@ -922,6 +938,7 @@ function stepMatch(M){
 function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
   const C=TUNING.chain, F=TUNING.mom;
   let lastCh=null, carryRun=0;                              // 同じ選手が連続で運んだ回数
+  let aCh=null;                                             // アシストを作ったチャンネル
   while(true){
     const stray=strayOf(carrier,h,x);
     const ch=pickOriginCh(rng,carrier,lastCh,stray,min);
@@ -969,22 +986,22 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
     if(ch.kind==="pass")carrier.stat.passOk++;
     addMom(M,T.side,F.duelWon);
 
-    if(ch.kind==="shot")return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att,null,min);
+    if(ch.kind==="shot")return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att,null,min,aCh);
 
     // **ボールを収めたのは上で決めた受け手**。撃つかどうかの判断はこのあと。
     // 順番を逆にすると、スルーパスを出した本人がその球を自分で撃つことになる。
-    let next=carrier, nextAssist=assist, nextLast=null;
+    let next=carrier, nextAssist=assist, nextLast=null, nextACh=aCh;
     if(ch.kind==="carry"){
       nextLast=ch.id;                                       // 自分が次の起点になる
     }else{                                                  // パス系 → 行き先に近い味方へ
-      if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att,null,min);
-      next=recv; nextAssist=carrier;
+      if(!recv)return shoot(M,rng,push,T,D,carrier,assist,tg,from,0,att,null,min,aCh);
+      next=recv; nextAssist=carrier; nextACh=ch;            // **どう渡したか**も覚える
     }
     // 撃つ: 深く入った / つなぎ上限。判断するのは**ボールを収めた選手**
     if(step>=C.maxLinks||shotUrge(rng,tg.h,step,next))
-      return shoot(M,rng,push,T,D,next,nextAssist,tg,from,0,att,null,min);
+      return shoot(M,rng,push,T,D,next,nextAssist,tg,from,0,att,null,min,nextACh);
 
-    carrier=next; assist=nextAssist; lastCh=nextLast;
+    carrier=next; assist=nextAssist; lastCh=nextLast; aCh=nextACh;
     h=tg.h; x=tg.x; step++;
   }
 }
@@ -1024,7 +1041,7 @@ function resolveLastMan(rng,atk,df,fin){
  * **GKに全部が来るわけではない。** 守備者が身体を入れ、技術が足りなければ枠を外れ、
  * 止められてもこぼれれば詰められる。GK以外の守備も結果に効く。
  */
-function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
+function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min,ach){
   const F=TUNING.mom, SP=TUNING.sp, gk=pickGK(D);
   const pos=[Math.round(tg.x),yOfH(tg.h)];
   const d=depth||0, A=att||{ sp:0 };
@@ -1075,7 +1092,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
   gk.stat.inv++;
 
   // ③ GK
-  if(resolveShot(rng,shooter,gk,tg.h,fin,false,min)){
+  if(resolveShot(rng,shooter,gk,tg.h,fin,false,min,chanceOf(assist,ach))){
     T.score++; shooter.stat.goals++;
     if(assist)assist.stat.assists++;
     addMom(M,T.side,F.goal);
