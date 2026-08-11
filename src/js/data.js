@@ -598,8 +598,19 @@ const ORIGINS={
        {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55, to:0.90, kind:"pass",  lane:"box"}],
   // **CF も pow を持たせる**(→docs/03 §3.37)。def 起点は「CFの3番目に大事な能力が守備」
   // という妙な評価を作っていた(実測: CF の def が spd/pow より価値が高かった)
-  CF: [{id:"cfPress",label:"前線からのプレス",stat:"pow", risk:0.52, gain:0.55, kind:"carry", lane:"same"},
-       {id:"cfDrop", label:"落とし",         stat:"tec", risk:0.80, gain:0.10, kind:"pass",  lane:"same"},
+  //
+  // **CFの3枚を組み替えた**(2026-08-11)。決定機の質(→docs/07 §7.21)を入れたら、
+  // **パス札の能力がそのままチームの得点に効く**ようになった。CF のパス札は
+  // 「落とし」1枚だけで、それが TEC だったので、CF は TEC に尖ったときだけ点が伸びた
+  // (実測 パワー1.02 / テク1.26 / スピード1.10)。
+  //   落とし        … 背負って収め、身体を張って預ける手なので **POW** が筋
+  //   前線からのプレス … pow が空いたので **くさびを収める(TEC)** に置き換えた
+  //                     (3枚は別々の能力、という決まりがある → careertest)
+  // これで パワー1.19 / テク1.06 / スピード1.10。
+  // **ST は変えない** — あちらはダイレクトシュートで POW の出口があり、
+  // 同じことをすると今度は POW に偏る(実測 1.33倍)。
+  CF: [{id:"cfPress",label:"くさびを収める",  stat:"tec", risk:0.52, gain:0.55, kind:"carry", lane:"same"},
+       {id:"cfDrop", label:"落とし",         stat:"pow", risk:0.80, gain:0.10, kind:"pass",  lane:"same"},
        {id:"cfRun",   label:"裏抜け",     stat:"spd", risk:0.42, gain:0.62, kind:"carry", lane:"same"}],
   ST: [{id:"stBehind",label:"背後への抜け出し", stat:"spd", risk:0.44, gain:0.60, kind:"carry", lane:"same"},
        {id:"stHold",  label:"収めて預ける",   stat:"tec", risk:0.74, gain:0.14, kind:"pass",  lane:"same"},
