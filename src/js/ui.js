@@ -2307,6 +2307,9 @@ function matchLine(e,M){
                         :mName(vs)+"が競り勝ってクリア", cls:side };
     // **どう撃ったか**を出す(→docs/07 §7.13)。「シュート」だけだと
     // ヘディングもミドルもGKとの一対一も同じ文になり、局面が読めない
+    // 決定機阻止(→docs/07 §7.19)。**シュートの前**なので「撃った」とは言わない
+    case "clear":    return { text:"<b>"+mName(p)+"</b>が抜け出す！"
+                        +"しかし"+mName(vs)+"が身体を投げ出してクリア", cls:side };
     case "block":    return { text:mName(p)+"の"+shotWord(e)+"！"+mName(vs)+"がブロック", cls:side };
     case "miss":     return { text:mName(p)+"の"+shotWord(e)+"は枠を外れた", cls:side };
     case "save":     return { text:"<b>"+mName(p)+"</b>の"+shotWord(e)+"！"+mName(gk)+"がセーブ", cls:side };
@@ -2824,6 +2827,7 @@ function mCut(e){
     case "aerial":   return vs?cutVs(e,by,vs,e.ok?"競り勝った!":"クリア!",e.ok):0;
     case "goal":    return cutShot(e,by,gk,"GOAL!!",true,e.assist&&mPlayer(_M,e.side,e.assist));
     case "save":    return cutShot(e,by,gk,"SAVE!",false);
+    case "clear":   return vs?cutVs(e,by,vs,"CLEAR!",false):0;
     case "block":   return cutShot(e,by,vs,"BLOCK!",false);
     case "miss":    return Math.random()<P.cutMiss?cutShot(e,by,null,"枠を外れた…",false):0;
     case "origin":

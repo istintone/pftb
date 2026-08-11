@@ -612,17 +612,21 @@ function strayOf(p,h,x){
  *   FW起点(h≒0.85)↔ 相手DF(h'≒0.15)  … 最も止められやすい
  * GKは外す(GKの仕事はシュートを止めること)。
  */
-function matchupDefender(rng,h,x,D){
+function matchupDefender(rng,h,x,D,except){
   const F=TUNING.matchup;
   const th=1-h, tx=100-x;
-  const cand=D.players.filter(q=>q.role!=="GK");
+  // except … その1人を外して選ぶ(カバーに入る2人目を引くときに使う)
+  const cand=D.players.filter(q=>q.role!=="GK"&&q!==except);
   return pickW(rng,cand.length?cand:D.players,q=>{
     const dh=(heightOf(q)-th)/F.sigmaH;
     const dx=((q.x-tx)/100)/F.sigmaX;
     // **寄せるのは足の速い選手**(→docs/03 §3.37)。攻撃側で atk が「誰に渡すか」を
     // 決める(recvAtk)のと対になる守備側の幹。これが無いと spd は3枚に1枚の
     // チャンネルでしか出番が無く、守備の選手にとってほぼ死に能力になる
-    const q2=1+eff(q,"spd")/STAT_MAX*F.markSpd;
+    // **守備も「質」で選ぶ**(→docs/03 §3.38)。攻撃側は recvAtk で良い受け手ほど
+    // ボールが集まるのに、守備側は座標の近さだけで選ばれていた。
+    // 守備の上手い選手ほど前に出て広く受け持つ = 関与そのものが増える(フォアチェック)
+    const q2=1+eff(q,"spd")/STAT_MAX*F.markSpd+eff(q,"def")/STAT_MAX*F.markDef;
     return Math.exp(-(dh*dh+dx*dx))*q2;
   });
 }
@@ -997,6 +1001,22 @@ function gkFeed(M,rng,D,from){
   return M.events.slice(from);
 }
 /**
+ * 決定機阻止(→docs/07 §7.19)。**カバーの1人が身体を投げ出す**。
+ *
+ * ブロック(→resolveBlock)と違って**面(coverOf)を掛けない**。
+ * 攻撃側はシュートという「1人で決める場面」を持っているのに、守備側は
+ * どの判定にも面が掛かって4人で割られていた。ここだけは1対1で決める。
+ *
+ * 守り手は**マーカーではなくカバー**。撃ち手は直前のデュエルでマーカーを
+ * 抜いているので、間に合うかどうかは後ろから寄せた選手の脚と守備で決まる。
+ */
+function resolveLastMan(rng,atk,df,fin){
+  const L=TUNING.lastMan;
+  const a=(eff(atk,"atk")*L.atkW+eff(atk,fin.stat)*(1-L.atkW))*(fin.k||1)*rr(rng);
+  const d=(eff(df,"def")*L.defW+eff(df,"spd")*(1-L.defW))*rr(rng);
+  return d>a*L.th;
+}
+/**
  * シュートまで行ったときの決着(→docs/07 §7.9)。連鎖のどこからでも呼べる。
  *
  *   ブロック → 枠外 → GK → こぼれ球 → 詰め
@@ -1014,8 +1034,22 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min){
     sp:sp||null, fin:fin.id,
     flabel:skMove(shooter,"finish",fin,min)||fin.label,
     sk:skFired(shooter,"finish",fin,min) };
-  shooter.stat.shots++;
   const more=A.sp<SP.maxSp;                                  // まだセットプレーを重ねてよいか
+
+  // ⓪ 決定機阻止 — **カバーの1人が身体を投げ出す**(→docs/07 §7.19)。
+  //    シュートの前なので、間に合えば**シュートにもならない**(本数にも数えない)
+  const L=TUNING.lastMan;
+  if(!fin.noBlk&&!sp&&tg.h>=L.h){
+    const near=matchupDefender(rng,tg.h,tg.x,D);
+    const last=matchupDefender(rng,tg.h,tg.x,D,near)||near;
+    if(last&&resolveLastMan(rng,shooter,last,fin)){
+      last.stat.clears=(last.stat.clears||0)+1; last.stat.inv++;
+      addMom(M,D.side,F.block);
+      push(Object.assign({ type:"clear", vs:last.c.id },base));
+      return M.events.slice(from);
+    }
+  }
+  shooter.stat.shots++;
 
   // ① ブロック — 打点に近い守備者が身体を入れる(PKは壁もブロックも無い)
   const blocker=fin.noBlk?null:matchupDefender(rng,tg.h,tg.x,D);
@@ -1191,7 +1225,7 @@ function matchRating(p,conceded){
   let r=4.0+2.05*Math.log10(1+(s.inv||0));
   r+=(s.goals||0)*0.9+(s.assists||0)*0.55
     +(s.duelW||0)*0.12-(s.duelL||0)*0.12
-    +(s.blocks||0)*0.22
+    +(s.blocks||0)*0.22+(s.clears||0)*0.30
     -((s.shots||0)-(s.goals||0))*0.06;
   // **守った仕事にも点を付ける**(→docs/03 §3.38)。関与の数と得点だけで見ると
   // 前線が構造的に1点高くなり、DFはどれだけ止めても上に行けない

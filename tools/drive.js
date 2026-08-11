@@ -1030,6 +1030,27 @@ const STEPS = [
     await ctx.shot("07e-cutin-shot");    // まず「シュート!」
     await ctx.wait(1250);
     await ctx.shot("07e-cutin-goal");    // そのあと結果
+    // 決定機阻止(→docs/07 §7.19)。**守備側の見せ場**なので、出ることと文を確かめる
+    ctx.log("  決定機阻止:", await ctx.js(`(()=>{
+      const T=_M.home, D=_M.away;
+      const by=T.players.find(p=>p.role==='FW')||T.players[10];
+      const vs=D.players.find(p=>p.role==='DF')||D.players[1];
+      const e={ side:'H', type:'clear', by:by.c.id, vs:vs.c.id,
+        pos:[50,20], h:0.8, min:_M.min||10 };
+      const line=matchLine(e,_M);
+      if(!line||line.text.indexOf('クリア')<0)
+        throw new Error('実況の文が出ない: '+(line&&line.text));
+      if(line.text.indexOf('シュート')>=0)
+        throw new Error('撃つ前なのに「シュート」と言っている');
+      mCut(e);
+      // マッチアップの帯なので、決着の言葉は .cut-word に出る
+      const w=document.querySelector('#mCut .cut-word');
+      if(!w||w.textContent.indexOf('CLEAR')<0)
+        throw new Error('カットインが出ない: '+(w&&w.textContent));
+      return line.text+' ／ '+w.textContent;
+    })()`));
+    await ctx.wait(400);
+    await ctx.shot("07p-cutin-clear");
     // セットプレー(→docs/07 §7.11)。出る局面が毎回変わるので直接呼ぶ
     ctx.log("  セットプレーのカットイン:", await ctx.js(`(()=>{
       const k=spKicker(_M.home,'pk');
