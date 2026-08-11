@@ -898,11 +898,26 @@ const STEPS = [
         .find(b=>b.textContent.indexOf('TEC')===0);
       if(tec.querySelector('s').textContent!=='★')
         throw new Error('TECの★が1つになっていない');
+      // **総合力には載る**(→docs/03 §3.30)。カードの数値は据え置きでも、
+      // 「いまのチームの力」は育てたぶんだけ上がっていないと、伸びた実感が持てない
+      closeCard();
+      S.career.train={};
+      const p0=myPower();
+      // **1人ぶんでは丸めに埋もれる**(★2 = 11人の平均で +0.18)。
+      // 先発全員に配って、表に出る数字が確かに動くことを見る
+      for(const x of S.squad.filter(Boolean))trainAwake(x,'atk');
+      const p2=myPower();
+      if(p2<=p0)throw new Error('★が総合力に載っていない: '+p0+' → '+p2);
+      window.__starPow=p0+' → '+p2+'（全員★1）';
+      show('deck');
+      const shown=Number(document.getElementById('deckPower').textContent);
+      if(shown!==myPower())throw new Error('画面の総合力と食い違う: '+shown);
       S.career.train={};
       // **開いた詳細は閉じる**。開けっぱなしだと、このあとの試合のカットインが
       // ずっとこのカードに隠れて写る(スクリーンショットで気付いた)
       closeCard();
-      return '★'+star.length+' ／ 表示 '+tec0+' のまま ／ 内訳はバー右の★';
+      return '★'+star.length+' ／ 表示 '+tec0+' のまま ／ 内訳はバー右の★'
+        +' ／ 総合力 '+window.__starPow;
     })()`));
     await ctx.js("(()=>{S.career.chat=null;show('season');})()");
     await ctx.wait(200);

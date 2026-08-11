@@ -55,6 +55,31 @@ const E=setup({tmpName:"_tmp_train.js"});
   assert.deepStrictEqual(E.trainUps(pid),{ tec:1 },"裏パラを引ける");
   console.log("覚醒OK ★1 / TEC 裏+1 / TEC経験点",before.tec,"→0 / ATKは",before.atk,"のまま");
 
+  // ---------- ★は総合力に載る(→docs/03 §3.30) ----------
+  // カードの数値は据え置きのまま、**いまのチームの力**だけが上がる。
+  // ここが載っていないと、訓練を選び続けても画面が何も変わらない
+  {
+    const card = E.cardById(pid);
+    const raw = card.ovr;
+    assert.strictEqual(E.liveOvr(card), raw + 1, "★1つで OVR +1（6能力の合計なので）");
+    assert.strictEqual(E.cardById(pid).ovr, raw, "カードそのものは書き換えない");
+    const p0 = E.myPower();
+    for (const id of E.getS().squad.filter(Boolean)) {
+      E.trainAwake(id, "atk"); E.trainAwake(id, "def"); E.trainAwake(id, "pow");
+    }
+    const p3 = E.myPower();
+    assert.ok(p3 >= p0 + 2, "全員★3で総合力が上がる: " + p0 + " → " + p3);
+    // 相手のカードには記録が無いので素のまま返る(同じ関数で両方を扱える)
+    const foe = E.cpuSquad("sam-1").cards.find(Boolean);
+    assert.strictEqual(E.liveOvr(foe), foe.ovr, "相手のカードは素のまま");
+    E.getS().career.train = {};
+    assert.strictEqual(E.myPower(), p0, "任期がリセットされれば元に戻る");
+    console.log("★の総合力への反映OK ★1=OVR+1 ／ 全員★3で " + p0 + " → " + p3
+      + " ／ カードの数値は据え置き");
+    // **このあとの検査が使うので、消した★1を戻しておく**
+    E.trainAwake(pid, "tec");
+  }
+
   // --- ★は上限まで。到達したら覚醒は起きない ---
   for(let i=1;i<G.maxStar;i++){
     E.trainAdd(pid,"pow",G.need*3);          // atk に残っている経験点より多く積む

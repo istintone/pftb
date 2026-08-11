@@ -313,7 +313,7 @@ function renderHome(){
   // 2枚タイル(→docs/06 §6.8)。試合の次に触る2つを並べ、**状態を添える**
   const start=squadCards().slice(0,TUNING.squad.starters);
   $("tileScoutSub").textContent=fmtNum(S.club?S.club.coins:0)+" コイン";
-  $("tileDeckSub").textContent="総合力 "+squadPowerAt(squadCards(),S.form);
+  $("tileDeckSub").textContent="総合力 "+myPower();
   // タイルの余白にステッカーを貼る(→docs/06 §6.30)。**絵は固定**で、その行き先を表す
   $("tileScoutArt").innerHTML=stickerArt("scout");
   $("tileDeckArt").innerHTML=stickerArt("board");
@@ -612,7 +612,8 @@ function squadSlotLabel(ix){
  * 目減りしている段だけ色を付け、**数字そのもので損失が分かる**ようにする
  * (→docs/06 §6.15)。100% = 素のまま / 75% = 黄 / 50% = 赤。
  */
-const effOvr=(c,sub)=>Math.round(c.ovr*slotFit(c,sub));
+// **覚醒ぶんを載せた値**を使う(→docs/03 §3.30)。相手のカードには記録が無いので素のまま
+const effOvr=(c,sub)=>Math.round(liveOvr(c)*slotFit(c,sub));
 const effClass=(c,sub)=>({ a:"", b:" v-warn", c:" v-bad" })[fitTier(c,sub)];
 /**
  * 枠のピッカー。**適性 × OVR の高い順**に並べる(=そのまま推奨順になる)。
@@ -641,7 +642,7 @@ function openSlot(ix){
           // 左端の「›」だけは**入れ替えずに詳細を開く**。行そのものは入れ替え。
           +'<button class="pk-i" data-info="'+c.id+'" aria-label="詳細">›</button>'
           +'<div class="pk-ovr'+(sub?effClass(c,sub):"")+'">'
-            +(sub?effOvr(c,sub):c.ovr)+'</div>'
+            +(sub?effOvr(c,sub):liveOvr(c))+'</div>'
           +'<div class="pk-b"><b>'+esc(c.name)+'<i class="awk">'+starOf(c)+'</i>'+loanTag(c)+'</b>'
             +'<span>'+c.subs.join(" / ")+'</span></div>'
           +'<div class="pk-r">'
@@ -997,7 +998,9 @@ function renderDeck(){
   const start=cards.slice(0,TUNING.squad.starters);
   // 総合力は**配置込み**で出す。この画面で決めるのは「誰をどこに置くか」なので、
   // 適性を無視した平均を見せても判断材料にならない(→docs/06 §6.15)。
-  const raw=squadPower(start), fit=squadPowerAt(cards,S.form);
+  // **覚醒の成果を載せた数字**で出す(→docs/03 §3.30)。育てた結果がここに出ないと、
+  // 訓練を選び続けても画面が何も変わらず、伸びている実感が持てない
+  const raw=squadPower(start.map(c=>c&&liveCard(c))), fit=myPower(cards);
   $("deckPower").textContent=fit;
   $("deckCoach").textContent=S.coach?("監督 "+S.coach):"監督";
   $("deckForm").textContent="陣形: "+S.form
@@ -1083,7 +1086,7 @@ function foeBrief(side){
   const tk=STAT_KEYS.reduce((b,k)=>key[k]>key[b]?k:b,STAT_KEYS[0]);
   // 戦力差は**編成込み**で比べる。素の平均だと枠の噛み合いが落ちて、
   // 実際に戦った感触とずれる(→docs/06 §6.15)
-  const d=squadPowerAt(squadCards(),S.form)-squadPowerAt(side.cards,side.form);
+  const d=myPower()-squadPowerAt(side.cards,side.form);
   const G=TUNING.brief;
   return { f:side.form, p:key.pos, n:shortName(key), t:STAT_TRAIT[tk],
     gap:d>=G.big?"up2":d>=G.small?"up":d<=-G.big?"dn2":d<=-G.small?"dn":"even" };

@@ -723,6 +723,27 @@ const trainExp=(id,k)=>{ const r=trainRec(id); return (r&&r.exp[k])||0; };
 const trainUp=(id,k)=>{ const r=trainRec(id); return (r&&r.up[k])||0; };
 const trainStar=id=>{ const r=trainRec(id); return (r&&r.star)||0; };
 /** 裏パラをまとめて引く(試合に渡すため)。何も無ければ null。 */
+/**
+ * **覚醒の成果を数に載せる**(→docs/03 §3.30)。
+ *
+ * 覚醒は能力を1つ +1 する。OVR は6能力の**合計**なので、★1つ = OVR +1 で、
+ * ★5まで積めば +5 — 部がひとつ違うくらいの差になる。ところがカードの `ovr` は
+ * 作られたときの値のまま**書き換えない**(裏パラは career 側に持つ)ので、
+ * 画面の総合力も格の判定も**育てた成果を見ていなかった**。
+ *
+ * ここを通した数字だけが「いまのチーム」を表す。相手のカードには記録が無いので
+ * そのまま素の値が返る(同じ関数で両方を扱える)。
+ */
+const starUp=id=>{
+  const u=trainUps(id);
+  return u?STAT_KEYS.reduce((n,k)=>n+(u[k]||0),0):0;
+};
+const liveOvr=c=>c?c.ovr+starUp(c.id):0;
+const liveCard=c=>{ const n=c?starUp(c.id):0; return n?{ ...c, ovr:c.ovr+n }:c; };
+/** いまの編成の総合力。**画面に出す数字も格の判定もこれを使う**。 */
+const myPower=(cards,form)=>
+  squadPowerAt((cards||squadCards()).map(c=>c&&liveCard(c)),form||S.form);
+
 function trainUps(id){
   const r=trainRec(id);
   if(!r||!r.star)return null;
@@ -1649,7 +1670,7 @@ function playMatchday(done){
       S.club.coins+=gf>ga?TUNING.reward.win:gf===ga?TUNING.reward.draw:TUNING.reward.lose;
       S.club.exp+=gf>ga?350:gf===ga?220:150;              // チーム熟練度(→§3.7)
       // オーナーの評価(→§3.9)。**格が違う相手との結果だけ**が動かす
-      evalMatch(squadPowerAt(squadCards(),S.form),
+      evalMatch(myPower(),
         squadPowerAt(cpuSquad(out.my.opp).cards,formFor(out.my.opp)),gf>ga,gf<ga);
       bondMatch();                                         // 連携(→§3.31)。一戦ごとに積む
       trustMatch();                                        // 信頼(→§3.39)。スタメンに入る
