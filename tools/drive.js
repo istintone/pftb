@@ -110,6 +110,19 @@ const STEPS = [
     await ctx.js("(()=>{const i=document.getElementById('ctCoach');i.value='C. モレッティ';i.dispatchEvent(new Event('input'))})()");
     await ctx.wait(150);
     ctx.log("署名欄:", JSON.stringify(await ctx.js("document.getElementById('ctSignPreview').textContent")));
+    // 就任者の肖像(→docs/03 §3.45)。**選べること**と**チャットに出ること**
+    ctx.log("就任者の肖像:", await ctx.js(`(()=>{
+      const f=[...document.querySelectorAll('#ctFaces [data-face]')];
+      if(f.length<2)throw new Error('顔が並ばない: '+f.length);
+      if(f.filter(x=>x.classList.contains('on')).length!==1)
+        throw new Error('選ばれている顔が1つでない');
+      const first=S.face;
+      f[3].click();
+      if(S.face===first)throw new Error('選び直せない');
+      if(!document.querySelector('#ctFaces .ct-face.on img'))throw new Error('絵が出ていない');
+      if(chatAvatar('mgr').indexOf('<img')<0)throw new Error('監督の丸に絵が入らない');
+      return f.length+'人から選べる ／ 選び直せる ／ チャットの丸にも出る';
+    })()`));
     await ctx.shot("03-contract");
   }],
   ["未記入で署名(弾かれること)", async ctx => {

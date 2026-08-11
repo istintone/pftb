@@ -14,6 +14,9 @@ function defaultState(){
   return {
     v:SAVE_VER,
     coach:"",                       // 監督名(就任契約書で記入)
+    // 監督の顔(→docs/03 §3.45)。就任契約書で選ぶ。src/assets/manager の名前が入る。
+    // 空なら監督名から決まる(古いセーブと、選ばずに進んだ場合の受け皿)
+    face:"",
     form:DEFAULT_FORM,              // 使用フォーメーション
     player:{
       fame:0,                       // 名声 = 次にどのクラブへ行けるか(→§3.9)

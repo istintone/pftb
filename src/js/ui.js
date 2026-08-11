@@ -1891,12 +1891,26 @@ function secretaryArt(clubId){
  * `src/assets/faces/sec.png` / `mgr.png` を置けば**そのまま差し替わる**
  * (絵を足すのに JS を触らない。選手の絵と同じ考え方 →docs/03 §3.19)。
  */
+/**
+ * 監督の顔(→docs/03 §3.45)。契約書で選んだものを返す。
+ * **選んでいなければ監督名から決める**ので、絵が出ないことは無い
+ * (古いセーブ、そして選ばずに進んだ場合の受け皿)。
+ */
+const managerFaces=()=>Object.keys((window.ASSETS&&window.ASSETS.manager)||{}).sort();
+function managerArt(key){
+  const A=(window.ASSETS&&window.ASSETS.manager)||{};
+  const k=key||S.face;
+  if(k&&A[k])return A[k];
+  const keys=managerFaces();
+  if(!keys.length)return null;
+  return A[keys[Math.abs(hashStr("mgr:"+(S.coach||"")))%keys.length]];
+}
 function chatAvatar(w,cls){
   const box=(kind,src)=>'<div class="'+(cls||"ch-sm")+' '+kind+'">'
     +(src?'<img src="'+src+'" alt="">':'<i class="ch-ph"></i>')+'</div>';
   const F=(window.ASSETS&&window.ASSETS.faces)||{};
   if(w==="sec")return box("sec",secretaryArt()||F.sec);
-  if(w==="mgr")return box("mgr",F.mgr);
+  if(w==="mgr")return box("mgr",managerArt()||F.mgr);
   const c=cardById(w);
   const art=c&&artKeyOf(c);
   return box("pl",art&&artOf(art+"_stand"));
@@ -3539,8 +3553,24 @@ function openContract(){
   $("ctLeague").textContent=c?leagueById(c.league).name+" "+divName(c.div):"—";
   $("ctGrade").textContent=c?"★"+c.grade+"（部内"+c.rank+"位相当）":"—";
   $("ctNote").textContent=c?c.name+" 監督として登録されます":"クラブを選ぶと契約内容が確定します";
+  renderFaces();
   updateSignature();
   show("contract");
+}
+/**
+ * 就任者の肖像(→docs/03 §3.45)。**顔は一度だけ選ぶ**もので、次の任期では聞かれない。
+ * 選ばなくても進める(その場合は監督名から決まる)。
+ */
+function renderFaces(){
+  const keys=managerFaces(), A=(window.ASSETS&&window.ASSETS.manager)||{};
+  const box=$("ctFaces"); if(!box)return;
+  if(!keys.length){ box.innerHTML=""; return; }
+  if(!S.face)S.face=keys[Math.abs(hashStr("mgr:"+(S.coach||"")))%keys.length];
+  box.innerHTML=keys.map(k=>'<div class="ct-face'+(k===S.face?" on":"")+'" data-face="'+k+'">'
+    +'<img src="'+A[k]+'" alt=""></div>').join("");
+  box.querySelectorAll("[data-face]").forEach(el=>{
+    el.onclick=()=>{ S.face=el.dataset.face; renderFaces(); };
+  });
 }
 /** 記入した氏名を署名欄へ即時に反映する(書いている実感を出すため)。 */
 function updateSignature(){

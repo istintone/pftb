@@ -1391,6 +1391,18 @@ body{
   60%{ opacity:.55; transform:scale(.8) }
   100%{ opacity:0; transform:scale(.35) }
 }
+/* 就任者の肖像(→docs/03 §3.45)。契約書の中なので**紙の上の証明写真**として置く。
+   丸ではなく角丸の枠にして、チャットの丸とは役割を分ける */
+.ct-faces{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 6px; }
+.ct-face{
+  position:relative; width:44px; height:44px; flex:none; overflow:hidden;
+  border-radius:7px; cursor:pointer;
+  background:oklch(0.90 0.02 85); border:1px solid oklch(0.72 0.03 80);
+}
+/* 顔の位置はチャットの丸と同じ切り出し(→§6.23)。枠が変わっても顔がずれない */
+.ct-face img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
+  transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
+.ct-face.on{ border-color:oklch(0.55 0.14 60); box-shadow:0 0 0 2px oklch(0.55 0.14 60) }
 /* カード詳細の札。**固有だけ金縁**にする */
 .skill.sig{
   color:var(--accent-hi); border-color:var(--accent);
