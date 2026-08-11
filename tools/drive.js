@@ -1014,6 +1014,41 @@ const STEPS = [
     })()`));
     await ctx.wait(250);
     await ctx.shot("07d2-cutin-skill");
+    // **どの帯でも金になること**(→docs/06 §6.34)。パスの帯を作り忘れていて、
+    // ベッカムの札が出ても見た目が変わらなかった(実際に見落とした)
+    ctx.log("  固有スキルの帯:", await ctx.js(`(()=>{
+      const H=_M.home,A=_M.away;
+      const mySide=(_M.fixture.h===S.club.id)?'H':'A';
+      const T=mySide==='H'?H:A, D=mySide==='H'?A:H;
+      const a=T.players[10], b=T.players[9], gk=D.players.find(p=>p.role==='GK');
+      const df=D.players.find(p=>p.role==='DF');
+      const dch=(COUNTERS[df.sub]||COUNTERS.CB)[0];
+      const sk=['精密機械'];
+      const kinds=[];
+      const check=(name,fn)=>{
+        fn();
+        const band=document.querySelector('#mCut .cut');
+        if(!band||!band.classList.contains('sig'))throw new Error(name+'の帯が金にならない');
+        if(!document.querySelectorAll('#mCut .cut-spk i').length)
+          throw new Error(name+'にきらめきが無い');
+        if(!document.getElementById('mCut').classList.contains('shake'))
+          throw new Error(name+'で揺れない');
+        kinds.push(name);
+      };
+      check('マッチアップ',()=>cutVs({side:mySide,label:'ベンドイット',ch:'cfRun',
+        vs:df.c.id,dch:dch.id,dlabel:dch.label,sk:sk,dsk:sk},a,df,'突破!',true));
+      check('パス',()=>cutPass({side:mySide,label:'ベンドイット',sk:sk},a,b));
+      check('シュート',()=>cutShot({side:mySide,flabel:'ベンドイット',sk:sk,
+        pos:[50,20],h:0.8},a,gk,'GOAL!!',false));
+      // 抽選で間引かれないこと
+      const n0=window.__cutN;
+      mCut({type:'origin',side:mySide,by:a.c.id,vs:df.c.id,ok:true,kind:'pass',
+        sk:sk,dsk:[],pos:[50,30]});
+      if(window.__cutN===n0)throw new Error('固有スキルが出ても間引かれることがある');
+      return kinds.join(' / ')+' すべて金・きらめき・揺れ ／ 間引かれない';
+    })()`));
+    await ctx.wait(250);
+    await ctx.shot("07d3-cutin-sig-pass");
     await ctx.wait(600);
     await ctx.shot("07d-cutin-vs-2");   // 勝敗が表れ、決着語が出たところ
     ctx.log("  シュートの見出し:", await ctx.js(`(()=>{ const H=_M.home;

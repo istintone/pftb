@@ -2683,7 +2683,9 @@ function cutSkills(list){
 }
 /** パス成功。左に出し手、右から受け手がスライドインする。 */
 function cutPass(e,from,to){
-  return cutShow('<div class="cut">'
+  const sg=sigIn(e.sk);                                  // 固有スキル(→docs/06 §6.34)
+  return cutShow('<div class="cut'+(sg?" sig":"")+'">'
+    +(sg?cutSparks():"")
     +'<div class="cut-hd">'+esc(e.label||"PASS")+'</div>'
     +cutSkills(e.sk)
     +'<div class="cut-row">'
@@ -2851,13 +2853,17 @@ function mCut(e){
     case "save":    return cutShot(e,by,gk,"SAVE!",false);
     case "clear":   return vs?cutVs(e,by,vs,"CLEAR!",false):0;
     case "block":   return cutShot(e,by,vs,"BLOCK!",false);
-    case "miss":    return Math.random()<P.cutMiss?cutShot(e,by,null,"枠を外れた…",false):0;
+    case "miss":    return (sigIn(e.sk)||Math.random()<P.cutMiss)
+                      ?cutShot(e,by,null,"枠を外れた…",false):0;
     case "origin":
     case "link":
       if(!vs)return 0;
-      if(!e.ok)return Math.random()<P.cutStop?cutVs(e,by,vs,"STOP!",false):0;
+      // **固有スキルが出たら必ず見せる**(→docs/06 §6.34)。抽選で間引くと、
+      // 12人しか持っていない札が出た瞬間が流れてしまう(実際に流れていた)
+      const sig=sigIn(e.sk)||sigIn(e.dsk);
+      if(!e.ok)return (sig||Math.random()<P.cutStop)?cutVs(e,by,vs,"STOP!",false):0;
       // 通ったときは、パス系なら受け手を出す(次のイベントの持ち手)
-      if(Math.random()>=P.cutPass)return 0;
+      if(!sig&&Math.random()>=P.cutPass)return 0;
       if(e.kind==="pass"){
         const nx=_mNext&&_mNext.by&&mPlayer(_M,e.side,_mNext.by);
         if(nx&&nx!==by)return cutPass(e,by,nx);
