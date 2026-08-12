@@ -755,8 +755,19 @@ body{
 .rs-rt{ width:28px; text-align:right; font:700 14px/1 var(--f-head) }
 .rs-rt.hi{ color:var(--accent-hi) }
 .rs-rt.lo{ color:var(--fit-bad) }
-.rs-rw{ display:flex; justify-content:center; gap:14px; margin-bottom:20px;
-  font-size:11px; color:oklch(0.75 0.13 85) }
+/* 試合収益(→docs/03 §3.47)。**帳簿の体**で出す。1行1項目、右に金額 */
+.rs-rw{ display:flex; flex-direction:column; gap:0; margin-bottom:20px }
+.rs-in{
+  display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+  padding:8px 2px; border-bottom:1px solid var(--line);
+  font-size:11px; color:var(--text-dim);
+}
+.rs-in b{ font:600 13px/1 var(--f-head); color:var(--text-2) }
+.rs-in.tot{ border-bottom:none; border-top:1px solid var(--accent-dim); margin-top:2px }
+.rs-in.tot span{ color:var(--text-2) }
+.rs-in.tot b{ font-size:16px; color:var(--accent-hi) }
+.rs-in.none{ border-bottom:none }
+.rs-in.none b{ font:400 11px/1.4 var(--f-body); color:var(--text-mute) }
 
 /* =========================================================================
    MATCH — 試合画面(→docs/06 §6.17)

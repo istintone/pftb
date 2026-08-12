@@ -1408,6 +1408,25 @@ const STEPS = [
       await ctx.js("document.getElementById('rsVerdict').textContent"),
       await ctx.js("document.getElementById('rsScore').textContent"));
     await ctx.shot("08-result");
+    // 試合収益(→docs/03 §3.47)。**明細で出す / EXPは出さない**
+    ctx.log("    試合収益:", await ctx.js(`(()=>{
+      const rows=[...document.querySelectorAll('#rsReward .rs-in')];
+      if(rows.length<2)throw new Error('明細が出ない: '+rows.length);
+      const txt=document.getElementById('rsReward').textContent;
+      if(txt.indexOf('EXP')>=0)throw new Error('EXP が出ている');
+      const tot=rows[rows.length-1];
+      if(!tot.classList.contains('tot'))throw new Error('合計の行が無い');
+      const n=v=>Number(String(v).replace(/[^0-9-]/g,''));
+      const sum=rows.slice(0,-1).reduce((a,r)=>a+n(r.querySelector('b').textContent),0);
+      if(sum!==n(tot.querySelector('b').textContent))
+        throw new Error('明細の合計が合わない: '+sum);
+      return rows.slice(0,-1).map(r=>r.querySelector('span').textContent
+        +' '+r.querySelector('b').textContent).join(' / ')+' → 合計 '+
+        tot.querySelector('b').textContent;
+    })()`));
+    await ctx.js("document.getElementById('appBody').scrollTop=99999");
+    await ctx.wait(250);
+    await ctx.shot("08c-result-income");
     await ctx.js("document.getElementById('btnResultOk').click()");
     await ctx.wait(300);
   }],

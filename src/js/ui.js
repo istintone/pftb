@@ -2032,6 +2032,24 @@ function chatClock(node,i){
   const t=m0+i*2+(hashStr("clock:"+node+":"+i)%2);        // 1発言 2〜3分
   return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
 }
+/**
+ * 試合収益の明細(→docs/03 §3.47)。**合計は今までと同じ**で、内訳の見せ方だけを変える。
+ *   入場料 … 観客が入って落ちるお金。ホームのほうが多い
+ *   成績給 … 勝ち・引き分け・負けで変わるぶん
+ * カップ戦は賞金が大会の決着でまとめて入る(→docs/03 §3.23)ので、ここは入場料だけ。
+ */
+function matchIncome(m){
+  const R=TUNING.reward;
+  // **カップ戦はこの試合では1コインも入らない**(賞金は大会の決着でまとめて →§3.23)。
+  // 無い収入を明細に書かない。何も入らないことを、そのまま書く
+  if(m.cup)return [];
+  const total=m.win?R.win:m.draw?R.draw:R.lose;
+  // **出れば入るぶん**と**勝敗で変わるぶん**に割る。合計は今までと同じ
+  const out=[{ k:m.home?"入場料（ホーム開催）":"入場料（遠征の配分）", v:R.lose }];
+  const bonus=total-R.lose;
+  if(bonus>0)out.push({ k:m.win?"勝利給":"引き分け給", v:bonus });
+  return out;
+}
 function chatBottom(){
   setTimeout(()=>{ const el=$("chatAsk"); if(el)try{ el.scrollIntoView({block:"end"}); }catch(e){} },20);
 }
@@ -3361,10 +3379,17 @@ function renderResult(){
   // PK戦で決まったなら、そのスコアを添える(→docs/03 §3.33)
   $("rsVerdict").textContent=(m.win?"勝利":m.draw?"引き分け":"敗戦")
     +(m.pso?"　PK "+m.pso.gf+"-"+m.pso.ga:"");
-  $("rsReward").innerHTML=m.cup
-    ?'<span>'+esc(m.label||"カップ戦")+'</span><span>+'+(m.win?350:150)+' EXP</span>'
-    :'<span>+'+fmtNum(m.win?TUNING.reward.win:m.draw?TUNING.reward.draw:TUNING.reward.lose)
-      +' コイン</span><span>+'+(m.win?350:m.draw?220:150)+' EXP</span>';
+  // 試合収益(→docs/03 §3.47)。**明細で出す**。「+900 コイン」だけだと
+  // ゲームの点数に見えるが、入場料と成績給に割れば「クラブの帳簿」になる。
+  // **チーム熟練度(EXP)は出さない** — 監督が見るものではないので
+  const inc=matchIncome(m);
+  $("rsReward").innerHTML=inc.length
+    ?inc.map(r=>'<div class="rs-in"><span>'+esc(r.k)+'</span><b class="num">+'
+      +fmtNum(r.v)+'</b></div>').join("")
+      +'<div class="rs-in tot"><span>合計</span><b class="num">+'
+      +fmtNum(inc.reduce((a,r)=>a+r.v,0))+'</b></div>'
+    :'<div class="rs-in none"><span>この試合の収入はありません</span>'
+      +'<b>賞金は大会の決着で</b></div>';
   $("rsOthers").innerHTML=o.others.map(x=>'<div class="fx"><span class="nm">'+esc(clubName(x.h))+'</span>'
     +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
     +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("")||'<div class="lg">なし</div>';
