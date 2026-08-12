@@ -1976,16 +1976,29 @@ function renderChat(){
   $("chatSub").textContent="第"+C.node+"節";
   // 節は見出しの副題に出ているので、ここでは繰り返さない(→docs/06 §6.24)
   $("chatAv").innerHTML=chatAvatar("sec","ch-av-in");
-  $("chatLog").innerHTML=ch.log.map(m=>{
+  // **本物のやりとりに見せる**(→docs/06 §6.36)。
+  //   ・同じ人が続けて話したら、顔と名前は最初の1回だけ(いちばん効く手掛かり)
+  //   ・時刻を添える。**節から決まる**ので、開き直しても同じ時刻に見える
+  //   ・監督の最後の発言には「既読」を付ける(相手が読んだ、という形)
+  const lastMe=ch.log.reduce((a,m,i)=>m.w==="mgr"?i:a,-1);
+  $("chatLog").innerHTML='<div class="ch-day">第'+C.node+'節　試合当日</div>'
+    +ch.log.map((m,i)=>{
+    const prev=ch.log[i-1], head=!prev||prev.w!==m.w;      // そのまとまりの先頭か
+    const t=chatClock(C.node,i);
     // 監督は**右に丸**。左右で誰の発言かが形だけで分かる
-    if(m.w==="mgr")return '<div class="ch-row me"><div class="ch-b">'+esc(m.t)+'</div>'
-      +chatAvatar("mgr")+'</div>';
+    if(m.w==="mgr")return '<div class="ch-row me'+(head?" hd":"")+'">'
+      +'<div class="ch-meta"><span class="ch-t">'+t+'</span>'
+      +(i===lastMe?'<span class="ch-read">既読</span>':"")+'</div>'
+      +'<div class="ch-b">'+esc(m.t)+'</div>'
+      +(head?chatAvatar("mgr"):'<span class="ch-gap"></span>')+'</div>';
     // **選手はポジションも添える**(→docs/06 §6.24)。誰を育てるかの手掛かりになる
     const pc=m.w==="sec"?null:cardById(m.w);
     const nm=m.w==="sec"?"秘書":esc(shortOf(m.w))
       +(pc?' <i class="ch-pos">'+esc(primarySub(pc))+'</i>':"");
-    return '<div class="ch-row">'+chatAvatar(m.w)
-      +'<div class="ch-b"><span class="ch-nm">'+nm+'</span>'+esc(m.t)+'</div></div>';
+    return '<div class="ch-row'+(head?" hd":"")+'">'
+      +(head?chatAvatar(m.w):'<span class="ch-gap"></span>')
+      +'<div class="ch-b">'+(head?'<span class="ch-nm">'+nm+'</span>':"")+esc(m.t)+'</div>'
+      +'<div class="ch-meta"><span class="ch-t">'+t+'</span></div></div>';
   }).join("");
   const o=chatOptions();
   if(ch.step==="ready"){
@@ -2010,6 +2023,15 @@ function renderChat(){
   chatBottom();
 }
 /** 会話は下が最新。**開いたら必ず最新まで送る**。 */
+/**
+ * 発言の時刻(→docs/06 §6.36)。**節から決まる**ので、開き直しても同じ時刻に見える。
+ * 試合当日の朝、9時前後から数分おきに話している、という体。
+ */
+function chatClock(node,i){
+  const m0=9*60+5+(hashStr("clock:"+node)%22);            // 9:05〜9:26 に始まる
+  const t=m0+i*2+(hashStr("clock:"+node+":"+i)%2);        // 1発言 2〜3分
+  return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
+}
 function chatBottom(){
   setTimeout(()=>{ const el=$("chatAsk"); if(el)try{ el.scrollIntoView({block:"end"}); }catch(e){} },20);
 }

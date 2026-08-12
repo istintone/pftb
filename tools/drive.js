@@ -450,7 +450,9 @@ const STEPS = [
       "/ 選択肢", await ctx.js("document.querySelectorAll('#chatAsk [data-pick]').length"));
     // 相手の見立て(→docs/03 §3.35)。**打ち手を聞かれる前**に、並び・注目選手・戦力差を言う
     ctx.log("  相手の見立て:", await ctx.js(`(()=>{
-      const rows=[...document.querySelectorAll('#chatLog .ch-row')].map(r=>r.textContent);
+      // **発言そのものだけを見る**(→docs/06 §6.36)。時刻や既読は画面の飾りで、
+      // 秘書が読み上げているわけではない
+      const rows=[...document.querySelectorAll('#chatLog .ch-b')].map(r=>r.textContent);
       const side=cpuSquad(myFixture().opp), b=foeBrief(side);
       const scout=rows.find(t=>t.indexOf(b.n)>=0&&t.indexOf(b.t)>=0);
       if(!scout)throw new Error('見立てが出ていない');

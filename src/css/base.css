@@ -1820,6 +1820,12 @@ body{
   --ch-line:oklch(0.855 0.022 90);      /* 吹き出しの縁 */
   --ch-me:oklch(0.86 0.105 88);         /* 監督の吹き出し。金 */
   min-height:100%;
+  /* **壁紙**(→docs/06 §6.36)。ベタ塗りの地はUIに見える。ごく薄い斜めの綾を
+     敷くと「アプリの中の会話画面」らしくなる。柄が読めるほど濃くしない */
+  background-image:
+    repeating-linear-gradient(135deg,
+      oklch(1 0 0 / .014) 0 2px, transparent 2px 7px),
+    radial-gradient(120% 70% at 50% 0%, oklch(0.30 0.05 265 / .30), transparent 70%);
 }
 /* 見出し・注記は**地の上に直接乗る**ので、アプリ共通の明るい字のまま */
 .ch-head{
@@ -1831,12 +1837,27 @@ body{
 
 .ch-hn{ font:600 14px/1.2 var(--f-head); color:var(--text) }
 .ch-hs{ font-size:10px; color:var(--text-dim); margin-top:1px }
+/* 日付の区切り。**会話の頭に1つだけ**置く(チャットらしさの型) */
 .ch-day{
-  text-align:center; margin-bottom:14px;
-  font:400 9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-mute);
+  align-self:center; margin:0 auto 8px;
+  padding:4px 12px; border-radius:999px;
+  background:oklch(0.22 0.03 265 / .85); border:1px solid oklch(0.32 0.03 265);
+  font:400 9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-dim);
 }
-.ch-log{ display:flex; flex-direction:column; gap:10px }
+/* **同じ人の続きは詰める**(→docs/06 §6.36)。まとまりの先頭だけ間を空けると、
+   誰がひと続きに話しているかが、名前を読まなくても分かる */
+.ch-log{ display:flex; flex-direction:column; gap:3px }
 .ch-row{ display:flex; align-items:flex-end; gap:7px }
+.ch-row.hd{ margin-top:11px }
+.ch-log>.ch-row:first-of-type{ margin-top:0 }
+/* 顔を出さない行の、顔ぶんの空き */
+.ch-gap{ width:36px; flex-shrink:0 }
+/* 時刻と既読。**吹き出しの外の足元**に置く(中に入れると本文と競る) */
+.ch-meta{ display:flex; flex-direction:column; align-items:flex-end; gap:1px;
+  flex-shrink:0; padding-bottom:2px }
+.ch-t{ font:9px/1 var(--f-mono); color:var(--text-mute) }
+.ch-read{ font:9px/1 var(--f-mono); color:oklch(0.62 0.09 150); letter-spacing:.5px }
+.ch-row.me .ch-meta{ align-items:flex-start; order:-1 }
 /* 監督の丸は右端に来るので、HELPタブに隠れないぶんだけ内側へ寄せる */
 .ch-row.me{ justify-content:flex-end; padding-right:30px }
 /* **顔の丸は3者とも同じ形**(→docs/06 §6.23)。色だけで役割を分ける */
@@ -1878,13 +1899,22 @@ body{
 /* **吹き出しがクリーム**。暗い地の上に明るい塊が乗るので、会話の切れ目がいちばん
    はっきりする。字は吹き出しの中だけ暗くなる */
 .ch-b{
+  position:relative;
   max-width:74%; padding:10px 12px; font-size:12px; line-height:1.65;
-  background:var(--ch-card); color:var(--ch-ink); border-radius:12px 12px 12px 4px;
+  background:var(--ch-card); color:var(--ch-ink); border-radius:14px;
   box-shadow:0 2px 6px oklch(0 0 0 / .35);
 }
 .ch-row.me .ch-b{
   background:var(--ch-me); color:oklch(0.26 0.03 80);
-  border-radius:12px 12px 4px 12px;
+}
+/* **尻尾はまとまりの先頭だけ**(→docs/06 §6.36)。全部に付けると鋸の歯になる */
+#scr-chat .ch-row.hd .ch-b::before{
+  content:""; position:absolute; bottom:7px; left:-5px; width:10px; height:10px;
+  background:var(--ch-card); clip-path:polygon(100% 0, 100% 100%, 0 78%);
+}
+#scr-chat .ch-row.me.hd .ch-b::before{
+  left:auto; right:-5px; background:var(--ch-me);
+  clip-path:polygon(0 0, 0 100%, 100% 78%);
 }
 /* 名前は**発言と同じ濃さ**。落とすと吹き出しのクリームに沈んで誰の発言か読み取れない */
 .ch-nm{ display:block; font:400 9px/1 var(--f-mono); color:var(--ch-ink); margin-bottom:4px }
