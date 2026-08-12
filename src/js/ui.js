@@ -544,19 +544,39 @@ const evalLabel=v=>v>=TUNING.eval.extendNeed?"良好":v>=45?"普通":v>=20?"不�
 
 // ---------- CARDS(コレクション) ----------
 let _cardFilter="ALL";
+// 1ページに出す枚数(→docs/06 §6.35)。**全部並べると数百枚のスクロールになる**ので
+// 区切る。絞り込みを変えたら1ページ目へ戻す(前のページ番号が残ると空振りする)。
+const CARDS_PER_PAGE=12;
+let _cardPage=1;
 function renderCards(){
   const all=availableCards(), own=S.player.coll.length;
   $("cardsFilter").innerHTML=["ALL"].concat(POS).map(p=>
     '<button class="chip'+(p===_cardFilter?" on":"")+'" data-f="'+p+'">'+p+'</button>').join("");
   $("cardsFilter").querySelectorAll("button").forEach(b=>{
-    b.onclick=()=>{ _cardFilter=b.dataset.f; renderCards(); };
+    b.onclick=()=>{ _cardFilter=b.dataset.f; _cardPage=1; renderCards(); };
   });
   const list=all.filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter).sort((a,b)=>b.ovr-a.ovr);
+  const pages=Math.max(1,Math.ceil(list.length/CARDS_PER_PAGE));
+  if(_cardPage>pages)_cardPage=pages;                    // 売って減ったときの受け皿
+  const from=(_cardPage-1)*CARDS_PER_PAGE;
+  const page=list.slice(from,from+CARDS_PER_PAGE);
   $("cardsCount").innerHTML="所持カード "+list.length+" / "+all.length
     +"　<span class=\"loan\">(CLUBS)</span> クラブからの貸与 "+(all.length-own)+" 枚";
-  $("cardsGrid").innerHTML=list.length?list.map(cardTile).join("")
-    :'<div class="stub"><b>該当するカードがありません</b><span>パックは第4段で実装します</span></div>';
+  $("cardsGrid").innerHTML=page.length?page.map(cardTile).join("")
+    :'<div class="stub"><b>該当するカードがありません</b><span>絞り込みを変えてみてください</span></div>';
   wireCardTiles($("cardsGrid"));
+  // **1ページに収まるならページ送りは出さない**。要らない操作を置かない
+  $("cardsPager").innerHTML=pages>1
+    ?'<button class="pg-b" id="cardsPrev"'+(_cardPage<=1?" disabled":"")+'>‹ 前</button>'
+      +'<span class="pg-n num">'+_cardPage+' / '+pages+'</span>'
+      +'<button class="pg-b" id="cardsNext"'+(_cardPage>=pages?" disabled":"")+'>次 ›</button>'
+    :"";
+  if(pages>1){
+    $("cardsPrev").onclick=()=>{ if(_cardPage>1){ _cardPage--; renderCards();
+      $("appBody").scrollTop=0; } };
+    $("cardsNext").onclick=()=>{ if(_cardPage<pages){ _cardPage++; renderCards();
+      $("appBody").scrollTop=0; } };
+  }
 }
 function wireCardTiles(root){
   root.querySelectorAll("[data-card]").forEach(el=>{
@@ -884,12 +904,40 @@ function openCard(x,opts){
         : isLoaned(c)
         ? "<span class=\"loan\">(CLUBS)</span> クラブからの貸与 — 退任するとこのクラブに残ります"
         : "自分のカード — 移籍しても連れて行けます")+'</div>'
+      // 売却(→docs/03 §3.46)。**下見のときは出さない**(相手の選手なので)
+      +(foe?"":'<div class="cm-sell" id="cmSell"></div>')
     +'</div>';
   bindSkillPop(c.skills);
+  if(!foe)renderSell(c);
   $("cardModalClose").onclick=closeCard;
   $("cardModal").classList.add("on");
 }
-const closeCard=()=>$("cardModal").classList.remove("on");
+/**
+ * 売却の欄(→docs/03 §3.46)。**戻せない操作なので二段にする**。
+ * 1回目で値段と確認、2回目で確定。理由があって売れないカードは、その理由を出す
+ * (押せるのに何も起きない、を作らない)。
+ */
+let _sellArm=null;
+function renderSell(c){
+  const box=$("cmSell"); if(!box)return;
+  const why=sellWhy(c);
+  if(why){ box.innerHTML='<span class="cm-sell-no">'+esc(why)+'</span>'; return; }
+  const price=sellPrice(c);
+  const armed=_sellArm===c.id;
+  box.innerHTML='<span class="cm-sell-v">売却額 <b>'+fmtNum(price)+'</b> コイン</span>'
+    +'<button class="btn cm-sell-b'+(armed?" arm":"")+'" id="cmSellGo">'
+    +(armed?"本当に売る":"売却する")+'</button>'
+    +(armed?'<span class="cm-sell-w">この操作は戻せません</span>':"");
+  $("cmSellGo").onclick=async()=>{
+    if(!armed){ _sellArm=c.id; renderSell(c); return; }
+    const r=sellCard(c.id);
+    _sellArm=null;
+    if(!r){ toast("売却できませんでした"); renderSell(c); return; }
+    await save(); closeCard(); headUI(); renderCards();
+    toast(r.name+" を "+fmtNum(r.coin)+" コインで売却しました");
+  };
+}
+const closeCard=()=>{ _sellArm=null; $("cardModal").classList.remove("on"); };
 /** PROFILE の紹介文。カードの属性から組み立てる(専用のテキストは持たない)。 */
 function bioOf(c){
   const n=nationById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);

@@ -549,6 +549,46 @@ function fillSlots(slots,pool,pick,used){
 
 /** 使える選手 = 手持ちカード(恒久) + クラブからの貸与(任期中だけ)。 */
 const availableCards=()=>S.player.coll.concat(S.club.loan);
+
+// --- カードの売却(→docs/03 §3.46) ---
+/** 売値。段が幹で、OVR が枝。 */
+function sellPrice(card){
+  if(!card)return 0;
+  const V=TUNING.sell;
+  return Math.round((V.base[card.rarity]||V.base.STD)
+    +Math.max(0,card.ovr-V.from)*V.perOvr);
+}
+/**
+ * 売れない理由(売れるなら null)。**理由を返す**ので、画面はそのまま出せばよい。
+ * 「押せるのに何も起きない」を作らないための形。
+ */
+function sellWhy(card){
+  if(!card)return "選手が見つかりません";
+  if(isLoaned(card))return "クラブからの貸与です。売ることはできません";
+  if((S.squad||[]).includes(card.id))return "編成に入っています。外してから売ってください";
+  if(isMentor(card.id))return "師弟の約束をした選手です。次の任期へ連れていきます";
+  // **実在選手は売らない**(→docs/03 §3.46)。手で作った26人は集めるものであって
+  // 在庫ではない。入手経路がスポンサーの最上位だけで、売ると取り戻すのに
+  // 任期の半分が要る。二段の確認でも「勢いで手放した」を防ぎきれない
+  if(card.sig)return "実在選手は売れません。コレクションとして残ります";
+  return null;
+}
+const canSell=card=>!sellWhy(card);
+/** 売る。**戻せない**ので、押す前の確認は画面側が持つ(→docs/06 §6.35)。 */
+function sellCard(id){
+  const c=cardById(id);
+  if(!c||sellWhy(c))return null;
+  const i=S.player.coll.findIndex(x=>x.id===id);
+  if(i<0)return null;
+  const coin=sellPrice(c);
+  S.player.coll.splice(i,1);
+  S.club.coins+=coin;
+  // 訓練の成果と連携は**カードに紐づく**ので、一緒に消す(幽霊が残らないように)
+  if(S.career.train)delete S.career.train[id];
+  if(S.career.bond)for(const k of Object.keys(S.career.bond))
+    if(k.split(":").includes(String(id)))delete S.career.bond[k];
+  return { coin, name:c.name };
+}
 const cardById=id=>availableCards().find(c=>c.id===id)||null;
 const isLoaned=card=>!!card&&S.club.loan.some(c=>c.id===card.id);
 

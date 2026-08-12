@@ -917,11 +917,14 @@ const STEPS = [
       S.career.train={};
       const p0=myPower();
       // **1人ぶんでは丸めに埋もれる**(★2 = 11人の平均で +0.18)。
-      // 先発全員に配って、表に出る数字が確かに動くことを見る
-      for(const x of S.squad.filter(Boolean))trainAwake(x,'atk');
+      // 先発全員に3つずつ配る。1つずつだと、枠適性の低い編成では
+      // 平均の伸びが 0.5 未満になり、丸めに吸われることがある(実際に起きた)
+      for(const x of S.squad.filter(Boolean)){
+        trainAwake(x,'atk'); trainAwake(x,'def'); trainAwake(x,'pow');
+      }
       const p2=myPower();
       if(p2<=p0)throw new Error('★が総合力に載っていない: '+p0+' → '+p2);
-      window.__starPow=p0+' → '+p2+'（全員★1）';
+      window.__starPow=p0+' → '+p2+'（全員★3）';
       show('deck');
       const shown=Number(document.getElementById('deckPower').textContent);
       if(shown!==myPower())throw new Error('画面の総合力と食い違う: '+shown);
@@ -2044,6 +2047,66 @@ const STEPS = [
         ctx.log("  レアリティ表示:", await ctx.js(
           "[...document.querySelectorAll('#cardsGrid .pcard')].map(e=>e.className.replace('pcard ','')).join(' | ')"));
         await ctx.shot("09c-rarities");
+        // ページ送りと売却(→docs/03 §3.46 / docs/06 §6.35)
+        ctx.log("  ページ送り:", await ctx.js(`(()=>{
+          // **枚数を増やして**2ページ以上にする(少ないと出ない仕掛けなので)
+          const r2=mulberry32(4242);
+          while(S.player.coll.length<30)S.player.coll.push(makeCard(r2,'MF',{rarity:'STD'}));
+          renderCards();
+          const pg=document.getElementById('cardsPager');
+          if(!pg.querySelector('#cardsNext'))throw new Error('ページ送りが出ない');
+          const n1=document.querySelectorAll('#cardsGrid [data-card]').length;
+          const lab=pg.querySelector('.pg-n').textContent;
+          document.getElementById('cardsNext').click();
+          const lab2=document.querySelector('#cardsPager .pg-n').textContent;
+          if(lab===lab2)throw new Error('次のページに行かない: '+lab);
+          if(document.getElementById('cardsPrev').disabled)throw new Error('前へ戻れない');
+          document.querySelector('#cardsFilter [data-f="GK"]').click();
+          const p3=document.querySelector('#cardsPager .pg-n');
+          if(p3&&p3.textContent.indexOf('1 /')!==0)
+            throw new Error('絞り込みを変えてもページが戻らない');
+          document.querySelector('#cardsFilter [data-f="ALL"]').click();
+          return '1ページ '+n1+'枚 / '+lab+' → '+lab2+' / 絞り込みで1ページ目へ';
+        })()`));
+        // **ページ送りは一覧の下**にあるので、そこまで送ってから撮る
+        await ctx.js("document.getElementById('appBody').scrollTop=99999");
+        await ctx.wait(250);
+        await ctx.shot("09h-cards-pager");
+        await ctx.js("document.getElementById('appBody').scrollTop=0");
+        ctx.log("  売却:", await ctx.js(`(()=>{
+          // **実在選手は売れない**ので、自動生成のカードから選ぶ
+          const c=S.player.coll.find(x=>!S.squad.includes(x.id)&&!x.sig);
+          if(!c)throw new Error('売れるカードが無い');
+          openCard(c.id);
+          const box=document.getElementById('cmSell');
+          if(!box||!box.querySelector('#cmSellGo'))throw new Error('売却の欄が出ない');
+          const price=sellPrice(c), coin0=S.club.coins, n0=S.player.coll.length;
+          box.querySelector('#cmSellGo').click();          // 1回目 = 確認
+          if(S.player.coll.length!==n0)throw new Error('1回目で売れてしまう');
+          const b=document.querySelector('#cmSell #cmSellGo');
+          if(b.textContent.indexOf('本当に')<0)throw new Error('確認の段にならない');
+          window.__sellShot=1;
+          return price+'コイン / 1回目は確認で止まる';
+        })()`));
+        await ctx.wait(200);
+        await ctx.shot("09i-card-sell");
+        ctx.log("  売却の確定:", await ctx.js(`(()=>{
+          const n0=S.player.coll.length, coin0=S.club.coins;
+          document.querySelector('#cmSell #cmSellGo').click();
+          if(S.player.coll.length!==n0-1)throw new Error('売れない');
+          if(S.club.coins<=coin0)throw new Error('コインが増えない');
+          openCard(S.club.loan[0].id);
+          if(document.querySelector('#cmSell #cmSellGo'))throw new Error('貸与が売れてしまう');
+          const why=document.querySelector('#cmSell .cm-sell-no').textContent;
+          // **実在選手も売れない**(→docs/03 §3.46)
+          const sg=S.player.coll.find(x=>x.sig)||signatureCards()[0];
+          S.player.coll.push(sg); openCard(sg.id);
+          if(document.querySelector('#cmSell #cmSellGo'))throw new Error('実在選手が売れてしまう');
+          const why2=document.querySelector('#cmSell .cm-sell-no').textContent;
+          closeCard();
+          return '+'+(S.club.coins-coin0)+'コイン / 貸与は「'+why.slice(0,10)
+            +'」/ 実在選手は「'+why2.slice(0,8)+'」';
+        })()`));
         // LEGENDS の詳細を開く(縁線とホロが拡大表示でも出るか)
         await ctx.js("renderCards()");
         await ctx.wait(200);

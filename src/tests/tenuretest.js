@@ -768,5 +768,57 @@ function runSeason(hand) {
   assert.strictEqual(E.pickHand("nope"), false, "存在しない打ち手は選べない");
   console.log("打ち手の定義OK", E.HANDS.map(h => h.icon + h.label).join(" / "));
 
+  // ---------- カードの売却(→docs/03 §3.46) ----------
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; E.startTenure("sam-8");
+
+    // **値段は段が幹、OVR が枝**
+    const mk = (rar, ovr) => ({ id: 900000 + Math.floor(Math.random() * 1e6),
+      rarity: rar, ovr: ovr, pos: "MF", name: "検証 " + rar });
+    const V = E.TUNING.sell;
+    assert.ok(E.sellPrice(mk("LEG", 88)) > E.sellPrice(mk("WC", 88)), "段が上なら高い");
+    assert.ok(E.sellPrice(mk("REG", 75)) > E.sellPrice(mk("REG", 60)), "OVR が高いほど高い");
+    // **引く値段より必ず安い**(引いて売るが回らないように)
+    for (const pk of E.TUNING.scout) {
+      const worst = E.sellPrice(mk("WC", 85));
+      assert.ok(worst < 4000 || pk.cost >= worst, "売値がパックの値段を超えない");
+    }
+
+    // **貸与は売れない / 編成に入っていると売れない / 師弟は売れない**
+    const loan = S.club.loan[0];
+    assert.ok(E.sellWhy(loan), "貸与は売れない: " + E.sellWhy(loan));
+    const own = E.makeCard(E.mulberry32(5), "MF", { rarity: "REG" });
+    S.player.coll.push(own);
+    assert.strictEqual(E.sellWhy(own), null, "手持ちは売れる");
+    S.squad[3] = own.id;
+    assert.ok(E.sellWhy(own), "編成に入っていると売れない: " + E.sellWhy(own));
+    S.squad[3] = null;
+    S.career.mentor = [own.id];
+    assert.ok(E.sellWhy(own), "師弟は売れない: " + E.sellWhy(own));
+    S.career.mentor = [];
+    // **実在選手は売れない**(集めるものなので)
+    const sig = E.signatureCards()[0];
+    S.player.coll.push(sig);
+    assert.ok(E.sellWhy(sig), "実在選手は売れない: " + E.sellWhy(sig));
+    S.player.coll = S.player.coll.filter(x => x !== sig);
+
+    // **売るとコインが増えて手札から消える。訓練と連携も一緒に消える**
+    E.trainAdd(own.id, "atk", 5);
+    const mate = S.player.coll[0] || S.club.loan[0];
+    E.bondAdd(own.id, mate.id, 30);
+    const coin0 = S.club.coins, n0 = S.player.coll.length;
+    const r = E.sellCard(own.id);
+    assert.ok(r, "売れる");
+    assert.strictEqual(S.club.coins, coin0 + r.coin, "コインが増える");
+    assert.strictEqual(S.player.coll.length, n0 - 1, "手札から消える");
+    assert.strictEqual(E.cardById(own.id), null, "もう引けない");
+    assert.strictEqual(E.trainExp(own.id, "atk"), 0, "訓練の成果も消える");
+    assert.strictEqual(E.bondOf(own.id, mate.id), 0, "連携も消える");
+    assert.strictEqual(E.sellCard(own.id), null, "二度は売れない");
+    console.log("売却OK 段とOVRで値が決まる ／ 貸与・編成・師弟・実在選手は売れない ／"
+      + " 訓練と連携も一緒に消える");
+  }
+
   process.exit(0);
 })().catch(e => { console.error("FAIL:", e); process.exit(1); });

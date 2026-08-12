@@ -1403,6 +1403,27 @@ body{
 .ct-face img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
   transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
 .ct-face.on{ border-color:oklch(0.55 0.14 60); box-shadow:0 0 0 2px oklch(0.55 0.14 60) }
+/* ページ送り(→docs/06 §6.35)。1ページに収まるときは出さない */
+.pager{ display:flex; align-items:center; justify-content:center; gap:14px; margin:14px 0 4px }
+.pg-b{
+  padding:9px 18px; border-radius:999px; cursor:pointer;
+  background:var(--panel); border:1px solid var(--line); color:var(--text-2);
+  font:600 12px/1 var(--f-head); letter-spacing:1px;
+}
+.pg-b:disabled{ opacity:.35; cursor:default }
+.pg-n{ font-size:12px; color:var(--text-dim); min-width:52px; text-align:center }
+/* 売却(→docs/03 §3.46)。**戻せない操作なので二段**。1回目は値段、2回目で確定 */
+.cm-sell{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
+}
+.cm-sell-v{ font-size:12px; color:var(--text-dim) }
+.cm-sell-v b{ font:600 14px/1 var(--f-head); color:var(--accent-hi) }
+.cm-sell-b{ width:auto; margin-left:auto; padding:9px 16px; flex:none }
+/* 確認の段は色を変える。**同じ見た目のまま二度押させない** */
+.cm-sell-b.arm{ background:oklch(0.55 0.19 25); border-color:oklch(0.55 0.19 25); color:#fff }
+.cm-sell-w{ width:100%; font-size:10px; color:oklch(0.65 0.16 25) }
+.cm-sell-no{ font-size:11px; color:var(--text-mute) }
 /* カード詳細の札。**固有だけ金縁**にする */
 .skill.sig{
   color:var(--accent-hi); border-color:var(--accent);
