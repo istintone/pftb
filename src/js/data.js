@@ -272,6 +272,37 @@ const SKILL_FX={
     fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"origin", grp:"spd", s:1.07 }] },
   "本能":           { sig:"inzaghi", move:"一瞬の抜け出し",
     fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"recv", k:1.30 }] },
+  // --- WORLD CLASS の固有スキル(2026-08-12) ---
+  // **LEGENDS と同じ物差し**で置く(→docs/03 §3.41)。段が違っても札の強さは変えない。
+  // 段の差は能力(76〜85 と 82〜90)と札の枚数(3枚と4枚)で付いている。
+  "加速する司令塔": { sig:"kaka", move:"一気の持ち上がり",
+    fx:[{ at:"origin", grp:"carry", w:1.55, s:1.17, when:"fresh" },{ at:"recv", k:1.25 }] },
+  "巨壁":           { sig:"courtois",
+    fx:[{ at:"gk", k:1.10 },{ at:"aerial", k:1.20 }] },
+  "最終ラインの主": { sig:"vandyck", move:"競り勝ち",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"aerial", k:1.22 }] },
+  "牙":             { sig:"lmartinez", move:"食い付き",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"tough", k:1.12 }] },
+  "絡みつく守備":   { sig:"cucurella",
+    fx:[{ at:"counter", grp:"tec", s:1.14 },{ at:"stam", k:0.88 }] },
+  "読みの速さ":     { sig:"timber", move:"読み勝ち",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"cover", k:1.18 }] },
+  "試合の心拍":     { sig:"rodri", move:"刈り取り",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"mid", k:1.10 }] },
+  "遅れて入る":     { sig:"bellingham", move:"二列目からの飛び出し",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"start", k:1.20 }] },
+  "曲がる軌道":     { sig:"olise", move:"巻いたクロス",
+    fx:[{ at:"origin", grp:"cross", s:1.13 },{ at:"spDeliver", k:1.12 }] },
+  "天才の閃き":     { sig:"yamal", move:"閃きのカットイン",
+    fx:[{ at:"origin", grp:"cut", w:1.85, s:1.36, when:"fresh" },{ at:"mood", k:1.05 }] },
+  "点取りの化身":   { sig:"haaland", move:"叩き込む",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"aerial", k:1.18 }] },
+  "加速":           { sig:"mbappe", move:"置き去りの加速",
+    fx:[{ at:"origin", grp:"spd", s:1.07 },{ at:"start", k:1.18 }] },
+  "左足の魔術":     { sig:"messi", move:"左足の一差し",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"vision", k:1.20 }] },
+  "間で受ける":     { sig:"wirtz", move:"間で受ける",
+    fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"recv", k:1.25 }] },
 };
 /**
  * 固有スキルの発動条件(→docs/03 §3.41)。**文脈が分からなければ発動しない**

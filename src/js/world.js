@@ -864,12 +864,21 @@ function ticketUse(id){
  * LEGENDS を1枚引く(→docs/03 §3.42)。**手で作った12人から、まだ持っていない人**。
  * 全員そろっていたら、段だけ名指しした自動生成に落とす(引けない状態を作らない)。
  */
-function drawLegend(rng){
+/**
+ * **手で作った選手を1枚引く**(→docs/03 §3.13)。持っている人は出ない。
+ * 全員そろったら自動生成に落ちるので、経路が枯れることはない。
+ *
+ * pos を渡すと、その大分類の選手だけから引く(ポジション確定の報酬 →§3.40)。
+ * **その枠の実在選手をもう持っていたら自動生成に落ちる** — 枠の指定を優先する。
+ */
+function drawSig(rng,rarity,pos){
   const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
-  const pool=signatureCards().filter(c=>c.rarity==="LEG"&&!mine.has(c.sig));
+  const pool=signatureCards().filter(c=>c.rarity===rarity&&!mine.has(c.sig)
+    &&(!pos||c.pos===pos));
   if(pool.length)return pool[Math.floor(rng()*pool.length)];
-  return makeCard(rng,rpick(rng,POS),{ rarity:"LEG" });
+  return makeCard(rng,pos||rpick(rng,POS),{ rarity:rarity });
 }
+const drawLegend=rng=>drawSig(rng,"LEG");
 
 // ---------- スポンサー(→docs/03 §3.40) ----------
 // **クラブを支える企業と契約する**。契約は24節前後で、任期のあいだに何度か入れ替わる。
@@ -994,12 +1003,12 @@ function sponPay(pos){
     return { kind:"coin", coin:v };
   }
   // **段を名指しして1枚引く**(→docs/03 §3.26 のプロスカウトと同じ作り)
-  // **LEGENDS は手で作った12人から**(→docs/03 §3.42)。自動生成に落とすのは全員そろってから
-  // WORLD CLASS 確定は2種類ある。**ポジションまで選べるのが上の段**(→§3.40)
+  // **実在選手が先**(→docs/03 §3.13)。自動生成に落とすのは全員そろってから。
+  // WORLD CLASS 確定は2種類あり、**ポジションまで選べるのが上の段**(→§3.40)
   const wc=P.kind==="scoutWc"||P.kind==="scoutWcPos";
-  const card=P.kind==="scoutLe"?drawLegend(rng)
-    :makeCard(rng,pos||rpick(rng,POS),
-      { rarity:wc?"WC":(rng()<T.wcInPos?"WC":"SPE") });
+  const card=P.kind==="scoutLe"?drawSig(rng,"LEG")
+    :wc?drawSig(rng,"WC",P.pick?pos:null)
+    :makeCard(rng,pos||rpick(rng,POS),{ rarity:rng()<T.wcInPos?"WC":"SPE" });
   S.player.coll.push(card);
   return { kind:P.kind, card };
 }

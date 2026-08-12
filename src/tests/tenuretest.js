@@ -498,14 +498,44 @@ function runSeason(hand) {
       assert.strictEqual(r.kind, P.kind, tier + "段は " + P.kind);
       if (P.pick) assert.strictEqual(r.card.pos, "FW",
         tier + "段は呼んだポジションで来る: " + r.card.pos);
-      if (P.kind === "scoutWc" || P.kind === "scoutWcPos")
+      if (P.kind === "scoutWc" || P.kind === "scoutWcPos") {
         assert.strictEqual(r.card.rarity, "WC", tier + "段は WORLD CLASS 確定");
+        // **実在選手が先**(→docs/03 §3.13)。持っていない人が居るうちは必ずそちら
+        assert.ok(r.card.sig, tier + "段で手で作った選手が出ない: " + r.card.name);
+      }
       if (P.kind === "scoutLe") assert.strictEqual(r.card.rarity, "LEG", "5段は LEGENDS 確定");
       kinds.push(P.label);
     }
     // **LEGENDS の重さは動かさない**。4段を挟んでも5段の課題は前のままにしてある
     assert.strictEqual(T.streak[4], T.streak[3], "4段と5段の連勝数は同じ");
     assert.ok(T.fameFail[3] < T.fameFail[4], "落としたときの痛みは段で増える");
+
+    // --- 実在選手は重複しない。全員そろったら自動生成に落ちる ---
+    {
+      const S9 = E.getS();
+      const keep = S9.player.coll.slice();
+      const wcs = E.signatureCards().filter(c => c.rarity === "WC");
+      assert.ok(wcs.length >= 8, "WORLD CLASS の実在選手が居る: " + wcs.length + "人");
+      const got = new Set();
+      S9.player.coll = [];
+      for (let i = 0; i < wcs.length; i++) {
+        const c = E.drawSig(E.mulberry32(100 + i), "WC");
+        assert.ok(c.sig, "そろうまでは実在選手が出る");
+        assert.ok(!got.has(c.sig), "同じ人は二度出ない: " + c.name);
+        got.add(c.sig); S9.player.coll.push(c);
+      }
+      const over = E.drawSig(E.mulberry32(7), "WC");
+      assert.strictEqual(over.rarity, "WC", "全員そろっても引ける");
+      assert.ok(!over.sig, "そのときは自動生成に落ちる");
+      // **枠を指定すると、その枠の実在選手から出る**
+      S9.player.coll = [];
+      const fw = E.drawSig(E.mulberry32(3), "WC", "FW");
+      assert.strictEqual(fw.pos, "FW", "指定した枠で来る");
+      assert.ok(fw.sig, "枠を指定しても実在選手が先");
+      S9.player.coll = keep;
+      console.log("実在選手の引き当てOK WC " + wcs.length + "人 ／ 重複しない ／"
+        + " 枠の指定も効く ／ そろったら自動生成");
+    }
 
     // --- 1段は**会社ごとに額が違う**。名声0でも「どれと組むか」の判断になる ---
     const t1 = E.SPONSORS.filter(x => x.tier === 1);

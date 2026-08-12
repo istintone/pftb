@@ -121,6 +121,127 @@ const SIGNATURES=[
     atk:20, def:4, pow:13, tec:14, spd:17, sta:14,               // 82
     skills:["本能","オフザボール","詰めの速さ","決定力"],
   },
+  {
+    // **LEGENDS の13人目**(2026-08-12)
+    id:"kaka", art:"le_st02_kaka", rarity:"LEG",
+    name:"カカ", short:"カカ",
+    club:"ミラノ・ロッソネリ", nation:"bra",
+    pos:"FW", subs:["ST","OMF"], age:25,
+    atk:17, def:6, pow:14, tec:19, spd:17, sta:12,               // 85
+    skills:["加速する司令塔","ドリブル突破","視野の広さ","決定力"],
+  },
+
+  // ================= WORLD CLASS =================
+  // 76〜85(→data.js RARITY)。札は**3枚**で、1枚目が固有スキル(→docs/03 §3.41)。
+  // LEGENDS より1枚少ないぶん、伸びしろではなく「いま強い」段として置いてある。
+  // ---------- GK ----------
+  {
+    id:"courtois", art:"wc_gk01_courtois", rarity:"WC",
+    name:"T. クルトワ", short:"クルトワ",
+    club:"マドリー・ブランコス", nation:"bel",
+    pos:"GK", subs:["GK"], age:30,
+    atk:3, def:20, pow:18, tec:15, spd:12, sta:14,               // 82
+    skills:["巨壁","ハイボール処理","守備の統率"],
+  },
+  // ---------- DF ----------
+  {
+    id:"vandyck", art:"wc_cb02_van_dyck", rarity:"WC",
+    name:"V. ダイク", short:"ダイク",
+    club:"マージーサイド・レッズ", nation:"ned",
+    pos:"DF", subs:["CB"], age:30,
+    atk:8, def:20, pow:18, tec:13, spd:13, sta:12,               // 84
+    skills:["最終ラインの主","対人守備","空中戦の強さ"],
+  },
+  {
+    id:"lmartinez", art:"wc_cb01_lisandro_martinez", rarity:"WC",
+    name:"L. マルティネス", short:"マルティネス",
+    club:"マンチェスター・レッズ", nation:"arg",
+    pos:"DF", subs:["CB","DMF"], age:26,
+    atk:9, def:18, pow:16, tec:15, spd:13, sta:12,               // 83
+    skills:["牙","厳しい寄せ","ビルドアップ"],
+  },
+  {
+    id:"cucurella", art:"wc_lsb01_cucurella", rarity:"WC",
+    name:"M. ククレジャ", short:"ククレジャ",
+    club:"ロンドン・ブルーズ", nation:"esp",
+    pos:"DF", subs:["LSB","LMF"], age:26,
+    atk:10, def:16, pow:14, tec:15, spd:16, sta:13,              // 84
+    skills:["絡みつく守備","オーバーラップ","運動量"],
+  },
+  {
+    id:"timber", art:"wc_rsb01_timber", rarity:"WC",
+    name:"J. ティンバー", short:"ティンバー",
+    club:"ロンドン・ガナーズ", nation:"ned",
+    pos:"DF", subs:["RSB","CB"], age:24,
+    atk:9, def:17, pow:15, tec:15, spd:16, sta:12,               // 84
+    skills:["読みの速さ","カバーリング","推進力"],
+  },
+  // ---------- MF ----------
+  {
+    id:"rodri", art:"wc_dmf_rodri", rarity:"WC",
+    name:"ロドリ", short:"ロドリ",
+    club:"マンチェスター・スカイブルー", nation:"esp",
+    pos:"MF", subs:["DMF","CMF"], age:27,
+    atk:11, def:17, pow:15, tec:18, spd:11, sta:13,              // 85
+    skills:["試合の心拍","ボール奪取","展開力"],
+  },
+  {
+    id:"bellingham", art:"wc_cmf01_bellingham", rarity:"WC",
+    name:"J. ベリンガム", short:"ベリンガム",
+    club:"マドリー・ブランコス", nation:"eng",
+    pos:"MF", subs:["CMF","OMF"], age:22,
+    atk:15, def:13, pow:15, tec:16, spd:14, sta:12,              // 85
+    skills:["遅れて入る","オフザボール","運動量"],
+  },
+  {
+    id:"olise", art:"wc_omf01_olise", rarity:"WC",
+    name:"M. オリーズ", short:"オリーズ",
+    club:"ミュンヘン・レーヴェン", nation:"fra",
+    pos:"MF", subs:["OMF","RMF"], age:24,
+    atk:15, def:8, pow:12, tec:18, spd:15, sta:12,               // 80
+    skills:["曲がる軌道","正確なクロス","キープ力"],
+  },
+  {
+    id:"yamal", art:"wc_rmf01_yamal", rarity:"WC",
+    name:"L. ヤマル", short:"ヤマル",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"MF", subs:["RMF","RWG"], age:18,
+    atk:15, def:7, pow:11, tec:18, spd:16, sta:12,               // 79
+    skills:["天才の閃き","ドリブル突破","切れ込みの鋭さ"],
+  },
+  // ---------- FW ----------
+  {
+    id:"haaland", art:"wc_cf01_haland", rarity:"WC",
+    name:"E. ハーランド", short:"ハーランド",
+    club:"マンチェスター・スカイブルー", nation:"nor", nat:"ノルウェー",
+    pos:"FW", subs:["CF","ST"], age:24,
+    atk:20, def:4, pow:19, tec:12, spd:15, sta:12,               // 82
+    skills:["点取りの化身","詰めの速さ","空中戦の強さ"],
+  },
+  {
+    id:"mbappe", art:"wc_lwg01_mbappe", rarity:"WC",
+    name:"K. ムバッペ", short:"ムバッペ",
+    club:"マドリー・ブランコス", nation:"fra",
+    pos:"FW", subs:["LWG","ST"], age:25,
+    atk:18, def:4, pow:13, tec:15, spd:20, sta:12,               // 82
+    skills:["加速","スピード","カットイン"],
+  },
+  {
+    id:"messi", art:"wc_rwg01_messi", rarity:"WC",
+    name:"L. メッシ", short:"メッシ",
+    club:"マイアミ・ローズ", nation:"arg",
+    pos:"FW", subs:["RWG","OMF"], age:30,
+    atk:18, def:4, pow:10, tec:20, spd:14, sta:11,               // 77
+    skills:["左足の魔術","視野の広さ","キープ力"],
+  },
+  {
+    id:"wirtz", art:"wc_st01_wirtz", rarity:"WC",
+    name:"F. ヴィルツ", short:"ヴィルツ",
+    club:"マージーサイド・レッズ", nation:"ger",
+    pos:"FW", subs:["ST","OMF"], age:22,
+    atk:16, def:7, pow:12, tec:18, spd:14, sta:12,               // 79
+    skills:["間で受ける","オフザボール","パスの精度"],
+  },
 ];
 const signatureById=id=>SIGNATURES.find(s=>s.id===id);
 
