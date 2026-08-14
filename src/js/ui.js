@@ -1800,6 +1800,17 @@ function chatEnter(st){
       chatSay(m,chatText(CHAT.mentorAsk,"mt:"+C.node+":"+m));
       return true;
     }
+    // **節の出来事**(→docs/03 §3.48)。10試合に1回くらい。同時には1つだけ
+    const lk=luckPick();
+    if(lk){
+      sel.luck=lk;
+      if(lk.id==="ask"){
+        chatSay(lk.who,chatText(CHAT.luckAsk,"lk:"+C.node+":"+lk.who));
+        return true;                                   // 答えを待つ
+      }
+      luckSay(lk);
+      return false;
+    }
     chatSay("sec",chatText(CHAT.eventNone,"ev:"+C.node)); return false;
   }
   if(st==="ready"){ chatSay("sec",chatText(CHAT.ready,"rd:"+C.node)); return true; }
@@ -1830,6 +1841,14 @@ function chatPick(id,label){
     if(sp)chatSay("sec",chatText(CHAT.sponYes,"sy:"+C.node,
       { n:sponsorById(sp.id).name, g:sponGoalText(sp), d:String(sp.until) }));
   }
+  else if(st==="event"&&sel.luck){
+    // 節の出来事の答え(→docs/03 §3.48)
+    const ev=sel.luck, r=luckApply(ev,id);
+    chatSay(ev.who,chatText(r&&r.ok?CHAT.luckHit:CHAT.luckMiss,"lh:"+C.node+":"+ev.who));
+    chatSay("sec",chatText(r&&r.ok?CHAT.luckHitSec:CHAT.luckMissSec,"ls:"+C.node,
+      { n:shortOf(ev.who) }));
+    sel.luck=null;
+  }
   else if(st==="event"){
     const who=sel.mentor;
     const ok=mentorAnswer(who,id==="yes");
@@ -1853,6 +1872,23 @@ function chatPick(id,label){
   ch.i++; ch.step=null;
   save(); chatAdvance();
 }
+/**
+ * 答えの要らない出来事を、その場で解決して喋る(→docs/03 §3.48)。
+ * **効き目は先に反映する**。結果を見せてから効く、では順が逆になる。
+ */
+function luckSay(ev){
+  const C=S.career;
+  luckApply(ev);
+  if(ev.id==="sub"){
+    chatSay(ev.who,chatText(CHAT.luckSub,"lb:"+C.node+":"+ev.who));
+    chatSay("sec",chatText(CHAT.luckSubOk,"lc:"+C.node,{ n:shortOf(ev.who) }));
+  }else if(ev.id==="bond"){
+    chatSay("sec",chatText(CHAT.luckBond,"ld:"+C.node,
+      { a:shortOf(ev.who), b:shortOf(ev.with) }));
+  }else if(ev.id==="bad"){
+    chatSay("sec",chatText(CHAT.luckBad,"le:"+C.node,{ n:shortOf(ev.who) }));
+  }
+}
 /** いま出す選択肢。 */
 function chatOptions(){
   const C=S.career, ch=C.chat, sel=ch.sel, st=ch&&ch.step;
@@ -1872,6 +1908,10 @@ function chatOptions(){
         sub:"リーグ戦に集中します" }]) };
   }
   if(st==="event"){
+    // 節の出来事の3択(→docs/03 §3.48)。**当たりは節ごとに変わる**
+    if(sel.luck&&sel.luck.id==="ask")return { q:"何を求めているか、伝えますか",
+      items:LUCK_ROLES.map(r=>({ id:r.id, label:r.label,
+        say:"お前には "+r.label+" であってほしい。" })) };
     if(sel.spon==="sign")return { q:"どこと契約しますか", items:sponOffers().map(o=>({
       id:o.id, label:o.name,
       // **課題と報酬と支援を並べて見せる**。これが選ぶ材料そのもの

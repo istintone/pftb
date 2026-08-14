@@ -1159,6 +1159,88 @@ function trustOver(n){
 }
 /** いま相談してくる選手(→§3.39)。**1人だけ**。居なければ null。 */
 function mentorPending(){ return trustOver(TUNING.trust.need)[0]||null; }
+
+// ---------- 節の出来事(→docs/03 §3.48) ----------
+// **10試合に1回くらい、選手のほうから何かが起きる。** 96節が「打ち手 → 試合」の
+// 反復になっているので、たまに別の色を入れる。**同時には1つしか起きない**。
+//
+// 起きるかどうかも、誰に起きるかも**節から決まる**(開き直しても同じ)。
+// 毎回引き直すと、チャットを閉じて開くだけで当たりを探せてしまう。
+
+/** 問いの3択(→§3.48)。**当たりは節ごとに変わる**ので覚えられない。 */
+const LUCK_ROLES=[
+  { id:"core",  label:"チームの中心" },
+  { id:"ace",   label:"エース" },
+  { id:"brain", label:"戦術理解者" },
+];
+/**
+ * 今節の出来事。**無ければ null**。
+ * 起きるものが複数当てはまる場合は、**その節のたねで1つだけ**選ぶ。
+ */
+function luckPick(){
+  const C=S.career;
+  if(!S.club||!C||C.over)return null;
+  const rng=mulberry32((S.world.seed^hashStr("luck:"+S.club.id+":"+C.node))>>>0);
+  if(rng()>=TUNING.luck.rate)return null;
+  const xi=(S.squad||[]).slice(0,TUNING.squad.starters).filter(Boolean);
+  const bench=(S.squad||[]).slice(TUNING.squad.starters).filter(Boolean);
+  const out=[];
+  // ① 控えの直訴 … 出してくれと言いに来る
+  if(bench.length)out.push({ id:"sub", who:bench[Math.floor(rng()*bench.length)] });
+  // ② 先発の問い … 何を求められているのかを訊く
+  if(xi.length)out.push({ id:"ask", who:xi[Math.floor(rng()*xi.length)],
+    hit:LUCK_ROLES[Math.floor(rng()*LUCK_ROLES.length)].id });
+  // ③ 個人練習 … 同じ国籍か同じクラブの2人が居残る
+  const pair=luckPair(rng);
+  if(pair)out.push({ id:"bond", who:pair[0], with:pair[1] });
+  // ④ 不信 … いちばん信頼の低い選手の調子が落ちる
+  const low=luckLowTrust(xi.concat(bench));
+  if(low!=null)out.push({ id:"bad", who:low });
+  if(!out.length)return null;
+  return out[Math.floor(rng()*out.length)];
+}
+/** 同じ国籍か、同じコンビネーション(クラブ)の2人。**編成の中から**探す。 */
+function luckPair(rng){
+  const ids=(S.squad||[]).filter(Boolean);
+  const groups={};
+  for(const id of ids){
+    const c=cardById(id); if(!c)continue;
+    for(const k of ["nat:"+c.nation,"club:"+(c.club||"")]){
+      if(k==="club:")continue;
+      (groups[k]=groups[k]||[]).push(id);
+    }
+  }
+  const keys=Object.keys(groups).filter(k=>groups[k].length>=2);
+  if(!keys.length)return null;
+  const g=groups[keys[Math.floor(rng()*keys.length)]];
+  const a=Math.floor(rng()*g.length);
+  let b=Math.floor(rng()*g.length); if(b===a)b=(b+1)%g.length;
+  return g[a]===g[b]?null:[g[a],g[b]];
+}
+/** いちばん信頼の低い選手(同じ値が並んだら、いちばん出番の遅い選手)。 */
+function luckLowTrust(ids){
+  let best=null,bv=Infinity;
+  for(const id of ids){ const v=trustOf(id); if(v<bv){ bv=v; best=id; } }
+  return best;
+}
+/**
+ * 出来事の結末を反映する(→§3.48)。**答えの要る出来事は role を渡す**。
+ * 戻り値は画面が読む結果。
+ */
+function luckApply(ev,role){
+  if(!ev)return null;
+  const L=TUNING.luck;
+  if(ev.id==="sub"){ condSet(ev.who,COND_MAX); return { cond:COND_MAX }; }
+  if(ev.id==="bad"){ condSet(ev.who,L.badTo); return { cond:L.badTo }; }
+  if(ev.id==="bond"){ bondAdd(ev.who,ev.with,L.bond); return { bond:L.bond }; }
+  if(ev.id==="ask"){
+    const ok=role===ev.hit;
+    trustAdd(ev.who,ok?L.trustHit:L.trustMiss);
+    if(ok)condSet(ev.who,COND_MAX);
+    return { ok, trust:trustOf(ev.who) };
+  }
+  return null;
+}
 /** 相談に答える。**受けても断ても二度目は無い**。 */
 function mentorAnswer(id,yes){
   if(!id)return false;

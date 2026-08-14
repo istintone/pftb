@@ -700,6 +700,61 @@ const STEPS = [
     // **契約は残したまま**にする。外すと次の節でまたスポンサーの相談が先に出て、
     // 師弟の相談まで進まない(1節に出るイベントは1つ)
     await ctx.js("S.player.fame=0; S.career.chat=null; S.career.hand=null; S.career.comp=null;");
+    // 節の出来事(→docs/03 §3.48)。**問いの3択**を通しで見る
+    ctx.log("  節の出来事:", await ctx.js(`(()=>{
+      // **あとの手順のために元の状態を控えておく**。節を送って当たりを探すので、
+      // 戻さないと以降の検査(ケガと休息・師弟)が別の節を見ることになる
+      window.__luckSave={ node:S.career.node,
+        trust:JSON.stringify(S.career.trust||{}),
+        seen:JSON.stringify(S.career.mentorSeen||{}) };
+      const n0=S.career.node;
+      let ev=null,n=n0;
+      for(let i=0;i<400&&!ev;i++){ S.career.node=n0+i; ev=luckPick(); n=n0+i;
+        if(ev&&ev.id!=='ask')ev=null; }
+      if(!ev)throw new Error('問いの出来事が見つからない');
+      S.career.node=n;
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      S.career.mentorSeen={}; S.career.trust={};
+      show('chat');
+      let g=0;
+      while(S.career.chat.step&&S.career.chat.step!=='event'
+            &&S.career.chat.step!=='ready'&&g++<8){
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        if(!bs.length)break;
+        const st=S.career.chat.step;
+        const b=st==='cup'?bs.find(x=>x.dataset.pick==='no')
+          :st==='hand'?bs.find(x=>x.dataset.pick==='rest'):bs[0];
+        b.click(); renderChat();
+      }
+      const ops=[...document.querySelectorAll('#chatAsk [data-pick]')].map(b=>b.dataset.pick);
+      if(ops.join(',')!==LUCK_ROLES.map(r=>r.id).join(','))
+        throw new Error('3択が出ない: '+ops);
+      window.__luck={ who:ev.who, hit:ev.hit, t0:trustOf(ev.who), c0:condOf(ev.who) };
+      return shortName(cardById(ev.who))+' が問いかけてくる ／ 3択: '
+        +LUCK_ROLES.map(r=>r.label).join('・');
+    })()`));
+    await ctx.wait(250);
+    await ctx.shot("05p-chat-luck");
+    ctx.log("  当たりを引く:", await ctx.js(`(()=>{
+      const L=window.__luck;
+      const b=[...document.querySelectorAll('#chatAsk [data-pick]')]
+        .find(x=>x.dataset.pick===L.hit);
+      if(!b)throw new Error('当たりの選択肢が無い');
+      b.click(); renderChat();
+      if(trustOf(L.who)!==L.t0+TUNING.luck.trustHit)
+        throw new Error('信頼が上がらない: '+L.t0+' → '+trustOf(L.who));
+      if(condOf(L.who)!==COND_MAX)throw new Error('絶好調にならない');
+      const out='信頼 '+L.t0+' → '+trustOf(L.who)+' ／ 調子 '+L.c0+' → '+condOf(L.who);
+      // **元に戻す**。ここで節を送ったままにすると、あとの検査が別の節を見る
+      const K=window.__luckSave;
+      S.career.node=K.node;
+      S.career.trust=JSON.parse(K.trust);
+      S.career.mentorSeen=JSON.parse(K.seen);
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      return out;
+    })()`));
+    await ctx.wait(250);
+    await ctx.shot("05q-chat-luck-hit");
     // 師弟の相談(→docs/03 §3.39)。**打ち手のあと**に選手から話しかけてくる
     // 秘書はクラブごと(→docs/06 §6.27)。**移れば替わる / 同じクラブなら同じ人**
     ctx.log("  秘書の顔:", await ctx.js(`(()=>{

@@ -480,5 +480,61 @@ const E=setup({tmpName:"_tmp_train.js"});
   assert.strictEqual(E.trainStar(pid),0,"★も任期で消える");
   assert.strictEqual(E.trainUps(pid),null,"裏パラも消える");
   console.log("任期リセットOK ★も裏パラも次の任期には持ち越さない");
+  // ---------- 節の出来事(→docs/03 §3.48) ----------
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; S.world.seed = 20260814;
+    E.startTenure("sam-8"); S.career.opened = true;
+    const L = E.TUNING.luck;
+
+    // **10試合に1回くらい**。同じ節なら何度引いても同じ(開き直しで探せない)
+    const cnt = {}; let hit = 0;
+    for (let n = 1; n <= 3000; n++) {
+      S.career.node = n;
+      const ev = E.luckPick();
+      assert.deepStrictEqual(E.luckPick(), ev, "同じ節では変わらない: " + n);
+      if (!ev) continue;
+      hit++; cnt[ev.id] = (cnt[ev.id] || 0) + 1;
+    }
+    const rate = hit / 3000;
+    assert.ok(Math.abs(rate - L.rate) < 0.03,
+      "起きる割合が " + (L.rate * 100) + "% 前後: " + (rate * 100).toFixed(1) + "%");
+    assert.ok(Object.keys(cnt).length >= 3, "何種類も起きる: " + Object.keys(cnt).join(","));
+
+    // **控えの直訴 → 絶好調**
+    const bench = S.squad.slice(E.TUNING.squad.starters).filter(Boolean);
+    E.condSet(bench[0], 1);
+    E.luckApply({ id: "sub", who: bench[0] });
+    assert.strictEqual(E.condOf(bench[0]), E.COND_MAX, "控えは絶好調になる");
+
+    // **不信 → 調子が落ちる**
+    const xi = S.squad.slice(0, E.TUNING.squad.starters).filter(Boolean);
+    E.condSet(xi[0], 4);
+    E.luckApply({ id: "bad", who: xi[0] });
+    assert.strictEqual(E.condOf(xi[0]), L.badTo, "不信で調子が落ちる");
+
+    // **個人練習 → 連携が大きく積まれる**
+    const b0 = E.bondOf(xi[1], xi[2]);
+    E.luckApply({ id: "bond", who: xi[1], with: xi[2] });
+    assert.strictEqual(E.bondOf(xi[1], xi[2]), b0 + L.bond, "連携が積まれる");
+
+    // **問い → 当たりは信頼+10と絶好調 / 外れは信頼-3**
+    const who = xi[3];
+    E.trustAdd(who, 20); E.condSet(who, 2);
+    const t0 = E.trustOf(who);
+    const ev = { id: "ask", who: who, hit: E.LUCK_ROLES[0].id };
+    const okR = E.luckApply(ev, E.LUCK_ROLES[0].id);
+    assert.ok(okR.ok, "当たり");
+    assert.strictEqual(E.trustOf(who), t0 + L.trustHit, "信頼が上がる");
+    assert.strictEqual(E.condOf(who), E.COND_MAX, "当たりは絶好調になる");
+    const t1 = E.trustOf(who);
+    const ngR = E.luckApply(ev, E.LUCK_ROLES[1].id);
+    assert.ok(!ngR.ok, "外れ");
+    assert.strictEqual(E.trustOf(who), t1 + L.trustMiss, "信頼が下がる");
+    console.log("節の出来事OK " + (rate * 100).toFixed(1) + "% ／ 同じ節では変わらない ／"
+      + " 直訴=絶好調 / 不信=不調 / 個人練習=連携+" + L.bond
+      + " / 問い=信頼" + (L.trustHit > 0 ? "+" : "") + L.trustHit + "・" + L.trustMiss);
+  }
+
   process.exit(0);
 })().catch(e=>{ console.error("FAIL:",e); process.exit(1); });
