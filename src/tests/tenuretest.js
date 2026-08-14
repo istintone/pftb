@@ -164,9 +164,12 @@ function runSeason(hand) {
     // キングズは DIV3 水準の相手を出すので、DIV1 のクラブが出れば当然弱い。
     // 見るのは「回戦が上がるほど強くなる」ことと、下の「大会の階段」。
     {
-      // **1枠だけで比べない**。下駄は1回戦あたり +1 で、名簿の揺れのほうが大きい
+      // **1枠だけで比べない**。下駄は1回戦あたり +1 で、名簿の揺れのほうが大きい。
+      // 枠は8つしかないが、cupSide はたねを枠番号から作るだけなので、
+      // **架空の枠番号でいくらでも標本が取れる**。7個では足りず、実際に
+      // 「56.7 → 56.6」で落ちた(下駄 +2 に対して揺れが ±1.5 あった)
       const avg = r => { let n = 0, v = 0;
-        for (let k = 0; k < 8; k++) { if (k === C.cup.slot) continue;
+        for (let k = 0; k < 48; k++) { if (k === C.cup.slot || k === C.cup.elite) continue;
           v += E.squadPower(E.cupSide(cup, r, k).cards.slice(0, 11)); n++; }
         return v / n; };
       const p1 = avg(1), p3 = avg(cup.rounds);
@@ -481,6 +484,58 @@ function runSeason(hand) {
     assert.strictEqual(S7.player.fame, fame0 - end2.lost, "名声が減っている");
     E.fameLose(999999);
     assert.strictEqual(S7.player.fame, 0, "名声は0より下に行かない");
+
+    // --- 報酬は**受信箱で受け取る**(→docs/03 §3.40) ---
+    {
+      const S6 = E.getS();
+      S6.player.mail = [];
+      S6.club.sponsor = { id: E.SPONSORS[0].id, tier: 1, aid: "atk",
+        goal: { kind: "league" }, node0: 1, until: 90, hit: false, paid: false };
+      const before = S6.player.mail.length;
+      assert.ok(E.sponHit("league"), "課題を達成する");
+      assert.strictEqual(S6.player.mail.length, before + 1, "達成したら連絡が届く");
+      const m = E.mailList()[0];
+      const d = E.mailDef(m);
+      assert.ok(d && d.gift && d.gift.spon, "報酬が添えられている");
+      assert.ok(!E.sponsor().paid, "開くまでは渡っていない");
+      const coin0 = S6.club.coins;
+      const got = E.mailTake(m.id);
+      assert.ok(got && got.got, "受信箱で受け取れる");
+      assert.ok(S6.club.coins > coin0, "コインが入る");
+      assert.ok(E.sponsor().paid, "受け取ると清算済みになる");
+      assert.strictEqual(E.mailTake(m.id), null, "二度は受け取れない");
+
+      // **枠を選ぶ報酬は、枠を渡すまで受け取れない**
+      S6.player.mail = [];
+      S6.club.sponsor = { id: E.SPONSORS.find(x => x.tier === 2).id, tier: 2, aid: "atk",
+        goal: { kind: "league" }, node0: 2, until: 90, hit: false, paid: false };
+      E.sponHit("league");
+      const m2 = E.mailList()[0], d2 = E.mailDef(m2);
+      assert.ok(d2.gift.pick, "枠を選ぶ報酬だと分かる");
+      assert.strictEqual(E.mailTake(m2.id), null, "枠を渡さないと受け取れない");
+      const r2 = E.mailTake(m2.id, "FW");
+      assert.ok(r2 && r2.got.card, "枠を渡せば受け取れる");
+      assert.strictEqual(r2.got.card.pos, "FW", "選んだ枠で来る");
+      console.log("スポンサーの報酬OK 達成で連絡が届く ／ 受信箱で受け取る ／"
+        + " 枠は受け取る前に選ぶ");
+    }
+
+    // --- 溜まった連絡は上限で落ちる(→docs/03 §3.42) ---
+    {
+      const S7 = E.getS();
+      S7.player.mail = [];
+      const max = E.TUNING.mail.keep;
+      for (let i = 0; i < max + 12; i++) E.mailPush("t" + i, { title: "t", text: "t" });
+      assert.strictEqual(S7.player.mail.length, max, "上限 " + max + " 通に収まる");
+      assert.strictEqual(S7.player.mail[0].id, "t12", "古いものから落ちる");
+      // **受け取っていない贈り物は残る**
+      S7.player.mail = [];
+      E.mailPush("gift", { title: "g", text: "g", gift: { coin: 100 } });
+      for (let i = 0; i < max + 5; i++) E.mailPush("u" + i, { title: "u", text: "u" });
+      assert.ok(S7.player.mail.some(x => x.id === "gift"), "受け取り待ちは消えない");
+      assert.strictEqual(S7.player.mail.length, max, "それでも上限は守る");
+      console.log("連絡の上限OK " + max + "通 ／ 古いものから落ちる ／ 受け取り待ちは残る");
+    }
 
     // --- 段の階段(→docs/03 §3.40)。**5段。4段はポジションまで選べる WORLD CLASS** ---
     assert.deepStrictEqual(E.SPON_PRIZE.map(x => x.kind),

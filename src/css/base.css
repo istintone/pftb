@@ -1478,6 +1478,9 @@ body{
 }
 .ml-gift b{ font:600 12px/1.4 var(--f-head); color:var(--accent-hi) }
 .ml-take{ width:auto; padding:9px 16px; flex:none }
+/* 枠を選ぶ報酬(→docs/03 §3.40)。**受け取る前に決める**ので、ボタンを4つ並べる */
+.ml-pick{ display:flex; gap:5px; flex-wrap:wrap }
+.ml-pick .ml-take{ padding:8px 11px; font-size:11px }
 .ml-done{ font-size:10px; color:var(--text-dim) }
 /* チュートリアルの行き先(→docs/03 §3.43)。**読んで終わりにさせない**ので、
    贈り物と同じ位置に置いて、吹き出しの中から次の画面へ送り出す */

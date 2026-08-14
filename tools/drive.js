@@ -639,37 +639,64 @@ const STEPS = [
       return '選手を呼んで '+sponAidById(sponsor().aid).label+' を実施（メニューは聞かない）';
     })()`));
     await ctx.shot("05m-chat-aid");
-    ctx.log("  報酬:", await ctx.js(`(()=>{
+    // 報酬は**受信箱で受け取る**(→docs/03 §3.40)。話の流れでは配らない
+    ctx.log("  報酬の連絡:", await ctx.js(`(()=>{
       const sp=sponsor();
-      sp.hit=true; sp.paid=false;
+      S.player.mail=[]; sp.hit=false; sp.paid=false;
+      sponHit(sp.goal.kind, sp.goal.kind==='cup'?sp.goal.cup:sp.goal.n);
+      if(!sp.hit)throw new Error('課題が達成にならない');
+      if(!S.player.mail.length)throw new Error('連絡が届かない');
+      // **チャットでは配らない**
       S.career.chat=null; S.career.hand=null; S.career.comp=null;
       show('chat');
-      const coll0=S.player.coll.length, coin0=S.club.coins;
       let g=0;
-      // **入力の要らない報酬は素通りする**(コイン/WC/LE)。ready まで来たらそこで止める
-      while(S.career.chat.step&&S.career.chat.step!=='event'
-            &&S.career.chat.step!=='ready'&&g++<8){
+      while(S.career.chat.step&&S.career.chat.step!=='ready'&&g++<8){
         const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        if(!bs.length)break;
         const st=S.career.chat.step;
         const b=st==='cup'?bs.find(x=>x.dataset.pick==='no')
           :st==='hand'?bs.find(x=>x.dataset.pick==='rest'):bs[0];
         b.click(); renderChat();
       }
-      const kind=sponPrize(sp.tier).kind;
-      if(kind==='scoutPos'){
-        if(S.career.chat.step!=='event')throw new Error('ポジションを聞く段に来ない');
-        const ops=[...document.querySelectorAll('#chatAsk [data-pick]')].map(b=>b.dataset.pick);
-        if(ops.join(',')!==POS.join(','))throw new Error('ポジションを聞かない: '+ops);
-        [...document.querySelectorAll('#chatAsk [data-pick]')][3].click(); renderChat();
-      }
-      if(!sp.paid)throw new Error('報酬が渡っていない');
-      const got=S.player.coll.length>coll0?RARITY[S.player.coll[S.player.coll.length-1].rarity].label
-        :(S.club.coins-coin0)+' コイン';
+      if(sponsor().paid)throw new Error('チャットで報酬が渡ってしまう');
+      return sponsorById(sp.id).name+' の課題を達成 → 受信箱へ';
+    })()`));
+    await ctx.js("show('secretary')");
+    await ctx.wait(300);
+    ctx.log("  受信箱で受け取る:", await ctx.js(`(()=>{
+      const sp=sponsor(), P=sponPrize(sp.tier);
+      const btn=[...document.querySelectorAll('#mailLog [data-mail]')];
+      if(!btn.length)throw new Error('受け取るボタンが無い');
+      // **枠を選ぶ段は4つ並ぶ**(→docs/03 §3.40)
+      if(P.pick&&btn.length<4)throw new Error('ポジションを選ばせない: '+btn.length);
+      const coll0=S.player.coll.length, coin0=S.club.coins;
+      btn[btn.length-1].click();
+      return P.label;
+    })()`));
+    await ctx.wait(500);
+    await ctx.shot("05n-mail-prize");
+    ctx.log("  受け取りの結果:", await ctx.js(`(()=>{
+      const sp=sponsor();
+      if(!sp.paid)throw new Error('受け取っても清算されない');
+      closeCard();
       // **一度きり**。同じ契約で二度は出ない
       if(sponPay(null))throw new Error('報酬が二度出る');
-      return kind+' → '+got;
+      const m=mailList().find(x=>String(x.id).indexOf('spon:')===0);
+      if(!m||!m.got)throw new Error('受け取り済みにならない');
+      return '清算済み ／ 二度は出ない ／ 連絡は受け取り済み';
     })()`));
-    await ctx.shot("05n-chat-prize");
+    // CLUB NEWS(→docs/03 §3.40)。**達成したら残り節を数えない**
+    ctx.log("  CLUB NEWS の書き方:", await ctx.js(`(()=>{
+      show('home');
+      const t=document.getElementById('homeNews').textContent;
+      const nm=sponsorById(sponsor().id).name;
+      const line=[...document.querySelectorAll('#homeNews .news')]
+        .map(e=>e.textContent).find(x=>x.indexOf(nm)>=0);
+      if(!line)throw new Error('スポンサーの行が無い');
+      if(line.indexOf('達成済み')<0)throw new Error('達成済みと書かれない: '+line);
+      if(/残り\s*[0-9]+節/.test(line))throw new Error('達成後も残り節を数えている: '+line);
+      return line;
+    })()`));
     // **契約は残したまま**にする。外すと次の節でまたスポンサーの相談が先に出て、
     // 師弟の相談まで進まない(1節に出るイベントは1つ)
     await ctx.js("S.player.fame=0; S.career.chat=null; S.career.hand=null; S.career.comp=null;");

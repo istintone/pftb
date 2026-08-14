@@ -358,7 +358,7 @@ function renderHome(){
   // 秘書: **連絡が来ていればその最新**、無ければ次の一手の案内(→docs/03 §3.42)。
   // どちらでもタップで受信箱へ行けるようにして、入口を1つにする
   const mm=mailLatest(), un=mailUnread();
-  const def=mm?mailById(mm.id):null;
+  const def=mm?mailDef(mm):null;
   // **顔もここに出す**(→docs/06 §6.27)。丸はチャットと同じ部品を使う。
   // 未読の印は**丸の肩に付ける**(通知の印はアイコンに付くもの)
   $("homeSec").innerHTML='<div class="sec-row sec-go'+(un?" unread":"")+'" id="homeSecGo">'
@@ -440,8 +440,13 @@ function renderMail(){
   $("mailAv").innerHTML=chatAvatar("sec","ch-av-in");
   $("mailSub").textContent=list.length?list.length+"件の連絡":"連絡はありません";
   $("mailLog").innerHTML=list.length?list.map(m=>{
-    const d=mailById(m.id); if(!d)return "";
-    const gift=d.gift&&d.gift.ticket?ticketById(d.gift.ticket):null;
+    const d=mailDef(m); if(!d)return "";
+    // 添えられたもの(→docs/03 §3.42)。引換券 / コイン / スポンサーの報酬
+    const g=d.gift;
+    const gname=!g?null
+      :g.ticket?ticketById(g.ticket).name
+      :g.spon?(g.coin?fmtNum(g.coin)+" コイン":g.label)
+      :g.coin?fmtNum(g.coin)+" コイン":null;
     // **案内は行き先まで連れていく**(→docs/03 §3.43)。読んで終わりにさせない
     const go=d.go&&SCREENS[d.go]?d.go:null;
     return '<div class="ch-row"><div class="ch-b ml-b">'
@@ -452,10 +457,14 @@ function renderMail(){
       +esc(d.text)
       +(go?'<div class="ml-go"><button class="btn ml-jump" data-go="'+esc(go)+'">'
         +esc(SCREENS[go].title||go)+' をひらく ›</button></div>':"")
-      +(gift?'<div class="ml-gift">'
-        +'<b>'+esc(gift.name)+'</b>'
+      +(gname?'<div class="ml-gift">'
+        +'<b>'+esc(gname)+'</b>'
         +(m.got?'<span class="ml-done">受け取り済み</span>'
-          :'<button class="btn ml-take" data-mail="'+esc(m.id)+'">受け取る</button>')
+          // **枠を選ぶ報酬**(→docs/03 §3.40)は、受け取る前にどこを呼ぶか決める
+          :(g.spon&&g.pick)
+            ?'<span class="ml-pick">'+POS.map(x=>'<button class="btn ml-take" '
+              +'data-mail="'+esc(m.id)+'" data-pos="'+x+'">'+x+'</button>').join("")+'</span>'
+            :'<button class="btn ml-take" data-mail="'+esc(m.id)+'">受け取る</button>')
         +'</div>':"")
     +'</div></div>';
   }).join(""):'<div class="lg">まだ何も届いていません。</div>';
@@ -464,10 +473,20 @@ function renderMail(){
   });
   $("mailLog").querySelectorAll("[data-mail]").forEach(el=>{
     el.onclick=async()=>{
-      const g=mailTake(el.dataset.mail);
+      const g=mailTake(el.dataset.mail,el.dataset.pos||null);
       if(!g)return;
       await save(); headUI(); renderMail();
-      toast(ticketById(g.ticket).name+" を受け取りました");
+      // **もらったものをその場で見せる**(→docs/03 §3.42)。カードは詳細を開く
+      if(g.spon&&g.got&&g.got.card){
+        toast(RARITY[g.got.card.rarity].label+" "+shortName(g.got.card)+" が加入しました");
+        openCard(g.got.card);
+      }else if(g.spon){
+        toast(fmtNum(g.got.coin||g.coin||0)+" コインを受け取りました");
+      }else if(g.ticket){
+        toast(ticketById(g.ticket).name+" を受け取りました");
+      }else if(g.coin){
+        toast(fmtNum(g.coin)+" コインを受け取りました");
+      }
     };
   });
   // 開いたら既読。**HOME の未読の印はここで消える**
@@ -524,8 +543,11 @@ function clubNews(){
   const spon=[];
   {
     const sp=sponsor();
-    if(sp&&sp.hit&&!sp.paid)
-      spon.push('<b class="news-up">'+esc(sponsorById(sp.id).name)+'</b> の課題を達成　報酬が届いています');
+    // **達成したらそう書く**(→docs/03 §3.40)。受け取ったあとも残り節を数えていて、
+    // まだ追いかける必要があるように読めていた
+    if(sp&&sp.hit)
+      spon.push('<b class="news-up">'+esc(sponsorById(sp.id).name)+'</b> の課題は<b>達成済み</b>'
+        +(sp.paid?'（受け取り済み）':'　受信箱に報酬が届いています'));
     else if(sp)
       spon.push(esc(sponsorById(sp.id).name)+'：'+esc(sponGoalText(sp))
         +'　残り <b>'+Math.max(0,sp.until-S.career.node)+'節</b>');
@@ -1763,20 +1785,8 @@ function chatEnter(st){
     return false;
   }
   if(st==="event"){
-    // **1節に1つだけ**。順は「報酬 → 契約 → 師弟」。金の話を先に片づける
-    const sp=sponsor();
-    if(sp&&sp.hit&&!sp.paid){
-      sel.spon="pay";
-      chatSay("sec",chatText(CHAT.sponHit,"sh:"+C.node,{ n:sponsorById(sp.id).name }));
-      // ポジション確定スカウトだけは**どこを厚くするか**を監督が選ぶ
-      // **ポジションを選ぶ段**(2段と4段)だけ、監督にどこを呼ぶか聞く
-      if(sponPrize(sp.tier).pick){
-        chatSay("sec",chatText(CHAT.sponPos,"sp:"+C.node));
-        return true;
-      }
-      sponReward(null);
-      return false;
-    }
+    // **報酬はここで配らない**(→docs/03 §3.40)。HOME の受信箱で受け取る。
+    // 話の流れで渡すと、読み進めるうちに選手がいつの間にか加入していた
     // **スポンサーが付いていなければオーナーが相談を持ってくる**(→docs/03 §3.40)
     if(sponPending()){
       sel.spon="sign";
@@ -1814,7 +1824,6 @@ function chatPick(id,label){
     chatSay("sec",chatText(CHAT.cupNo,"cupNo:"+C.node));
     pickComp("league");
   }
-  else if(st==="event"&&sel.spon==="pay"){ sponReward(id); sel.spon=null; }
   else if(st==="event"&&sel.spon==="sign"){
     const sp=sponSign(id);
     sel.spon=null;
@@ -1844,15 +1853,6 @@ function chatPick(id,label){
   ch.i++; ch.step=null;
   save(); chatAdvance();
 }
-/** 報酬を受け取り、何が届いたかを会話に残す(→docs/03 §3.40)。 */
-function sponReward(pos){
-  const r=sponPay(pos);
-  if(!r)return;
-  if(r.kind==="coin")chatSay("sec",chatText(CHAT.sponCoin,"sc:"+S.career.node,
-    { v:fmtNum(r.coin) }));
-  else chatSay("sec",chatText(CHAT.sponCard,"sd:"+S.career.node,
-    { n:RARITY[r.card.rarity].label+" "+shortName(r.card) }));
-}
 /** いま出す選択肢。 */
 function chatOptions(){
   const C=S.career, ch=C.chat, sel=ch.sel, st=ch&&ch.step;
@@ -1872,8 +1872,6 @@ function chatOptions(){
         sub:"リーグ戦に集中します" }]) };
   }
   if(st==="event"){
-    if(sel.spon==="pay")return { q:"どのポジションを呼びますか",
-      items:POS.map(g=>({ id:g, label:g, say:g+" を頼む。" })) };
     if(sel.spon==="sign")return { q:"どこと契約しますか", items:sponOffers().map(o=>({
       id:o.id, label:o.name,
       // **課題と報酬と支援を並べて見せる**。これが選ぶ材料そのもの

@@ -846,6 +846,8 @@ function trainAdd(id,k,n){
 // **クラブチャットとは別のチャット**。1節の判断ではなく、溜まっていく連絡を扱う。
 // 配布物とチュートリアルの入口で、HOME の秘書のひとことがその最新を映す。
 const mailAll=()=>S.player.mail||(S.player.mail=[]);
+/** その連絡の中身。**その場で作った連絡は自分で中身を持つ**(dyn)。 */
+const mailDef=m=>m&&(m.dyn||mailById(m.id));
 const mailHas=id=>mailAll().some(m=>m.id===id);
 const mailUnread=()=>mailAll().filter(m=>!m.read).length;
 /** 新しい順。**画面も HOME のひとこともこの並びを見る**。
@@ -867,13 +869,56 @@ function mailTick(){
   return n;
 }
 const mailRead=id=>{ const m=mailAll().find(x=>x.id===id); if(m)m.read=true; return !!m; };
+/**
+ * その場で作る連絡(→docs/03 §3.42)。MAILS に書けない中身(スポンサーの報酬など)を、
+ * **連絡そのものに持たせて**足す。id は呼び出し側が重複しない形で作る。
+ */
+function mailPush(id,dyn){
+  if(!id||mailHas(id))return null;
+  mailAll().push({ id, at:S.career.node, read:false, got:false, dyn });
+  mailTrim();
+  return id;
+}
+/**
+ * 古い連絡を落とす(→docs/03 §3.42)。**受け取っていない贈り物がある連絡は残す**
+ * ので、取りそびれて消える、が起きない。
+ */
+function mailTrim(){
+  const a=mailAll(), max=TUNING.mail.keep;
+  let over=a.length-max;
+  if(over<=0)return 0;
+  let n=0;
+  for(let i=0;i<a.length&&over>0;){
+    const d=mailDef(a[i]);
+    if(d&&d.gift&&!a[i].got){ i++; continue; }   // 受け取り待ちは残す
+    a.splice(i,1); over--; n++;
+  }
+  return n;
+}
 /** 添えられた引換券を受け取る。**一度きり**。 */
-function mailTake(id){
-  const m=mailAll().find(x=>x.id===id), def=mailById(id);
+/**
+ * 添えられたものを受け取る(→docs/03 §3.42)。**一度きり**。
+ * 受け取れるものは3種類:
+ *   ticket … 引換券(スカウトの画面で使う)
+ *   coin   … その場でコイン
+ *   spon   … スポンサーの報酬(→§3.40)。カードはここで引く。
+ *            枠を選ぶ段は pos を渡す(渡さないと受け取れない)
+ */
+function mailTake(id,pos){
+  const m=mailAll().find(x=>x.id===id), def=mailDef(m);
   if(!m||!def||!def.gift||m.got)return null;
+  const g=def.gift;
+  if(g.spon){
+    if(g.pick&&!pos)return null;                 // 枠を選んでもらってから
+    const r=sponPay(pos||null);
+    if(!r)return null;
+    m.got=true; m.read=true;
+    return { ...g, got:r };
+  }
   m.got=true; m.read=true;
-  if(def.gift.ticket)ticketAdd(def.gift.ticket,1);
-  return def.gift;
+  if(g.ticket)ticketAdd(g.ticket,1);
+  if(g.coin)S.club.coins+=g.coin;
+  return g;
 }
 // --- 見たもの・やったこと(→docs/03 §3.43) ---
 // **キャリアで1つの覚え書き**。チュートリアルの進み具合はここだけを見る。
@@ -1010,7 +1055,26 @@ function sponHit(kind,arg){
   if(kind==="cup"&&g.cup!==arg)return false;
   if(kind==="streak"&&(arg||0)<g.n)return false;
   sp.hit=true;
+  sponMail(sp);                                  // **報酬は連絡で渡す**(→§3.40)
   return true;
+}
+/**
+ * 課題を達成したときの連絡(→docs/03 §3.40)。**受け取るのは HOME の受信箱**。
+ *
+ * 前はブリーフィングの流れの中で配っていたので、話が進むうちに
+ * **選手がいつの間にか加入している**状態になっていた。連絡にすると、
+ * 開いて・受け取って・スカウトの画面で見る、という手順がそのまま実感になる。
+ */
+function sponMail(sp){
+  const co=sponsorById(sp.id), P=sponPrize(sp.tier);
+  const coin=P.kind==="coin"?sponCoin(sp):0;
+  mailPush("spon:"+sp.id+":"+sp.node0,{
+    from:"sec", title:co.name+" から報酬が届きました",
+    text:"監督、"+co.name+"の課題を達成しました。「"+sponGoalText(sp)+"」——見事です。"
+      +"先方から"+(coin?fmtNum(coin)+"コインの支援":"「"+P.label+"」")+"が届いています。"
+      +(P.pick?"どのポジションを厚くするか、決めていただけますか。":""),
+    gift:{ spon:true, pick:!!P.pick, label:P.label, coin:coin },
+  });
 }
 /** 連勝を数える(→§3.40)。引き分けと負けで途切れる。 */
 function streakAdd(res){
