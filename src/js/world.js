@@ -455,6 +455,7 @@ function matchSide(clubId){
       }),
       form:S.form, name:club.name,
       kickers:S.kickers, captain:S.captain, order:S.order,
+      tactic:tacticOk(S.tactic)?S.tactic:null,             // 特別采配(→§3.50)
       med:facMedK() };                                       // 医療施設(→§3.5)
   }
   const { cards:base, form, kp }=cpuSquad(clubId);
@@ -1161,6 +1162,32 @@ function trustOver(n){
 }
 /** いま相談してくる選手(→§3.39)。**1人だけ**。居なければ null。 */
 function mentorPending(){ return trustOver(TUNING.trust.need)[0]||null; }
+
+// ---------- 特別采配(→docs/03 §3.50) ----------
+// **監督が覚えていて、かつクラブが理解していないと使えない。**
+//   覚える … player.tactics(キャリアに残る。移籍しても消えない)
+//   理解   … club.exp(**クラブに貯まる**ので、移籍したら0から)
+// 長く1つのクラブに居るほど選べる手が増え、渡り歩くと毎回積み直しになる。
+
+const tacticsKnown=()=>S.player.tactics||(S.player.tactics=[]);
+const knowsTactic=id=>tacticsKnown().includes(id);
+/** その采配が使えない理由(使えるなら null)。**理由をそのまま画面に出す**。 */
+function tacticWhy(id){
+  const t=tacticById(id); if(!t)return "その采配はありません";
+  if(!knowsTactic(id))return "まだ身につけていません";
+  const exp=S.club?S.club.exp:0;
+  if(exp<t.exp)return "チーム熟練度が足りません（"+fmtNum(t.exp)+" 必要）";
+  if(t.form&&!t.form.includes(S.form))
+    return t.form.join(" / ")+" でしか使えません";
+  return null;
+}
+const tacticOk=id=>!!id&&!tacticWhy(id);
+/** 覚える(→§3.50)。**同じ采配は一度だけ**。 */
+function learnTactic(id){
+  if(!tacticById(id)||knowsTactic(id))return false;
+  tacticsKnown().push(id);
+  return true;
+}
 
 // ---------- トレード(→docs/03 §3.49) ----------
 // **任期の折り返し(45節)と終盤(90節)に1度ずつ**、他クラブから話が来る。

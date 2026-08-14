@@ -157,5 +157,61 @@ const E=setup({tmpName:"_tmp_ord.js"});
       + " ／ 相手の軸も決定的");
   }
 
+  // ---------- 特別采配(→docs/03 §3.50) ----------
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; E.startTenure("sam-8");
+
+    // **最初から持っているのはダイレクトプレーだけ**
+    assert.deepStrictEqual(E.tacticsKnown(), ["direct"], "最初の1つ");
+    assert.strictEqual(E.tacticWhy("direct"), null, "熟練度0でも使える");
+
+    // **覚えていないと使えない**
+    const hp = E.tacticById("highpress");
+    assert.ok(E.tacticWhy(hp.id).indexOf("身につけ") >= 0, "覚えていない: " + E.tacticWhy(hp.id));
+    assert.ok(E.learnTactic(hp.id), "覚えられる");
+    assert.strictEqual(E.learnTactic(hp.id), false, "二度は覚えない");
+
+    // **クラブの熟練度が足りないと使えない**(→§3.50 の肝)
+    S.club.exp = 0;
+    assert.ok(E.tacticWhy(hp.id).indexOf("熟練度") >= 0, "熟練度が足りない");
+    S.club.exp = hp.exp;
+    assert.strictEqual(E.tacticWhy(hp.id), null, "足りれば使える");
+
+    // **熟練度はクラブのもの**。移籍すると0から積み直し
+    S.player.fame = 3000;
+    E.startTenure("sam-7");
+    assert.strictEqual(S.club.exp, 0, "移籍したらクラブの熟練度は0から");
+    assert.ok(E.tacticsKnown().includes(hp.id), "覚えた采配は監督に残る");
+    assert.ok(E.tacticWhy(hp.id), "覚えていても、そのクラブでは使えない");
+    S.club.exp = 99999;
+
+    // **陣形の縛り**
+    const sc = E.tacticById("shortcounter");
+    E.learnTactic(sc.id);
+    S.form = "5-3-2";
+    assert.ok(E.tacticWhy(sc.id).indexOf("しか使えません") >= 0,
+      "陣形が違う: " + E.tacticWhy(sc.id));
+    S.form = sc.form[0];
+    assert.strictEqual(E.tacticWhy(sc.id), null, "合う陣形なら使える");
+
+    // **札として全員に混ざる**(→§3.50)。発動すればカットインにも出る
+    const side = { cards: E.bestXI(E.clubRoster(4242, "sam-8"), "4-4-2"),
+      form: "4-4-2", name: "H", tactic: "highpress" };
+    const M = E.createMatch(side, { ...side, tactic: null }, 7);
+    const has = M.home.players.every(p => p.sk.ch.some(x => x.name === hp.label)
+      || p.sk.k.cover != null);
+    assert.ok(has, "全員に采配の札が混ざる");
+    assert.ok(!M.away.players[0].sk.ch.some(x => x.name === hp.label),
+      "采配を敷いていない側には混ざらない");
+
+    // **指示と足し算になる**(上げ下げが合成される)
+    const y0 = M.home.players[5].y;
+    E.setTeamOrder(M.home, "attack");
+    assert.ok(M.home.players[5].y < y0, "采配と指示で前に出る");
+    console.log("特別采配OK 覚える(監督) × 熟練度(クラブ) × 陣形 ／"
+      + " 札として全員に混ざる ／ 指示と足し算");
+  }
+
   process.exit(0);
 })().catch(e=>{ console.error("FAIL:",e); process.exit(1); });

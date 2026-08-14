@@ -3279,6 +3279,39 @@ function renderOrd(){
   $("ordPad").querySelectorAll("[data-ord]").forEach(el=>{
     el.onclick=()=>pickOrder(el.dataset.ord===cur?null:el.dataset.ord);
   });
+  renderTac();
+}
+/**
+ * 特別采配(→docs/03 §3.50)。**使えない采配も、理由を添えて並べる**。
+ * 何を目指せば使えるようになるのかが見えないと、覚える意味が伝わらない。
+ */
+function renderTac(){
+  const cur=S.tactic, box=$("ordTac"); if(!box)return;
+  const known=tacticsKnown();
+  // 覚えたものを先に、まだのものは熟練度の低い順に
+  const list=TACTICS.slice().sort((a,b)=>
+    (known.includes(b.id)?1:0)-(known.includes(a.id)?1:0)||a.exp-b.exp);
+  box.innerHTML=list.map(t=>{
+    const why=tacticWhy(t.id), on=cur===t.id;
+    return '<button class="tc-b'+(on?" on":"")+(why?" off":"")+'" data-tac="'+t.id+'"'
+      +(why?" disabled":"")+'>'
+      +'<span class="tc-i">'+t.icon+'</span>'
+      +'<span class="tc-b2"><b>'+esc(t.label)+'</b>'
+      +'<span class="tc-w">'+esc(why||t.desc)+'</span></span></button>';
+  }).join("");
+  $("ordTacDesc").textContent=cur
+    ?tacticById(cur).label+"：もう一度押すと解除します"
+    :"采配は1つだけ重ねられます。クラブの熟練度が上がるほど選べる手が増えます。";
+  box.querySelectorAll("[data-tac]").forEach(el=>{
+    el.onclick=()=>pickTactic(el.dataset.tac===cur?null:el.dataset.tac);
+  });
+}
+/** 采配を選ぶ。**次の再開から効く**(→docs/03 §3.50)。 */
+function pickTactic(id){
+  if(id&&!tacticOk(id)){ toast(tacticWhy(id)); return; }
+  S.tactic=id||null;
+  save(); renderTac();
+  toast(id?tacticById(id).label+" を敷きました（次の再開から）":"采配を解除しました");
 }
 /** 指示を出す。**エンジンには積むだけ**で、次のティックの頭で効く(→docs/07 §7.6)。 */
 function pickOrder(id){

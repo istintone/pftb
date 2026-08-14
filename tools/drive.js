@@ -1433,6 +1433,29 @@ const STEPS = [
     })()`));
     await ctx.wait(450);                       // 引き出しが出切るまで待つ
     await ctx.shot("07l-order");
+    // 特別采配(→docs/03 §3.50)。**覚える(監督) × 熟練度(クラブ) × 陣形**
+    ctx.log("  特別采配:", await ctx.js(`(()=>{
+      const rows=[...document.querySelectorAll('#ordTac [data-tac]')];
+      if(rows.length!==TACTICS.length)throw new Error('采配が並ばない: '+rows.length);
+      const on=rows.filter(r=>!r.disabled), off=rows.filter(r=>r.disabled);
+      if(!on.length)throw new Error('使える采配が1つも無い');
+      if(!off.length)throw new Error('使えない采配が理由付きで並んでいない');
+      // **使えないものには理由が出る**
+      const why=off[0].querySelector('.tc-w').textContent;
+      if(!why||why.length<4)throw new Error('理由が出ない');
+      on[0].click();
+      if(!S.tactic)throw new Error('采配が入らない');
+      const lab=tacticById(S.tactic).label;
+      // **覚えて熟練度が足りればもう1つ増える**
+      const n0=[...document.querySelectorAll('#ordTac [data-tac]')].filter(r=>!r.disabled).length;
+      learnTactic('highpress'); S.club.exp=99999; renderOrd();
+      const n1=[...document.querySelectorAll('#ordTac [data-tac]')].filter(r=>!r.disabled).length;
+      if(n1<=n0)throw new Error('覚えても増えない: '+n0+' → '+n1);
+      return TACTICS.length+'種 ／ 使える '+n0+' → '+n1+'（覚えて熟練度が足りた）'
+        +' ／ 敷いた: '+lab+' ／ 使えない理由「'+why.slice(0,14)+'」';
+    })()`));
+    await ctx.wait(250);
+    await ctx.shot("07r-order-tactic");
     ctx.log("  指示を出す:", await ctx.js(`(()=>{
       document.querySelector('#ordPad [data-ord="attack"]').click();
       if(document.getElementById('ordDrawer').classList.contains('on'))throw new Error('閉じない');

@@ -962,6 +962,68 @@ const ORDERS=[
 ];
 const orderById=id=>ORDERS.find(o=>o.id===id);
 
+/**
+ * 特別采配(→docs/03 §3.50)。**指示(上の5つ)の上に1つだけ重ねる**。
+ *
+ * 中身は「チーム全体に掛かる札」。スキル(→docs/08)とまったく同じ書き方
+ * (at / grp / w / s / k)なので、**発動すればカットインのバッジにも出る**。
+ *
+ *   form … 使える陣形。**陣形を選ぶ理由**になる(16種あるのに選ぶ理由が薄かった)
+ *   exp  … 要るチーム熟練度。**クラブに貯まるもの**なので、移籍すると0から
+ *          (監督が覚えていても、選手が理解していなければ使えない →§3.50)
+ *   role … 掛ける相手を絞る(null なら全員)
+ *   push/ordM … 既存の指示と同じ層。指示と**足し算**になる
+ *   fx   … 札と同じ層。**必ず代償(k)を1つ持たせる**。得しかない采配は選択にならない
+ */
+const TACTICS=[
+  {
+    id:"direct", label:"ダイレクトプレー", icon:"⇡",
+    form:null, exp:0,
+    desc:"蹴って走る。技術が要らないぶん、力のあるチームなら熟練度ゼロでも回る",
+    ordM:{ pow:1.06, tec:0.94 },
+    fx:[{ at:"origin", grp:"long", w:1.15 },
+        { at:"origin", grp:"passTec", w:0.45 }],
+    line:"前へ蹴り込む！",
+  },
+  {
+    id:"highpress", label:"ハイプレス", icon:"▲",
+    form:null, exp:1500,
+    desc:"ラインを上げて前から奪う。背後は当然薄くなる",
+    push:1, ordM:{ def:1.05, sta:0.96 },
+    fx:[{ at:"counter", grp:"press", w:1.70, s:1.07 },
+        { at:"cover", k:0.88 }],
+    line:"前から捕まえにいく！",
+  },
+  {
+    id:"retreat", label:"リトリート", icon:"▼",
+    form:null, exp:1500,
+    desc:"低い位置で受け止める。守れるが、攻めるには遠い",
+    push:-1,
+    fx:[{ at:"cover", k:1.34 },
+        { at:"origin", grp:"carry", w:0.70 }],
+    line:"引いて構える",
+  },
+  {
+    id:"shortcounter", label:"ショートカウンター", icon:"⚡",
+    form:["4-2-3-1","4-3-3","4-4-2"], exp:5000,
+    desc:"高い位置で奪って一気に撃つ。奪えなければ何も起きない",
+    ordM:{ spd:1.06, pow:0.97 },
+    fx:[{ at:"finish", grp:"close", w:1.55, s:1.06 },
+        { at:"cover", k:0.95 }],
+    line:"奪って一気に！",
+  },
+  {
+    id:"gegen", label:"ゲーゲンプレス", icon:"⛊",
+    form:["4-3-3","4-2-3-1"], exp:12000,
+    desc:"失った瞬間に奪い返す。走り切れれば強いが、消耗が激しい",
+    push:1, ordM:{ def:1.06, spd:1.04, tec:0.95 },
+    fx:[{ at:"counter", grp:"press", w:2.20, s:1.12 },
+        { at:"stam", k:1.02 }],
+    line:"即時奪回！",
+  },
+];
+const tacticById=id=>TACTICS.find(t=>t.id===id);
+
 // ---------- クラブチャット(→docs/03 §3.29) ----------
 // 節の進行を**秘書と選手とのやり取り**で行う。打ち手も大会の選択もここで決まる。
 // 台詞に改行は入れない(→§3.22 の教訓)。{n} は選手名、{m} は相方の名前に置き換える。

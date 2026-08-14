@@ -208,7 +208,7 @@ function pickCaptain(xi,want){
   const w=c=>c.ovr+(c.age-18)*1.5;
   return xi.reduce((b,p)=>w(p.c)>w(b.c)?p:b,xi[0]);
 }
-function buildTeam(cards,form,name,side,kickers,captain,order,med){
+function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
     p.y0=p.y; p.ordM=null;                      // y0 = 采配で動かす前の縦位置
@@ -221,7 +221,11 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med){
   // kickers … {pk,fk,ck} のカードID。自クラブは編成で指名し、CPUは自動選出に任せる
   const T={ players:xi, bench, form, name, side, score:0,
     kickers:kickers||null, captain:cap, subOut:[], sentOff:[], order:null, lane:null,
+    tactic:null,
     med:med||1 };                                    // 医療施設のケガ倍率(→docs/03 §3.5)
+  // **采配が先**(→docs/03 §3.50)。指示の上げ下げを合成するので、
+  // setTeamOrder は T.tactic が決まったあとに呼ぶ
+  setTeamTactic(T,tactic||null);
   setTeamOrder(T,order||null);
   return T;
 }
@@ -229,17 +233,50 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med){
  * 采配を掛け直す(→docs/03 §3.28)。**1つだけ**が効く。
  * 陣形の上下は y0 から取り直すので、指示を変えても位置がずれ続けない。
  */
+/**
+ * 特別采配をチームに掛ける(→docs/03 §3.50)。
+ *
+ * **全員の札に混ぜる**。こうすると `skW`/`skS`/`skK` がそのまま効き、
+ * **発動したときカットインのバッジに采配名が出る**(演出が自動で付いてくる)。
+ * 新しい判定を1つも足さずに済むのが、この形にした理由。
+ */
+function setTeamTactic(T,id){
+  const t=id?tacticById(id):null;
+  T.tactic=t?t.id:null;
+  if(!t)return null;
+  for(const p of T.players.concat(T.bench||[])){
+    if(t.role&&p.role!==t.role)continue;
+    if(!p.sk)p.sk={ ch:[], k:{} };
+    for(const e of (t.fx||[])){
+      if(e.grp)p.sk.ch.push({ name:t.label, at:e.at2||e.at, grp:e.grp,
+        w:e.w||1, s:e.s||1, move:null, when:e.when||null, tactic:true });
+      if(e.k!=null)p.sk.k[e.at]=(p.sk.k[e.at]||1)*e.k;
+    }
+  }
+  return T.tactic;
+}
 function setTeamOrder(T,id){
   const O=TUNING.order, o=id?orderById(id):null;
   T.order=o?o.id:null;
   T.lane=o&&o.lane!=null?o.lane:null;
   T.laneK=(o&&o.laneK)||1;
-  const push=(o&&o.push)||0;
+  // **采配は指示に足し算で乗る**(→docs/03 §3.50)。上げ下げも能力の倍率も合成する
+  const tc=T.tactic?tacticById(T.tactic):null;
+  const push=((o&&o.push)||0)+((tc&&tc.push)||0);
   // 攻撃重視は前に出るぶん ATK、守備重視は下がるぶん DEF が上がる。
   // **下がるだけでは損にしかならない**ので、必ず見返りを付ける
-  const m=push>0?{ atk:O.buf }:push<0?{ def:O.buf }:null;
+  const om=push>0?{ atk:O.buf }:push<0?{ def:O.buf }:null;
+  const mm=(function(){
+    if(!om&&!(tc&&tc.ordM))return null;
+    const out={};
+    for(const k of STAT_KEYS){
+      const a=(om&&om[k])||1, b=(tc&&tc.ordM&&tc.ordM[k])||1;
+      if(a*b!==1)out[k]=a*b;
+    }
+    return Object.keys(out).length?out:null;
+  })();
   T.players.forEach(p=>{
-    p.ordM=m;
+    p.ordM=mm;
     if(p.role==="GK")return;                     // GKは前に出ない
     // 陣形の縦は 13〜87 なので、押し出しぶんの余白(±shiftY)まで許す。
     // 13 で切ると最前線だけ動かず、押し上げているのに絵が変わらない
@@ -836,8 +873,8 @@ function matchClock(rng){
 /** 試合の状態を作る。ここではまだ1ティックも解かない。 */
 function createMatch(home,away,seed,opts){
   const s=seed>>>0;
-  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain,home.order,home.med);
-  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain,away.order,away.med);
+  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain,home.order,home.med,home.tactic);
+  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain,away.order,away.med,away.tactic);
   const M={
     seed:s, home:H, away:A, ix:0,
     clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定

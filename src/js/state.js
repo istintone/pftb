@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=28;
+const SAVE_VER=29;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -13,6 +13,8 @@ const SAVE_VER=28;
 function defaultState(){
   return {
     v:SAVE_VER,
+    // 選んでいる特別采配(→docs/03 §3.50)。指示(S.order)と同じ並び
+    tactic:null,
     coach:"",                       // 監督名(就任契約書で記入)
     // 監督の顔(→docs/03 §3.45)。就任契約書で選ぶ。src/assets/manager の名前が入る。
     // 空なら監督名から決まる(古いセーブと、選ばずに進んだ場合の受け皿)
@@ -29,7 +31,9 @@ function defaultState(){
       // **キャリアで1つ**。任期をまたいでも消えない(二度目の就任で案内は出ない)
       seen:{},
       coll:[],                      // 集めた選手カード = プレイヤーの資産(→§3.2.2)
-      tactics:[],                   // 習得した采配(→§3.7)
+      // 習得した采配(→docs/03 §3.50)。**キャリアに残る**(移籍しても消えない)。
+      // ダイレクトプレーだけは最初から。監督なら誰でも知っている手なので
+      tactics:["direct"],
       trophies:[],                  // 獲得トロフィー(→§3.9)
       // 師弟の持ち越し(→docs/03 §3.39)。任期が明けるときに作られ、
       // **次の就任で1度だけ**使われて消える。{ cards, train, bond, gold }
@@ -260,6 +264,11 @@ function migrate(){
   }
   // v12 → v13: 采配を足した(→docs/03 §3.28)。未指定 = 指示なしと同じ。
   if(S.v<13&&S.order===undefined)S.order=null;
+  // v28 → v29: 特別采配(→docs/03 §3.50)。**監督が覚えたものはキャリアに残る**
+  if(S.v<29){
+    if(!S.player.tactics||!S.player.tactics.length)S.player.tactics=["direct"];
+    if(S.tactic===undefined)S.tactic=null;
+  }
   // v13 → v14: 節の進行をクラブチャットに移した(→docs/03 §3.29)。
   // 途中の会話は持ち越せないので畳む(打ち手と大会の選択はそのまま残る)。
   if(S.v<14&&S.career&&S.career.chat===undefined)S.career.chat=null;
