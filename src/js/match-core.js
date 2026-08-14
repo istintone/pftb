@@ -248,10 +248,17 @@ function setTeamTactic(T,id){
     if(t.role&&p.role!==t.role)continue;
     if(!p.sk)p.sk={ ch:[], k:{} };
     for(const e of (t.fx||[])){
+      // **効果ごとに役割を絞れる**(→docs/03 §3.50)。フォルス9のように
+      // 「前は下がり、2列目が出る」という采配は、1つの倍率では書けない
+      if(e.role&&p.role!==e.role)continue;
       if(e.grp)p.sk.ch.push({ name:t.label, at:e.at2||e.at, grp:e.grp,
         w:e.w||1, s:e.s||1, move:null, when:e.when||null, tactic:true });
       if(e.k!=null)p.sk.k[e.at]=(p.sk.k[e.at]||1)*e.k;
     }
+    // **枠適性のロスを埋める**(トータルフットボール)。1に近づける
+    if(t.fitK&&p.fit!=null&&p.fit<1)p.fit=p.fit+(1-p.fit)*t.fitK;
+    // **相手の軸に人を付ける**(マンマーク)。resolveChannel が見る
+    if(t.manMark)p.manMark=true;
   }
   return T.tactic;
 }
@@ -760,9 +767,12 @@ function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX,bk,min){
   // **一発(long)はGKの飛び出しで摘まれる**。マーカーではなくGKが持つスキル
   const gkStop=ch.to!=null?skK(pickGK(D),"longStop"):1;
   // **軸には相手のマークが厳しい**(→docs/03 §3.44)。目立てば消される、の表現
+  // **軸には相手のマークが厳しい**(→docs/03 §3.44)。目立てば消される、の表現。
+  // マンマーク(→§3.50)を敷いていると、軸への当たりがさらに厳しくなる
+  const km=isKp(atk)?TUNING.kp.mark*(df.manMark?TUNING.kp.manMark:1):1;
   const dSc=(eff(df,"def")*M.defW+eff(df,dch.stat)*(1-M.defW))
     *dch.k*lineMul(D)*coverOf(D,atkH,atkX)*skS(df,"counter",dch,min)
-    *(isKp(atk)?TUNING.kp.mark:1)/gkStop*rr(rng);
+    *km/gkStop*rr(rng);
   return aSc>dSc*TUNING.th.origin;
 }
 

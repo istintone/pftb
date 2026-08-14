@@ -1008,18 +1008,112 @@ const TACTICS=[
     form:["4-2-3-1","4-3-3","4-4-2"], exp:5000,
     desc:"高い位置で奪って一気に撃つ。奪えなければ何も起きない",
     ordM:{ spd:1.06, pow:0.97 },
-    fx:[{ at:"finish", grp:"close", w:1.55, s:1.06 },
-        { at:"cover", k:0.95 }],
+    fx:[{ at:"finish", grp:"close", w:1.60, s:1.07 }],
     line:"奪って一気に！",
   },
   {
     id:"gegen", label:"ゲーゲンプレス", icon:"⛊",
     form:["4-3-3","4-2-3-1"], exp:12000,
     desc:"失った瞬間に奪い返す。走り切れれば強いが、消耗が激しい",
-    push:1, ordM:{ def:1.06, spd:1.04, tec:0.95 },
+    push:1, ordM:{ def:1.06, spd:1.04, tec:0.98 },
     fx:[{ at:"counter", grp:"press", w:2.20, s:1.12 },
         { at:"stam", k:1.02 }],
     line:"即時奪回！",
+  },
+  {
+    id:"longcounter", label:"ロングカウンター", icon:"➵",
+    form:["5-3-2","4-4-2","5-4-1","4-1-4-1"], exp:1500,
+    desc:"深く守って一発で終わらせる。持たれるのは承知の上",
+    push:-1, ordM:{ spd:1.05, tec:0.98 },
+    fx:[{ at:"origin", grp:"long", w:1.90, s:1.04 },
+        { at:"origin", grp:"carry", w:0.82 }],
+    line:"一発を狙う",
+  },
+  {
+    id:"zone", label:"ゾーンディフェンス", icon:"▦",
+    form:["4-4-2","4-1-4-1","4-3-3","4-2-3-1","4-4-2ダイヤ"], exp:5000,
+    desc:"人ではなく場所を守る。穴は埋まるが、上手い守備者の持ち味は薄れる",
+    fx:[{ at:"cover", k:1.26 },
+        { at:"counter", grp:"all", s:0.98 }],
+    line:"陣形を崩さない",
+  },
+  {
+    id:"fivelane", label:"5レーン", icon:"⫼",
+    form:["3-5-2","4-2-3-1","3-4-3","4-3-3アシメ"], exp:5000,
+    desc:"幅を使って外から崩す。中央は薄くなる",
+    ordM:{ spd:1.04 },
+    fx:[{ at:"origin", grp:"wide", w:1.60 },
+        { at:"origin", grp:"cross", w:1.45, s:1.05 },
+        { at:"origin", grp:"cut", w:0.82 }],
+    line:"幅を使え",
+  },
+  {
+    id:"storming", label:"ストーミング", icon:"⇶",
+    form:["4-4-2","4-2-4","4-2-2-2","3-4-3"], exp:5000,
+    desc:"縦に速く、当たりも強く。雑になるぶんは目をつぶる",
+    ordM:{ spd:1.05, pow:1.04, tec:0.96 },
+    fx:[{ at:"origin", grp:"carry", w:1.45, s:1.04 },
+        { at:"stam", k:1.01 }],
+    line:"縦に速く！",
+  },
+  {
+    id:"catenaccio", label:"カテナチオ", icon:"⛓",
+    form:["5-3-2","5-4-1","4-3-2-1"], exp:12000,
+    desc:"守り切って勝点1を持ち帰る。点は入らなくなる",
+    push:-1, ordM:{ def:1.06, atk:0.93 },
+    fx:[{ at:"cover", k:1.30 },
+        { at:"finish", grp:"far", w:0.55 }],
+    line:"閉じる",
+  },
+  {
+    id:"invfb", label:"インバーテッド・フルバック", icon:"⤺",
+    form:["4-3-3","4-2-3-1","4-1-4-1","4-3-1-2"], exp:12000,
+    desc:"サイドバックが中に入る。中盤で数的優位を作るが、外は空ける",
+    fx:[{ at:"origin", grp:"cut", w:1.70, s:1.05, role:"DF" },
+        { at:"start", k:1.30, role:"DF" },
+        { at:"counter", grp:"all", s:0.99, role:"DF" }],
+    line:"内へ絞れ",
+  },
+  {
+    id:"false9", label:"フォルス9", icon:"⊘",
+    form:["4-3-3","ゼロトップ","4-2-3-1"], exp:12000,
+    desc:"前線が下りて的が消える。2列目が飛び出すが、放り込みは死ぬ",
+    fx:[{ at:"recv", k:0.92, role:"FW" },
+        { at:"recv", k:1.38, role:"MF" },
+        // **下りた9番は繋ぎ役になる**。受ける回数を減らすだけでは損しかしない
+        // (関与の回数は価値にならない →docs/03 §3.38)。
+        // grp は "pass" にする — 4-3-3 の前3枚は tec のパス札を持っておらず、
+        // passTec だと一度も発動しなかった(実測で気付いた)
+        { at:"origin", grp:"pass", w:1.40, s:1.04, role:"FW" },
+        { at:"finish", grp:"close", w:1.60, s:1.09, role:"MF" },
+        { at:"aerial", k:0.94 }],
+    line:"下りて受けろ",
+  },
+  {
+    id:"manmark", label:"マンマーク", icon:"⌖",
+    form:["3-5-2","5-3-2","3-4-3","5-4-1"], exp:12000,
+    desc:"相手の軸に人を付ける。剥がされたときの穴は大きい",
+    manMark:true,
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.06 },
+        { at:"cover", k:0.96 }],
+    line:"あいつに付け",
+  },
+  {
+    id:"tikitaka", label:"ティキ・タカ", icon:"◌",
+    form:["4-3-3","4-1-4-1","9.5番"], exp:25000,
+    desc:"短いパスを重ねて崩す。無理には撃たない",
+    ordM:{ tec:1.06, pow:0.95 },
+    fx:[{ at:"origin", grp:"passTec", w:1.90, s:1.06 },
+        { at:"finish", grp:"far", w:0.50 }],
+    line:"つないで崩す",
+  },
+  {
+    id:"total", label:"トータルフットボール", icon:"✺",
+    form:null, exp:45000,
+    desc:"全員がどこでもこなす。枠の噛み合わせを気にしなくてよくなる",
+    fitK:0.48,
+    fx:[{ at:"stam", k:1.03 }],
+    line:"全員で回す",
   },
 ];
 const tacticById=id=>TACTICS.find(t=>t.id===id);
@@ -1690,7 +1784,7 @@ const TUNING={
   //   skill … スキルの抽選重み。**確定発動はしない**
   //   mark  … 軸に対して相手の守備スコアが上がる割合(代償)
   //   stam  … 軸でいるあいだの消耗の増え方(代償)。**軸を張った時間ぶんだけ残る**
-  kp:{ power:1.18, skill:1.35, mark:1.10, stam:1.30 },
+  kp:{ power:1.18, skill:1.35, mark:1.10, stam:1.30, manMark:1.16 },
   // 決定機の質(→docs/07 §7.21)。**シュートの成否を撃った本人だけで決めない**。
   //   chanceK   … アシストの質がシュートスコアに掛かる強さ
   //   chanceMid … 「並のアシスト」の基準(能力の 0..1 換算)。ここで倍率1になる

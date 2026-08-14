@@ -759,7 +759,11 @@ const STEPS = [
       // 戻さないと以降の検査(ケガと休息・師弟)が別の節を見ることになる
       window.__luckSave={ node:S.career.node,
         trust:JSON.stringify(S.career.trust||{}),
-        seen:JSON.stringify(S.career.mentorSeen||{}) };
+        seen:JSON.stringify(S.career.mentorSeen||{}),
+        trade:(S.career.tradeDone||[]).slice() };
+      // **トレードに席を取られないようにする**(1節に出るイベントは1つ)。
+      // 節を送って探すので、45節を越えるとトレードが先に出る
+      S.career.tradeDone=TUNING.trade.nodes.slice();
       const n0=S.career.node;
       let ev=null,n=n0;
       for(let i=0;i<400&&!ev;i++){ S.career.node=n0+i; ev=luckPick(); n=n0+i;
@@ -803,6 +807,7 @@ const STEPS = [
       S.career.node=K.node;
       S.career.trust=JSON.parse(K.trust);
       S.career.mentorSeen=JSON.parse(K.seen);
+      S.career.tradeDone=K.trade;
       S.career.chat=null; S.career.hand=null; S.career.comp=null;
       return out;
     })()`));
