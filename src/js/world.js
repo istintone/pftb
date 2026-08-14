@@ -918,6 +918,8 @@ function mailTake(id,pos){
   m.got=true; m.read=true;
   if(g.ticket)ticketAdd(g.ticket,1);
   if(g.coin)S.club.coins+=g.coin;
+  // **カードそのものを添えた連絡**(トレード →§3.49)。写しを入れる
+  if(g.card&&!S.player.coll.some(x=>x.id===g.card.id))S.player.coll.push(g.card);
   return g;
 }
 // --- 見たもの・やったこと(→docs/03 §3.43) ---
@@ -1159,6 +1161,90 @@ function trustOver(n){
 }
 /** いま相談してくる選手(→§3.39)。**1人だけ**。居なければ null。 */
 function mentorPending(){ return trustOver(TUNING.trust.need)[0]||null; }
+
+// ---------- トレード(→docs/03 §3.49) ----------
+// **任期の折り返し(45節)と終盤(90節)に1度ずつ**、他クラブから話が来る。
+// 出せるのは **WORLD CLASS 以上の実名選手で、いま編成に入っていない人**だけ。
+// 「使っていない切り札を、要る駒に替える」という判断にするため。
+
+/** その節に話が来るか。**まだ済ませていない節目**があれば、その節目を返す。 */
+function tradeNode(){
+  const C=S.career;
+  if(!S.club||!C||C.over)return null;
+  const done=C.tradeDone||[];
+  for(const n of TUNING.trade.nodes)
+    if(C.node>=n&&!done.includes(n))return n;
+  return null;
+}
+/** 出せる選手(→§3.49)。**編成に入っていない実名の WC 以上**。 */
+const tradeOuts=()=>S.player.coll.filter(c=>c.sig
+  &&(c.rarity==="WC"||c.rarity==="LEG")&&!(S.squad||[]).includes(c.id));
+/** 今節の話。無ければ null。**節目から決まる**ので開き直しても同じ。 */
+function tradePending(){
+  const at=tradeNode(); if(at==null)return null;
+  const outs=tradeOuts(); if(!outs.length)return null;
+  const rng=mulberry32((S.world.seed^hashStr("trade:"+S.club.id+":"+at))>>>0);
+  const out=outs[Math.floor(rng()*outs.length)];
+  return { at, out:out.id, cands:tradeCands(rng,at) };
+}
+/**
+ * 先方が出してくる候補(→§3.49)。**選ぶ前から中身は決まっている**。
+ * 実名の未所持を先に当て、尽きたら自動生成で埋める。
+ */
+function tradeCands(rng,at){
+  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+  const pool=signatureCards().filter(c=>(c.rarity==="WC"||c.rarity==="LEG")&&!mine.has(c.sig));
+  const out=[];
+  for(let i=0;i<TUNING.trade.pick;i++){
+    let c=null;
+    if(pool.length){ c=pool.splice(Math.floor(rng()*pool.length),1)[0]; }
+    else{
+      const saveUid=uid; uid=7900000+Math.floor(rng()*90000);
+      c=makeCard(rng,rpick(rng,POS),{ rarity:"WC" });
+      uid=saveUid;
+    }
+    out.push(c);
+  }
+  return out;
+}
+/**
+ * 候補の見せ方(→§3.49)。**どんな選手かは分かるが、誰かは分からない**。
+ * 手掛かりの種類は候補ごとに固定(引き直しても同じ文言になる)。
+ */
+function tradeHint(c){
+  const kind=Math.abs(hashStr("hint:"+(c.sig||c.id)))%3;
+  const best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
+  const nat=nationById(c.nation);
+  if(kind===0)return (nat?nat.name:(c.nat||c.nation))+"国籍の"+primarySub(c);
+  if(kind===1&&c.club)return c.club+"に所属している"+primarySub(c);
+  return "非常に強力な"+STAT_LABEL[best]+"能力の選手";
+}
+/**
+ * トレードを成立させる(→§3.49)。**出す選手はその場で消え、来る選手は連絡で届く**。
+ * 断ったときも同じ節目は二度と来ない(ix に null を渡す)。
+ */
+function tradeDo(ix){
+  const t=tradePending(); if(!t)return null;
+  if(!S.career.tradeDone)S.career.tradeDone=[];
+  S.career.tradeDone.push(t.at);
+  if(ix==null)return { at:t.at, done:false };
+  const c=t.cands[ix]; if(!c)return null;
+  const i=S.player.coll.findIndex(x=>x.id===t.out);
+  if(i<0)return null;
+  const out=S.player.coll[i];
+  S.player.coll.splice(i,1);
+  // 出した選手に紐づくものは残さない(→§3.46 の売却と同じ始末)
+  if(S.career.train)delete S.career.train[out.id];
+  if(S.career.bond)for(const k of Object.keys(S.career.bond))
+    if(k.split(":").includes(String(out.id)))delete S.career.bond[k];
+  mailPush("trade:"+t.at,{
+    from:"sec", title:"トレードの選手が到着しました",
+    text:"監督、"+shortName(out)+" と入れ替わる選手が到着しました。"
+      +"ご希望は「"+tradeHint(c)+"」でしたね。",
+    gift:{ card:c, label:RARITY[c.rarity].label+" "+shortName(c) },
+  });
+  return { at:t.at, done:true, out, card:c };
+}
 
 // ---------- 節の出来事(→docs/03 §3.48) ----------
 // **10試合に1回くらい、選手のほうから何かが起きる。** 96節が「打ち手 → 試合」の

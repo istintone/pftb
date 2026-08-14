@@ -700,6 +700,59 @@ const STEPS = [
     // **契約は残したまま**にする。外すと次の節でまたスポンサーの相談が先に出て、
     // 師弟の相談まで進まない(1節に出るイベントは1つ)
     await ctx.js("S.player.fame=0; S.career.chat=null; S.career.hand=null; S.career.comp=null;");
+    // トレード(→docs/03 §3.49)。**出す → 何が欲しいか → 受信箱で受け取る**
+    ctx.log("  トレード:", await ctx.js(`(()=>{
+      window.__trSave={ node:S.career.node, done:(S.career.tradeDone||[]).slice() };
+      // 出せる選手(編成外の実名WC以上)を用意して、節目まで送る
+      const wc=signatureCards().filter(c=>c.rarity==='WC').slice(0,2);
+      for(const c of wc)if(!S.player.coll.some(x=>x.sig===c.sig))S.player.coll.push(c);
+      S.career.tradeDone=[]; S.career.node=TUNING.trade.nodes[0];
+      const t=tradePending();
+      if(!t)throw new Error('トレードの話が来ない');
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      show('chat');
+      let g=0;
+      while(S.career.chat.step&&S.career.chat.step!=='event'
+            &&S.career.chat.step!=='ready'&&g++<8){
+        const bs=[...document.querySelectorAll('#chatAsk [data-pick]')];
+        if(!bs.length)break;
+        const st=S.career.chat.step;
+        const b=st==='cup'?bs.find(x=>x.dataset.pick==='no')
+          :st==='hand'?bs.find(x=>x.dataset.pick==='rest'):bs[0];
+        b.click(); renderChat();
+      }
+      const ops=[...document.querySelectorAll('#chatAsk [data-pick]')].map(b=>b.dataset.pick);
+      if(ops.join(',')!=='yes,no')throw new Error('出す/出さない が出ない: '+ops);
+      document.querySelector('#chatAsk [data-pick="yes"]').click(); renderChat();
+      const cands=[...document.querySelectorAll('#chatAsk [data-pick]')];
+      if(cands.length!==TUNING.trade.pick)throw new Error('候補が3つ出ない: '+cands.length);
+      window.__tr={ out:t.out, n0:S.player.coll.length, hints:cands.map(b=>b.textContent) };
+      return shortName(cardById(t.out))+' を出す ／ 候補: '
+        +cands.map(b=>b.textContent.slice(0,14)).join(' / ');
+    })()`));
+    await ctx.wait(250);
+    await ctx.shot("05r-chat-trade");
+    ctx.log("  トレードの成立:", await ctx.js(`(()=>{
+      const T=window.__tr;
+      document.querySelectorAll('#chatAsk [data-pick]')[0].click(); renderChat();
+      if(cardById(T.out))throw new Error('出した選手が残っている');
+      if(S.player.coll.length!==T.n0-1)throw new Error('手札が減らない');
+      const m=mailList().find(x=>String(x.id).indexOf('trade:')===0);
+      if(!m)throw new Error('受信箱に連絡が来ない');
+      show('secretary');
+      const b=document.querySelector('#mailLog [data-mail]');
+      if(!b)throw new Error('受け取るボタンが無い');
+      b.click();
+      if(S.player.coll.length!==T.n0)throw new Error('受け取っても増えない');
+      closeCard();
+      // **元に戻す**(あとの手順が別の節を見ないように)
+      const K=window.__trSave;
+      S.career.node=K.node; S.career.tradeDone=K.done;
+      S.career.chat=null; S.career.hand=null; S.career.comp=null;
+      return '出した選手は消え、受信箱から受け取って +1枚';
+    })()`));
+    await ctx.wait(300);
+    await ctx.shot("05s-mail-trade");
     // 節の出来事(→docs/03 §3.48)。**問いの3択**を通しで見る
     ctx.log("  節の出来事:", await ctx.js(`(()=>{
       // **あとの手順のために元の状態を控えておく**。節を送って当たりを探すので、

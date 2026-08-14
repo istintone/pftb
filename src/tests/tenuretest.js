@@ -875,5 +875,65 @@ function runSeason(hand) {
       + " 訓練と連携も一緒に消える");
   }
 
+  // ---------- トレード(→docs/03 §3.49) ----------
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; S.world.seed = 20260814;
+    E.startTenure("sam-8"); S.career.opened = true;
+    const T = E.TUNING.trade;
+
+    // **節目を過ぎるまで来ない**
+    S.career.node = T.nodes[0] - 1;
+    assert.strictEqual(E.tradePending(), null, "節目の前は来ない");
+
+    // **出せるのは編成外の WC 以上の実名選手だけ**
+    S.career.node = T.nodes[0];
+    assert.strictEqual(E.tradePending(), null, "出せる選手が居なければ来ない");
+    const wc = E.signatureCards().filter(c => c.rarity === "WC").slice(0, 2);
+    S.player.coll.push(...wc);
+    assert.strictEqual(E.tradeOuts().length, 2, "編成外の実名が候補になる");
+    S.squad[3] = wc[0].id;
+    assert.strictEqual(E.tradeOuts().length, 1, "編成に入っている人は出せない");
+    S.squad[3] = null;
+
+    const t = E.tradePending();
+    assert.ok(t, "節目を過ぎたら話が来る");
+    assert.strictEqual(t.cands.length, T.pick, T.pick + "人の候補が出る");
+    assert.deepStrictEqual(E.tradePending().cands.map(c => c.id), t.cands.map(c => c.id),
+      "**候補は先に決まっている**(引き直しても同じ)");
+    for (const c of t.cands) assert.ok(E.tradeHint(c).length > 2, "手掛かりの文がある");
+    assert.ok(!t.cands.some(c => S.player.coll.some(x => x.sig && x.sig === c.sig)),
+      "持っている選手は候補にならない");
+
+    // **断ると、その節目は二度と来ない**
+    const at = t.at;
+    assert.ok(E.tradeDo(null), "断れる");
+    assert.strictEqual(E.tradePending(), null, "断った節目は来ない");
+    assert.ok(S.career.tradeDone.includes(at), "済ませた節目に入る");
+
+    // **次の節目では、また来る**
+    S.career.node = T.nodes[1];
+    const t2 = E.tradePending();
+    assert.ok(t2, "次の節目では来る");
+    const outId = t2.out, n0 = S.player.coll.length, mail0 = S.player.mail.length;
+    E.trainAdd(outId, "atk", 5);
+    const r = E.tradeDo(0);
+    assert.ok(r && r.done, "成立する");
+    assert.strictEqual(E.cardById(outId), null, "出した選手は手札から消える");
+    assert.strictEqual(E.trainExp(outId, "atk"), 0, "訓練の成果も消える");
+    assert.strictEqual(S.player.coll.length, n0 - 1, "この時点ではまだ増えない");
+    assert.strictEqual(S.player.mail.length, mail0 + 1, "受信箱に連絡が届く");
+
+    // **来る選手は受信箱で受け取る**
+    const m = E.mailList()[0];
+    const got = E.mailTake(m.id);
+    assert.ok(got && got.card, "カードが添えられている");
+    assert.strictEqual(S.player.coll.length, n0, "受け取ると1枚増える");
+    assert.ok(E.cardById(got.card.id), "手札から引ける");
+    assert.strictEqual(E.tradePending(), null, "同じ節目は二度と来ない");
+    console.log("トレードOK " + T.nodes.join("/") + "節に1度ずつ ／ 編成外のWC以上だけ ／"
+      + " 候補は先に確定 ／ 出す選手は消え、来る選手は受信箱");
+  }
+
   process.exit(0);
 })().catch(e => { console.error("FAIL:", e); process.exit(1); });

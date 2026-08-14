@@ -446,6 +446,7 @@ function renderMail(){
     const gname=!g?null
       :g.ticket?ticketById(g.ticket).name
       :g.spon?(g.coin?fmtNum(g.coin)+" コイン":g.label)
+      :g.card?(g.label||shortName(g.card))            // トレードの選手(→§3.49)
       :g.coin?fmtNum(g.coin)+" コイン":null;
     // **案内は行き先まで連れていく**(→docs/03 §3.43)。読んで終わりにさせない
     const go=d.go&&SCREENS[d.go]?d.go:null;
@@ -477,7 +478,10 @@ function renderMail(){
       if(!g)return;
       await save(); headUI(); renderMail();
       // **もらったものをその場で見せる**(→docs/03 §3.42)。カードは詳細を開く
-      if(g.spon&&g.got&&g.got.card){
+      if(g.card){                                    // トレードの選手(→§3.49)
+        toast(RARITY[g.card.rarity].label+" "+shortName(g.card)+" が加入しました");
+        openCard(g.card);
+      }else if(g.spon&&g.got&&g.got.card){
         toast(RARITY[g.got.card.rarity].label+" "+shortName(g.got.card)+" が加入しました");
         openCard(g.got.card);
       }else if(g.spon){
@@ -1793,6 +1797,14 @@ function chatEnter(st){
       chatSay("sec",chatText(CHAT.sponAsk,"sq:"+C.node));
       return true;
     }
+    // **トレード**(→docs/03 §3.49)。任期の折り返しと終盤に1度ずつ
+    const tr=tradePending();
+    if(tr){
+      sel.trade=tr;
+      chatSay("sec",chatText(CHAT.tradeAsk,"tr:"+C.node,
+        { n:shortOf(tr.out) }));
+      return true;
+    }
     // **師弟の相談**(→docs/03 §3.39)。打ち手のあと、秘書ではなく選手が話しかけてくる
     const m=mentorPending();
     if(m){
@@ -1840,6 +1852,22 @@ function chatPick(id,label){
     sel.spon=null;
     if(sp)chatSay("sec",chatText(CHAT.sponYes,"sy:"+C.node,
       { n:sponsorById(sp.id).name, g:sponGoalText(sp), d:String(sp.until) }));
+  }
+  else if(st==="event"&&sel.trade){
+    // トレード(→docs/03 §3.49)。**出すと決めてから、何が欲しいかを選ぶ**
+    if(id==="no"){
+      tradeDo(null); sel.trade=null;
+      chatSay("sec",chatText(CHAT.tradeNo,"tn:"+C.node));
+    }else if(!sel.tradePick){
+      sel.tradePick=true;
+      chatSay("sec",chatText(CHAT.tradePick,"tp:"+C.node));
+      return;                                          // 候補の3択へ
+    }else{
+      const r=tradeDo(+id);
+      chatSay("sec",chatText(CHAT.tradeOk,"to:"+C.node,
+        { n:r?shortName(r.out):"" }));
+      sel.trade=null; sel.tradePick=false;
+    }
   }
   else if(st==="event"&&sel.luck){
     // 節の出来事の答え(→docs/03 §3.48)
@@ -1908,6 +1936,16 @@ function chatOptions(){
         sub:"リーグ戦に集中します" }]) };
   }
   if(st==="event"){
+    // トレード(→docs/03 §3.49)。**まず出すかどうか、次に何が欲しいか**
+    if(sel.trade&&!sel.tradePick)return { q:"トレードに応じますか", items:[
+      { id:"yes", label:shortOf(sel.trade.out)+" を出す",
+        sub:"かわりに希望の選手を1人もらえます",
+        say:shortOf(sel.trade.out)+" を出そう。" },
+      { id:"no", label:"トレードに出さない", sub:"この話は流れます",
+        say:"今回は見送る。" }] };
+    if(sel.trade&&sel.tradePick)return { q:"どんな選手を希望しますか",
+      items:sel.trade.cands.map((c,i)=>({ id:String(i), label:tradeHint(c),
+        sub:RARITY[c.rarity].label, say:"「"+tradeHint(c)+"」を頼む。" })) };
     // 節の出来事の3択(→docs/03 §3.48)。**当たりは節ごとに変わる**
     if(sel.luck&&sel.luck.id==="ask")return { q:"何を求めているか、伝えますか",
       items:LUCK_ROLES.map(r=>({ id:r.id, label:r.label,
