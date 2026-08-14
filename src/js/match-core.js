@@ -167,6 +167,10 @@ function refreshStamina(M,min){
       // **軸を張った時間を数える**。あとから外しても消えない(→staminaOf)
       if(isKp(p))p.kpMin=(p.kpMin||0)+TUNING.match.tickMin;
       p.stam=staminaOf(p,min);
+      // **点差を選手に持たせる**(→docs/03 §3.50)。条件付きの采配(パーク・ザ・バス)が
+      // 「いまリードしているか」を見る口。スキルの when は選手しか受け取らないので、
+      // 盤面の状態はここで選手に降ろしておく
+      p.lead=T.score-(T===M.home?M.away:M.home).score;
     }
 }
 
@@ -259,6 +263,10 @@ function setTeamTactic(T,id){
     if(t.fitK&&p.fit!=null&&p.fit<1)p.fit=p.fit+(1-p.fit)*t.fitK;
     // **相手の軸に人を付ける**(マンマーク)。resolveChannel が見る
     if(t.manMark)p.manMark=true;
+    // **連携の効きを増幅する**(オートマティズム)。bondK が見る
+    if(t.bondX)p.bondX=t.bondX;
+    // **止めるためなら反則も辞さない**(戦術的ファウル)。連鎖のファウル判定が見る
+    if(t.foulX)p.foulX=t.foulX;
   }
   return T.tactic;
 }
@@ -678,7 +686,10 @@ function bondK(a,b){
   if(a.c.gold&&a.c.gold[b.c.id])return B.k4;
   if(!a.c.bond)return 1;
   const sum=(a.c.bond[b.c.id]||0)*2;
-  return sum>B.t3?B.k3:sum>B.t2?B.k2:sum>B.t1?B.k1:1;
+  const m=sum>B.t3?B.k3:sum>B.t2?B.k2:sum>B.t1?B.k1:1;
+  // **積み上げの効きを増幅する采配**(オートマティズム →docs/03 §3.50)。
+  // 1からの隔たりを伸ばすので、**組んだことのない11人には何も起きない**
+  return a.bondX?1+(m-1)*a.bondX:m;
 }
 /** 選手の枠(元の立ち位置)から、いまボールがある場所までの離れ具合(0..1)。 */
 function strayOf(p,h,x){
@@ -1050,8 +1061,10 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
         push({ side:T.side, type:"injury", by:carrier.c.id, vs:marker.c.id,
           dch:dch.id, dlabel:dch.label,
           h:Math.round(h*100)/100, pos:[Math.round(x),yOfH(h)] });
-      // 反則率は**守備側が選んだ手**が持つ(削りにいけば高く、間合いを取れば低い)
-      const foul=marker?rollFoul(rng,h,dch.foul*clean):null;
+      // 反則率は**守備側が選んだ手**が持つ(削りにいけば高く、間合いを取れば低い)。
+      // **止めるためなら反則も辞さない采配**(戦術的ファウル)はここだけを膨らませる。
+      // ケガの側(上)には掛けない。狙って削るのではなく、掴んで止めているから
+      const foul=marker?rollFoul(rng,h,dch.foul*clean*(marker.foulX||1)):null;
       if(foul)return giveFoul(M,rng,push,T,D,foul,marker,carrier,h,x,from,att,min);
       addMom(M,D.side,F.duelLost); return M.events.slice(from);
     }

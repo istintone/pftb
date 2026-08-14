@@ -311,11 +311,15 @@ const SKILL_FX={
 const SK_WHEN={
   late: (p,min)=>min!=null&&min>=TUNING.skillCond.late,
   fresh:(p)=>!!p&&p.stam!=null&&p.stam>=TUNING.skillCond.fresh,
+  // **盤面の状態で立つ条件**。選手が持てるのは自分のことだけなので、点差は
+  // 毎ティック refreshStamina が選手に降ろしている(→docs/03 §3.50)
+  lead: (p)=>!!p&&p.lead>0,
 };
 // **実際に立つ割合**(実測 200試合・14,880件の起点/連鎖)。
 // テストがこれを掛けて「絞られたぶん強い」を検算する。条件を足したら測り直す。
-const SK_WHEN_SHARE={ late:0.256, fresh:0.337 };
-const SK_WHEN_WHAT={ late:"残り15分だけ", fresh:"脚が残っているあいだだけ" };
+const SK_WHEN_SHARE={ late:0.256, fresh:0.337, lead:0.306 };
+const SK_WHEN_WHAT={ late:"残り15分だけ", fresh:"脚が残っているあいだだけ",
+                     lead:"リードしているあいだだけ" };
 /** 固有スキル(持ち主つき)。**抽選プールには入らない**ので skillPool は触らない。 */
 const SKILLS_SIG=Object.keys(SKILL_FX).filter(n=>SKILL_FX[n].sig);
 const sigSkillOf=id=>SKILLS_SIG.find(n=>SKILL_FX[n].sig===id)||null;
@@ -1114,6 +1118,35 @@ const TACTICS=[
     fitK:0.48,
     fx:[{ at:"stam", k:1.03 }],
     line:"全員で回す",
+  },
+  {
+    id:"bus", label:"パーク・ザ・バス", icon:"⊔",
+    form:["5-3-2","5-4-1","4-1-4-1","4-4-2"], exp:5000,
+    desc:"リードしたら閉じる。追う展開では何の役にも立たない",
+    push:-1,
+    // **リードしているあいだだけ**。追う展開では下がるぶんの損しか残らない
+    // grp:"all" に w は効かない(全部の札を同じだけ持ち上げても選ばれ方は変わらない)。
+    // **リードしているあいだだけ**、寄せの強さそのものを上げる
+    fx:[{ at:"counter", grp:"all", s:1.28, when:"lead" },
+        { at:"origin", grp:"long", w:1.40, when:"lead" }],
+    line:"閉じろ！",
+  },
+  {
+    id:"cynical", label:"戦術的ファウル", icon:"⊗",
+    form:null, exp:12000,
+    desc:"止めるためなら掴む。芽は摘めるが、カードが増え、退場が現実になる",
+    foulX:1.50,
+    fx:[{ at:"counter", grp:"press", w:1.90, s:1.18 }],
+    line:"ここで止めろ！",
+  },
+  {
+    id:"automat", label:"オートマティズム", icon:"⧉",
+    form:null, exp:25000,
+    desc:"型で動く。長く組んだ11人ほど噛み合い、初対面の集団では何も起きない",
+    bondX:2.6,
+    // 型に嵌るぶん、個で運ぶ場面が減る
+    fx:[{ at:"origin", grp:"carry", w:0.72 }],
+    line:"型どおりに！",
   },
 ];
 const tacticById=id=>TACTICS.find(t=>t.id===id);
