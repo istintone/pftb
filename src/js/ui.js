@@ -1165,8 +1165,9 @@ function foeBrief(side){
   const G=TUNING.brief;
   // 相手の軸(→docs/03 §3.44)。名前だけを渡す(数字は読み上げない → §3.35)
   const kc=side.kp?start.find(c=>c.id===side.kp):null;
+  const tc=side.tactic?tacticById(side.tactic):null;
   return { f:side.form, p:key.pos, n:shortName(key), t:STAT_TRAIT[tk],
-    kp:kc?shortName(kc):null,
+    kp:kc?shortName(kc):null, tac:tc?tc.label:null,
     gap:d>=G.big?"up2":d>=G.small?"up":d<=-G.big?"dn2":d<=-G.small?"dn":"even" };
 }
 /** 対戦表から相手を開く。spec は renderFoe がそのまま解釈する。 */
@@ -1672,6 +1673,8 @@ function chatEnter(st){
     if(b){
       chatSay("sec",chatText(CHAT.foeScout,"scout:"+C.node,b));
       if(b.kp)chatSay("sec",chatText(CHAT.foeKey,"key:"+C.node,{ n:b.kp }));
+      // **相手の采配**(→docs/03 §3.51)。何を盗めるかが先に分かる
+      if(b.tac)chatSay("sec",chatText(CHAT.foeTac,"ftc:"+C.node,{ t:b.tac }));
       chatSay("sec",chatText(CHAT.foeGap[b.gap],"gap:"+C.node));
     }
     return false;

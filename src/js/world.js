@@ -465,7 +465,8 @@ function matchSide(clubId){
   // **相手も軸を持つ**(→docs/03 §3.44)。cpuSquad が決めた1人をそのまま使う
   const cards=base.map(c=>({ ...c, cond:condCpu(clubId,rng),
     ...(c.id===kp?{ kp:true }:{}) }));
-  return { cards, form, name:club.name, kp };
+  // **上の部は采配を敷いてくる**(→docs/03 §3.51)。盗む相手になる
+  return { cards, form, name:club.name, kp, tactic:clubTactic(clubId) };
 }
 /**
  * CPUクラブの編成(→docs/03 §3.34)。**試合も下見もここを通す**ので、
@@ -474,8 +475,8 @@ function matchSide(clubId){
 function cpuSquad(clubId){
   const form=formFor(clubId);
   const cards=bestXI(clubRoster(S.world.seed,clubId),form);
-  // **軸もここで決める**(→docs/03 §3.44)。試合も下見も見立ても同じ選手になる
-  return { cards, form, kp:cpuKp(clubId,cards) };
+  // **軸と采配もここで決める**(→§3.44 / §3.51)。試合も下見も見立ても同じになる
+  return { cards, form, kp:cpuKp(clubId,cards), tactic:clubTactic(clubId) };
 }
 /** クラブの陣形。クラブIDから決定的に選ぶ(クラブごとに一貫した色になる)。 */
 // 陣形は名簿から決まる = 世界のたねが変わらない限り不変。毎回引き直すと重いので覚えておく。
@@ -1189,6 +1190,47 @@ function learnTactic(id){
   return true;
 }
 
+/**
+ * そのクラブが敷いている采配(→docs/03 §3.51)。**1部と2部だけ**。
+ *
+ * 3部は素朴に戦う。上の部ほど賢い相手が並ぶので、**上へ行くほど盗める手が増える**。
+ * どの采配かはクラブから決まる(下見でも試合でも同じ)。
+ * **そのリーグの格に見合う采配しか敷かない** — 弱いリーグの1部に
+ * ゲーゲンプレスが並ぶと、序盤で全部覚えられてしまう。
+ */
+function clubTactic(clubId){
+  const club=clubById(clubId); if(!club)return null;
+  const div=divOfClub(club);
+  if(div>2)return null;                                  // 3部は素朴に戦う
+  const lg=leagueById(club.league);
+  // リーグの格(1〜6)と部で「賢さ」を決め、その範囲の采配から選ぶ
+  const smart=lg.tier*2+(3-div);
+  const pool=TACTICS.filter(t=>t.exp<=smart*2200&&(!t.form||t.form.includes(formFor(clubId))));
+  if(!pool.length)return null;
+  const rng=mulberry32((S.world.seed^hashStr("ctac:"+clubId))>>>0);
+  return pool[Math.floor(rng()*pool.length)].id;
+}
+/**
+ * 采配を盗む(→docs/03 §3.51)。**その采配で来た相手とやり合った試合のあと**に引く。
+ * 覚えていない采配だけが対象で、勝つほど当たりやすい。
+ */
+function learnRoll(tacticId,res,seed,cup){
+  const L=TUNING.learn;
+  if(!tacticId||knowsTactic(tacticId))return null;
+  const p=(res==="win"?L.win:res==="draw"?L.draw:L.lose)+(cup?L.cup:0);
+  const rng=mulberry32((S.world.seed^hashStr("learn:"+tacticId+":"+S.career.node+":"+seed))>>>0);
+  if(rng()>=p)return null;
+  learnTactic(tacticId);
+  const t=tacticById(tacticId);
+  mailPush("learn:"+tacticId,{
+    from:"sec", title:"「"+t.label+"」を持ち帰りました",
+    text:"監督、先日の相手の戦い方——「"+t.label+"」ですね。"
+      +t.desc+"。うちでも試せます。"
+      +(t.exp?"（チーム熟練度 "+fmtNum(t.exp)+" 以上で使えます）":""),
+  });
+  return tacticId;
+}
+
 // ---------- トレード(→docs/03 §3.49) ----------
 // **任期の折り返し(45節)と終盤(90節)に1度ずつ**、他クラブから話が来る。
 // 出せるのは **WORLD CLASS 以上の実名選手で、いま編成に入っていない人**だけ。
@@ -1865,7 +1907,11 @@ function cupSide(cup,round,foe){
     rarPlan:cupPlan(cup,elite,rng) });
   uid=saveUid;
   const form=Object.keys(FORMATIONS)[Math.floor(rng()*Object.keys(FORMATIONS).length)];
-  return { cards:bestXI(roster,form), form, name:cupTeamName(c,foe), elite };
+  // **格の高い大会ほど賢い相手が出る**(→docs/03 §3.51)。盗む相手になる
+  const smart=Math.round(cup.bias+round*1.5+(elite?3:0));
+  const pool=TACTICS.filter(t=>t.exp<=smart*2200&&(!t.form||t.form.includes(form)));
+  const tactic=pool.length?pool[Math.floor(rng()*pool.length)].id:null;
+  return { cards:bestXI(roster,form), form, name:cupTeamName(c,foe), elite, tactic };
 }
 /** カップの組み合わせ。相手はクラブ一覧に居ないので、ここで全部持つ。 */
 function cupFixtureOf(){
@@ -2002,6 +2048,9 @@ function playMatchday(done){
       trustMatch();                                        // 信頼(→§3.39)。スタメンに入る
       condAfterMatch(out.M,home?"H":"A",seed);             // 出来(→§3.32)
       out.hurt=applyInjuries(out.M,home?"H":"A");          // ケガ(→§3.32)
+      // **相手の采配を盗む**(→§3.51)。覚えたら受信箱に連絡が届く
+      out.learned=learnRoll(clubTactic(out.my.opp),
+        gf>ga?"win":gf===ga?"draw":"lose",md,false);
     }else out.others.push({ h:m.h, a:m.a, hg, ag });
   });
 

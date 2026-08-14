@@ -213,5 +213,61 @@ const E=setup({tmpName:"_tmp_ord.js"});
       + " 札として全員に混ざる ／ 指示と足し算");
   }
 
+  // ---------- 采配を盗む(→docs/03 §3.51) ----------
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; S.world.seed = 20260814;
+    E.startTenure("sam-8");
+
+    // **1部と2部だけが采配を敷く**(3部は素朴に戦う)
+    const byDiv = { 1: 0, 2: 0, 3: 0 }, has = { 1: 0, 2: 0, 3: 0 };
+    for (const c of E.CLUBS) { byDiv[c.div]++; if (E.clubTactic(c.id)) has[c.div]++; }
+    assert.strictEqual(has[3], 0, "3部は采配を敷かない");
+    assert.ok(has[1] > byDiv[1] * 0.5, "1部の多くが敷いている: " + has[1] + "/" + byDiv[1]);
+    assert.ok(has[2] > 0, "2部も敷いている");
+    // **同じクラブなら何度引いても同じ**(下見と試合で食い違わない)
+    const id = E.CLUBS.find(c => c.div === 1).id;
+    assert.strictEqual(E.clubTactic(id), E.clubTactic(id), "クラブから決まる");
+    assert.strictEqual(E.cpuSquad(id).tactic, E.clubTactic(id), "下見と一致する");
+
+    // **上のリーグほど高い采配が並ぶ**
+    const top = E.CLUBS.filter(c => c.div <= 2 && E.leagueById(c.league).tier >= 5)
+      .map(c => E.clubTactic(c.id)).filter(Boolean);
+    const low = E.CLUBS.filter(c => c.div <= 2 && E.leagueById(c.league).tier <= 2)
+      .map(c => E.clubTactic(c.id)).filter(Boolean);
+    const expOf = a => a.reduce((s, t) => s + E.tacticById(t).exp, 0) / Math.max(1, a.length);
+    assert.ok(expOf(top) > expOf(low),
+      "上のリーグほど賢い: " + expOf(top).toFixed(0) + " > " + expOf(low).toFixed(0));
+
+    // **覚えていないものだけ、確率で覚える**
+    S.player.tactics = ["direct"];
+    assert.strictEqual(E.learnRoll("direct", "win", 1, false), null, "知っている采配は引かない");
+    let got = 0, n = 0;
+    for (let i = 1; i <= 400; i++) {
+      S.player.tactics = ["direct"]; S.player.mail = []; S.career.node = i;
+      n++; if (E.learnRoll("highpress", "win", i, false)) got++;
+    }
+    const rate = got / n;
+    assert.ok(Math.abs(rate - E.TUNING.learn.win) < 0.06,
+      "勝ったときの当たりが " + (E.TUNING.learn.win * 100) + "% 前後: "
+      + (rate * 100).toFixed(1) + "%");
+    // **負けても少しは覚える**(勝ったときより低い)
+    let lo = 0;
+    for (let i = 1; i <= 400; i++) {
+      S.player.tactics = ["direct"]; S.player.mail = []; S.career.node = i;
+      if (E.learnRoll("highpress", "lose", i, false)) lo++;
+    }
+    assert.ok(lo < got, "負けたときのほうが覚えにくい: " + lo + " < " + got);
+
+    // **覚えたら連絡が届く**
+    S.player.tactics = ["direct"]; S.player.mail = []; S.career.node = 1;
+    for (let i = 1; i <= 200; i++) { S.career.node = i;
+      if (E.learnRoll("highpress", "win", i, false)) break; }
+    assert.ok(E.tacticsKnown().includes("highpress"), "覚えている");
+    assert.strictEqual(S.player.mail.length, 1, "受信箱に連絡が届く");
+    console.log("采配を盗むOK 1部2部だけが敷く ／ 上のリーグほど賢い ／"
+      + " 勝ち " + (rate * 100).toFixed(0) + "% > 負け ／ 覚えたら連絡");
+  }
+
   process.exit(0);
 })().catch(e=>{ console.error("FAIL:",e); process.exit(1); });
