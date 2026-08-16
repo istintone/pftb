@@ -416,12 +416,22 @@ function resolveShot(rng,atk,gk,h,fin,pso,min,cq){
   const pk=fin.id==="pk";
   // cq = 決定機の質(→chanceOf)。**渡した側の仕事がここに乗る**
   const sSc=finishScore(atk,fin)*Math.pow(nearOf(h),S.rangePow)*(fin.k||1)
-    *(cq||1)*skS(atk,"finish",fin,min)*(pk?skK(atk,"pkKick"):1)*rr(rng);
+    *(cq||1)*skS(atk,"finish",fin,min)*(pk?skK(atk,"pkKick"):1);
   const gSc=(eff(gk,"def")*S.gkDef+eff(gk,"pow")*S.gkPow+eff(gk,"tec")*S.gkTec)
     *skK(gk,"gk")*skS(gk,"gkFin",fin)*(pk?skK(gk,"pkGk"):1)
     // **PK戦のときだけ**効く札(→docs/03 §3.41)。試合中のPKには掛からない
-    *(pso?skK(gk,"psoGk"):1)*rr(rng);
-  return sSc>gSc*TUNING.th.shot;
+    *(pso?skK(gk,"psoGk"):1);
+  // **能力差をそのまま決定率にしない**(→docs/07 §7.22)。
+  // 撃つ側とGKの比を1に向けて圧縮してから、ぶれを掛けて競らせる。
+  // 圧縮しないと、力の差がそのまま決定率の差になり、
+  // 差が20を超えた対戦の**7割が4点差以上**という壊れ方をする。
+  // ぶれ(rr)は圧縮の外に置く。中に入れると偶然まで潰れて、試合が作業になる。
+  // **PKだけは圧縮しない**。流れの中のシュートは「チームが作った好機」なので
+  // 力の差が二重に効くが、PKは蹴る人とGKだけの固定の一騎打ちで、
+  // そこに同じ圧縮を掛けると決定率が 52% まで落ちて別の競技になる
+  if(pk)return sSc*rr(rng)>gSc*TUNING.th.pk*rr(rng);
+  const r=Math.pow(sSc/(gSc||1),S.gapPow);
+  return r*rr(rng)>TUNING.th.shot*rr(rng);
 }
 // ---------- セットプレー(→docs/07 §7.11) ----------
 // **ファウルは守備側が競り合いに勝った瞬間にしか起きない。** 独立した抽選にすると

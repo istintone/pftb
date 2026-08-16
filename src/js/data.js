@@ -1764,7 +1764,7 @@ const TUNING={
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
   mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
-  th:{ shot:1.00, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
+  th:{ shot:1.16, pk:1.00, origin:0.95, block:1.36, rebound:1.00, aerial:1.15 },
   // セットプレー(→docs/07 §7.11)。**守備側が競り合いに勝った瞬間だけ**ファウルが起きる。
   //   foulK              … 守備チャンネルが持つ反則率に一括で掛ける倍率(→§7.12)
   //   foulBlock          … ブロックのあとのファウル率
@@ -1792,7 +1792,11 @@ const TUNING={
   // **水準が上がっても得点が膨らまないように**(→docs/07 §7.16)。
   // GKのセービング(def)は OVR80 あたりで 20 に張り付くのに、攻撃側は tec/spd が
   // 伸び続ける。GKの評価を pow/tec 寄りにし、枠内率の tec 依存も浅くしてある。
-  shot:{ deadZone:0.25, minRange:0.04, rangePow:1.00,
+  //   gapPow … 撃つ側とGKの比をこの累乗で**1に向けて圧縮する**(→docs/07 §7.22)。
+  //            1.0 = 圧縮なし(力の差がそのまま決定率の差になる)。
+  //            低いほど「格上でも決めきれない」。th.shot と対で調整すること
+  //            (圧縮すると全体の決定率も上がるので、閾値で水準を戻す)
+  shot:{ gapPow:0.45, deadZone:0.25, minRange:0.04, rangePow:1.00,
          gkDef:0.65, gkPow:0.20, gkTec:0.15,
          finStat:0.35, fkAccBase:0.62,
          accBase:0.30, accTec:0.45, accRange:0.55, rebound:0.30,
