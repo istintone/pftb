@@ -1736,11 +1736,11 @@ const lgTrophyId=(lg,div)=>"lg:"+lg+":"+div;
 /** 陳列棚の定義。**獲っていない分も並べる**ので、これが目標の一覧そのものになる。 */
 function trophyDefs(){
   const out=CUPS.map(c=>({ id:c.id, kind:"cup", name:c.trophy, short:c.name,
-    note:c.rounds+"回戦を勝ち抜く", rank:c.prize[0] }));
+    note:c.rounds+"回戦を勝ち抜く", award:achPrize(c.id,"cup",true), rank:c.prize[0] }));
   for(const lg of LEAGUES)for(const d of DIVS)
     out.push({ id:lgTrophyId(lg.id,d), kind:"league",
       name:lg.name+" "+divName(d)+" 制覇", short:lg.name+" "+divName(d),
-      note:"1位でシーズンを終える",
+      note:"1位でシーズンを終える", award:achPrize(lgTrophyId(lg.id,d),"league",true),
       // **易しい順に並べる**。棚がそのまま上への階段に見えるようにする
       rank:lg.tier*10+(4-d) });
   return out.sort((a,b)=>a.kind===b.kind?a.rank-b.rank:(a.kind==="cup"?-1:1));
@@ -1754,11 +1754,50 @@ const trophyCount=()=>(S.player.trophies||[]).length;
 function trophyAdd(id,name,kind){
   const list=S.player.trophies||(S.player.trophies=[]);
   const t=list.find(x=>x.id===id);
-  if(t){ t.n=(t.n||1)+1; t.last=S.world.season; return { t, first:false }; }
+  if(t){
+    t.n=(t.n||1)+1; t.last=S.world.season;
+    achMail(t,kind,false);
+    return { t, first:false };
+  }
   const nt={ id, name, kind, n:1, season:S.world.season, last:S.world.season,
     node:S.career?S.career.node:0, club:S.club?S.club.id:null };
   list.push(nt);
+  achMail(nt,kind,true);
   return { t:nt, first:true };
+}
+/**
+ * その実績に付く報酬(→docs/03 §3.52)。**初優勝にだけシグネチャが付く**。
+ * 一番価値のあるものを棚の目標そのものと結びつけて、実績を飾りで終わらせない。
+ */
+function achPrize(id,kind,first){
+  const A=TUNING.ach;
+  const rar=kind==="cup"?(A.cup[id]||null)
+    :(+String(id).split(":")[2]===1?A.lg1:null);
+  const coin=rar?0:(kind==="cup"?0:(A.lgCoin[+String(id).split(":")[2]]||0));
+  // 2度目からはシグネチャを配らない。**棚に回数が増えるのが実績**で、
+  // ここで毎回配ると、同じ大会を回るだけで収集が終わってしまう
+  if(!first)return { rar:null, coin:rar?A.again[rar]:Math.round(coin*A.again.coin) };
+  return { rar, coin };
+}
+/** 実績の報酬を秘書のお知らせで配る(→§3.52)。受け取りは受信箱で行う。 */
+function achMail(t,kind,first){
+  if(!S.club||!S.career)return null;
+  const P=achPrize(t.id,kind,first);
+  if(!P.rar&&!P.coin)return null;
+  // **同じ実績を2度獲っても別の連絡になる**ように、回数まで鍵に混ぜる
+  const key="ach:"+t.id+":"+(t.n||1);
+  const rng=mulberry32(hashStr(key+":"+S.world.seed));
+  const card=P.rar?drawSig(rng,P.rar):null;
+  const head="監督、"+t.name+"のトロフィーがクラブに届きました。";
+  mailPush(key,{
+    from:"sec", title:t.name+(card?"　記念のカードが届いています":"　報奨が出ています"),
+    text:head+(card
+      ? "この栄誉を聞きつけた"+shortName(card)+"が、うちで戦いたいと申し出ています。"
+        +"こんな機会はそうありません。"
+      : "理事会から"+fmtNum(P.coin)+"コインの報奨が出ています。"),
+    gift:card?{ card, label:RARITY[card.rarity].label+" "+shortName(card) }:{ coin:P.coin },
+  });
+  return key;
 }
 /** 参加条件を満たしているか。**開催日とは別に判定する**(予告に使う)。 */
 function cupOpen(cup){

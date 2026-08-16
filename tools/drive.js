@@ -1798,6 +1798,70 @@ const STEPS = [
     await ctx.shot("20d-scout-le");
   }],
 
+  ["実績の報酬(トロフィーとシグネチャ)", async ctx => {
+    // **初優勝にだけシグネチャが付く**(→docs/03 §3.52)。2度目からはコイン
+    ctx.log("  棚に出る報酬:", await ctx.js(`(()=>{
+      const d=trophyDefs();
+      const sig=d.filter(x=>x.award&&x.award.rar), coin=d.filter(x=>x.award&&x.award.coin);
+      if(sig.length!==14)throw new Error('シグネチャの枠が14でない: '+sig.length);
+      const wc=sig.filter(x=>x.award.rar==='WC').length;
+      if(wc!==10)throw new Error('WC の枠が10でない: '+wc);
+      return 'シグネチャ '+sig.length+'枠（WC '+wc+' / LE '+(sig.length-wc)
+        +'）／ コイン '+coin.length+'枠 ／ 全 '+d.length+'枠';
+    })()`));
+    ctx.log("  初優勝 → 秘書のお知らせ:", await ctx.js(`(()=>{
+      S.player.mail=[]; S.player.trophies=[]; S.player.coll=[];
+      const r=trophyAdd('world', cupById('world').trophy, 'cup');
+      if(!r.first)throw new Error('初優勝にならない');
+      const m=mailLatest();
+      if(!m)throw new Error('お知らせが届かない');
+      const g=mailDef(m).gift;
+      if(!g||!g.card)throw new Error('選手が添えられていない');
+      if(g.card.rarity!=='LEG')throw new Error('LEGENDS でない: '+g.card.rarity);
+      if(!g.card.sig)throw new Error('手で作った実在選手ではない: '+g.card.name);
+      return mailDef(m).title+' ／ '+g.label;
+    })()`));
+    await ctx.js("show('secretary')");
+    await ctx.wait(300);
+    await ctx.shot("21-ach-mail");
+    ctx.log("  受信箱で受け取る:", await ctx.js(`(()=>{
+      const b=[...document.querySelectorAll('#mailLog [data-mail]')];
+      if(!b.length)throw new Error('受け取るボタンが無い');
+      const n0=S.player.coll.length;
+      b[b.length-1].click();
+      return '所持 '+n0+' → (受け取り)';
+    })()`));
+    await ctx.wait(500);
+    await ctx.shot("21b-ach-card");
+    ctx.log("  受け取りの結果:", await ctx.js(`(()=>{
+      closeCard();
+      const c=S.player.coll.find(x=>x.sig);
+      if(!c)throw new Error('加入していない');
+      // **id で引く**。画面を開いた時点でチュートリアルの案内も配り直されるので、
+      // 「一番新しい連絡」では実績のものが取れない
+      const m=mailList().find(x=>String(x.id).indexOf('ach:')===0);
+      if(!m||!m.got)throw new Error('受け取り済みにならない');
+      return RARITY[c.rarity].label+' '+c.name+' が加入 ／ 連絡は受け取り済み';
+    })()`));
+    // **2度目からはシグネチャを配らない**。同じ大会を回るだけで収集が終わってしまう
+    ctx.log("  2度目:", await ctx.js(`(()=>{
+      const n0=S.player.coll.length, coin0=S.club.coins;
+      trophyAdd('world', cupById('world').trophy, 'cup');
+      const m=mailList().find(x=>String(x.id).indexOf('ach:world:2')===0);
+      if(!m)throw new Error('2度目の連絡が届かない');
+      const g=mailDef(m).gift;
+      if(g.card)throw new Error('2度目もシグネチャが出る');
+      mailTake(m.id);
+      if(S.player.coll.length!==n0)throw new Error('2度目で選手が増えている');
+      const got=S.club.coins-coin0;
+      if(got!==TUNING.ach.again.LEG)throw new Error('報奨が違う: '+got);
+      return '棚は ×'+trophyOf('world').n+' ／ 選手は増えず '+got+' コイン';
+    })()`));
+    await ctx.js("show('clubhouse')");
+    await ctx.wait(300);
+    await ctx.shot("21c-ach-shelf");
+  }],
+
   ["タブ巡回", async ctx => {
     for (const [tab, name] of [["cards", "09-cards"], ["deck", "10-deck"], ["season", "11-season"], ["clubhouse", "12-club"]]) {
       await ctx.js(`document.querySelector('#tabs button[data-s="${tab}"]').click()`);

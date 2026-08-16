@@ -2347,8 +2347,15 @@ function renderClubhouse(){
     const t=trophyOf(d.id);
     // 2度目からは回数だけ増える。**初めて獲った季**が実績の中身なので消さない
     const sub=t?("SEASON "+t.season+(t.n>1?" ・ ×"+t.n:"")):d.note;
+    // **初優勝に何が付くかを棚に出す**(→docs/03 §3.52)。棚がそのまま
+    // 「次にどれを獲りにいくか」の一覧になるので、報酬を隠す理由が無い
+    // **短縮形で書く**。RARITY.label(WORLD CLASS)だと2行に折れて棚が読めなくなる
+    const a=d.award, aw=!a?null:a.rar?"初優勝 "+RARITY[a.rar].abbr+" シグネチャ"
+      :a.coin?"初優勝 "+fmtNum(a.coin)+" コイン":null;
     return '<div class="trophy'+(t?"":" off")+'"><i>'+(t?"🏆":"🔒")+'</i><div>'
-      +'<b>'+esc(d.short)+'</b><span>'+esc(sub)+'</span></div></div>';
+      +'<b>'+esc(d.short)+'</b><span>'+esc(sub)+'</span>'
+      +(aw?'<em class="tr-aw'+(a.rar?" sig":"")+'">'+esc(t?"受領済み":aw)+'</em>':"")
+      +'</div></div>';
   };
   const grp=(k,label)=>'<div class="tr-grp">'+label+'</div><div class="trophies">'
     +defs.filter(d=>d.kind===k).map(tile).join("")+'</div>';
