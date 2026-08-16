@@ -1932,13 +1932,64 @@ const STEPS = [
     await ctx.shot("21c-ach-shelf");
   }],
 
+  ["実在選手(シグネチャ)の顔ぶれ", async ctx => {
+    ctx.log("  人数と段:", await ctx.js(`(()=>{
+      const all=signatureCards();
+      const by={}; for(const c of all)by[c.rarity]=(by[c.rarity]||0)+1;
+      const ids=all.map(c=>c.id);
+      if(new Set(ids).size!==ids.length)throw new Error('IDが重複している');
+      // **絵が無い選手を出さない**(→docs/03 §3.19)。ここが抜けると枠だけの札になる
+      const noArt=all.filter(c=>!(ASSETS.sig&&ASSETS.sig[c.art+'_stand']
+                                  &&ASSETS.sig[c.art+'_play']));
+      if(noArt.length)throw new Error('絵が無い: '+noArt.map(c=>c.art).join(','));
+      // 固有スキル(→docs/03 §3.41)と、段の OVR 範囲
+      for(const c of all){
+        const f=SKILL_FX[c.skills[0]];
+        if(!f||f.sig!==c.sig)throw new Error(c.name+' の固有スキルが無い');
+        for(const s of c.skills)if(!SKILL_FX[s])throw new Error(c.name+' の札 '+s+' が未定義');
+        const [lo,hi]=RARITY[c.rarity].ovr;
+        if(c.ovr<lo||c.ovr>hi)throw new Error(c.name+' の OVR が段の外: '+c.ovr);
+      }
+      return all.length+'人（LE '+by.LEG+' / WC '+by.WC+'）／ 絵・固有スキル・OVR すべて揃っている';
+    })()`));
+    // 新顔をカードとして開いて、絵と札が出ることを目で見る
+    await ctx.js(`(()=>{
+      const add=['maradona','iniesta','nesta','cafu','davids','lampard','vandersar',
+                 'gvardiol','cubarsi','palmer','estevao','endrick','ferran',
+                 'tonali','mastantuono'];
+      S.player.coll=signatureCards().filter(c=>add.includes(c.sig));
+      S.squad=[]; show('cards');
+    })()`);
+    await ctx.wait(400);
+    await ctx.shot("25-sig-new");
+    ctx.log("  カードを開く:", await ctx.js(`(()=>{
+      const c=S.player.coll.find(x=>x.sig==='maradona');
+      openCard(c);
+      const b=document.getElementById('cardModalBody');
+      const sk=[...b.querySelectorAll('.skill')].map(e=>e.textContent.trim());
+      if(sk.length!==4)throw new Error('札が4枚でない: '+sk.length);
+      if(!b.querySelector('.skill.sig'))throw new Error('固有スキルが金にならない');
+      return c.name+' OVR'+c.ovr+' ／ '+sk.join(' / ');
+    })()`));
+    await ctx.wait(300);
+    await ctx.shot("25b-sig-card");
+    await ctx.js("closeCard()");
+  }],
+
   ["まとめて売る(CARDS の一括売却)", async ctx => {
     // **売れる札を用意する**。ここまでの検査で所持が実在選手と編成中に偏り、
     // 「売れる札が1枚も無い」状態になっていることがある
     ctx.log("  下ごしらえ:", await ctx.js(`(()=>{
       const rng=mulberry32(20260817);
+      // **実在選手を退けてから足す**。売れない札はOVRが高くて一覧の先頭を占めるので、
+      // 混ざったままだと1ページ目に選べる札が1枚も出ない
+      S.player.coll=S.player.coll.filter(c=>!c.sig);
+      // **編成を先に組む**。あとから組むと、いま足した売り物まで
+      // 自動編成に吸い上げられて、選べる札が1枚も残らない
+      if(!(S.squad||[]).filter(Boolean).length)S.squad=autoSquad();
       for(let i=0;i<8;i++)S.player.coll.push(makeCard(rng,rpick(rng,POS),{rarity:"REG"}));
-      return '売れる札を8枚足した ／ 所持 '+S.player.coll.length+'枚';
+      return '売れる札を8枚足した ／ 所持 '+S.player.coll.length+'枚 ／ 編成 '
+        +(S.squad||[]).filter(Boolean).length+'人';
     })()`));
     await ctx.js("show('cards')");
     await ctx.wait(200);

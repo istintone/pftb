@@ -303,6 +303,40 @@ const SKILL_FX={
     fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"vision", k:1.20 }] },
   "間で受ける":     { sig:"wirtz", move:"間で受ける",
     fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"recv", k:1.25 }] },
+  // --- 追加の実在選手(2026-08-17) ---
+  // **札の組み合わせは既にある形から採る**(→docs/03 §3.41)。
+  // 層とグループごとの s は careertest が価値の帯で見張っていて、
+  // 新しい数字を思いつきで置くと必ず落ちる。**個性は2枚目の掛かり先で出す**。
+  "静かな支配":     { sig:"vandersar",
+    fx:[{ at:"gk", k:1.10 },{ at:"marshal", k:1.15 }] },
+  "間合いの芸術":   { sig:"nesta", move:"間合いで奪う",
+    fx:[{ at:"counter", grp:"tec", s:1.14 },{ at:"clean", k:0.70 }] },
+  "果てなき上下動": { sig:"cafu", move:"駆け上がり",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"stam", k:0.80 }] },
+  "番犬":           { sig:"davids", move:"食い下がり",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"tough", k:1.12 }] },
+  "二列目の砲":     { sig:"lampard", move:"遅れて撃つ",
+    fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"start", k:1.20 }] },
+  "白い旋律":       { sig:"iniesta", move:"するりと抜ける",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"recv", k:1.35 }] },
+  "神の左":         { sig:"maradona", move:"五人抜き",
+    fx:[{ at:"origin", grp:"cut", w:1.85, s:1.36, when:"fresh" },{ at:"vision", k:1.20 }] },
+  "若き司令塔":     { sig:"cubarsi", move:"背後を射抜く",
+    fx:[{ at:"origin", grp:"long", s:1.09 },{ at:"cover", k:1.18 }] },
+  "持ち上がる壁":   { sig:"gvardiol", move:"運び出し",
+    fx:[{ at:"origin", grp:"carry", w:1.55, s:1.17, when:"fresh" },{ at:"aerial", k:1.18 }] },
+  "先を読む足":     { sig:"tonali", move:"先回り",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"mid", k:1.10 }] },
+  "未完の煌めき":   { sig:"mastantuono", move:"若さの一閃",
+    fx:[{ at:"origin", grp:"cut", w:1.85, s:1.36, when:"fresh" },{ at:"mood", k:1.06 }] },
+  "冷たい一撃":     { sig:"palmer", move:"表情を変えない一撃",
+    fx:[{ at:"finish", grp:"set", s:1.08 },{ at:"pkKick", k:1.25 }] },
+  "詰めの嗅覚":     { sig:"ferran", move:"押し込む",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"recv", k:1.25 }] },
+  "跳ねる才能":     { sig:"endrick", move:"弾ける初速",
+    fx:[{ at:"origin", grp:"spd", s:1.07 },{ at:"start", k:1.18 }] },
+  "奔放な足":       { sig:"estevao", move:"止まらない仕掛け",
+    fx:[{ at:"origin", grp:"cut", w:1.85, s:1.36, when:"fresh" },{ at:"mood", k:1.05 }] },
 };
 /**
  * 固有スキルの発動条件(→docs/03 §3.41)。**文脈が分からなければ発動しない**

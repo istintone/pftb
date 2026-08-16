@@ -102,7 +102,10 @@ def out_dir(path):
 def main():
     force = "--force" in sys.argv
     dry = "--dry" in sys.argv
-    sheets = sorted(p for g in GROUPS for p in (ART / g).rglob("*.png") if p.is_file())
+    # **png と jpg の両方を拾う**。生成の出どころによって拡張子が変わるので、
+    # 素材を置くたびに変換させない(名前だけがキーになる)
+    sheets = sorted(p for g in GROUPS for e in ("*.png", "*.jpg", "*.jpeg")
+                    for p in (ART / g).rglob(e) if p.is_file())
     if not sheets:
         sys.exit("シートが1枚もありません: %s" % ART)
     for d in OUT.values():
