@@ -575,6 +575,7 @@ let _cardFilter="ALL";
 // 区切る。絞り込みを変えたら1ページ目へ戻す(前のページ番号が残ると空振りする)。
 const CARDS_PER_PAGE=12;
 let _cardPage=1;
+let _bulk=false;                    // まとめて売るモード(→docs/03 §3.54)
 function renderCards(){
   const all=availableCards(), own=S.player.coll.length;
   $("cardsFilter").innerHTML=["ALL"].concat(POS).map(p=>
@@ -582,6 +583,11 @@ function renderCards(){
   $("cardsFilter").querySelectorAll("button").forEach(b=>{
     b.onclick=()=>{ _cardFilter=b.dataset.f; _cardPage=1; renderCards(); };
   });
+  // **まとめて売るモード**(→docs/03 §3.54)。入ると札のタップが「開く」から
+  // 「選ぶ」に変わるので、いま何のモードなのかを必ず画面に出す
+  $("cardsBulk").textContent=_bulk?"やめる":"まとめて売る";
+  $("cardsBulk").classList.toggle("on",_bulk);
+  $("scr-cards").classList.toggle("bulk",_bulk);
   const list=all.filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter).sort((a,b)=>b.ovr-a.ovr);
   const pages=Math.max(1,Math.ceil(list.length/CARDS_PER_PAGE));
   if(_cardPage>pages)_cardPage=pages;                    // 売って減ったときの受け皿
@@ -589,9 +595,10 @@ function renderCards(){
   const page=list.slice(from,from+CARDS_PER_PAGE);
   $("cardsCount").innerHTML="所持カード "+list.length+" / "+all.length
     +"　<span class=\"loan\">(CLUBS)</span> クラブからの貸与 "+(all.length-own)+" 枚";
-  $("cardsGrid").innerHTML=page.length?page.map(cardTile).join("")
+  $("cardsGrid").innerHTML=page.length
+    ?page.map(c=>_bulk?bulkTile(c):cardTile(c)).join("")
     :'<div class="stub"><b>該当するカードがありません</b><span>絞り込みを変えてみてください</span></div>';
-  wireCardTiles($("cardsGrid"));
+  if(_bulk)wireBulkTiles($("cardsGrid")); else wireCardTiles($("cardsGrid"));
   // **1ページに収まるならページ送りは出さない**。要らない操作を置かない
   $("cardsPager").innerHTML=pages>1
     ?'<button class="pg-b" id="cardsPrev"'+(_cardPage<=1?" disabled":"")+'>‹ 前</button>'
@@ -604,11 +611,89 @@ function renderCards(){
     $("cardsNext").onclick=()=>{ if(_cardPage<pages){ _cardPage++; renderCards();
       $("appBody").scrollTop=0; } };
   }
+  renderSellBar(list);
 }
 function wireCardTiles(root){
   root.querySelectorAll("[data-card]").forEach(el=>{
     el.onclick=()=>openCard(Number(el.dataset.card));
   });
+}
+
+// ---------- まとめて売る(→docs/03 §3.54) ----------
+// 1枚ずつ開いて売ると、整理のたびに「開く → 売る → 確認 → 閉じる」を
+// 人数ぶん繰り返すことになる。**選んでから一度だけ確認する**形にする。
+// 売れない札(編成・師弟・実在選手・貸与)は選べないようにし、理由をその場に出す。
+
+/** 選んだ札。**ページと絞り込みをまたいで残る**ので、送りながら積める。 */
+let _bulkPick=new Set();
+let _bulkArm=false;                                  // 二段確認の armed 状態
+
+/** まとめて売るモードの札。押せるかどうかと、押せない理由を面に出す。 */
+function bulkTile(c){
+  const why=sellWhy(c), on=_bulkPick.has(c.id);
+  return '<div class="pcard '+rarClass(c)+(why?" no-sell":"")+(on?" picked":"")+'"'
+    +(why?"":' data-pick="'+c.id+'"')+cardBgStyle(c)+'>'
+    +cardFace(c)
+    +(why?'<span class="pc-nosell">'+esc(sellWhyShort(why))+'</span>'
+      :'<span class="pc-tick">'+(on?"✓":"")+'</span>'
+       +'<span class="pc-price">'+fmtNum(sellPrice(c))+'</span>')
+  +'</div>';
+}
+/** 札の上に載せる短い理由。長い説明は1枚売りの画面が持っている。 */
+const sellWhyShort=why=>
+  why.indexOf("編成")>=0?"編成中"
+  :why.indexOf("師弟")>=0?"師弟"
+  :why.indexOf("実在")>=0?"コレクション"
+  :why.indexOf("貸与")>=0?"貸与"
+  :"売れません";
+function wireBulkTiles(root){
+  root.querySelectorAll("[data-pick]").forEach(el=>{
+    el.onclick=()=>{
+      const id=Number(el.dataset.pick);
+      if(_bulkPick.has(id))_bulkPick.delete(id); else _bulkPick.add(id);
+      _bulkArm=false;                                // 選び直したら確認はやり直し
+      renderCards();
+    };
+  });
+}
+/**
+ * 足元の帯。**選んだ数と合計額を常に見せる**(→docs/06 §6.35)。
+ * 売却は戻せないので、1枚売りと同じ二段確認にする。
+ */
+function renderSellBar(list){
+  const bar=$("cardsSellBar");
+  if(!_bulk){ bar.innerHTML=""; bar.classList.remove("on"); return; }
+  bar.classList.add("on");
+  // **いま見えている中で選べるもの**。全選択はページではなく絞り込み全体に掛ける
+  const sellable=list.filter(canSell);
+  const n=_bulkPick.size, coin=sellTotal([..._bulkPick]);
+  const allOn=sellable.length>0&&sellable.every(c=>_bulkPick.has(c.id));
+  bar.innerHTML='<div class="bs-row">'
+      +'<button class="pg-b" id="bsAll">'+(allOn?"すべて外す":"すべて選ぶ")+'</button>'
+      +'<span class="bs-n">'+n+' 人　<b class="num">'+fmtNum(coin)+'</b> コイン</span>'
+    +'</div>'
+    +'<button class="btn bs-go'+(_bulkArm?" arm":"")+'" id="bsGo"'+(n?"":" disabled")+'>'
+      +(_bulkArm?"本当に "+n+" 人を売る":"売却する")+'</button>'
+    +(_bulkArm?'<span class="bs-w">この操作は戻せません</span>':"");
+  $("bsAll").onclick=()=>{
+    if(allOn)for(const c of sellable)_bulkPick.delete(c.id);
+    else for(const c of sellable)_bulkPick.add(c.id);
+    _bulkArm=false; renderCards();
+  };
+  $("bsGo").onclick=async()=>{
+    if(!_bulkPick.size)return;
+    if(!_bulkArm){ _bulkArm=true; renderSellBar(list); return; }
+    const r=sellCards([..._bulkPick]);
+    _bulkPick.clear(); _bulkArm=false;
+    await save(); headUI(); renderCards();
+    toast(r.sold?r.sold+" 人を "+fmtNum(r.coin)+" コインで売却しました"
+      :"売却できませんでした");
+  };
+}
+/** モードの出入り。**入るたびに選び直し**にする(前の選択を持ち越さない)。 */
+function toggleBulk(){
+  _bulk=!_bulk; _bulkPick.clear(); _bulkArm=false;
+  renderCards();
 }
 // ---------- GALLERY(カード見本) ----------
 // LEGENDS は実在選手の段でパックからは出ず、WORLD CLASS もプロスカウト(→§3.26)から
@@ -3853,6 +3938,7 @@ document.querySelectorAll("#scr-schedule .comp").forEach(b=>{
   b.onclick=()=>{ _comp=b.dataset.comp; renderSchedule(); };
 });
 $("scoutMarket").onclick=()=>show("market",{push:1});
+$("cardsBulk").onclick=toggleBulk;
 $("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast("自動編成しました"); };
 $("btnForm").onclick=openForm;
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる

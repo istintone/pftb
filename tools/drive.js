@@ -1932,6 +1932,84 @@ const STEPS = [
     await ctx.shot("21c-ach-shelf");
   }],
 
+  ["まとめて売る(CARDS の一括売却)", async ctx => {
+    // **売れる札を用意する**。ここまでの検査で所持が実在選手と編成中に偏り、
+    // 「売れる札が1枚も無い」状態になっていることがある
+    ctx.log("  下ごしらえ:", await ctx.js(`(()=>{
+      const rng=mulberry32(20260817);
+      for(let i=0;i<8;i++)S.player.coll.push(makeCard(rng,rpick(rng,POS),{rarity:"REG"}));
+      return '売れる札を8枚足した ／ 所持 '+S.player.coll.length+'枚';
+    })()`));
+    await ctx.js("show('cards')");
+    await ctx.wait(200);
+    ctx.log("  モードに入る:", await ctx.js(`(()=>{
+      const b=document.getElementById('cardsBulk');
+      if(!b)throw new Error('入口が無い');
+      b.click();
+      if(!document.getElementById('scr-cards').classList.contains('bulk'))
+        throw new Error('モードにならない');
+      const t=[...document.querySelectorAll('#cardsGrid .pcard')];
+      const pick=[...document.querySelectorAll('#cardsGrid [data-pick]')];
+      const no=[...document.querySelectorAll('#cardsGrid .pcard.no-sell')];
+      if(!pick.length)throw new Error('選べる札が1枚も無い');
+      if(pick.length+no.length!==t.length)throw new Error('選べも売れなくもない札がある');
+      return t.length+'枚 中 選べる '+pick.length+' / 売れない '+no.length
+        +'（'+[...new Set(no.map(x=>x.querySelector('.pc-nosell').textContent))].join(',')+'）';
+    })()`));
+    await ctx.shot("24-bulk-sell");
+    // **編成に入っている選手は選べない**(→docs/03 §3.54)
+    ctx.log("  編成中は選べない:", await ctx.js(`(()=>{
+      const inSquad=(S.squad||[]).filter(Boolean);
+      if(!inSquad.length)throw new Error('編成が空');
+      for(const id of inSquad)
+        if(document.querySelector('#cardsGrid [data-pick="'+id+'"]'))
+          throw new Error('編成中の選手が選べる: '+id);
+      return inSquad.length+'人が編成中 ／ どれも選べない';
+    })()`));
+    ctx.log("  選ぶと合計が出る:", await ctx.js(`(()=>{
+      const pick=[...document.querySelectorAll('#cardsGrid [data-pick]')].slice(0,3);
+      let want=0;
+      for(const el of pick){ el.click(); want+=sellPrice(cardById(Number(el.dataset.pick))); }
+      const bar=document.getElementById('cardsSellBar').textContent;
+      if(bar.indexOf(fmtNum(want))<0)throw new Error('合計が合わない: '+bar+' / 期待 '+want);
+      if(bar.indexOf('3 人')<0)throw new Error('人数が出ない: '+bar);
+      return '3人 '+fmtNum(want)+' コイン';
+    })()`));
+    await ctx.wait(200);
+    await ctx.shot("24b-bulk-picked");
+    // **戻せないので二段**(1枚売りと同じ作法)
+    ctx.log("  一度目は確認になる:", await ctx.js(`(()=>{
+      const n0=S.player.coll.length;
+      document.getElementById('bsGo').click();
+      if(S.player.coll.length!==n0)throw new Error('一度目で売れてしまう');
+      const t=document.getElementById('bsGo').textContent;
+      if(t.indexOf('本当に')<0)throw new Error('確認の文言が出ない: '+t);
+      return t;
+    })()`));
+    ctx.log("  二度目で売れる:", await ctx.js(`(()=>{
+      const n0=S.player.coll.length, c0=S.club.coins;
+      const want=sellTotal([...document.querySelectorAll('#cardsGrid .pcard.picked')]
+        .map(x=>Number(x.dataset.pick)));
+      document.getElementById('bsGo').click();
+      const got=S.club.coins-c0, gone=n0-S.player.coll.length;
+      if(gone!==3)throw new Error('減った枚数が違う: '+gone);
+      if(got!==want)throw new Error('入ったコインが違う: '+got+' / 期待 '+want);
+      return gone+'人 → +'+fmtNum(got)+' コイン ／ 残 '+S.player.coll.length+'枚';
+    })()`));
+    await ctx.wait(400);
+    await ctx.shot("24c-bulk-done");
+    ctx.log("  抜けると元どおり:", await ctx.js(`(()=>{
+      document.getElementById('cardsBulk').click();
+      if(document.getElementById('scr-cards').classList.contains('bulk'))
+        throw new Error('モードが抜けない');
+      if(document.querySelector('#cardsGrid [data-pick]'))throw new Error('選択の札が残る');
+      if(!document.querySelector('#cardsGrid [data-card]'))throw new Error('開く札に戻らない');
+      if(document.getElementById('cardsSellBar').textContent.trim())
+        throw new Error('足元の帯が残る');
+      return 'タップは「開く」に戻る ／ 帯も消える';
+    })()`));
+  }],
+
   ["タブ巡回", async ctx => {
     for (const [tab, name] of [["cards", "09-cards"], ["deck", "10-deck"], ["season", "11-season"], ["clubhouse", "12-club"]]) {
       await ctx.js(`document.querySelector('#tabs button[data-s="${tab}"]').click()`);

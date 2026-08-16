@@ -675,6 +675,29 @@ function marketBuy(id){
   return { card, price };
 }
 
+/**
+ * まとめて売る(→docs/03 §3.54)。**売れないものは黙って飛ばす**。
+ * 1枚ずつ sellCard に通すので、編成・師弟・実在選手・貸与の縛りは
+ * 1枚売りとまったく同じ判断になる(ここに条件を書き足さない)。
+ * 返り値の `sold` は実際に売れた枚数で、選んだ数と一致するとは限らない。
+ */
+function sellCards(ids){
+  const out={ sold:0, coin:0, names:[], skipped:[] };
+  for(const id of (ids||[])){
+    const c=cardById(id);
+    if(!c){ out.skipped.push(id); continue; }
+    const r=sellCard(id);
+    if(!r){ out.skipped.push(id); continue; }
+    out.sold++; out.coin+=r.coin; out.names.push(r.name);
+  }
+  return out;
+}
+/** 選んだ札の合計売却額。**売れないものは数えない**(画面の合計と実額を合わせる)。 */
+const sellTotal=ids=>(ids||[]).reduce((n,id)=>{
+  const c=cardById(id);
+  return n+(c&&canSell(c)?sellPrice(c):0);
+},0);
+
 const cardById=id=>availableCards().find(c=>c.id===id)||null;
 const isLoaned=card=>!!card&&S.club.loan.some(c=>c.id===card.id);
 
