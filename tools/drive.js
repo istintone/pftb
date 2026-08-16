@@ -1798,6 +1798,76 @@ const STEPS = [
     await ctx.shot("20d-scout-le");
   }],
 
+  ["移籍市場(名指しで買う)", async ctx => {
+    await ctx.js("show('gacha')");
+    await ctx.wait(200);
+    ctx.log("  スカウトからの入口:", await ctx.js(`(()=>{
+      const b=document.getElementById('scoutMarket');
+      if(!b)throw new Error('入口が無い');
+      b.click(); return b.textContent;
+    })()`));
+    await ctx.wait(300);
+    await ctx.shot("23-market");
+    ctx.log("  並ぶ顔ぶれ:", await ctx.js(`(()=>{
+      const l=marketList();
+      if(l.length!==TUNING.market.slots)throw new Error('人数が違う: '+l.length);
+      if(l.some(c=>c.rarity==='LEG'))throw new Error('LEGENDS が並んでいる');
+      // **開き直しても動かない**(→docs/03 §3.53)
+      const a=marketList().map(c=>c.name).join(',');
+      if(a!==l.map(c=>c.name).join(','))throw new Error('開くたびに顔ぶれが変わる');
+      return l.map(c=>RARITY[c.rarity].abbr+(c.sig?'*':'')+' '+fmtNum(c.price)).join(' / ');
+    })()`));
+    ctx.log("  買う:", await ctx.js(`(()=>{
+      const c=marketList()[0];
+      S.club.coins=c.price;                       // ちょうど買える額にする
+      renderMarket();
+      const b=[...document.querySelectorAll('#mkList [data-buy]')]
+        .find(x=>x.dataset.buy===c.id);
+      if(!b)throw new Error('買うボタンが無い');
+      if(b.disabled)throw new Error('ちょうどの額で押せない');
+      const n0=S.player.coll.length;
+      const r=marketBuy(c.id);
+      if(!r)throw new Error('買えない');
+      if(S.player.coll.length!==n0+1)throw new Error('加入しない');
+      if(S.club.coins!==0)throw new Error('コインが引かれていない: '+S.club.coins);
+      // **同じ枠は二度は買えない**
+      if(marketBuy(c.id))throw new Error('同じ選手が二度買える');
+      if(typeof r.card.id!=='number')throw new Error('通し番号が振られていない: '+r.card.id);
+      return shortName(r.card)+' を '+fmtNum(r.price)+' コインで獲得 ／ 残 '+S.club.coins;
+    })()`));
+    await ctx.js("renderMarket()");
+    await ctx.wait(300);
+    await ctx.shot("23b-market-sold");
+    // **節が変われば総入れ替え**。逃したら消える(→docs/03 §3.53)
+    ctx.log("  節が変わると:", await ctx.js(`(()=>{
+      const was=marketList().map(c=>c.name).join(',');
+      S.career.node++;
+      const now=marketList();
+      if(now.map(c=>c.name).join(',')===was)throw new Error('顔ぶれが入れ替わらない');
+      if(now.some(c=>c.sold))throw new Error('前の節の売り切れを引きずっている');
+      S.career.node--;
+      return '6人とも入れ替わる ／ 売り切れは持ち越さない';
+    })()`));
+    // **実在選手はまれ**(→docs/03 §3.53)。桁が変わるので行ごと立てて見せる。
+    // たね4242では第19節に並ぶので、そこまで飛ばして撮る
+    ctx.log("  実在選手が並ぶ節:", await ctx.js(`(()=>{
+      const keep=S.career.node;
+      S.world.seed=4242; S.club.coins=120000;
+      for(let i=1;i<400;i++){
+        S.career.node=i;
+        const c=marketList().find(x=>x.sig);
+        if(!c)continue;
+        renderMarket();
+        if(c.price<TUNING.market.sigMin)throw new Error('下限を割っている: '+c.price);
+        return '第'+i+'節に '+shortName(c)+' が '+fmtNum(c.price)+' コイン';
+      }
+      S.career.node=keep;
+      throw new Error('400節みても実在選手が並ばない');
+    })()`));
+    await ctx.wait(300);
+    await ctx.shot("23c-market-sig");
+  }],
+
   ["実績の報酬(トロフィーとシグネチャ)", async ctx => {
     // **初優勝にだけシグネチャが付く**(→docs/03 §3.52)。2度目からはコイン
     ctx.log("  棚に出る報酬:", await ctx.js(`(()=>{

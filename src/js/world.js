@@ -591,6 +591,90 @@ function sellCard(id){
     if(k.split(":").includes(String(id)))delete S.career.bond[k];
   return { coin, name:c.name };
 }
+
+// ---------- 移籍市場(→docs/03 §3.53) ----------
+// **名指しで買える唯一の経路**。ほかの経路(スカウト・引換券・実績・トレード)は
+// どれも抽選か、向こうから来るもので、「この枠にこの選手が要る」に応えられない。
+// 顔ぶれは節から決まるので、**節が変われば総入れ替え**(逃したら消える)。
+
+/** その節の市場のたね。**同じ節なら何度開いても同じ顔ぶれ**になる。 */
+const marketSeed=()=>hashStr("market:"+S.world.seed+":"+(S.career?S.career.node:0));
+/** 買値。売却カーブ(→§3.46)に段ごとの倍率を掛けるだけで出す。 */
+function marketPrice(card){
+  if(!card)return 0;
+  const M=TUNING.market;
+  const k=card.rarity==="WC"?M.wcK*(card.sig?M.sigK:1):M.k;
+  // **段の下限からどれだけ抜けているか**で伸ばす。売却カーブだけだと平らすぎて、
+  // 能力が見えている市場では上のOVRを買うだけの作業になる
+  const lo=(RARITY[card.rarity]||RARITY.STD).ovr[0];
+  const up=1+Math.max(0,card.ovr-lo)*M.ovrK;
+  const p=Math.round(sellPrice(card)*k*up/100)*100;  // 100コイン刻みに丸める
+  return card.sig?Math.max(p,M.sigMin):p;            // 実在選手には底がある
+}
+/**
+ * その節に並ぶ選手。**毎回同じものを組み立てる**ので、画面を開き直しても動かない。
+ * カードのidは節と枠から決まる固定値で、**買ったときに本物のidを振り直す**
+ * (ここで nextCardId を使うと、開くたびに番号が進んで別人になる)。
+ */
+function marketList(){
+  if(!S.club||!S.career)return [];
+  const M=TUNING.market, rng=mulberry32(marketSeed());
+  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+  const sold=S.career.market||(S.career.market={});
+  const out=[];
+  for(let i=0;i<M.slots;i++){
+    const pos=rpick(rng,POS);
+    let c=null;
+    if(rng()<M.wc){
+      // **実在選手はまれ**(→§3.53)。まだ持っていない人からしか出ない
+      const pool=rng()<M.sig
+        ?signatureCards().filter(x=>x.rarity==="WC"&&!mine.has(x.sig))
+        :[];
+      c=pool.length?JSON.parse(JSON.stringify(rpick(rng,pool)))
+        :makeCardAt(rng,pos,{ rarity:"WC" });
+    }else{
+      const r=rng(), R=M.rar;
+      c=makeCardAt(rng,pos,{ rarity:r<R.SPE?"SPE":r<R.SPE+R.REG?"REG":"STD" });
+    }
+    // **枠に紐づくid**。画面の data 属性はこれを持つ(→docs/06 の取り違えの教訓)
+    c.id="mk"+S.career.node+"-"+i;
+    c.club=c.club||rpick(rng,CLUBS).name;             // 「どこから獲るか」を出す
+    c.price=marketPrice(c);
+    c.sold=!!sold[c.id];
+    out.push(c);
+  }
+  return out;
+}
+/** 市場の選手を作る。**カード番号を進めない**(買うまでは実体を持たせない)。 */
+function makeCardAt(rng,pos,opts){
+  const keep=uid; uid=8800000;
+  const c=makeCard(rng,pos,opts);
+  uid=keep;
+  return c;
+}
+const marketOf=id=>marketList().find(c=>c.id===id)||null;
+/** 買えない理由(買えるなら null)。**理由を返す**ので画面はそのまま出せばよい。 */
+function marketWhy(card){
+  if(!card)return "選手が見つかりません";
+  if(card.sold)return "この選手はもう移籍しました";
+  if(S.club.coins<card.price)return "コインが足りません";
+  return null;
+}
+/** 買う。**その節のその枠は売り切れになる**(同じ選手を2度は買えない)。 */
+function marketBuy(id){
+  const c=marketOf(id);
+  if(!c||marketWhy(c))return null;
+  const price=c.price;
+  S.club.coins-=price;
+  (S.career.market||(S.career.market={}))[id]=1;
+  // ここで初めて本物のカードにする。**節をまたぐと市場のidは意味を失う**ので、
+  // 手元に入れる瞬間に通し番号へ載せ替える
+  const card={ ...c, id:nextCardId() };
+  delete card.price; delete card.sold;
+  S.player.coll.push(card);
+  return { card, price };
+}
+
 const cardById=id=>availableCards().find(c=>c.id===id)||null;
 const isLoaned=card=>!!card&&S.club.loan.some(c=>c.id===card.id);
 

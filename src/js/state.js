@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=29;
+const SAVE_VER=30;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -70,6 +70,9 @@ function defaultState(){
       kp:null,
       // 済ませたトレードの節目(→docs/03 §3.49)。断った場合もここに入る
       tradeDone:[],
+      // 移籍市場で買い取った枠(→docs/03 §3.53)。{ "mk<節>-<枠>": 1 }。
+      // **節が変われば市場は総入れ替え**なので、鍵は節をまたいで意味を持たない
+      market:{},
       // クラブチャット(→docs/03 §3.29)。**節ごとに畳む**ので、節が進めば消える。
       // { log:[{w,t}], i:段の位置, step:入力待ちの段, sel:{選んだもの} }
       chat:null,
@@ -323,6 +326,8 @@ function migrate(){
     for(const m of MAILS)if(m.tut&&!S.player.mail.some(x=>x.id===m.id))
       S.player.mail.push({ id:m.id, at:0, read:true, got:true });
   }
+  // v29 → v30: 移籍市場(→docs/03 §3.53)。**買った枠の覚え書きを足しただけ**
+  if(S.v<30&&S.career&&!S.career.market)S.career.market={};
   if(S.v<26){
     if(S.club&&S.club.sponsor===undefined)S.club.sponsor=null;
     if(S.career&&S.career.streak==null)S.career.streak=0;

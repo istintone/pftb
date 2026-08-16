@@ -31,6 +31,7 @@ const SCREENS={
   foe:       { title:"OPPONENT",  under:"season",  chrome:"back", render:()=>renderFoe() },
   gallery:   { title:"GALLERY",   under:"clubhouse", chrome:"back", render:()=>renderGallery() },
   gacha:     { title:"SCOUT",     under:"home",    chrome:"back", render:()=>renderScout() },
+  market:    { title:"MARKET",    under:"home",    chrome:"back", render:()=>renderMarket() },
   // 受信箱は**チャットとして読む**(→docs/03 §3.43)。上が古く、下が最新。
   // 開いたら一番下(=いま言われていること)まで送る
   secretary: { title:"SECRETARY", under:"home",    chrome:"back", render:()=>renderMail(),
@@ -1290,6 +1291,50 @@ function buyScout(id){
   save(); headUI(); renderScout();
   const best=_scoutGot.reduce((b,c)=>RAR_KEYS.indexOf(c.rarity)>RAR_KEYS.indexOf(b.rarity)?c:b);
   toast(pk.name+"：最高 "+RARITY[best.rarity].label+" "+shortName(best));
+}
+
+/**
+ * 移籍市場(→docs/03 §3.53)。**能力も値段も全部見えている**のが、
+ * スカウト(引く)との違いそのものなので、隠すものは何も無い。
+ * 一覧は買値の高い順。高い選手が上にあるほうが「今日の目玉」が伝わる。
+ */
+function renderMarket(){
+  const list=marketList().slice().sort((a,b)=>b.price-a.price);
+  const left=(S.career?S.career.limit-S.career.node:0);
+  $("mkHead").innerHTML="所持コイン <b class=\"num\">"+fmtNum(S.club?S.club.coins:0)+"</b>"
+    +'<span class="mk-note">第'+(S.career?S.career.node:0)+"節の顔ぶれ　"
+    +(left>0?"次の節には入れ替わります":"")+"</span>";
+  $("mkList").innerHTML=list.map(c=>{
+    const why=marketWhy(c), R=RARITY[c.rarity];
+    return '<div class="mk-row'+(c.sold?" gone":"")+(c.rarity==="WC"?" wc":"")+'">'
+      +'<div class="mk-b" data-look="'+esc(c.id)+'">'
+        +'<div class="mk-nm">'+esc(shortName(c))
+          +'<i class="mk-r '+esc(R.bg)+'">'+esc(R.abbr)+'</i>'
+          +(c.sig?'<i class="mk-sig">実名</i>':"")+'</div>'
+        +'<div class="mk-de">'+esc(primarySub(c))+'　OVR '+c.ovr
+          +(c.club?'　'+esc(c.club):"")+'</div></div>'
+      +'<button class="btn mk-buy" data-buy="'+esc(c.id)+'"'+(why?" disabled":"")+'>'
+        +(c.sold?"移籍済み":fmtNum(c.price))+'</button>'
+    +'</div>';
+  }).join("");
+  // **押す前に中身を見られる**。値段だけで決めさせない
+  $("mkList").querySelectorAll("[data-look]").forEach(el=>{
+    el.onclick=()=>{ const c=marketOf(el.dataset.look); if(c)openCard(c); };
+  });
+  $("mkList").querySelectorAll("[data-buy]").forEach(el=>{
+    el.onclick=()=>buyMarket(el.dataset.buy);
+  });
+}
+function buyMarket(id){
+  const c=marketOf(id); if(!c)return;
+  const why=marketWhy(c);
+  if(why){ toast(why); return; }
+  if(!confirm(shortName(c)+" を "+fmtNum(c.price)+" コインで獲得します。よろしいですか?"))return;
+  const r=marketBuy(id); if(!r)return;
+  seeNow("scoutDone");                             // 補強を「やった」(→docs/03 §3.43)
+  save(); headUI(); renderMarket();
+  toast(RARITY[r.card.rarity].label+" "+shortName(r.card)+" が加入しました");
+  openCard(r.card);
 }
 
 // ---------- SEASON(任期スケジュール = クラブ進行の起点) ----------
@@ -3807,6 +3852,7 @@ $("ctCoach").oninput=updateSignature;
 document.querySelectorAll("#scr-schedule .comp").forEach(b=>{
   b.onclick=()=>{ _comp=b.dataset.comp; renderSchedule(); };
 });
+$("scoutMarket").onclick=()=>show("market",{push:1});
 $("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast("自動編成しました"); };
 $("btnForm").onclick=openForm;
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
