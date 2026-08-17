@@ -2260,6 +2260,36 @@ const STEPS = [
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
       if (tab === "clubhouse") {
+        // 経歴(→docs/03 §3.2.3)。**着地した部**と**直近だけ**
+        ctx.log("  経歴:", await ctx.js(`(()=>{
+          // 着地した部の書き方
+          const k=[['昇格',2,'DIV1昇格'],['降格',1,'DIV2降格'],
+                   ['残留',2,'DIV2'],['在任',3,'DIV3']];
+          for(const [res,div,want] of k){
+            const got=careerDiv({div,result:res});
+            if(got!==want)throw new Error(res+'(DIV'+div+') の書き方が違う: '+got+' / 期待 '+want);
+          }
+          if(careerDiv({div:1,result:'昇格'})!=='DIV1昇格')throw new Error('DIV1より上へ上がってしまう');
+          if(careerDiv({div:3,result:'降格'})!=='DIV3降格')throw new Error('DIV3より下へ落ちてしまう');
+          // **直近だけ並べる**
+          const keep=S.player.history.slice();
+          for(let i=0;i<30;i++)
+            S.player.history.push({season:900+i,clubId:S.club.id,div:2,result:'残留',rank:5});
+          renderClubhouse();
+          const rows=document.querySelectorAll('#clubHistory .kv').length;
+          const more=document.querySelector('#clubHistory .ch-more');
+          if(rows!==TUNING.career.show)
+            throw new Error('直近'+TUNING.career.show+'件に絞られない: '+rows+'行');
+          if(!more)throw new Error('残りの季数が出ない');
+          // **新しいものが上**
+          const top=document.querySelector('#clubHistory .kv span').textContent;
+          if(top.indexOf('S929')<0)throw new Error('新しい順に並んでいない: '+top);
+          S.player.history=keep; renderClubhouse();
+          const dv=document.querySelector('#clubHistory .ch-div');
+          return '着地した部で書く / '+rows+'行に絞る（'+more.textContent+'）'
+            +' / いまの表示: '+(dv?dv.textContent:'—');
+        })()`));
+        await ctx.shot("12e-club-career");
         // 実績の棚(→docs/03 §3.36)。**獲っていない実績も並ぶ**
         ctx.log("  実績の棚:", await ctx.js(`(()=>{
           const defs=trophyDefs();
@@ -3464,14 +3494,26 @@ const STEPS = [
       const b=window.__before;
       const el=document.querySelector('#offerList [data-club]');
       if(!el)throw new Error('オファーが無い');
+      // **任期をまたぐと季が進む**(→docs/03 §3.2.3)。ここで進めていなかったので、
+      // 移籍しても経歴の S が前のクラブと同じ番号のままだった
+      const s0=S.world.season, n0=S.player.history.length;
       startTenure(el.dataset.club); headUI(); show('home');
+      if(S.world.season!==s0+1)
+        throw new Error('移籍しても季が進まない: S'+s0+' → S'+S.world.season);
+      const last=S.player.history[S.player.history.length-1];
+      if(S.player.history.length!==n0+1)throw new Error('経歴が増えていない');
+      if(last.season!==S.world.season)
+        throw new Error('新しい経歴の季が合わない: S'+last.season+' / 世界は S'+S.world.season);
+      if(last.clubId!==el.dataset.club)throw new Error('経歴のクラブが違う');
+      window.__season='S'+s0+' → S'+S.world.season;
       const c=cardById(b.newId);
       if(!c)throw new Error('連れてきた選手が手元に居ない: '+b.name);
       if(c.name!==b.name)throw new Error('別人が来ている: '+c.name+' ≠ '+b.name);
       if(trainStar(c.id)!==b.star)throw new Error('★が引き継がれていない: '+trainStar(c.id));
       if(S.player.legacy)throw new Error('持ち越しが残り続けている');
       if(trustOf(c.id)!==0)throw new Error('信頼が0に戻っていない');
-      return b.name+' ★'+trainStar(c.id)+' / 所持 '+S.player.coll.length+'枚 / 信頼 0 から';
+      return b.name+' ★'+trainStar(c.id)+' / 所持 '+S.player.coll.length+'枚 / 信頼 0 から'
+        +' / 季 '+window.__season;
     })()`));
     await ctx.shot("19c-next-tenure");
   }],

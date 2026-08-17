@@ -2482,10 +2482,21 @@ function renderClubhouse(){
   $("clubMgrName").textContent=S.coach||"監督";
   $("clubFame").textContent=fmtNum(S.player.fame);
   $("clubTickets").textContent=ticketTotal();
-  const h=S.player.history;
-  $("clubHistory").innerHTML=h.length?h.slice().reverse().map(x=>
-    '<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'
-    +(x.rank?x.rank+"位 ":"")+x.result+'</b></div>').join(""):'<div class="lg">まだ記録がありません</div>';
+  // **直近だけ見せる**(→docs/03 §3.2.3)。長く続けるほど経歴は伸びるので、
+  // 全部並べると CLUB 画面がそれだけで埋まる。古い季は棚(実績)のほうに残る
+  const h=S.player.history, KEEP=TUNING.career.show;
+  const recent=h.slice(-KEEP).reverse();
+  $("clubHistory").innerHTML=h.length?recent.map(x=>{
+      // **部と結末は1つの語で書く**(→careerDiv)。「3位 昇格」だけだと
+      // どの部での3位なのかが分からない
+      const dv=careerDiv(x);
+      return '<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'
+        +(dv?'<i class="ch-div'+(x.result==="昇格"?" up":x.result==="降格"?" dn":"")+'">'
+          +esc(dv)+'</i>':"")
+        +(x.rank?x.rank+"位 ":"")+esc(x.result)+'</b></div>';
+    }).join("")
+    +(h.length>KEEP?'<div class="lg ch-more">ほか '+(h.length-KEEP)+' 季</div>':"")
+    :'<div class="lg">まだ記録がありません</div>';
   const F={ training:"練習場", medical:"医療施設", stadium:"スタジアム", scouting:"スカウト網" };
   // 実績トロフィー(→docs/03 §3.36)。**獲っていない分も並べる**。
   // 棚が目標の一覧そのものになり、次に何を狙うかがここで決まる
@@ -3932,9 +3943,13 @@ function renderCareerEnd(){
           return c?esc(shortName(c))+(trainStar(id)?"★"+trainStar(id):""):"—"; }).join(" / ")
       :"—")
     +'<div class="sect-t" style="margin-top:14px">CAREER</div>'
-    +h.map(x=>'<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))
-      +(x.div?' '+divName(x.div):"")+'</span><b>'
-      +(x.rank?x.rank+"位 "+x.result:"—")+'</b></div>').join("");
+    +h.slice(-TUNING.career.show).reverse().map(x=>{
+        const dv=careerDiv(x);
+        return '<div class="kv"><span>S'+x.season+' '+esc(clubName(x.clubId))+'</span><b>'
+          +(dv?'<i class="ch-div'+(x.result==="昇格"?" up":x.result==="降格"?" dn":"")+'">'
+            +esc(dv)+'</i>':"")
+          +(x.rank?x.rank+"位 "+esc(x.result):"—")+'</b></div>';
+      }).join("");
 }
 
 // ---------- 就任先の選択 ----------

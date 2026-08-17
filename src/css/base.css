@@ -1914,6 +1914,15 @@ body{
 .comp-card b{ display:block; font:600 13px/1.35 var(--f-head); letter-spacing:.5px }
 .comp-card .lg{ font-size:11px; line-height:1.35 }
 .comp-card .cc-r{ color:var(--text-dim); font-size:16px }
+/* 経歴の部(→docs/03 §3.2.3)。**着地した部**を書くので、昇降格は色で向きを添える */
+.ch-div{
+  font-style:normal; font:600 10px/1 var(--f-mono); letter-spacing:.5px;
+  margin-right:6px; padding:2px 5px; border-radius:4px;
+  color:var(--text-dim); background:var(--panel-2); border:1px solid var(--line);
+}
+.ch-div.up{ color:oklch(0.86 0.13 150); border-color:oklch(0.50 0.10 150) }
+.ch-div.dn{ color:var(--fit-bad); border-color:color-mix(in srgb, var(--fit-bad) 45%, var(--line)) }
+.ch-more{ margin-top:6px; text-align:center; color:var(--text-mute) }
 /* 契約中のスポンサーの看板(→docs/06 §6.42)。**契約の話をしている場所**なので、
    相手の顔が見えるほうが「どこと組んでいるか」が残る */
 .ct-spon{ margin:2px 0 10px }

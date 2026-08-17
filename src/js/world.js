@@ -95,6 +95,20 @@ const CLUB_NAMES={
 const DIVS=[1,2,3];
 /** 部の呼び名。表示は必ずここを通す(「DIV2」の書き方を1か所に閉じる)。 */
 const divName=d=>"DIV"+d;
+/**
+ * 経歴1行ぶんの「どの部で、どうなったか」(→docs/03 §3.2.3)。
+ * **着地した部で書く**。「DIV2 昇格」だと上がった先が DIV2 なのか、
+ * DIV2 から上がったのかが読めない。
+ *   残留/在任 … DIV2
+ *   昇格      … DIV1昇格   (d-1 へ上がった)
+ *   降格      … DIV3降格   (d+1 へ落ちた)
+ */
+function careerDiv(h){
+  if(!h||h.div==null)return "";
+  if(h.result==="昇格")return divName(Math.max(1,h.div-1))+"昇格";
+  if(h.result==="降格")return divName(Math.min(DIVS[DIVS.length-1],h.div+1))+"降格";
+  return divName(h.div);
+}
 const CLUBS=[];
 LEAGUES.forEach(lg=>{
   DIVS.forEach(d=>{
@@ -378,6 +392,11 @@ function newTenure(){
 function startTenure(clubId){
   const seed=S.world.seed;
   const club=clubById(clubId);
+  // **任期をまたぐと季が進む**(→docs/03 §3.2.3)。前の任期は必ず季の終わり(judgeSeason)で
+  // 締めているので、新しいクラブでは次の季から始まる。ここで進めていなかったので、
+  // **移籍しても経歴の S が前のクラブと同じ番号のまま**になっていた。
+  // 初就任(記録がまだ無い)のときだけ、いまの季のまま始める
+  if((S.player&&S.player.history||[]).length)S.world.season++;
   S.world.divs=makeDivs(club.league);
   S.world.div=club.div;                                      // **入口はそのクラブの持ち場**
   const league=divClubs();
