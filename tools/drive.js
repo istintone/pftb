@@ -648,6 +648,82 @@ const STEPS = [
     await ctx.js("if(window.__adId){sponsor().id=window.__adId;show('home');}");
     await ctx.wait(200);
     await ctx.shot("03d-home-banner");
+    // HOME のタイル(→docs/06 §6.44)。**4枚**。市場と実績はそれぞれ行き先を持つ
+    ctx.log("  HOMEのタイル:", await ctx.js(`(()=>{
+      const t=[...document.querySelectorAll('#scr-home .tiles .tile')];
+      if(t.length!==4)throw new Error('タイルが4枚でない: '+t.length);
+      // **実績は 獲った数/全部 と 次に狙うもの**
+      const tr=document.getElementById('tileTrophySub').textContent;
+      const defs=trophyDefs(), got=defs.filter(d=>trophyOf(d.id)).length;
+      if(tr.indexOf(got+' / '+defs.length)<0)
+        throw new Error('実績の数が出ていない: '+tr);
+      if(tr.indexOf('次:')<0&&tr.indexOf('制覇')<0)
+        throw new Error('次に狙うものが出ていない: '+tr);
+      // **市場は WC以上が居るときだけ「エントリ中」**
+      const mk=document.getElementById('tileMarketSub').textContent;
+      const hot=marketList().filter(c=>c.rarity==='WC'||c.rarity==='LEG')
+        .sort((a,b)=>ovrOf(b)-ovrOf(a));
+      if(hot.length){
+        if(mk.indexOf('がエントリ中')<0)throw new Error('エントリ中が出ない: '+mk);
+        if(mk.indexOf(RARITY[hot[0].rarity].abbr)<0)throw new Error('段が出ない: '+mk);
+        // 絵はいちばん強い WC の枠に合わせる
+        const want={FW:'shoot',MF:'dribble',DF:'striker',GK:'gk'}[hot[0].pos];
+        const img=document.querySelector('#tileMarketArt img');
+        if(want&&!img)throw new Error('ステッカーが出ない（'+hot[0].pos+'）');
+      }else if(mk.indexOf('がエントリ中')>=0)
+        throw new Error('WCが居ないのにエントリ中と出る: '+mk);
+      // 行き先
+      document.getElementById('tileMarket').click();
+      if((document.querySelector('.screen.on')||{}).id!=='scr-market')
+        throw new Error('市場へ飛ばない');
+      goBack();
+      document.getElementById('tileTrophy').click();
+      if((document.querySelector('.screen.on')||{}).id!=='scr-clubhouse')
+        throw new Error('実績（CLUB）へ飛ばない');
+      show('home');
+      return '4枚 ／ 実績「'+tr.replace(/\s+/g,' ')+'」 ／ 市場「'+mk+'」'
+        +(hot.length?'（WC '+hot.length+'人）':'');
+    })()`));
+    await ctx.shot("03e-home-tiles");
+    // **WCが並んだときの見え方**。市場の抽選まかせだと出ない回があるので、
+    // 4つの枠ぶんそれぞれ確かめる(→docs/06 §6.44)
+    ctx.log("  市場にWCが居るとき:", await ctx.js(`(()=>{
+      const orig=marketList;
+      const out=[];
+      for(const pos of ['FW','MF','DF','GK']){
+        window.marketList=()=>[{ id:1, pos, rarity:'WC', ovr:84, name:'X' },
+                               { id:2, pos:'MF', rarity:'REG', ovr:70, name:'Y' }];
+        renderHomeMarket();
+        const sub=document.getElementById('tileMarketSub').textContent;
+        const img=document.querySelector('#tileMarketArt img');
+        if(sub.indexOf('WC がエントリ中')<0)throw new Error(pos+' でエントリ中が出ない: '+sub);
+        if(!img)throw new Error(pos+' のステッカーが出ない');
+        out.push(pos+'→'+{FW:'shoot',MF:'dribble',DF:'striker',GK:'gk'}[pos]);
+      }
+      // **いちばん強いWCの枠で決まる**
+      window.marketList=()=>[{ id:1, pos:'GK', rarity:'WC', ovr:78, name:'A' },
+                             { id:2, pos:'FW', rarity:'WC', ovr:85, name:'B' }];
+      renderHomeMarket();
+      const a=document.querySelector('#tileMarketArt img').src;
+      window.marketList=()=>[{ id:1, pos:'FW', rarity:'WC', ovr:85, name:'B' }];
+      renderHomeMarket();
+      if(document.querySelector('#tileMarketArt img').src!==a)
+        throw new Error('いちばん強いWCの枠で決まっていない');
+      // **WCが居なければ空**
+      window.marketList=()=>[{ id:1, pos:'FW', rarity:'SPE', ovr:79, name:'C' }];
+      renderHomeMarket();
+      if(document.querySelector('#tileMarketArt img'))throw new Error('WCが居ないのに絵が出る');
+      window.marketList=orig; renderHomeMarket();
+      return out.join(' / ')+' ／ 一番強いWCの枠で決まる ／ 居なければ空';
+    })()`));
+    // WC が居る状態で1枚撮る
+    await ctx.js(`(()=>{ window.__mk=marketList;
+      window.marketList=()=>[{ id:1, pos:'FW', rarity:'WC', ovr:85, name:'X' },
+                             { id:2, pos:'MF', rarity:'SPE', ovr:74, name:'Y' }];
+      renderHomeMarket(); return 1; })()`);
+    await ctx.wait(250);
+    await ctx.shot("03f-home-market-wc");
+    await ctx.js("window.marketList=window.__mk; renderHomeMarket(); 1");
     await ctx.js("if(window.__adId){sponsor().id='dynasty';show('home');}");
     await ctx.shot("03c-home-sponsor");
     ctx.log("  支援の打ち手:", await ctx.js(`(()=>{
@@ -1583,7 +1659,10 @@ const STEPS = [
         throw new Error('タブが光らない');
       return tacticById(S.tactic).label+' を敷いた';
     })()`));
-    await ctx.wait(1400);                       // 次のティックで実際に掛かるまで待つ
+    // **掛かるまで待つ**(→docs/06 §6.43)。止めて再開すると見せ残しを先に流すので、
+    // 次のティック(=積んだ指示が効く瞬間)までの時間は一定ではない
+    for(let i=0;i<40&&!(await ctx.js("(mMine()==='H'?_M.home:_M.away).tactic===S.tactic"));i++)
+      await ctx.wait(200);
     ctx.log("  ピッチの帯:", await ctx.js(`(()=>{
       const mine=document.getElementById('mTacMine');
       const foe=document.getElementById('mTacFoe');
@@ -1630,7 +1709,8 @@ const STEPS = [
         throw new Error('タブの光が残る');
       return '解除した（帯は次のティックで消える）';
     })()`));
-    await ctx.wait(1400);
+    for(let i=0;i<40&&!(await ctx.js("!(mMine()==='H'?_M.home:_M.away).tactic"));i++)
+      await ctx.wait(200);
     ctx.log("  帯も消えたか:", await ctx.js(`(()=>{
       const T=mMine()==='H'?_M.home:_M.away;
       if(T.tactic)throw new Error('盤面から外れていない: '+T.tactic);
@@ -1869,7 +1949,7 @@ const STEPS = [
     await ctx.wait(250);
     ctx.log("HOMEのタイル:", await ctx.js(`(()=>{
       const t=[...document.querySelectorAll('.tiles .tile')];
-      if(t.length!==2)throw new Error('タイルが2枚ではない: '+t.length);
+      if(t.length!==4)throw new Error('タイルが4枚ではない: '+t.length);
       return t.map(e=>e.querySelector('.tile-t').textContent+'('
         +e.querySelector('.tile-s').textContent+')').join(' / ');
     })()`));

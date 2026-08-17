@@ -319,6 +319,37 @@ function cardBgStyle(c){
 }
 const clubName=id=>clubById(id)?clubById(id).name:id;
 
+/**
+ * 移籍市場のタイル(→docs/06 §6.44)。**WC以上が並んでいるかだけを言う**。
+ * 誰が出ているかは市場を開けば分かるので、タイルは「今行く理由があるか」を返す。
+ * 絵はいちばん強い WC の枠に合わせる(FW=shoot / MF=dribble / DF=striker / GK=gk)。
+ */
+const MARKET_STICKER={ FW:"shoot", MF:"dribble", DF:"striker", GK:"gk" };
+function renderHomeMarket(){
+  const list=(typeof marketList==="function"?marketList():[])||[];
+  const hot=list.filter(c=>c&&(c.rarity==="WC"||c.rarity==="LEG"))
+    .sort((a,b)=>ovrOf(b)-ovrOf(a));
+  const top=hot[0]||null;
+  $("tileMarketSub").innerHTML=top
+    ? '<b class="tl-hot">'+esc(RARITY[top.rarity].abbr)+' がエントリ中</b>'
+    : list.length+" 人が登録中";
+  // **絵は枠で決まる**。該当が無ければ空(→docs/06 §6.30 の「無ければ出さない」)
+  $("tileMarketArt").innerHTML=top&&MARKET_STICKER[top.pos]
+    ? stickerArt(MARKET_STICKER[top.pos]) : "";
+}
+/**
+ * 実績のタイル(→docs/06 §6.44)。**獲った数と、次に狙うもの**。
+ * 棚(→§3.36)は易しい順に並んでいるので、まだ獲っていない先頭がそのまま次の目標。
+ */
+function renderHomeTrophy(){
+  const defs=trophyDefs();
+  const got=defs.filter(d=>trophyOf(d.id)).length;
+  const next=defs.find(d=>!trophyOf(d.id));
+  $("tileTrophySub").innerHTML='<b class="tl-num">'+got+'</b> / '+defs.length
+    +(next?'<span class="tl-next">次: '+esc(next.short)+'</span>':'<span class="tl-next">制覇</span>');
+  $("tileTrophyArt").innerHTML=stickerArt("trophy");
+}
+
 // ---------- HOME(監督のデバイス → docs/06 §6.8) ----------
 function renderHome(){
   const W=S.world;
@@ -329,6 +360,8 @@ function renderHome(){
   // タイルの余白にステッカーを貼る(→docs/06 §6.30)。**絵は固定**で、その行き先を表す
   $("tileScoutArt").innerHTML=stickerArt("scout");
   $("tileDeckArt").innerHTML=stickerArt("board");
+  renderHomeMarket();
+  renderHomeTrophy();
   const md="SEASON "+W.season+" · MATCHDAY "
     +String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0");
 
@@ -4165,6 +4198,8 @@ $("btnForm").onclick=openForm;
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };
 $("clubMgrFace").onclick=openFace;
 $("clubCrest").onclick=openCrest;
+$("tileMarket").onclick=()=>show("market",{push:1});
+$("tileTrophy").onclick=()=>show("clubhouse");
 $("crestDone").onclick=closeCrest;
 $("crestModal").onclick=e=>{ if(e.target===$("crestModal"))closeCrest(); };
 $("faceDone").onclick=closeFace;
