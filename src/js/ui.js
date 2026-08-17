@@ -74,6 +74,7 @@ function show(id,opts){
   $("subTab").classList.toggle("off",id!=="match");
   $("kpTab").classList.toggle("off",id!=="match");           // 軸(→docs/03 §3.44)
   $("ordTab").classList.toggle("off",id!=="match");
+  $("tacTab").classList.toggle("off",id!=="match");   // 采配(→docs/03 §3.50)
   if(id!=="match"){ closeSub(); closeOrd(); closeKp(); }
 
   if(def.render)def.render();
@@ -2642,6 +2643,10 @@ function matchLine(e,M){
                         +"　"+scOrder(M,e.hg,e.ag), cls:"goal" };
     case "sub":      return { text:"🔄 交代 "+mName(mPlayer(M,e.side,e.in))+" ← "
                         +mName(mPlayer(M,e.side,e.out)), cls:"info" };
+    // **敷き替えは実況にも出す**(→docs/06 §6.38)。盤面の帯だけだと、
+    // あとから見返したときに「いつ変えたか」が残らない
+    case "tactic":   return { text:(e.tactic?"⛨ <b>"+esc(e.label)+"</b>に切り替えた"
+                        :"⛨ 采配を解除した"), cls:"info" };
     default:         return null;                    // possession / build は出さない
   }
 }
@@ -2722,7 +2727,26 @@ function mDrawSquads(){
     });
   }
   $("mSlots").innerHTML=html.join("");
-  mKpMark();
+  mKpMark(); mTacBars();
+}
+/**
+ * 敷いている采配の帯(→docs/06 §6.38)。**両チームぶん**、画面外から差し込む。
+ * 右上が相手・左下が自分。**いま盤面に効いているものだけ**を出す
+ * (`_M` のチームが持っている采配であって、次の試合の設定ではない)。
+ */
+function mTacBars(){
+  if(!_M)return;
+  const mine=mMine()==="H"?_M.home:_M.away;
+  const foe =mMine()==="H"?_M.away:_M.home;
+  const side0=T=>T.side==="H"?_M.fixture.h:_M.fixture.a;
+  for(const [el,T] of [[$("mTacMine"),mine],[$("mTacFoe"),foe]]){
+    if(!el)continue;
+    const t=T&&T.tactic?tacticById(T.tactic):null;
+    el.classList.toggle("on",!!t);
+    if(!t)continue;
+    el.style.setProperty("--kit",clubColor(side0(T)));
+    el.innerHTML='<i>'+t.icon+'</i><span>'+esc(t.label)+'</span>';
+  }
 }
 /**
  * ピッチの軸に印を付ける(→docs/03 §3.44 / docs/06 §6.37)。
@@ -3213,6 +3237,9 @@ function mApply(e){
   $("mClock").classList.toggle("late",e.min>=80);
   if(e.hg!=null)$("mSc").textContent=mScore(e.hg,e.ag);
   if(e.type==="card"&&e.off)mDrawSquads();     // 退場した選手は盤面から消える
+  // **采配が実際に掛かった瞬間に帯を更新する**(→docs/06 §6.38)。
+  // 押した瞬間ではなく、ティックの頭で適用されたときが「効き始め」
+  if(e.type==="tactic")mTacBars();
   mFocus(e); mMoveBall(e); mLayout(e);
   kpSync();                                    // 軸がピッチを離れていたら外す(→§3.44)
   const hold=mCut(e);
@@ -3262,6 +3289,7 @@ function mFinish(){
   closeSub(); $("subTab").classList.add("off");   // 終わったら交代はできない
   closeKp(); $("kpTab").classList.add("off");    // 軸の指名も終わり
   closeOrd(); $("ordTab").classList.add("off");   // 指示も同じ
+  closeTac(); $("tacTab").classList.add("off");   // 采配も同じ
   // **並んだままならPK戦**(→docs/03 §3.33)。決着まで1本ずつ見せる
   if(_M.pso)psoShow();
 }
@@ -3431,6 +3459,7 @@ const subOpen=()=>$("subDrawer").classList.contains("on");
 // **同時に効くのは1つだけ。** 選んだ時点で閉じて試合が再開し、いつでも変えられる。
 // 指示は試合をまたいで持ち越す(監督の構え)ので、次の試合もその形で始まる。
 let _ordWasPaused=false;
+let _tacWasPaused=false;
 function renderOrd(){
   const cur=S.order;
   // **十字に置く**。行/列は指示の意味そのもの(上=攻撃 / 左中右=レーン / 下=守備)
@@ -3449,39 +3478,61 @@ function renderOrd(){
   $("ordPad").querySelectorAll("[data-ord]").forEach(el=>{
     el.onclick=()=>pickOrder(el.dataset.ord===cur?null:el.dataset.ord);
   });
-  renderTac();
 }
 /**
- * 特別采配(→docs/03 §3.50)。**使えない采配も、理由を添えて並べる**。
- * 何を目指せば使えるようになるのかが見えないと、覚える意味が伝わらない。
+ * 特別采配(→docs/03 §3.50 / docs/06 §6.38)。
+ * **いま敷けるものだけ**を並べる。試合を止めて開く画面なので、
+ * 「覚えていない手」「この陣形では使えない手」を混ぜると選ぶまでが遠くなる。
+ * 何を目指せば増えるのかは、**残りの数を1行**で伝えれば足りる。
  */
 function renderTac(){
   const cur=S.tactic, box=$("ordTac"); if(!box)return;
-  const known=tacticsKnown();
-  // 覚えたものを先に、まだのものは熟練度の低い順に
-  const list=TACTICS.slice().sort((a,b)=>
-    (known.includes(b.id)?1:0)-(known.includes(a.id)?1:0)||a.exp-b.exp);
-  box.innerHTML=list.map(t=>{
-    const why=tacticWhy(t.id), on=cur===t.id;
-    return '<button class="tc-b'+(on?" on":"")+(why?" off":"")+'" data-tac="'+t.id+'"'
-      +(why?" disabled":"")+'>'
+  const list=TACTICS.filter(t=>tacticOk(t.id)).sort((a,b)=>a.exp-b.exp);
+  const rest=TACTICS.length-list.length;
+  box.innerHTML=list.length?list.map(t=>{
+    const on=cur===t.id;
+    return '<button class="tc-b'+(on?" on":"")+'" data-tac="'+t.id+'">'
       +'<span class="tc-i">'+t.icon+'</span>'
       +'<span class="tc-b2"><b>'+esc(t.label)+'</b>'
-      +'<span class="tc-w">'+esc(why||t.desc)+'</span></span></button>';
-  }).join("");
-  $("ordTacDesc").textContent=cur
-    ?tacticById(cur).label+"：もう一度押すと解除します"
-    :"采配は1つだけ重ねられます。クラブの熟練度が上がるほど選べる手が増えます。";
+      +'<span class="tc-w">'+esc(t.desc)+'</span></span></button>';
+  }).join("")
+    :'<div class="tc-non">いまの陣形で敷ける采配がありません。</div>';
+  // **残りは数だけ**。一覧で見せるのはここではなく、覚える場面(→§3.51)の仕事
+  $("ordTacDesc").textContent=(cur?tacticById(cur).label+"：もう一度押すと解除します。":"")
+    +(rest?"ほかに "+rest+" 手（熟練度と陣形の条件があります）":"すべての采配が敷けます");
   box.querySelectorAll("[data-tac]").forEach(el=>{
     el.onclick=()=>pickTactic(el.dataset.tac===cur?null:el.dataset.tac);
   });
+}
+function openTac(){
+  if(!_M||_M.over)return;
+  _tacWasPaused=_mPaused;
+  if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
+  renderTac();
+  $("tacDrawer").classList.add("on");
+  $("tacDrawer").setAttribute("aria-hidden","false");
+}
+function closeTac(){
+  $("tacDrawer").classList.remove("on");
+  $("tacDrawer").setAttribute("aria-hidden","true");
+  if(!_tacWasPaused&&_M&&!_M.over)mPause(false);
+}
+const tacOpen=()=>$("tacDrawer").classList.contains("on");
+/** 敷いているあいだタブを光らせる(軸タブと同じ作法 →§6.37)。 */
+function tacTabUI(){
+  const t=$("tacTab"); if(!t)return;
+  t.classList.toggle("on",!!S.tactic);
 }
 /** 采配を選ぶ。**次の再開から効く**(→docs/03 §3.50)。 */
 function pickTactic(id){
   if(id&&!tacticOk(id)){ toast(tacticWhy(id)); return; }
   S.tactic=id||null;
-  save(); renderTac();
-  toast(id?tacticById(id).label+" を敷きました（次の再開から）":"采配を解除しました");
+  // **試合中なら盤面にも積む**(→docs/03 §3.50)。次のティックの頭で掛かる。
+  // 積まずに S だけ変えていた頃は、敷いても**次の試合まで何も起きなかった**
+  if(_M&&!_M.over)orderMatch(_M,mMine(),{ type:"tactic", id:S.tactic });
+  save(); renderTac(); tacTabUI();
+  toast(id?tacticById(id).label+" を敷きました":"采配を解除しました");
+  closeTac();
 }
 /** 指示を出す。**エンジンには積むだけ**で、次のティックの頭で効く(→docs/07 §7.6)。 */
 function pickOrder(id){
@@ -3624,6 +3675,7 @@ function startMatch(){
   $("mPlay").textContent="⏸ 一時停止"; $("mSpeed").textContent="×1";
   show("match");
   mDrawSquads();
+  kpTabUI(); tacTabUI();          // タブの光り方を試合の頭で合わせる
   $("mBall").style.left="50%"; $("mBall").style.top="50%";
   // キックオフのイベントは createMatch が積んでいるので、ここで自分で見せる
   // (stepMatch は返さない)。card-eleven と同じく**開始からカットインする**。
@@ -4003,6 +4055,8 @@ $("kpTab").onclick=()=>{ kpOpen()?closeKp():openKp(); };
 $("kpClose").onclick=closeKp;
 $("subClose").onclick=closeSub;
 $("ordTab").onclick=()=>{ ordOpen()?closeOrd():openOrd(); };
+$("tacTab").onclick=()=>{ tacOpen()?closeTac():openTac(); };
+$("tacClose").onclick=closeTac;
 $("ordClose").onclick=closeOrd;
 $("subGo").onclick=doSub;
 $("mSpeed").onclick=()=>{

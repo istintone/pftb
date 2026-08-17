@@ -827,6 +827,32 @@ body{
 .mp.on{ transform:scale(1.35) }
 .mp.on .mp-sh{ opacity:1; box-shadow:0 0 0 2px oklch(1 0 0 / .85) }
 .mp.vs .mp-sh{ opacity:1; box-shadow:0 0 0 2px var(--fit-bad) }
+/* 敷いている采配の帯(→docs/06 §6.38)。**画面外から差し込む**ので、
+   ピッチの一部ではなく「外から掛かっているもの」に見える。
+   .pitch は overflow:hidden なので、はみ出したぶんは切られて端で断ち落ちる。 */
+.pt-tac{
+  position:absolute; z-index:6; display:none; align-items:center; gap:4cqw;
+  padding:1.5cqw 3cqw; max-width:62cqw;
+  font:600 3.4cqw/1.25 var(--f-head); letter-spacing:.5px; white-space:nowrap;
+  color:oklch(0.97 0.01 90); background:color-mix(in oklab, var(--kit) 62%, transparent);
+  border:1px solid color-mix(in oklab, var(--kit) 85%, white 15%);
+  text-shadow:0 1px 2px oklch(0 0 0 / .55);
+}
+.pt-tac.on{ display:flex }
+.pt-tac i{ font-style:normal; font-size:4.2cqw; opacity:.95 }
+/* **相手は右上から**。右端を越えさせて、外から伸びてきたように見せる */
+.pt-tac.foe{
+  right:-3cqw; top:4.5cqw; border-right:none; border-radius:999px 0 0 999px;
+  flex-direction:row-reverse; padding-right:5cqw;
+}
+/* **自分は左下から**。対角に置くと、どちらの采配かを位置で読める */
+.pt-tac.mine{
+  left:-3cqw; bottom:4.5cqw; border-left:none; border-radius:0 999px 999px 0;
+  padding-left:5cqw;
+}
+/* 効いているあいだは光る。**消したら帯ごと消える**(.on が外れる) */
+.pt-tac.mine{ box-shadow:0 0 10px color-mix(in oklab, var(--kit) 70%, transparent) }
+.pt-tac.foe{ box-shadow:0 0 10px color-mix(in oklab, var(--kit) 70%, transparent) }
 /* 軸(→docs/03 §3.44 / docs/06 §6.37)。**クラブカラーで光らせる**ので、
    どちらのチームの軸かは色で読む。両チームぶん出る。
    関与中(.on)や競り合い(.vs)は一瞬の印なので、そちらを上に出せるよう
@@ -995,7 +1021,7 @@ body{
 #subTab.off{ display:none }
 /* 采配タブ(→docs/06 §6.22)。**交代の反対側**に置いて、攻めと守りの手を左右に分ける */
 #ordTab{
-  position:absolute; left:0; top:56%; transform:translateY(-50%); z-index:48;
+  position:absolute; left:0; top:60%; transform:translateY(-50%); z-index:48;
   writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
   padding:12px 5px; border-radius:0 9px 9px 0;
   border:1px solid var(--accent-dim); border-left:none;
@@ -1005,9 +1031,31 @@ body{
 }
 #ordTab:active{ background:oklch(0.32 0.08 85) }
 #ordTab.off{ display:none }
+/* 采配タブ(→docs/06 §6.38)。**指示の上**。指示より上位の構えなので、
+   上下の並びがそのまま「どちらが土台か」を表す */
+#tacTab{
+  position:absolute; left:0; top:45%; transform:translateY(-50%); z-index:48;
+  writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
+  padding:12px 5px; border-radius:0 9px 9px 0;
+  border:1px solid var(--accent-dim); border-left:none;
+  background:linear-gradient(90deg, oklch(0.26 0.06 85), oklch(0.19 0.02 255));
+  color:var(--accent); font:600 10px/1 var(--f-head); letter-spacing:2px;
+  box-shadow:2px 0 12px oklch(0 0 0 / .5);
+}
+#tacTab:active{ background:oklch(0.32 0.08 85) }
+#tacTab.off{ display:none }
+/* 敷いているあいだは光る(軸タブと同じ作法 →§6.37) */
+#tacTab.on{ border-color:var(--accent-hi); color:var(--accent-hi);
+  box-shadow:2px 0 16px oklch(0.70 0.14 85 / .6) }
+#tacDrawer{
+  position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
+  transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
+#tacDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
 /* 軸タブ(→docs/06 §6.33)。指示の**上**に置く。色は固有スキルと同じ金 */
 #kpTab{
-  position:absolute; left:0; top:34%; transform:translateY(-50%); z-index:48;
+  position:absolute; left:0; top:30%; transform:translateY(-50%); z-index:48;
   writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
   padding:12px 5px; border-radius:0 9px 9px 0;
   border:1px solid var(--accent); border-left:none;
@@ -1053,7 +1101,9 @@ body{
 .od-note{ font-size:11px; color:var(--text-dim); margin-bottom:10px }
 /* 特別采配(→docs/03 §3.50)。**使えないものも理由付きで並べる** */
 .od-k{ margin:14px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
-.od-tac{ display:flex; flex-direction:column; gap:5px; max-height:34vh; overflow:auto }
+.od-tac{ display:flex; flex-direction:column; gap:5px; max-height:44vh; overflow:auto }
+/* 敷けるものが1つも無いとき。**空欄にしない**(何が起きているか分からなくなる) */
+.tc-non{ font-size:11px; color:var(--text-mute); padding:10px 2px }
 .tc-b{
   display:flex; align-items:center; gap:9px; width:100%; padding:9px 10px; cursor:pointer;
   border-radius:9px; background:var(--panel-2); border:1px solid var(--line);

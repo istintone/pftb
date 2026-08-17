@@ -247,10 +247,18 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic){
 function setTeamTactic(T,id){
   const t=id?tacticById(id):null;
   T.tactic=t?t.id:null;
-  if(!t)return null;
   for(const p of T.players.concat(T.bench||[])){
-    if(t.role&&p.role!==t.role)continue;
+    // **掛け直せるようにする**(→docs/03 §3.50)。札は積み、k は掛け算で混ぜるので、
+    // 素の状態を控えずに2度呼ぶと**前の采配が乗ったまま重なる**。
+    // 試合中に敷き替えるには、毎回ここまで戻してから掛け直す
     if(!p.sk)p.sk={ ch:[], k:{} };
+    if(!p.sk0)p.sk0={ ch:p.sk.ch.slice(), k:Object.assign({},p.sk.k) };
+    if(p.fit0==null)p.fit0=p.fit;
+    p.sk={ ch:p.sk0.ch.slice(), k:Object.assign({},p.sk0.k) };
+    p.fit=p.fit0;
+    p.manMark=false; p.bondX=0; p.foulX=0;
+    if(!t)continue;
+    if(t.role&&p.role!==t.role)continue;
     for(const e of (t.fx||[])){
       // **効果ごとに役割を絞れる**(→docs/03 §3.50)。フォルス9のように
       // 「前は下がり、2列目が出る」という采配は、1つの倍率では書けない
@@ -944,10 +952,21 @@ function applyOrders(M,t){
     const q=M.orders[side]; M.orders[side]=[];
     for(const o of q){
       if(o.type==="order"){
-        // **采配はいつでも上書きできる**。1つだけが効く(→docs/03 §3.28)
+        // **指示はいつでも上書きできる**。1つだけが効く(→docs/03 §3.28)
         setTeamOrder(T,o.id||null);
         M.events.push({ min:t.min, half:t.half, at:t.at, side, type:"order",
           order:T.order, label:T.order?orderById(T.order).label:"指示なし" });
+        continue;
+      }
+      if(o.type==="tactic"){
+        // **特別采配も試合中に敷き替えられる**(→docs/03 §3.50)。
+        // 掛け直しは素の状態まで戻してから乗せるので、重ならない。
+        // **指示を掛け直すのを忘れない**。上げ下げと能力の倍率は采配と合成しているので、
+        // 采配だけ差し替えると前の合成が残る
+        setTeamTactic(T,o.id||null);
+        setTeamOrder(T,T.order||null);
+        M.events.push({ min:t.min, half:t.half, at:t.at, side, type:"tactic",
+          tactic:T.tactic, label:T.tactic?tacticById(T.tactic).label:"采配なし" });
         continue;
       }
       if(o.type!=="sub")continue;

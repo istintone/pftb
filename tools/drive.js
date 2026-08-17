@@ -1469,33 +1469,112 @@ const STEPS = [
       if(!_mPaused)throw new Error('開いても試合が止まらない');
       const btns=[...document.querySelectorAll('#ordPad .od-b')];
       if(btns.length!==ORDERS.length)throw new Error('指示の数が合わない: '+btns.length);
+      if(document.querySelector('#ordDrawer [data-tac]'))
+        throw new Error('指示の引き出しに采配が残っている');
       return btns.length+'手 / 指示タブ x='+Math.round(r.left)+' 交代タブ x='+Math.round(sr.left);
     })()`));
     await ctx.wait(450);                       // 引き出しが出切るまで待つ
     await ctx.shot("07l-order");
-    // 特別采配(→docs/03 §3.50)。**覚える(監督) × 熟練度(クラブ) × 陣形**
-    ctx.log("  特別采配:", await ctx.js(`(()=>{
+    await ctx.js("document.getElementById('ordClose').click()");
+    await ctx.wait(300);
+    // 特別采配(→docs/03 §3.50 / docs/06 §6.38)。**指示から分けた専用のタブ**
+    ctx.log("  采配タブ(TAC):", await ctx.js(`(()=>{
+      const tab=document.getElementById('tacTab');
+      if(!tab||tab.classList.contains('off'))throw new Error('TACタブが出ていない');
+      // **指示の上**に置く(→docs/06 §6.38)
+      const tr=tab.getBoundingClientRect();
+      const or=document.getElementById('ordTab').getBoundingClientRect();
+      const kr=document.getElementById('kpTab').getBoundingClientRect();
+      if(!(kr.top<tr.top&&tr.top<or.top))
+        throw new Error('KP → TAC → 指示 の順に並んでいない: '
+          +Math.round(kr.top)+'/'+Math.round(tr.top)+'/'+Math.round(or.top));
+      tab.click();
+      if(!document.getElementById('tacDrawer').classList.contains('on'))throw new Error('開かない');
+      if(!_mPaused)throw new Error('開いても試合が止まらない');
+      // **敷けるものだけが並ぶ**。押せない行は置かない
       const rows=[...document.querySelectorAll('#ordTac [data-tac]')];
-      if(rows.length!==TACTICS.length)throw new Error('采配が並ばない: '+rows.length);
-      const on=rows.filter(r=>!r.disabled), off=rows.filter(r=>r.disabled);
-      if(!on.length)throw new Error('使える采配が1つも無い');
-      if(!off.length)throw new Error('使えない采配が理由付きで並んでいない');
-      // **使えないものには理由が出る**
-      const why=off[0].querySelector('.tc-w').textContent;
-      if(!why||why.length<4)throw new Error('理由が出ない');
-      on[0].click();
-      if(!S.tactic)throw new Error('采配が入らない');
-      const lab=tacticById(S.tactic).label;
-      // **覚えて熟練度が足りればもう1つ増える**
-      const n0=[...document.querySelectorAll('#ordTac [data-tac]')].filter(r=>!r.disabled).length;
-      learnTactic('highpress'); S.club.exp=99999; renderOrd();
-      const n1=[...document.querySelectorAll('#ordTac [data-tac]')].filter(r=>!r.disabled).length;
+      if(!rows.length)throw new Error('敷ける采配が1つも無い');
+      if(rows.some(r=>r.disabled))throw new Error('敷けない采配が混ざっている');
+      for(const r of rows)if(!tacticOk(r.dataset.tac))
+        throw new Error('使えない采配が並んでいる: '+r.dataset.tac);
+      const n0=rows.length;
+      // **覚えて熟練度が足りれば増える**
+      learnTactic('highpress'); S.club.exp=99999; renderTac();
+      const n1=document.querySelectorAll('#ordTac [data-tac]').length;
       if(n1<=n0)throw new Error('覚えても増えない: '+n0+' → '+n1);
-      return TACTICS.length+'種 ／ 使える '+n0+' → '+n1+'（覚えて熟練度が足りた）'
-        +' ／ 敷いた: '+lab+' ／ 使えない理由「'+why.slice(0,14)+'」';
+      return TACTICS.length+'種 中 敷ける '+n0+' → '+n1+'（覚えて熟練度が足りた）'
+        +' ／ KP・TAC・指示 の順に並ぶ';
     })()`));
-    await ctx.wait(250);
+    await ctx.wait(400);
     await ctx.shot("07r-order-tactic");
+    // 選ぶと閉じ、**その場で盤面に効く**(→docs/03 §3.50)
+    ctx.log("  敷くと盤面に出る:", await ctx.js(`(()=>{
+      const rows=[...document.querySelectorAll('#ordTac [data-tac]')];
+      rows[0].click();
+      if(!S.tactic)throw new Error('采配が入らない');
+      if(document.getElementById('tacDrawer').classList.contains('on'))
+        throw new Error('選んでも閉じない');
+      if(!document.getElementById('tacTab').classList.contains('on'))
+        throw new Error('タブが光らない');
+      return tacticById(S.tactic).label+' を敷いた';
+    })()`));
+    await ctx.wait(1400);                       // 次のティックで実際に掛かるまで待つ
+    ctx.log("  ピッチの帯:", await ctx.js(`(()=>{
+      const mine=document.getElementById('mTacMine');
+      const foe=document.getElementById('mTacFoe');
+      if(!mine.classList.contains('on'))throw new Error('自分の帯が出ない');
+      const T=mMine()==='H'?_M.home:_M.away;
+      if(T.tactic!==S.tactic)throw new Error('盤面に掛かっていない: '+T.tactic);
+      if(mine.textContent.indexOf(tacticById(S.tactic).label)<0)
+        throw new Error('帯の名前が違う: '+mine.textContent);
+      // **対角に置く**(→docs/06 §6.38)。自分は左下・相手は右上
+      const pr=document.getElementById('mPitch').getBoundingClientRect();
+      const mr=mine.getBoundingClientRect();
+      if(mr.left>pr.left+pr.width*0.5)throw new Error('自分の帯が左に無い');
+      if(mr.top<pr.top+pr.height*0.5)throw new Error('自分の帯が下に無い');
+      let f='相手なし';
+      if(foe.classList.contains('on')){
+        const fr=foe.getBoundingClientRect();
+        if(fr.right<pr.left+pr.width*0.5)throw new Error('相手の帯が右に無い');
+        if(fr.top>pr.top+pr.height*0.5)throw new Error('相手の帯が上に無い');
+        f=foe.textContent.trim();
+      }
+      return '自分「'+mine.textContent.trim()+'」（左下） ／ 相手「'+f+'」（右上）';
+    })()`));
+    // **相手の帯も絵で確かめる**。3部の相手は采配を敷かない(→§3.51)ので、
+    // 見た目の検査のためにここだけ入れて撮る
+    ctx.log("  相手の帯:", await ctx.js(`(()=>{
+      const F=mMine()==='H'?_M.away:_M.home;
+      setTeamTactic(F,'catenaccio'); setTeamOrder(F,F.order||null); mTacBars();
+      const foe=document.getElementById('mTacFoe');
+      if(!foe.classList.contains('on'))throw new Error('相手の帯が出ない');
+      const pr=document.getElementById('mPitch').getBoundingClientRect();
+      const fr=foe.getBoundingClientRect();
+      if(fr.right<pr.left+pr.width*0.5)throw new Error('相手の帯が右に無い');
+      if(fr.top>pr.top+pr.height*0.5)throw new Error('相手の帯が上に無い');
+      return foe.textContent.trim()+'（右上）';
+    })()`));
+    await ctx.wait(300);
+    await ctx.shot("07r2-tac-bars");
+    // **切るとオフ**
+    ctx.log("  切ると消える:", await ctx.js(`(()=>{
+      openTac();
+      document.querySelector('#ordTac [data-tac="'+S.tactic+'"]').click();
+      if(S.tactic)throw new Error('解除できない');
+      if(document.getElementById('tacTab').classList.contains('on'))
+        throw new Error('タブの光が残る');
+      return '解除した（帯は次のティックで消える）';
+    })()`));
+    await ctx.wait(1400);
+    ctx.log("  帯も消えたか:", await ctx.js(`(()=>{
+      const T=mMine()==='H'?_M.home:_M.away;
+      if(T.tactic)throw new Error('盤面から外れていない: '+T.tactic);
+      if(document.getElementById('mTacMine').classList.contains('on'))
+        throw new Error('帯が残っている');
+      return '盤面からも外れた';
+    })()`));
+    await ctx.js("openOrd()");
+    await ctx.wait(400);
     ctx.log("  指示を出す:", await ctx.js(`(()=>{
       document.querySelector('#ordPad [data-ord="attack"]').click();
       if(document.getElementById('ordDrawer').classList.contains('on'))throw new Error('閉じない');
