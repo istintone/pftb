@@ -302,6 +302,31 @@ const STEPS = [
         +document.querySelector('.cup-res b').textContent;
     })()`));
     await ctx.shot("07m-cup-plan");
+    // **相手の数値は段の域内**(→docs/03 §3.53)。強さの差は★で出しているので、
+    // ★が読めないと「なぜ強いのか」が画面から消える
+    ctx.log("  相手の段と★:", await ctx.js(`(()=>{
+      let out=0, tot=0, star=0;
+      for(const c of CLUBS.slice(0,40))
+        for(const p of clubRoster(S.world.seed,c.id)){
+          const [lo,hi]=RARITY[p.rarity].ovr; tot++;
+          if(p.ovr<lo||p.ovr>hi)out++;
+          star=Math.max(star,upOf(p));
+        }
+      if(out)throw new Error('段の域を外れた選手が居る: '+out+'/'+tot+'人');
+      if(star>TUNING.star.max)throw new Error('★が上限を超えている: '+star);
+      // **強いクラブほど★が多い**
+      const top=clubStar(clubById('eng-1')), bottom=clubStar(clubById('sam-24'));
+      if(!(top>bottom))throw new Error('強豪のほうが★が少ない: '+top+' / '+bottom);
+      if(top!==TUNING.star.max)throw new Error('DIV1の強豪が★上限でない: '+top);
+      // **十分に育った相手は黄金線を張る**
+      const r=clubRoster(S.world.seed,'eng-1');
+      if(!r[0].gold)throw new Error('DIV1の強豪に黄金線が無い');
+      // **★が画面に出る**(相手のカードでも)
+      const html=starOf(r[0]);
+      if(html.indexOf('★')<0)throw new Error('相手の★が表示されない');
+      return '域外0/'+tot+'人 ／ 最大★'+star+' ／ 強豪★'+top+'(黄金線あり) 弱小★'+bottom
+        +' ／ 表示 '+html;
+    })()`));
     // 組み合わせ表の枠からも相手を下見できる(→docs/03 §3.34)。
     // **その回戦で当たったときの相手**が出る(回戦が上がるほど強くなる)
     ctx.log("  カップの下見:", await ctx.js(`(()=>{

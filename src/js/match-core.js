@@ -640,7 +640,9 @@ function addMom(M,side,v){
 /** キックオフ時のモメンタム。**強いチームが前から始められる**。 */
 function kickoffMom(H,A){
   const F=TUNING.mom;
-  const ovr=T=>T.players.reduce((s,p)=>s+p.c.ovr,0)/(T.players.length||1);
+  // **★を含めて比べる**(→docs/03 §3.53)。素の ovr で比べると、
+  // 段の域内に収めたぶんだけ相手を弱く見積もり、勢いの初期値がつかなくなる
+  const ovr=T=>T.players.reduce((s,p)=>s+ovrOf(p.c),0)/(T.players.length||1);
   return clamp((ovr(H)-ovr(A))/F.kickK,-F.kickCap,F.kickCap);
 }
 
@@ -1431,7 +1433,7 @@ function teamStrength(cards,form){
   cards.forEach((c,i)=>{
     if(!c)return;
     const sub=slots[i]?slots[i][0]:null;
-    total+=c.ovr*(sub?slotFit(c,sub):1);
+    total+=ovrOf(c)*(sub?slotFit(c,sub):1);        // ★を含む(→docs/03 §3.53)
     n++;
   });
   return n?total/n:0;

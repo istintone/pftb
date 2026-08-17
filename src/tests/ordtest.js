@@ -38,7 +38,10 @@ const E=setup({tmpName:"_tmp_ord.js"});
   {
     const M=E.createMatch(side(),side(),2);
     const T=M.home, p=T.players.find(q=>q.role!=="GK");
-    const a0=p.c.atk*p.fit*p.stam, d0=p.c.def*p.fit*p.stam;
+    // **★のぶんを含める**(→docs/03 §3.53)。eff() は p.c.up を足すので、
+    // 素の p.c.atk で基準を作ると相手の選手ぶんだけずれる
+    const up=k=>(p.c.up&&p.c.up[k])||0;
+    const a0=(p.c.atk+up("atk"))*p.fit*p.stam, d0=(p.c.def+up("def"))*p.fit*p.stam;
     E.setTeamOrder(T,"attack");
     assert.ok(Math.abs(E.eff(p,"atk")/a0-E.TUNING.order.buf)<1e-9,"攻撃重視でATKが上がる");
     assert.ok(Math.abs(E.eff(p,"def")/d0-1)<1e-9,"DEFは動かない");

@@ -279,8 +279,16 @@ function noteOf(fx){
  * 最終的にはほとんどが自分のカードになるので、自分側に印を付けても意味を持たない。
  */
 const loanTag=c=>isLoaned(c)?'<i class="loan">(CLUBS)</i>':"";
-/** 覚醒の★(→docs/03 §3.30)。名前の右に付く。任期が明ければ消える。 */
-const starOf=c=>{ const n=trainStar(c.id); return n?"★".repeat(n):""; };
+/**
+ * 覚醒の★(→docs/03 §3.30)。名前の右に付く。任期が明ければ消える。
+ * **相手の選手も★を持つ**(→docs/03 §3.53)。自分のカードは訓練の記録から、
+ * 相手のカードは札に焼き込まれた `up` から数える。どちらも同じ見た目にする
+ * (数字を域外へ出さずに強さの差を出しているので、★が読めないと理由が消える)。
+ */
+const starOf=c=>{
+  const n=trainStar(c.id)||(c&&c.up?STAT_KEYS.reduce((a,k)=>a+(c.up[k]||0),0):0);
+  return n?"★".repeat(n):"";
+};
 
 /**
  * 段の名前を右側に縦に流す**半透明のデザイン文字**(→docs/06 §6.13)。
@@ -747,7 +755,8 @@ function squadSlotLabel(ix){
  * (→docs/06 §6.15)。100% = 素のまま / 75% = 黄 / 50% = 赤。
  */
 // **覚醒ぶんを載せた値**を使う(→docs/03 §3.30)。相手のカードには記録が無いので素のまま
-const effOvr=(c,sub)=>Math.round(liveOvr(c)*slotFit(c,sub));
+// **★を含めた実効値**(→docs/03 §3.53)。liveOvr は自分の訓練ぶん、upOf は相手の★ぶん
+const effOvr=(c,sub)=>Math.round((liveOvr(c)+upOf(c))*slotFit(c,sub));
 const effClass=(c,sub)=>({ a:"", b:" v-warn", c:" v-bad" })[fitTier(c,sub)];
 /**
  * 枠のピッカー。**適性 × OVR の高い順**に並べる(=そのまま推奨順になる)。
@@ -1091,7 +1100,10 @@ function figHtml(c,cls,extra,cond){
 /** 覚醒の★(→docs/03 §3.30)。名前の下に置く。 */
 // **★が上限まで並んだら金**(→docs/03 §3.30)。黄金の連携線(→§3.31)と同じ色で、
 // 「もう伸びしろが無い = 仕上がった」を盤面の上で一目で分かるようにする。
-const starRow=c=>{ const n=c?trainStar(c.id):0;
+// **相手の★も出す**(→docs/03 §3.53)。強さの差を段の数値ではなく★で出しているので、
+// ここに出さないと「なぜ強いのか」が下見から読み取れなくなる。
+// 自分のカードは訓練の記録から、相手のカードは札の `up` から数える。
+const starRow=c=>{ const n=c?(trainStar(c.id)||upOf(c)):0;
   return n?'<div class="fig-star'+(n>=TUNING.train.maxStar?" full":"")+'">'
     +"★".repeat(n)+'</div>':""; };
 // コンディション(→docs/03 §3.32)は**オーラ**で見せる。**自チームの編成でだけ**。

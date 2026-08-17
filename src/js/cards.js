@@ -199,10 +199,37 @@ function rollRarity(rng,minKey){
  *   pos    大分類ポジション
  *   opts   { rarity, club, nation, ovrBias }
  */
+/**
+ * ★のぶんの上乗せ(→docs/03 §3.53)。**能力の上限(20)を超えない**ように配る。
+ * 高いものから1点ずつ積むので、その選手の持ち味がそのまま伸びる
+ * (プレイヤー側の訓練 →§3.30 と同じ考え方)。
+ * 返り値は eff() がそのまま読む { atk:1, spd:2, ... } の形。
+ */
+function starUps(st,n){
+  if(!n||n<=0)return null;
+  const up={};
+  let left=n, guard=0;
+  while(left>0&&guard++<80){
+    // まだ上限に届いていない能力のうち、いちばん高いものへ
+    const ks=STAT_KEYS.filter(k=>st[k]+(up[k]||0)<STAT_MAX)
+      .sort((a,b)=>(st[b]+(up[b]||0))-(st[a]+(up[a]||0)));
+    if(!ks.length)break;
+    up[ks[0]]=(up[ks[0]]||0)+1; left--;
+  }
+  return Object.keys(up).length?up:null;
+}
 function makeCard(rng,pos,opts={}){
   const rarity=opts.rarity||rollRarity(rng);
   const [lo,hi]=RARITY[rarity].ovr;
-  const ovr=clamp(rri(rng,lo,hi)+(opts.ovrBias||0),STAT_KEYS.length,OVR_MAX);
+  // **段の数値は域の中だけで決める**(→docs/03 §3.53)。
+  // 以前は水増し(ovrBias)を足して域の外へ出していたので、**RG99 が WC85 より強く**なり、
+  // 段のバッジが何も意味しなくなっていた(上位カップは全員が域外だった)。
+  // **水増しをそのまま域内に押し込めても駄目**で、全員が上限に張り付いて
+  // 段の中の個体差が消える。**薄めてから**寄せることで、強いクラブの選手は
+  // 域の上のほうに、弱いクラブの選手は下のほうに散る(張り付きはしない)。
+  // 強さの差の本体は★(→starUps)が持つ
+  const shift=Math.round((opts.ovrBias||0)*TUNING.star.bandK);
+  const ovr=clamp(rri(rng,lo,hi)+shift,lo,hi);
   // 国籍は呼び出し側が決める(makeRoster がリーグの構成比から配る)。
   // 単体で作るときだけ、ここで世界中から1つ引く。
   const nation=opts.nation||rpick(rng,NATION_IDS);
@@ -218,9 +245,13 @@ function makeCard(rng,pos,opts={}){
     const s=rpick(rng,from);
     if(!skills.includes(s))skills.push(s);
   }
+  // **強さの差は★で出す**(→docs/03 §3.53)。域を広げるのではなく、
+  // プレイヤーが自分のカードにやっているのと同じ「育った」形で持たせる
+  const up=starUps(st,opts.star||0);
   const subs=rollSubs(rng,pos,rarity);
   const sur=opts.family||rpick(rng,FAMILY[nation]);
   return {
+    ...(up?{ up }:{}),
     id:nextCardId(),
     // 姓は makeRoster が重複なしで配る。並び順は国籍で変わる(日本は姓が先)
     name:makeName(rng,nation,sur),
@@ -337,7 +368,8 @@ function expandRarPlan(plan){
   return bag;
 }
 /**
- * 1チーム分(先発11+控え)を作る。強さの水準は ovrBias で調整する。
+ * 1チーム分(先発11+控え)を作る。**強さの水準は段の内訳(rarPlan)と★(star)で決まる**
+ * (→docs/03 §3.53)。OVR の水増しはしない。
  *   opts.nations … 国籍の抽選箱(重み付きで展開済みのID配列 → world.js の nationBox)。
  *                  省略すると世界中から一様に引く。
  *   opts.rarPlan … 段の内訳(→docs/03 §3.25)。指定するとその内訳を配り切る。
@@ -375,10 +407,21 @@ function makeRoster(rng,opts={}){
 /** カードの表示用レア度ラベル。 */
 const rarLabel=c=>RARITY[c.rarity].label;
 
-/** 編成の強さ(平均OVR)。期待順位やCPUの戦力比較に使う。 */
+/**
+ * 札に焼き込まれた★のぶん(→docs/03 §3.53)。相手の選手はここに強さを持つ。
+ * 自分のカードは訓練の記録(→trainUps)に持つので、こちらは 0。
+ */
+const upOf=c=>c&&c.up?STAT_KEYS.reduce((n,k)=>n+(c.up[k]||0),0):0;
+/**
+ * **実効の総合力**(→docs/03 §3.53)。★を含む。
+ * **強さを比べる場所は必ずこれを使う**。素の `c.ovr` で比べると、
+ * 段の域内に収めたぶんだけ相手を弱く見積もる(勢いの初期値・期待順位・見立てが全部ずれる)。
+ */
+const ovrOf=c=>c?c.ovr+upOf(c):0;
+/** 編成の強さ(平均OVR)。期待順位やCPUの戦力比較に使う。**★を含む**。 */
 function squadPower(cards){
   const a=cards.filter(Boolean);
-  return a.length?Math.round(sum(a.map(c=>c.ovr))/a.length):0;
+  return a.length?Math.round(sum(a.map(ovrOf))/a.length):0;
 }
 
 /**

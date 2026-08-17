@@ -165,16 +165,42 @@ function divOfClub(club){
   return club.div;
 }
 const clubPlan=club=>rosterPlan(leagueById(club.league).tier,divOfClub(club),club.rank);
+/**
+ * そのクラブの選手が持つ★の数(→docs/03 §3.53)。
+ * **段の数値は域内に収めてあるので、強さの差はここで出す**。
+ * 部を土台に、リーグの格と順位で上下する。DIV1 の強豪は上限の★5。
+ */
+function clubStar(club){
+  const S2=TUNING.star, lg=leagueById(club.league), div=divOfClub(club);
+  const n=S2.byDiv[clamp(div,1,S2.byDiv.length)-1]
+    +(lg.tier-3.5)*S2.tierK+(4.5-club.rank)*S2.rankK;
+  return clamp(Math.round(n),0,S2.max);
+}
+/**
+ * 全ペアに黄金線を張る(→docs/03 §3.31)。★が十分に育った相手は、
+ * **長く組んできたチーム**として噛み合っているものとして扱う。
+ * bondK が `gold` を見るので、カードに印を置くだけでよい。
+ */
+function goldWeb(cards){
+  const ids=cards.map(c=>c.id);
+  return cards.map(c=>{
+    const g={};
+    for(const id of ids)if(id!==c.id)g[id]=1;
+    return { ...c, gold:g };
+  });
+}
 
 /** クラブの所属選手を決定的に再生成する(貸与される戦力・CPUの戦力の両方に使う)。 */
 function clubRoster(seed,clubId){
   const club=clubById(clubId);
   const rng=mulberry32((seed^hashStr(clubId))>>>0);
   const saveUid=uid; uid=1000000+(hashStr(clubId)%900000);   // クラブ選手のIDは別空間に置く
-  const roster=makeRoster(rng,{ club:club.name, ovrBias:clubBias(club),
+  const star=clubStar(club);
+  const roster=makeRoster(rng,{ club:club.name, star, ovrBias:clubBias(club),
     rarPlan:clubPlan(club), nations:nationBox(leagueById(club.league)) });
   uid=saveUid;
-  return roster;
+  // **十分に育ったクラブは連携も完成している**(→docs/03 §3.53)
+  return star>=TUNING.star.goldAt?goldWeb(roster):roster;
 }
 
 /** クラブの総合力(順位表の初期並びやCPU同士の試合に使う)。 */
@@ -466,7 +492,7 @@ function kpCarry(){
  * 「いちばん強い1人」だと毎回エースで読み合いにならないので、**上位3人から1人**。
  */
 function cpuKp(clubId,cards){
-  const list=cards.filter(c=>c&&c.pos!=="GK").slice().sort((a,b)=>b.ovr-a.ovr).slice(0,3);
+  const list=cards.filter(c=>c&&c.pos!=="GK").slice().sort((a,b)=>ovrOf(b)-ovrOf(a)).slice(0,3);
   if(!list.length)return null;
   const rng=mulberry32((S.world.seed^hashStr("kp:"+clubId+":"+S.career.node))>>>0);
   return list[Math.floor(rng()*list.length)].id;
@@ -570,7 +596,7 @@ function fillSlots(slots,pool,pick,used){
       let b1=-1,b2=-1,c1=null;
       for(const c of pool){
         if(used.has(c.id))continue;
-        const v=slotFit(c,slots[i][0])*c.ovr;
+        const v=slotFit(c,slots[i][0])*ovrOf(c);
         if(v>b1){ b2=b1; b1=v; c1=c; } else if(v>b2){ b2=v; }
       }
       if(c1==null)continue;
@@ -759,7 +785,7 @@ function autoSquad(){
  * 枠適性0.50の選手が入って**交代が損になる**(実際にそうなった → docs/07 §7.10)。
  */
 function benchOrder(rest){
-  const pool=rest.slice().sort((a,c)=>c.ovr-a.ovr), out=[], used=new Set();
+  const pool=rest.slice().sort((a,c)=>ovrOf(c)-ovrOf(a)), out=[], used=new Set();
   for(const g of POS){                                    // GK/DF/MF/FW を1枚ずつ確保
     const c=pool.find(x=>!used.has(x.id)&&x.pos===g);
     if(c){ out.push(c); used.add(c.id); }
@@ -792,7 +818,7 @@ function refitSquad(form){
     let best=null,bestScore=-1;
     for(const c of pool){
       if(used.has(c.id))continue;
-      const score=slotFit(c,sub)*c.ovr;
+      const score=slotFit(c,sub)*ovrOf(c);
       if(score>bestScore){ bestScore=score; best=c; }
     }
     if(best)used.add(best.id);
@@ -2081,12 +2107,14 @@ function cupSide(cup,round,foe){
   const W=S.world, c=S.career.cup;
   const rng=mulberry32((W.seed^hashStr(cup.id+":"+W.season+":"+c.node0+":"+round+":"+foe))>>>0);
   const elite=foe===c.elite;
-  const base=clubBias(clubById(S.club.id));
   const saveUid=uid; uid=7000000+Math.floor(rng()*900000);  // 手持ちカードとIDをぶつけない
-  const roster=makeRoster(rng,{
-    club:"", ovrBias:base+cup.bias+round,                    // 勝ち上がるほど強くなる
-    rarPlan:cupPlan(cup,elite,rng) });
+  // **大会の格と勝ち上がりは★で出す**(→docs/03 §3.53)。段の数値は域内のまま
+  const star=clamp(Math.round(cup.bias*TUNING.star.cupK+round*TUNING.star.roundK
+    +(elite?1:0)),0,TUNING.star.max);
+  const roster0=makeRoster(rng,{ club:"", star, rarPlan:cupPlan(cup,elite,rng),
+    ovrBias:clubBias(clubById(S.club.id))+cup.bias+round });
   uid=saveUid;
+  const roster=star>=TUNING.star.goldAt?goldWeb(roster0):roster0;
   const form=Object.keys(FORMATIONS)[Math.floor(rng()*Object.keys(FORMATIONS).length)];
   // **格の高い大会ほど賢い相手が出る**(→docs/03 §3.51)。盗む相手になる
   const smart=Math.round(cup.bias+round*1.5+(elite?3:0));
