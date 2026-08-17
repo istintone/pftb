@@ -710,6 +710,16 @@ body{
    RESULT — 試合結果(→docs/06 §6.20)。モックの構成に準拠。
    ========================================================================= */
 .rs{ text-align:center }
+/* 結果画面の行き先(→docs/06 §6.41)。**下に貼り付ける**。
+   .pad の余白ぶん食い出させて全幅にし、下を流れる採点が横から覗かないようにする。
+   上端をぼかすのは、**まだ下に続きがある**ことを隠さないため(硬い線で切ると
+   そこで終わりに見える)。この画面は chrome:"bare" でタブ帯が無いので、
+   貼り付く先は端末の下端そのもの。 */
+.rs-go{
+  position:sticky; bottom:0; z-index:6;
+  margin:18px -18px -24px; padding:14px 18px calc(24px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(180deg, transparent, var(--surface) 26%);
+}
 /* クラブ名は長いので、スコアだけ折り返さずに中央へ固定する */
 .rs-sc{ display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px }
 .rs-sc b{ flex:1; min-width:0; font:600 12px/1.35 var(--f-head); color:var(--text-2) }

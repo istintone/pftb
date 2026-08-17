@@ -1729,6 +1729,29 @@ const STEPS = [
     await ctx.shot("07c-match-end");
     await ctx.js("document.getElementById('mDone').click()");
     await ctx.wait(400);
+    // **行き先は下に貼り付く**(→docs/06 §6.41)。いちばん上まで戻しても、
+    // いちばん下まで送っても、同じ位置に見えていること
+    ctx.log("  行き先の固定:", await ctx.js(`(()=>{
+      const body=document.getElementById('appBody');
+      const go=document.querySelector('#scr-result .rs-go');
+      if(!go)throw new Error('行き先の行が無い');
+      const H=body.getBoundingClientRect();
+      const at=()=>{ const r=go.getBoundingClientRect();
+        return { top:Math.round(r.top), bottom:Math.round(r.bottom) }; };
+      body.scrollTop=0; const a=at();
+      if(a.bottom>H.bottom+2||a.top<H.top)
+        throw new Error('上端に居るとき画面外にある: '+JSON.stringify(a));
+      body.scrollTop=body.scrollHeight; 
+      const b=at();
+      if(Math.abs(a.bottom-b.bottom)>2)
+        throw new Error('送ると位置が変わる: '+a.bottom+' → '+b.bottom);
+      // **中身は隠れず、下に流れていること**(= 画面自体はまだ送れる)
+      if(body.scrollHeight<=body.clientHeight+8)
+        throw new Error('そもそも送る必要が無い画面になっている(検査の意味が無い)');
+      body.scrollTop=Math.round(body.scrollHeight*0.45);   // 途中で撮る
+      return '上でも下でも下端 '+b.bottom+'px に固定 ／ 中身は '
+        +body.scrollHeight+'px（画面 '+body.clientHeight+'px）';
+    })()`));
     ctx.log("結果画面:", await ctx.screen(),
       "/ MOM:", await ctx.js("(document.querySelector('#rsMom .pc-name b')||{}).textContent"),
       "/ スタッツ:", await ctx.js("document.querySelectorAll('#rsBars .rs-bar').length"), "項目",
