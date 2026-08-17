@@ -1536,6 +1536,29 @@ body{
 .ct-face img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
   transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
 .ct-face.on{ border-color:oklch(0.55 0.14 60); box-shadow:0 0 0 2px oklch(0.55 0.14 60) }
+/* CLUB の監督の顔(→docs/03 §3.45)。**押すと選び直せる**。
+   .emblem と同じ大きさに収めて、名前との並びを変えない */
+.mgr-face{
+  position:relative; width:34px; height:34px; flex:0 0 auto; overflow:hidden;
+  border-radius:8px; cursor:pointer;
+  background:radial-gradient(circle at 30% 30%, oklch(0.80 0.14 85), oklch(0.50 0.10 85));
+  border:1px solid oklch(0.35 0.02 255);
+  display:flex; align-items:center; justify-content:center;
+}
+/* 顔の切り出しはチャットの丸・契約書と同じ(→§6.23)。枠が変わっても顔がずれない */
+.mgr-face img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
+  transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
+.mgr-face i{ font-style:normal; color:var(--surface); font:700 15px/1 var(--f-head) }
+/* 選べるときだけ「押せる」印を出す(顔が1つしか無い環境では出さない) */
+.mgr-face.pick::after{
+  content:"✎"; position:absolute; right:0; bottom:0; z-index:2;
+  padding:1px 2px; border-radius:5px 0 0 0;
+  background:oklch(0.20 0.02 255 / .82); color:var(--accent-hi); font-size:9px; line-height:1;
+}
+.mgr-face:active{ filter:brightness(1.15) }
+/* 顔を選び直すモーダル。**契約書と同じ .ct-faces を中で使う** */
+.fm-sheet{ max-width:340px }
+.fm-list{ flex-wrap:wrap; overflow:visible }
 /* ページ送り(→docs/06 §6.35)。1ページに収まるときは出さない */
 .pager{ display:flex; align-items:center; justify-content:center; gap:14px; margin:14px 0 4px }
 .pg-b{

@@ -2315,6 +2315,40 @@ const STEPS = [
             +' / いまの表示: '+(dv?dv.textContent:'—');
         })()`));
         await ctx.shot("12e-club-career");
+        // 監督の顔(→docs/03 §3.45)。**CLUB からいつでも選び直せる**
+        ctx.log("  監督の顔:", await ctx.js(`(()=>{
+          const keys=managerFaces();
+          if(!keys.length)return '絵が無い環境';
+          const av=document.getElementById('clubMgrFace');
+          if(!av)throw new Error('監督の顔の枠が無い');
+          if(!av.querySelector('img'))throw new Error('顔の絵が出ていない');
+          const was=S.face;
+          av.click();
+          if(!document.getElementById('faceModal').classList.contains('on'))
+            throw new Error('押しても選べない');
+          const cells=[...document.querySelectorAll('#faceList [data-face]')];
+          if(cells.length!==keys.length)
+            throw new Error('顔が全部並ばない: '+cells.length+' / '+keys.length);
+          // **いま選んでいる顔に印が付く**
+          if(!cells.find(e=>e.classList.contains('on')))throw new Error('選択中の印が無い');
+          const other=cells.find(e=>e.dataset.face!==was);
+          if(other){
+            other.click();
+            if(S.face===was)throw new Error('選び直せない');
+            // **その場で反映される**
+            const src=av.querySelector('img').getAttribute('src');
+            if(src!==managerArt())throw new Error('顔がすぐ入れ替わらない');
+          }
+          document.getElementById('faceDone').click();
+          if(document.getElementById('faceModal').classList.contains('on'))
+            throw new Error('閉じない');
+          const now=S.face; S.face=was; renderClubMgr();
+          return keys.length+'種から選べる ／ '+was+' → '+now+' ／ その場で反映';
+        })()`));
+        await ctx.js("document.getElementById('clubMgrFace').click()");
+        await ctx.wait(300);
+        await ctx.shot("12f-club-face");
+        await ctx.js("document.getElementById('faceDone').click()");
         // 実績の棚(→docs/03 §3.36)。**獲っていない実績も並ぶ**
         ctx.log("  実績の棚:", await ctx.js(`(()=>{
           const defs=trophyDefs();

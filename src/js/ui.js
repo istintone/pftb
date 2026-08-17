@@ -2492,6 +2492,7 @@ function renderStandings(){
 // ---------- CLUB(クラブハウス) ----------
 function renderClubhouse(){
   $("clubMgrName").textContent=S.coach||"監督";
+  renderClubMgr();
   $("clubFame").textContent=fmtNum(S.player.fame);
   $("clubTickets").textContent=ticketTotal();
   // **直近だけ見せる**(→docs/03 §3.2.3)。長く続けるほど経歴は伸びるので、
@@ -4014,16 +4015,34 @@ function openContract(){
  * 就任者の肖像(→docs/03 §3.45)。**顔は一度だけ選ぶ**もので、次の任期では聞かれない。
  * 選ばなくても進める(その場合は監督名から決まる)。
  */
-function renderFaces(){
+function renderFaces(id,after){
   const keys=managerFaces(), A=(window.ASSETS&&window.ASSETS.manager)||{};
-  const box=$("ctFaces"); if(!box)return;
+  const box=$(id||"ctFaces"); if(!box)return;
   if(!keys.length){ box.innerHTML=""; return; }
   if(!S.face)S.face=keys[Math.abs(hashStr("mgr:"+(S.coach||"")))%keys.length];
   box.innerHTML=keys.map(k=>'<div class="ct-face'+(k===S.face?" on":"")+'" data-face="'+k+'">'
     +'<img src="'+A[k]+'" alt=""></div>').join("");
   box.querySelectorAll("[data-face]").forEach(el=>{
-    el.onclick=()=>{ S.face=el.dataset.face; renderFaces(); };
+    el.onclick=()=>{ S.face=el.dataset.face; renderFaces(id,after); if(after)after(); };
   });
+}
+/**
+ * 監督の顔を選び直す(→docs/03 §3.45)。**契約書と同じ部品**を使う。
+ * 就任のときに一度きり、にしない — 顔は名前と同じで、あとから変えたくなる。
+ */
+function openFace(){
+  if(!managerFaces().length)return;                 // 絵が無いなら開かない
+  renderFaces("faceList",()=>{ renderClubMgr(); save(); });
+  $("faceModal").classList.add("on");
+}
+const closeFace=()=>$("faceModal").classList.remove("on");
+/** CLUB の監督の顔。名前の左に出す。 */
+function renderClubMgr(){
+  const el=$("clubMgrFace"); if(!el)return;
+  const src=managerArt();
+  // **絵が無い環境では頭文字に落とす**(埋め込みを外しても画面が壊れない)
+  el.innerHTML=src?'<img src="'+src+'" alt="">':'<i>M</i>';
+  el.classList.toggle("pick",managerFaces().length>1);
 }
 /** 記入した氏名を署名欄へ即時に反映する(書いている実感を出すため)。 */
 function updateSignature(){
@@ -4050,7 +4069,10 @@ $("scoutMarket").onclick=()=>show("market",{push:1});
 $("cardsBulk").onclick=toggleBulk;
 $("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast("自動編成しました"); };
 $("btnForm").onclick=openForm;
-$("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };  // 外側タップで閉じる
+$("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };
+$("clubMgrFace").onclick=openFace;
+$("faceDone").onclick=closeFace;
+$("faceModal").onclick=e=>{ if(e.target===$("faceModal"))closeFace(); };  // 外側タップで閉じる
 $("slotModal").onclick=e=>{ if(e.target===$("slotModal"))closeSlot(); };
 $("formModal").onclick=e=>{ if(e.target===$("formModal"))closeForm(); };
 $("helpTab").onclick=e=>{ e.stopPropagation(); helpOpen()?closeHelp():openHelp(); };
