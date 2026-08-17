@@ -1559,6 +1559,10 @@ body{
   background:var(--panel); border:1px solid var(--line);
 }
 .cr-b.on{ border-color:var(--accent); box-shadow:0 0 0 2px oklch(0.70 0.14 85 / .45) }
+/* 色は**色そのもの**を並べる。小さい盾を12個並べても色が読めない */
+.cr-c{ padding:2px }
+.cr-sw{ display:block; width:26px; height:26px; border-radius:6px;
+  border:1px solid oklch(1 0 0 / .18) }
 /* CLUB の監督の顔(→docs/03 §3.45)。**押すと選び直せる**。
    .emblem と同じ大きさに収めて、名前との並びを変えない */
 .mgr-face{

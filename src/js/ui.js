@@ -2453,12 +2453,23 @@ function titleWall(){
  *  **文字を載せる丸は clubInk() を使う**(白では読めなくなる)。 */
 const CLUB_L=0.80, CLUB_C=0.17;
 const clubHue=clubId=>((CLUBS.findIndex(c=>c.id===clubId)*137.5+20)%360).toFixed(1);
+/**
+ * クラブの色。**自分のクラブでホームカラーを選んでいればそれを使う**
+ * (→docs/03 §3.54)。エンブレムだけ選んだ色で、ピッチの影が別の色、を作らない。
+ */
 function clubColor(clubId){
-  return "oklch("+CLUB_L+" "+CLUB_C+" "+clubHue(clubId)+")";
+  const p=embPickedHue(clubId);
+  return "oklch("+CLUB_L+" "+(p&&p.c!=null?p.c:CLUB_C)+" "+(p?p.h:clubHue(clubId))+")";
+}
+/** 自分のクラブが選んでいるホームの色相(選んでいなければ null)。 */
+function embPickedHue(clubId){
+  if(!S.club||S.club.id!==clubId||!S.club.emblem)return null;
+  return embHueById(S.club.emblem.home);
 }
 /** その丸の上に載せる字の色。明るい地なので**暗い側**で取る。 */
 function clubInk(clubId){
-  return "oklch(0.26 0.06 "+clubHue(clubId)+")";
+  const p=embPickedHue(clubId);
+  return "oklch(0.26 0.06 "+(p?p.h:clubHue(clubId))+")";
 }
 /** 消化済みの節のスコア表示。順位表からは復元できないので保存済みの結果を使う。 */
 function scoreOf(md){
@@ -4061,15 +4072,27 @@ function renderCrestPick(){
     S.club.emblem=save;
     return h;
   };
+  // 色は**見本ではなく色そのもの**を並べる(小さい盾を12個並べても色が読めない)
+  const sw=(key,v)=>{ const H=embHueById(v);
+    return '<i class="cr-sw" style="background:oklch('
+      +(key==="home"?"0.62 "+(H.c!=null?H.c:0.16):"0.42 "+(H.c!=null?H.c:0.12))
+      +" "+H.h+')" title="'+esc(H.name)+'"></i>'; };
+  const crow=(key,label)=>'<div class="cr-k">'+label+'</div><div class="cr-row">'
+    +EMB_HUES.map(H=>'<button class="cr-b cr-c'+(d[key]===H.id?" on":"")
+      +'" data-k="'+key+'" data-v="'+H.id+'">'+sw(key,H.id)+'</button>').join("")+'</div>';
   $("crestPick").innerHTML=
-    row("shape",EMB_SHAPES,"かたち",v=>mini({shape:v}))
+    crow("home","ホームカラー（地）")
+    +crow("away","アウェイカラー（柄）")
+    +row("shape",EMB_SHAPES,"かたち",v=>mini({shape:v}))
     +row("field",EMB_FIELDS,"地の柄",v=>mini({field:v}))
     +row("crest",EMB_CRESTS,"紋章",v=>mini({crest:v}));
   $("crestPick").querySelectorAll("[data-k]").forEach(el=>{
     el.onclick=()=>{
       const cur=embDesign(id,nm);
-      S.club.emblem={ shape:cur.shape, field:cur.field, crest:cur.crest, text:cur.text };
+      S.club.emblem={ shape:cur.shape, field:cur.field, crest:cur.crest, text:cur.text,
+        home:cur.home||null, away:cur.away||null };
       S.club.emblem[el.dataset.k]=el.dataset.v;
+      // **色は盤面にも効く**ので、開いている画面を描き直す(→docs/03 §3.54)
       renderCrestPick(); renderClubCrest(); headUI(); save();
     };
   });

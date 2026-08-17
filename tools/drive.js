@@ -2343,8 +2343,13 @@ const STEPS = [
           if(!document.getElementById('crestModal').classList.contains('on'))
             throw new Error('押しても組み替えられない');
           const btns=[...document.querySelectorAll('#crestPick [data-k]')];
-          if(btns.length!==EMB_SHAPES.length+EMB_FIELDS.length+EMB_CRESTS.length)
-            throw new Error('選べる数が合わない: '+btns.length);
+          const want=EMB_SHAPES.length+EMB_FIELDS.length+EMB_CRESTS.length+EMB_HUES.length*2;
+          if(btns.length!==want)
+            throw new Error('選べる数が合わない: '+btns.length+' / 期待 '+want);
+          // **色は盤面にも効く**(→docs/03 §3.54)。エンブレムだけ別色にしない
+          const c0=clubColor(S.club.id);
+          btns.find(b=>b.dataset.k==='home'&&!b.classList.contains('on')).click();
+          if(clubColor(S.club.id)===c0)throw new Error('ホームカラーが盤面に効かない');
           const before=JSON.stringify(embDesign(S.club.id,clubName(S.club.id)));
           const other=btns.find(b=>b.dataset.k==='field'&&!b.classList.contains('on'));
           other.click();
@@ -2353,7 +2358,9 @@ const STEPS = [
           if(!S.club.emblem)throw new Error('組み替えが保存されない');
           document.getElementById('crestDone').click();
           return CLUBS.length+'クラブが全部ちがう顔 ／ ★は0,1,3,3（3つ打ち止め）'
-            +' ／ '+btns.length+'通りから組み替えられる';
+            +' ／ '+btns.length+'通り（形'+EMB_SHAPES.length+'・柄'+EMB_FIELDS.length
+            +'・紋章'+EMB_CRESTS.length+'・色'+EMB_HUES.length+'×2）'
+            +' ／ ホームカラーは盤面にも効く';
         })()`));
         await ctx.js("document.getElementById('clubCrest').click()");
         await ctx.wait(300);

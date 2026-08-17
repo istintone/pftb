@@ -6,15 +6,38 @@
 // **クラブIDから決まる**(世界のたねと同じ流儀)。クラブを足せばエンブレムも生える。
 // 自分のクラブだけは CLUB 画面で好きに組み替えられる(→S.club.emblem)。
 
-const EMB_SHAPES=["shield","round","pointed","banner"];
-const EMB_FIELDS=["solid","stripe","half","quarter","sash","hoop","chevron"];
+const EMB_SHAPES=["shield","round","oval","pointed","banner"];
+const EMB_FIELDS=["solid","stripe","half","quarter","sash","hoop","chevron","cross","saltire"];
 // 紋章。**文字の代わりに置ける**(→docs/03 §3.54)。どれも 100x100 の中で完結させる
-const EMB_CRESTS=["none","star","crown","wing","ball","tower","laurel","bolt"];
+const EMB_CRESTS=["none","star","crown","wing","bird","wolf","helm","ball","tower","laurel","bolt"];
+
+/**
+ * 選べる色(→docs/03 §3.54)。**色相だけ持つ**ので、明るさと彩度は
+ * 既にある決まり(→docs/06 §6.13)がそのまま効く。
+ * ホーム=地の色 / アウェイ=柄の色。
+ */
+const EMB_HUES=[
+  { id:"red",    h:28,  name:"レッド" },
+  { id:"orange", h:62,  name:"オレンジ" },
+  { id:"gold",   h:92,  name:"ゴールド" },
+  { id:"lime",   h:126, name:"ライム" },
+  { id:"green",  h:152, name:"グリーン" },
+  { id:"teal",   h:186, name:"ティール" },
+  { id:"sky",    h:224, name:"スカイ" },
+  { id:"blue",   h:258, name:"ブルー" },
+  { id:"violet", h:292, name:"バイオレット" },
+  { id:"purple", h:318, name:"パープル" },
+  { id:"pink",   h:348, name:"ピンク" },
+  { id:"slate",  h:250, name:"スレート", c:0.03 },
+];
+const embHueById=id=>EMB_HUES.find(x=>x.id===id)||null;
 
 // 盾の輪郭。clip と縁取りで同じパスを使う
 const EMB_PATH={
   shield: "M50 4 L92 18 V52 Q92 84 50 96 Q8 84 8 52 V18 Z",
   round:  "M50 4 A46 46 0 1 1 49.9 4 Z",
+  // 縦長の楕円。丸より紋章が縦に伸びるので、鳥や兜が収まりやすい
+  oval:   "M50 2 A31 48 0 1 1 49.9 2 Z",
   pointed:"M50 3 L93 20 V50 Q93 82 50 97 Q7 82 7 50 V20 Z",
   banner: "M12 6 H88 V70 Q88 84 50 96 Q12 84 12 70 Z",
 };
@@ -74,6 +97,22 @@ function embCrestPath(kind,ink,edge){
     case "tower": return '<path d="M34 76 V40 H30 V30 H38 V36 H44 V30 H56 V36 H62 V30 H70 V40 H66 V76 Z"'+st+'/>';
     case "laurel":return '<path d="M50 30 Q30 44 32 74 Q46 70 50 52 Q54 70 68 74 Q70 44 50 30 Z"'+st+'/>';
     case "bolt":  return '<path d="M56 24 L34 58 H48 L42 82 L66 46 H52 Z"'+st+'/>';
+    // 鳥(翼を広げた猛禽)。頭・胴・左右の翼・尾を1本のパスで
+    case "bird":  return '<path d="M50 20 Q56 20 56 26 Q56 30 53 32 L58 40'
+                        +' L84 30 L70 46 L82 50 L62 52 L58 62 L54 82 L46 82 L42 62 L38 52'
+                        +' L18 50 L30 46 L16 30 L42 40 L47 32 Q44 30 44 26 Q44 20 50 20 Z"'+st+'/>';
+    // オオカミ(横顔ではなく正面)。**耳を尖らせる**と犬と見分けが付く
+    case "wolf":  return '<path d="M26 28 L36 48 Q50 42 64 48 L74 28 L68 50'
+                        +' Q76 62 68 72 Q60 82 50 82 Q40 82 32 72 Q24 62 32 50 Z"'+st+'/>'
+                        +'<circle cx="42" cy="58" r="3.4" fill="'+edge+'"/>'
+                        +'<circle cx="58" cy="58" r="3.4" fill="'+edge+'"/>'
+                        +'<path d="M50 66 L45 72 H55 Z" fill="'+edge+'"/>';
+    // 騎士の兜(グレートヘルム)。**目のスリット**が無いと壺に見える
+    case "helm":  return '<path d="M32 30 Q50 20 68 30 V62 Q68 78 50 82 Q32 78 32 62 Z"'+st+'/>'
+                        +'<rect x="34" y="46" width="32" height="7" rx="2" fill="'+edge+'"/>'
+                        +'<rect x="47" y="56" width="6" height="18" rx="2" fill="'+edge+'"/>'
+                        +'<rect x="37" y="58" width="5" height="12" rx="2" fill="'+edge+'"/>'
+                        +'<rect x="58" y="58" width="5" height="12" rx="2" fill="'+edge+'"/>';
     default:      return "";
   }
 }
@@ -89,6 +128,12 @@ function embFieldPath(kind,b){
     case "hoop":   return '<rect x="0" y="30" width="100" height="16" fill="'+b+'"/>'
                          +'<rect x="0" y="60" width="100" height="16" fill="'+b+'"/>';
     case "chevron":return '<path d="M0 42 L50 14 L100 42 V62 L50 34 L0 62 Z" fill="'+b+'"/>';
+    // 十字。**縦を少し細く**しないと、盾の中で横棒だけが目立つ
+    case "cross":  return '<rect x="39" y="0" width="22" height="100" fill="'+b+'"/>'
+                         +'<rect x="0" y="36" width="100" height="22" fill="'+b+'"/>';
+    // ななめ十字(セント・アンドリュー)。盾の外まで伸ばして端で断つ
+    case "saltire":return '<path d="M-10 6 L6 -10 L110 94 L94 110 Z" fill="'+b+'"/>'
+                         +'<path d="M94 -10 L110 6 L6 110 L-10 94 Z" fill="'+b+'"/>';
     default:       return "";
   }
 }
@@ -133,11 +178,14 @@ function embSvg(clubId,name,size,opts){
   const o=opts||{};
   const d=embDesign(clubId,name);
   const i=CLUBS.findIndex(c=>c.id===clubId);
-  const hue=i>=0?((i*137.5+20)%360):(hashStr("hue:"+clubId)%360);
   const h2=hashStr("emb2:"+clubId);
-  const hue2=(hue+((h2%2)?150:40))%360;
-  const a="oklch(0.62 0.16 "+hue.toFixed(1)+")";
-  const b="oklch(0.34 0.10 "+hue2.toFixed(1)+")";
+  // **選んだ色があればそれを使う**(ホーム=地 / アウェイ=柄 →docs/03 §3.54)
+  const ph=embHueById(d.home), pa=embHueById(d.away);
+  const hue=ph?ph.h:(i>=0?((i*137.5+20)%360):(hashStr("hue:"+clubId)%360));
+  const hue2=pa?pa.h:(hue+((h2%2)?150:40))%360;
+  const ca=ph&&ph.c!=null?ph.c:0.16, cb=pa&&pa.c!=null?pa.c:0.10;
+  const a="oklch(0.62 "+ca+" "+hue.toFixed(1)+")";
+  const b="oklch(0.34 "+cb+" "+hue2.toFixed(1)+")";
   const ink="oklch(0.96 0.03 "+hue.toFixed(1)+")";
   const rim="oklch(0.92 0.05 "+hue.toFixed(1)+")";
   const path=EMB_PATH[d.shape]||EMB_PATH.shield;
