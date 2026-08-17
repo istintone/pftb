@@ -1895,6 +1895,15 @@ body{
 }
 /* **9つ並んでもスクロールさせない**(→docs/03 §3.23)。種別は見出し行に畳んで2行に収める */
 .comp-card.off{ opacity:.55 }
+/* **いま戦っている大会は光らせる**(→docs/06 §6.42)。9つ並ぶ中で、
+   エントリー中のものが分からないと「次にどこへ行くか」が読めない */
+.comp-card.live{
+  border-color:var(--accent); background:linear-gradient(90deg,
+    oklch(0.27 0.06 85), var(--panel) 62%);
+  box-shadow:0 0 0 1px oklch(0.70 0.14 85 / .25), 0 0 14px oklch(0.70 0.14 85 / .18);
+}
+.comp-card.live b{ color:var(--accent-hi) }
+.comp-card.live .cc-r{ color:var(--accent) }
 /* **srgb で混ぜる**。oklch で線色(青灰)と金を混ぜると途中が緑に寄って別の色に見える */
 .comp-card.off.ok{ opacity:.8; border-color:color-mix(in srgb, var(--accent) 38%, var(--line)) }
 .comp-card .cc-l{ flex:1; min-width:0 }
@@ -1905,6 +1914,13 @@ body{
 .comp-card b{ display:block; font:600 13px/1.35 var(--f-head); letter-spacing:.5px }
 .comp-card .lg{ font-size:11px; line-height:1.35 }
 .comp-card .cc-r{ color:var(--text-dim); font-size:16px }
+/* 契約中のスポンサーの看板(→docs/06 §6.42)。**契約の話をしている場所**なので、
+   相手の顔が見えるほうが「どこと組んでいるか」が残る */
+.ct-spon{ margin:2px 0 10px }
+.ct-spon .ad{ border-radius:8px; overflow:hidden; border:1px solid var(--line) }
+.ct-spon .ad img{ display:block; width:100%; height:auto }
+.ct-spon b{ display:block; margin-top:6px; font:600 12px/1.3 var(--f-head);
+  letter-spacing:.5px; color:var(--accent-hi) }
 /* 引き出しの頭に置く一言(条件の読み方) */
 .side-note{
   margin:0 0 8px; padding:8px 10px; font-size:11px; line-height:1.5;
@@ -2266,6 +2282,15 @@ body{
 /* 着地(そのシーズンの結末) */
 .cal.judge{ background:oklch(0.22 0.02 255); border-style:dashed }
 .cal.judge b{ font-size:11px; color:var(--text-2) }
+/* **節目は行き先まで連れていく**(→docs/06 §6.42)。押せる行は実線に戻し、
+   右端に行き先を書く(点線のままだと「まだ何も無い枠」に見える) */
+.cal.judge.go{
+  border-style:solid; border-color:var(--accent-dim); cursor:pointer;
+  background:linear-gradient(90deg, oklch(0.26 0.05 85), oklch(0.22 0.02 255));
+}
+.cal.judge.go b{ color:var(--accent-hi); font-size:12px }
+.cal.judge.go .cal-r{ color:var(--accent); font:600 11px/1 var(--f-head); white-space:nowrap }
+.cal.judge.go:active{ background:oklch(0.30 0.06 85) }
 
 /* 現在節は行ではなくカード(打ち手の選択を内蔵する) */
 .cal.cur{

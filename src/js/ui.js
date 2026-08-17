@@ -113,7 +113,7 @@ function openSide(kind){
   _side=kind;
   // **大会は8つあり、出ていない大会も条件つきで並ぶ**(→docs/03 §3.23)ので
   // 「エントリー中の大会」では中身と合わない
-  $("sideTitle").textContent=kind==="contract"?"契約":"大会と参加条件";
+  $("sideTitle").textContent=kind==="contract"?"CONTRACT":"ENTRY";
   $("seasonBox").hidden=kind!=="contract";
   $("seasonComps").hidden=kind!=="comp";
   $("sideDrawer").classList.add("on");
@@ -1441,7 +1441,11 @@ function renderSeason(){
     // スポンサー(→docs/03 §3.40)。契約の話なのでここに置く
     +(()=>{ const sp=sponsor();
       if(!sp)return kv("スポンサー",sponPending()?"相談が来ています":"—");
-      return kv("スポンサー",esc(sponsorById(sp.id).name)+"（第"+sp.until+"節まで）")
+      // **看板のある会社は絵で出す**(→docs/06 §6.32)。契約の話をしている場所なので、
+      // 相手の顔が見えるほうが「どこと組んでいるか」が残る。絵の無い会社は社名のまま
+      const ad=sponAd("ad-ct");
+      return (ad?'<div class="ct-spon">'+ad+'<b>'+esc(sponsorById(sp.id).name)+'</b></div>':"")
+        +kv("スポンサー",esc(sponsorById(sp.id).name)+"（第"+sp.until+"節まで）")
         +kv("課題",esc(sponGoalText(sp))+(sp.hit?"　達成":""))
         +kv("報酬",esc(sponPrizeText(sp)))
         +kv("支援",esc(sponAidById(sp.aid).label));
@@ -1455,9 +1459,9 @@ function renderSeason(){
   $("seasonComps").innerHTML=
     // **ここが大会の一覧そのもの**(→docs/03 §3.23)。日程画面には出られる大会しか
     // 並べないので、「何があって何で開くのか」はこの引き出しだけが答えられる
-    '<p class="side-note">条件を満たした大会は、<b>開催節にクラブチャットからエントリー</b>できます。'
-      +'大会を終えると次のエントリーまで'+TUNING.cup.rest+'節あきます。</p>'
-    +'<div class="comp-card" data-comp="league">'
+    // **説明文は置かない**(→docs/06 §6.42)。並んでいる札そのものが一覧で、
+    // 出られるかどうかは各行の状態に書いてある
+    '<div class="comp-card live" data-comp="league">'
       +'<div class="cc-l"><b><i class="cc-k">LEAGUE</i>'+esc(lg.name)+' '+divName(W.div)+'</b>'
       +'<div class="lg">'+r+'位 · 勝点'+pts(t)+'（'+played+'/'+W.fixtures.length+'節）</div></div>'
       +'<div class="cc-r">›</div></div>'
@@ -1476,7 +1480,11 @@ function renderSeason(){
       // 「なぜ出られないのか」のどちらかが分からなくなる
       else sub=cup.every+"の倍数の節 ／ "
         +(need||(cupNeedFull(cup)==="なし"?"参加条件なし":"参加条件クリア（"+cupNeedFull(cup)+"）"));
-      return '<div class="comp-card'+(j?"":" off")+(!j&&!need?" ok":"")+'" data-comp="cup">'
+      // **エントリー中は光らせる**(→docs/06 §6.42)。並びの中で「いま戦っている大会」が
+      // 一目で分かるようにする。リーグは常に戦っているので常に光る
+      const live=!!(j&&j.alive);
+      return '<div class="comp-card'+(j?"":" off")+(!j&&!need?" ok":"")
+        +(live?" live":"")+'" data-comp="cup">'
         +'<div class="cc-l"><b><i class="cc-k">CUP</i>'+esc(cup.name)
         +(won?' <i class="cc-t">🏆</i>':'')+'</b>'
         +'<div class="lg">'+esc(sub)+'</div></div>'
@@ -1515,8 +1523,13 @@ function renderTenureCalendar(){
   // --- 現在: 打ち手 → 試合 ---
   if(!C.over){
     if(lastSeason!==W.season||lastClub!==S.club.id)rows.push(seasonDivider(W.season,S.club.id));
-    if(seasonOver())rows.push('<div class="cal judge"><span class="cal-n">◆</span>'
-      +'<span class="cal-b"><b>全日程を終了。HOMEで今季を終えられます</b></span></div>');
+    // **節目は行き先まで連れていく**(→docs/06 §6.42)。ここで止まると
+    // 「HOMEへ行け」と書いてあるだけで、自分でタブを押しに行くことになる
+    if(seasonOver())rows.push('<div class="cal judge go" data-go="home" role="button" tabindex="0">'
+      +'<span class="cal-n">◆</span>'
+      +'<span class="cal-b"><b>全日程を終了しました</b>'
+      +'<span class="lg">オーナーの査定を受けて今季を終えます</span></span>'
+      +'<span class="cal-r">HOMEへ ›</span></div>');
     else rows.push(currentRow());
   }
 
@@ -1544,6 +1557,10 @@ function renderTenureCalendar(){
   }
 
   $("seasonCal").innerHTML=rows.join("");
+  // **節目の行き先**(→docs/06 §6.42)。押すとその画面へ連れていく
+  $("seasonCal").querySelectorAll("[data-go]").forEach(el=>{
+    el.onclick=()=>show(el.dataset.go);
+  });
   wireCurrentRow();
 }
 /**

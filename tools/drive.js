@@ -3090,7 +3090,7 @@ const STEPS = [
     ctx.log("  右端の柱:", await ctx.js(`(()=>{
       const on=[...document.querySelectorAll('#sideTabs > div')]
         .filter(t=>!t.classList.contains('off')).map(t=>t.textContent);
-      if(on.join('/')!=='契約/日程/HELP')throw new Error('柱の並びが違う: '+on.join('/'));
+      if(on.join('/')!=='契約/Entry/HELP')throw new Error('柱の並びが違う: '+on.join('/'));
       return on.join(' → ');
     })()`));
     await ctx.js("document.getElementById('contractTab').click()");
@@ -3100,8 +3100,16 @@ const STEPS = [
         throw new Error('引き出しが開かない');
       if(document.getElementById('seasonComps').hidden===false)
         throw new Error('契約なのに大会が出ている');
+      if(document.getElementById('sideTitle').textContent!=='CONTRACT')
+        throw new Error('見出しが CONTRACT でない');
+      // **契約中ならスポンサーの看板を出す**(→docs/06 §6.42)。絵の無い会社は社名のまま
+      const sp=sponsor();
+      const logo=document.querySelector('#seasonBox .ct-spon img');
+      const A=(window.ASSETS&&window.ASSETS.banner)||{};
+      if(sp&&A[sp.id]&&!logo)throw new Error('看板のある会社なのにロゴが出ない: '+sp.id);
       return document.getElementById('sideTitle').textContent
-        +' / '+document.querySelectorAll('#seasonBox .kv').length+'項目';
+        +' / '+document.querySelectorAll('#seasonBox .kv').length+'項目'
+        +' / ロゴ '+(logo?'あり':(sp?'（この会社は絵が無い）':'契約なし'));
     })()`));
     await ctx.shot("12c-tab-contract");
     // 別のタブを押したら中身が入れ替わる(いったん閉じなくてよい)
@@ -3117,9 +3125,21 @@ const STEPS = [
       // **スクロールさせない**。大会が増えるとここが最初に溢れる
       const sc=document.querySelector('#sideDrawer .hd-in');   // 実際に縦スクロールする器
       const over=sc.scrollHeight-sc.clientHeight;
-      if(over>2)throw new Error('日程タブがスクロールしないと全部見えない: +'+over+'px');
+      if(over>2)throw new Error('Entryタブがスクロールしないと全部見えない: +'+over+'px');
+      if(document.getElementById('sideTitle').textContent!=='ENTRY')
+        throw new Error('見出しが ENTRY でない');
+      // **説明文は置かない**(→docs/06 §6.42)
+      if(document.querySelector('#seasonComps .side-note'))
+        throw new Error('頭の説明文が残っている');
+      // **エントリー中は光る**。リーグは常に戦っているので必ず光る
+      const live=rows.filter(e=>e.classList.contains('live'));
+      if(!live.length)throw new Error('光っている行が1つも無い（リーグは常に戦っている）');
+      const cup=S.career.cup;
+      const want=1+((cup&&cup.alive)?1:0);
+      if(live.length!==want)
+        throw new Error('光る行の数が合わない: '+live.length+' / 期待 '+want);
       return document.getElementById('sideTitle').textContent
-        +' / '+rows.length+'件 / 器 '+sc.clientHeight+'px 中身 '+sc.scrollHeight+'px';
+        +' / '+rows.length+'件（光る '+live.length+'）/ 器 '+sc.clientHeight+'px 中身 '+sc.scrollHeight+'px';
     })()`));
     await ctx.shot("12d-tab-comps");
     // **進行バーは上に貼り付く**。記録をどこまで送っても任期の現在地が見えている
@@ -3240,6 +3260,27 @@ const STEPS = [
       await ctx.js("document.getElementById('btnResultOk').click()");
       await ctx.wait(120);
     }
+    // **全日程が終わったスケジュールから HOME へ連れていく**(→docs/06 §6.42)。
+    // ここに導線が無いと「HOMEで今季を終えられます」と書いてあるだけになり、
+    // 自分でタブを押しに行くことになる
+    await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
+    await ctx.wait(300);
+    ctx.log("  節目の導線:", await ctx.js(`(()=>{
+      if(!seasonOver())throw new Error('まだ全日程が終わっていない(検査の前提が崩れている)');
+      const go=document.querySelector('#seasonCal .cal.judge.go[data-go]');
+      if(!go)throw new Error('全日程を終えても行き先の行が出ない');
+      if(go.dataset.go!=='home')throw new Error('行き先が HOME でない: '+go.dataset.go);
+      const txt=go.textContent.replace(/\s+/g,' ').trim();
+      go.click();
+      return txt;
+    })()`));
+    await ctx.wait(300);
+    ctx.log("  押した先:", await ctx.js(`(()=>{
+      const sc=(document.querySelector('.screen.on')||{}).id;
+      if(sc!=='scr-home')throw new Error('HOMEへ行かない: '+sc);
+      return 'scr-home';
+    })()`));
+    await ctx.shot("14b-season-go-home");
     await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
     await ctx.wait(200);
     // 全日程が終わると、次戦のタイルの代わりに「シーズンを終える」が出る
