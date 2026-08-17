@@ -1996,11 +1996,22 @@ body.bg-pitch{
   background-position:center center, 0 0;
   background-repeat:no-repeat, repeat;
 }
-body.bg-wall{
-  background-color:oklch(0.97 0.005 95);
-  background-repeat:repeat;
-  background-size:520px 150px;
+body.bg-wall{ background-color:oklch(0.97 0.005 95) }
+/* ロゴウォール(→docs/06 §6.45)。**本物の要素**で敷くので、
+   タイトルと同じフォント(Oswald)がそのまま効く。データURIのSVGでは届かない。
+   45度に倒し、盤面より後ろに置く */
+#bgWall{
+  position:fixed; inset:-40%; z-index:0; pointer-events:none; overflow:hidden;
+  transform:rotate(-45deg); transform-origin:50% 50%;
+  display:flex; flex-direction:column; justify-content:center; gap:2.2vmin;
 }
+.bw-row{ display:flex; gap:3.2vmin; justify-content:center; white-space:nowrap }
+.bw-row b{
+  font:700 4.6vmin/1 var(--f-head); letter-spacing:1px;
+  opacity:.92; user-select:none;
+}
+/* 盤面は必ず壁より前に出す */
+body.bg-wall #app{ position:relative; z-index:1 }
 /* 設定(→docs/06 §6.45)。監督の欄の右端に小さく置く */
 .cfg-b{
   flex:0 0 auto; width:30px; height:30px; border-radius:8px; cursor:pointer;

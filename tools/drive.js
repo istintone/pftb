@@ -2497,15 +2497,39 @@ const STEPS = [
             const app=getComputedStyle(document.getElementById('app')).backgroundColor;
             out.push(id+'('+app.replace(/\s/g,'')+')');
           }
-          // ロゴウォールは**絵を持たずその場で描く**
+          // ロゴウォールは**本物の要素**で敷く(データURIのSVGだとフォントが届かない)
           S.player.bg='wall'; applyBg();
-          const bi=document.body.style.backgroundImage;
-          if(bi.indexOf('svg')<0)throw new Error('ロゴウォールが描かれない');
-          if(bi.indexOf('%23F8FF26')<0&&bi.indexOf('F8FF26')<0)
-            throw new Error('インクカラーが使われていない');
+          const w=document.getElementById('bgWall');
+          if(!w)throw new Error('ロゴウォールが敷かれない');
+          const words=[...w.querySelectorAll('b')];
+          if(words.length<40)throw new Error('文字が少なすぎる: '+words.length);
+          // **タイトルと同じフォント**
+          const wf=getComputedStyle(words[0]).fontFamily;
+          const tf=getComputedStyle(document.querySelector('.t-name')).fontFamily;
+          if(wf!==tf)throw new Error('タイトルと別のフォント: '+wf+' / '+tf);
+          // **45度**
+          const tr=getComputedStyle(w).transform;
+          if(tr.indexOf('matrix')<0)throw new Error('傾いていない');
+          // **青と黄が出ている**
+          const used=new Set(words.map(b=>b.style.color));
+          const need=['ink-blue','ink-lemon','ink-yellow','ink-cyan']
+            .map(id=>embHueById(id).hex.toLowerCase());
+          const hit=[...used].map(c=>c.toLowerCase()).join('|');
+          for(const h of need){
+            const v=h.replace('#','');
+            const r=parseInt(v.slice(0,2),16),g=parseInt(v.slice(2,4),16),b2=parseInt(v.slice(4,6),16);
+            if(hit.indexOf('rgb('+r+', '+g+', '+b2+')')<0)
+              throw new Error('この色が壁に出ていない: '+h);
+          }
+          // 盤面は壁より前
+          if(getComputedStyle(document.getElementById('app')).zIndex==='auto'
+             &&getComputedStyle(w).zIndex!=='0')
+            throw new Error('盤面が壁より後ろにいる');
           S.player.bg='black'; applyBg();
+          if(document.getElementById('bgWall'))throw new Error('切り替えても壁が残る');
           document.getElementById('cfgDone').click();
-          return BGS.length+'種 ／ '+out.join(' ')+' ／ 盤面の色は変わらない';
+          return BGS.length+'種 ／ '+out.join(' ')
+            +' ／ 壁はタイトルと同じフォント・45度・青と黄も出る';
         })()`));
         await ctx.js("S.player.bg='wall'; applyBg(); 1");
         await ctx.wait(250);

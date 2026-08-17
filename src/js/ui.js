@@ -357,36 +357,45 @@ const BGS=[
   { id:"wall",  name:"ロゴウォール", note:"会見の背景のように斜めに並べる" },
 ];
 /**
- * ロゴウォール(→docs/06 §6.45)。**絵は持たず、その場で描く**。
- * 会見のバックボードのように、白地へ斜めの帯で社名を敷き詰める。
- * 色はエンブレムと同じ水彩の並び(→docs/03 §3.54)から採る。
+ * ロゴウォール(→docs/06 §6.45)。**本物の要素で敷く**。
+ *
+ * data URI の SVG を背景画像にすると、**ページに埋め込んだフォントが使えない**
+ * (データURIは別の文書として読まれるので @font-face が届かない)。
+ * タイトルと同じ Oswald で出したいので、DOM で組んで CSS のフォントをそのまま効かせる。
+ * 敷き詰めではなく1枚の層なので、**継ぎ目も出ない**。
  */
-function bgWallUrl(){
-  const pick=["ink-violet","ink-magenta","ink-blue","ink-lemon","ink-mint",
-              "ink-cyan","ink-orange","ink-green","ink-pink","ink-purple"]
-    .map(id=>embHueById(id)).filter(Boolean);
-  const W=520, H=150, rows=3;
-  let g="";
-  for(let r=0;r<rows;r++){
-    const y=28+r*48;
-    for(let i=0;i<4;i++){
-      const H2=pick[(r*4+i)%pick.length];
-      const x=-40+i*150+(r%2?70:0);
-      g+='<text x="'+x+'" y="'+y+'" font-family="Georgia,serif" font-weight="700"'
-        +' font-size="26" fill="'+H2.hex+'" opacity="0.92">P-FootBall</text>';
-    }
+const WALL_INKS=["ink-blue","ink-lemon","ink-magenta","ink-mint","ink-orange",
+                 "ink-violet","ink-green","ink-pink","ink-cyan","ink-yellow",
+                 "ink-indigo","ink-purple","ink-rose"];
+function buildWall(){
+  let el=$("bgWall");
+  if(!el){
+    el=document.createElement("div");
+    el.id="bgWall";
+    document.body.insertBefore(el,document.body.firstChild);
   }
-  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'">'
-    +'<rect width="'+W+'" height="'+H+'" fill="oklch(0.97 0.005 95)"/>'
-    +'<g transform="rotate(-14 '+(W/2)+' '+(H/2)+')">'+g+'</g></svg>';
-  return "url(\"data:image/svg+xml;utf8,"+encodeURIComponent(svg)+"\")";
+  const cols=(WALL_INKS.map(embHueById).filter(Boolean));
+  const ROWS=16, PER=7;
+  let h="";
+  for(let r=0;r<ROWS;r++){
+    let row="";
+    for(let i=0;i<PER;i++){
+      // **色は行ごとにずらす**。同じ色が縦に並ぶと縞に見える
+      const c=cols[(r*3+i)%cols.length];
+      row+='<b style="color:'+c.hex+'">P-FootBall</b>';
+    }
+    h+='<div class="bw-row">'+row+'</div>';
+  }
+  el.innerHTML=h;
+  return el;
 }
 /** いま選んでいる背景を body に着せる。**セーブに持つ**ので次に開いても残る。 */
 function applyBg(){
   const id=(S&&S.player&&S.player.bg)||"black";
   document.body.classList.remove("bg-black","bg-pitch","bg-wall");
   document.body.classList.add("bg-"+id);
-  document.body.style.backgroundImage=id==="wall"?bgWallUrl():"";
+  if(id==="wall")buildWall();
+  else{ const w=$("bgWall"); if(w)w.remove(); }
 }
 function renderCfg(){
   const cur=(S.player&&S.player.bg)||"black";
