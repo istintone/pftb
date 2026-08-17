@@ -1411,6 +1411,17 @@ const STEPS = [
       const last=rows[10].getBoundingClientRect(), lid=box.getBoundingClientRect();
       if(last.bottom>lid.bottom+1)
         throw new Error('11人目が見切れている: '+Math.round(last.bottom-lid.bottom)+'px はみ出し');
+      // **引き出しはピッチと同じ高さ**(→docs/06 §6.37)。割合で決め打ちにすると
+      // 端末が変わったときにずれるので、実物どうしを突き合わせる
+      const dr=document.getElementById('kpDrawer').getBoundingClientRect();
+      const pr=document.getElementById('mPitch').getBoundingClientRect();
+      if(Math.abs(dr.top-pr.top)>2||Math.abs(dr.height-pr.height)>2)
+        throw new Error('ピッチと高さが合っていない: 引き出し '
+          +Math.round(dr.top)+'/'+Math.round(dr.height)
+          +' ピッチ '+Math.round(pr.top)+'/'+Math.round(pr.height));
+      // 1行の高さ。**詰めすぎると押しにくい**ので下限を見る
+      const h=rows[1].getBoundingClientRect().top-rows[0].getBoundingClientRect().top;
+      if(h<30)throw new Error('行が薄すぎる: '+Math.round(h)+'px');
       rows[10].click();
       const T=mMine()==='H'?_M.home:_M.away;
       const id=S.career.kp;
@@ -1435,7 +1446,8 @@ const STEPS = [
         throw new Error('外しても光が残る');
       openKp();
       [...document.querySelectorAll('#kpBody [data-kp]')][9].click();
-      return '11人が収まる / 固有スキルあり '+sig+'人 / 選ぶと閉じる / '
+      return '11人が収まる(1行 '+Math.round(h)+'px) / ピッチと同じ高さ '
+        +Math.round(pr.height)+'px / 固有スキルあり '+sig+'人 / 選ぶと閉じる / '
         +'ピッチで光る(自分1・相手1) / 指名: '+shortName(cardById(S.career.kp));
     })()`));
     await ctx.wait(250);

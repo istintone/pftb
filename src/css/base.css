@@ -1018,24 +1018,31 @@ body{
 #kpTab:active{ background:oklch(0.40 0.11 85) }
 #kpTab.off{ display:none }
 #kpTab.on{ border-color:var(--accent-hi); box-shadow:2px 0 16px oklch(0.70 0.14 85 / .6) }
+/* 高さと上端は openKp() が**ピッチの実寸から**入れる(→docs/06 §6.37)。
+   ここの値は測る前の受け皿(ピッチが無い場面で開いても崩れないように) */
 #kpDrawer{
-  position:absolute; left:0; top:50%; z-index:70; width:min(88%,340px); height:74%;
-  transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  position:absolute; left:0; top:13%; z-index:70; width:min(88%,340px); height:70%;
+  transform:translateX(-105%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
   pointer-events:none;
 }
-#kpDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
+#kpDrawer.on{ transform:translateX(0); pointer-events:auto }
+/* 中身をピッチの高さいっぱいに使う。**行はその中で伸びる** */
+#kpDrawer .sb-in{ height:100%; display:flex; flex-direction:column }
+#kpDrawer .sb-list{ flex:1; min-height:0; display:flex; flex-direction:column;
+  justify-content:center; overflow:hidden }
 #kpDrawer .sb-in{ border-radius:0 14px 14px 0 }
 /* 軸に選ばれている行 */
 .sb-r.kp-on{ border-color:var(--accent); background:oklch(0.26 0.05 85) }
 /* **11人が一度に見えること**が要件(→docs/06 §6.37)。名前と固有スキルを横並びにし、
    行を薄くする。ここは #kpDrawer の中だけに効かせる(.sb-r は交代の引き出しと共用) */
-#kpDrawer .sb-r{ padding:5px 8px; margin-bottom:3px; gap:6px }
-#kpDrawer .sb-pos{ flex:0 0 26px; font-size:8px }
-#kpDrawer .sb-nm{ flex:0 0 auto; max-width:38%; font-size:11px }
-#kpDrawer .sb-v{ margin-left:auto }
-.kp-sig{ flex:1; min-width:0; font-style:normal; font-size:9px; letter-spacing:.3px;
+#kpDrawer .sb-r{ padding:7px 10px; margin-bottom:3px; gap:8px }
+#kpDrawer .sb-r:last-child{ margin-bottom:0 }
+#kpDrawer .sb-pos{ flex:0 0 30px; font-size:9px }
+#kpDrawer .sb-nm{ flex:0 0 auto; max-width:40%; font-size:12px }
+#kpDrawer .sb-v{ margin-left:auto; font-size:11px }
+.kp-sig{ flex:1; min-width:0; font-style:normal; font-size:10px; letter-spacing:.3px;
   color:var(--accent-hi); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.kp-none{ flex:1; min-width:0; font-style:normal; font-size:9px; color:var(--text-mute) }
+.kp-none{ flex:1; min-width:0; font-style:normal; font-size:10px; color:var(--text-mute) }
 #ordDrawer{
   position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
   transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);

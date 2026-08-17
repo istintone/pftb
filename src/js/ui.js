@@ -3336,8 +3336,22 @@ function openKp(){
   _kpWasPaused=_mPaused;
   if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
   renderKp();
+  kpFit();
   $("kpDrawer").classList.add("on");
   $("kpDrawer").setAttribute("aria-hidden","false");
+}
+/**
+ * 引き出しの高さをピッチに合わせる(→docs/06 §6.37)。
+ * **割合で決め打ちにしない**。ピッチは 3:4 の比で幅から高さが決まるので、
+ * 端末が変われば高さも変わる。開くたびに実物を測って合わせる。
+ */
+function kpFit(){
+  const d=$("kpDrawer"), pt=$("mPitch"), app=document.getElementById("app");
+  if(!d||!pt||!app||!pt.getBoundingClientRect)return;
+  const a=app.getBoundingClientRect(), r=pt.getBoundingClientRect();
+  if(!r.height)return;
+  d.style.top=(r.top-a.top)+"px";
+  d.style.height=r.height+"px";
 }
 function closeKp(){
   $("kpDrawer").classList.remove("on");
