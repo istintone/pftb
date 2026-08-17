@@ -3343,14 +3343,45 @@ function psoShow(){
 // ---------- 選手交代(→docs/06 §6.21) ----------
 // **開くと試合が止まる。** 走らせたまま選ばせると、決めている間に局面が進んで
 // 「誰を替えるつもりだったか」が変わってしまう。
-let _subOut=-1, _subIn=-1, _subWasPaused=false;
+let _subOut=-1, _subIn=-1;
 
 function subSide(){ return mMine()==="H"?_M.home:_M.away; }
 
 // ---------- 軸(キープレイヤー → docs/03 §3.44) ----------
 // **試合中に何度でも指名し直せる。** 回数で縛らないのは、軸を張った時間ぶんだけ
 // 消耗が残るから(それ自体がブレーキになる)。切り替えるほど疲れた選手が増える。
-let _kpWasPaused=false;
+// ---------- 試合中の引き出し(→docs/06 §6.39) ----------
+// **同時に開けるのは1つだけ**。4つとも試合を止めて開くので、重なると
+// 「どれを閉じれば再開するのか」が分からなくなる。開くときに他を畳む。
+// 止めた/戻すの管理も**1つにまとめる**(引き出しごとに持つと、
+// 別の引き出しへ移った瞬間に再生と停止が二重に走る)。
+const M_DRAWERS=["kpDrawer","tacDrawer","ordDrawer","subDrawer"];
+let _drawerPaused=false;                 // 引き出しのために止めたかどうか
+const mDrawerAnyOpen=()=>M_DRAWERS.some(id=>$(id).classList.contains("on"));
+/** 全部畳む。**再開はしない**(呼び出し側が決める)。 */
+function mDrawersShut(){
+  for(const id of M_DRAWERS){
+    $(id).classList.remove("on");
+    $(id).setAttribute("aria-hidden","true");
+  }
+}
+/** 1つ開く。開く前に他を畳み、必要なら試合を止める。 */
+function mDrawerOpen(id,render){
+  if(!_M||_M.over)return false;
+  if(!mDrawerAnyOpen())_drawerPaused=!_mPaused;   // 自分が止めたときだけ戻す
+  mDrawersShut();
+  if(!_mPaused)mPause(true);
+  if(render)render();
+  $(id).classList.add("on");
+  $(id).setAttribute("aria-hidden","false");
+  return true;
+}
+/** 畳んで、自分が止めていたなら再開する。 */
+function mDrawerClose(){
+  mDrawersShut();
+  if(_drawerPaused&&_M&&!_M.over)mPause(false);
+  _drawerPaused=false;
+}
 /** その選手の固有スキル(持っていなければ null)。タブに出す。 */
 function sigOf(card){
   for(const n of (card&&card.skills)||[]){
@@ -3359,15 +3390,7 @@ function sigOf(card){
   }
   return null;
 }
-function openKp(){
-  if(!_M||_M.over)return;
-  _kpWasPaused=_mPaused;
-  if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
-  renderKp();
-  kpFit();
-  $("kpDrawer").classList.add("on");
-  $("kpDrawer").setAttribute("aria-hidden","false");
-}
+function openKp(){ mDrawerOpen("kpDrawer",()=>{ renderKp(); kpFit(); }); }
 /**
  * 引き出しの高さをピッチに合わせる(→docs/06 §6.37)。
  * **割合で決め打ちにしない**。ピッチは 3:4 の比で幅から高さが決まるので、
@@ -3381,11 +3404,7 @@ function kpFit(){
   d.style.top=(r.top-a.top)+"px";
   d.style.height=r.height+"px";
 }
-function closeKp(){
-  $("kpDrawer").classList.remove("on");
-  $("kpDrawer").setAttribute("aria-hidden","true");
-  if(!_kpWasPaused&&_M&&!_M.over)mPause(false);
-}
+function closeKp(){ mDrawerClose(); }
 const kpOpen=()=>$("kpDrawer").classList.contains("on");
 /** 軸を指名する(同じ選手をもう一度押すと解除)。 */
 function setKp(id){
@@ -3440,26 +3459,14 @@ function renderKp(){
   });
 }
 function openSub(){
-  if(!_M||_M.over)return;
-  _subWasPaused=_mPaused;
-  if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
-  _subOut=-1; _subIn=-1;
-  renderSub();
-  $("subDrawer").classList.add("on");
-  $("subDrawer").setAttribute("aria-hidden","false");
+  mDrawerOpen("subDrawer",()=>{ _subOut=-1; _subIn=-1; renderSub(); });
 }
-function closeSub(){
-  $("subDrawer").classList.remove("on");
-  $("subDrawer").setAttribute("aria-hidden","true");
-  if(!_subWasPaused&&_M&&!_M.over)mPause(false);   // 元が再生中なら戻す
-}
+function closeSub(){ mDrawerClose(); }
 const subOpen=()=>$("subDrawer").classList.contains("on");
 
 // ---------- 采配(→docs/03 §3.28 / docs/06 §6.22) ----------
 // **同時に効くのは1つだけ。** 選んだ時点で閉じて試合が再開し、いつでも変えられる。
 // 指示は試合をまたいで持ち越す(監督の構え)ので、次の試合もその形で始まる。
-let _ordWasPaused=false;
-let _tacWasPaused=false;
 function renderOrd(){
   const cur=S.order;
   // **十字に置く**。行/列は指示の意味そのもの(上=攻撃 / 左中右=レーン / 下=守備)
@@ -3470,11 +3477,9 @@ function renderOrd(){
     +'<span class="od-i">'+o.icon+'</span><span class="od-l">'+esc(o.label)+'</span></button>';
   const up=ORDERS.find(o=>o.push>0), dn=ORDERS.find(o=>o.push<0);
   const lanes=ORDERS.filter(o=>o.lane!=null);
-  $("ordNote").textContent=cur
-    ?"いま出している指示: "+orderById(cur).label+"（もう一度押すと解除）"
-    :"指示を1つ選ぶと、その形で試合が再開します。";
+  // **説明は置かない**(→docs/06 §6.39)。十字に並んだ5手は形そのものが意味で、
+  // 選ばれている手は色で分かる。試合を止めて開く画面に読み物を置かない
   $("ordPad").innerHTML=btn(up)+lanes.map(btn).join("")+btn(dn);
-  $("ordDesc").textContent=cur?orderById(cur).desc:"指示なし。陣形どおりに戦います。";
   $("ordPad").querySelectorAll("[data-ord]").forEach(el=>{
     el.onclick=()=>pickOrder(el.dataset.ord===cur?null:el.dataset.ord);
   });
@@ -3488,7 +3493,6 @@ function renderOrd(){
 function renderTac(){
   const cur=S.tactic, box=$("ordTac"); if(!box)return;
   const list=TACTICS.filter(t=>tacticOk(t.id)).sort((a,b)=>a.exp-b.exp);
-  const rest=TACTICS.length-list.length;
   box.innerHTML=list.length?list.map(t=>{
     const on=cur===t.id;
     return '<button class="tc-b'+(on?" on":"")+'" data-tac="'+t.id+'">'
@@ -3497,26 +3501,12 @@ function renderTac(){
       +'<span class="tc-w">'+esc(t.desc)+'</span></span></button>';
   }).join("")
     :'<div class="tc-non">いまの陣形で敷ける采配がありません。</div>';
-  // **残りは数だけ**。一覧で見せるのはここではなく、覚える場面(→§3.51)の仕事
-  $("ordTacDesc").textContent=(cur?tacticById(cur).label+"：もう一度押すと解除します。":"")
-    +(rest?"ほかに "+rest+" 手（熟練度と陣形の条件があります）":"すべての采配が敷けます");
   box.querySelectorAll("[data-tac]").forEach(el=>{
     el.onclick=()=>pickTactic(el.dataset.tac===cur?null:el.dataset.tac);
   });
 }
-function openTac(){
-  if(!_M||_M.over)return;
-  _tacWasPaused=_mPaused;
-  if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
-  renderTac();
-  $("tacDrawer").classList.add("on");
-  $("tacDrawer").setAttribute("aria-hidden","false");
-}
-function closeTac(){
-  $("tacDrawer").classList.remove("on");
-  $("tacDrawer").setAttribute("aria-hidden","true");
-  if(!_tacWasPaused&&_M&&!_M.over)mPause(false);
-}
+function openTac(){ mDrawerOpen("tacDrawer",renderTac); }
+function closeTac(){ mDrawerClose(); }
 const tacOpen=()=>$("tacDrawer").classList.contains("on");
 /** 敷いているあいだタブを光らせる(軸タブと同じ作法 →§6.37)。 */
 function tacTabUI(){
@@ -3542,19 +3532,8 @@ function pickOrder(id){
   toast(id?orderById(id).label+" を指示しました":"指示を解除しました");
   closeOrd();
 }
-function openOrd(){
-  if(!_M||_M.over)return;
-  _ordWasPaused=_mPaused;
-  if(!_mPaused)mPause(true);                 // 開いている間は必ず止める
-  renderOrd();
-  $("ordDrawer").classList.add("on");
-  $("ordDrawer").setAttribute("aria-hidden","false");
-}
-function closeOrd(){
-  $("ordDrawer").classList.remove("on");
-  $("ordDrawer").setAttribute("aria-hidden","true");
-  if(!_ordWasPaused&&_M&&!_M.over)mPause(false);   // 元が再生中なら戻す
-}
+function openOrd(){ mDrawerOpen("ordDrawer",renderOrd); }
+function closeOrd(){ mDrawerClose(); }
 const ordOpen=()=>$("ordDrawer").classList.contains("on");
 
 /** スタミナのバー1本。**残量で色が変わる**ので、替えどきが一目で分かる。 */
@@ -3588,10 +3567,6 @@ function renderSub(){
   const pend=_M.orders[T.side].filter(o=>o.type==="sub").length;
   const left=Math.max(0,TUNING.squad.subMax-used-pend);
   const v=subView(T);
-
-  $("subNote").innerHTML="スタミナの少ない選手から替えます。"
-    +"<b>一度下がった選手は戻れません。</b>"
-    +"交代は次の再開時（3分ごと）に反映されます。";
 
   const row=(cls,pos,name,val,attr,tag)=>'<div class="sb-r'+cls+'"'+attr+'>'
     +'<div class="sb-pos">'+pos+'</div>'

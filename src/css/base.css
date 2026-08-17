@@ -1019,34 +1019,62 @@ body{
 }
 #subTab:active{ background:oklch(0.32 0.08 255) }
 #subTab.off{ display:none }
-/* 采配タブ(→docs/06 §6.22)。**交代の反対側**に置いて、攻めと守りの手を左右に分ける */
-#ordTab{
-  position:absolute; left:0; top:60%; transform:translateY(-50%); z-index:48;
+/* 試合中の左端のタブ(→docs/06 §6.39)。**3つとも同じ見た目**にする。
+   ここを別々に書いていたら KP だけ縁が明るく、TAC と ORD が沈んで見えた。
+   違うのは**縦の位置と、効いているときの光り方**だけ。 */
+#kpTab, #tacTab, #ordTab{
+  position:absolute; left:0; transform:translateY(-50%); z-index:48;
   writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
   padding:12px 5px; border-radius:0 9px 9px 0;
-  border:1px solid var(--accent-dim); border-left:none;
-  background:linear-gradient(90deg, oklch(0.26 0.06 85), oklch(0.19 0.02 255));
-  color:var(--accent); font:600 10px/1 var(--f-head); letter-spacing:2px;
+  border:1px solid var(--accent); border-left:none;
+  background:linear-gradient(90deg, oklch(0.34 0.09 85), oklch(0.20 0.03 255));
+  color:var(--accent-hi); font:600 10px/1 var(--f-head); letter-spacing:2px;
   box-shadow:2px 0 12px oklch(0 0 0 / .5);
 }
-#ordTab:active{ background:oklch(0.32 0.08 85) }
-#ordTab.off{ display:none }
-/* 采配タブ(→docs/06 §6.38)。**指示の上**。指示より上位の構えなので、
-   上下の並びがそのまま「どちらが土台か」を表す */
-#tacTab{
-  position:absolute; left:0; top:45%; transform:translateY(-50%); z-index:48;
-  writing-mode:vertical-rl; text-orientation:upright; cursor:pointer;
-  padding:12px 5px; border-radius:0 9px 9px 0;
-  border:1px solid var(--accent-dim); border-left:none;
-  background:linear-gradient(90deg, oklch(0.26 0.06 85), oklch(0.19 0.02 255));
-  color:var(--accent); font:600 10px/1 var(--f-head); letter-spacing:2px;
-  box-shadow:2px 0 12px oklch(0 0 0 / .5);
-}
-#tacTab:active{ background:oklch(0.32 0.08 85) }
-#tacTab.off{ display:none }
-/* 敷いているあいだは光る(軸タブと同じ作法 →§6.37) */
-#tacTab.on{ border-color:var(--accent-hi); color:var(--accent-hi);
+#kpTab:active, #tacTab:active, #ordTab:active{ background:oklch(0.40 0.11 85) }
+#kpTab.off, #tacTab.off, #ordTab.off{ display:none }
+/* 効いているあいだは光る。**ORD だけは光らせない**(指示は常にどれかが入る
+   わけではなく、無指示も普通の状態なので、光を「異常」の合図に使わない) */
+#kpTab.on, #tacTab.on{ border-color:var(--accent-hi);
   box-shadow:2px 0 16px oklch(0.70 0.14 85 / .6) }
+/* 上から 軸 → 采配 → 指示。**采配は指示より上位の構え**なので上に置く */
+#kpTab{ top:30% }
+#tacTab{ top:45% }
+#ordTab{ top:60% }
+/* 引き出し。高さと上端は openKp() が**ピッチの実寸から**入れる(→docs/06 §6.37) */
+#kpDrawer{
+  position:absolute; left:0; top:13%; z-index:70; width:min(88%,340px); height:70%;
+  transform:translateX(-105%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
+#kpDrawer.on{ transform:translateX(0); pointer-events:auto }
+#kpDrawer .sb-in{ border-radius:0 14px 14px 0 }
+/* 中身をピッチの高さいっぱいに使う。**行はその中で伸びる** */
+#kpDrawer .sb-in{ height:100%; display:flex; flex-direction:column }
+#kpDrawer .sb-list{ flex:1; min-height:0; display:flex; flex-direction:column;
+  justify-content:center; overflow:hidden }
+/* 軸に選ばれている行 */
+.sb-r.kp-on{ border-color:var(--accent); background:oklch(0.26 0.05 85) }
+/* **11人が一度に見えること**が要件(→docs/06 §6.37)。名前と固有スキルを横並びにし、
+   行を薄くする。ここは #kpDrawer の中だけに効かせる(.sb-r は交代の引き出しと共用) */
+#kpDrawer .sb-r{ padding:7px 10px; margin-bottom:3px; gap:8px }
+#kpDrawer .sb-r:last-child{ margin-bottom:0 }
+#kpDrawer .sb-pos{ flex:0 0 30px; font-size:9px }
+#kpDrawer .sb-nm{ flex:0 0 auto; max-width:40%; font-size:12px }
+#kpDrawer .sb-v{ margin-left:auto; font-size:11px }
+.kp-sig{ flex:1; min-width:0; font-style:normal; font-size:10px; letter-spacing:.3px;
+  color:var(--accent-hi); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.kp-none{ flex:1; min-width:0; font-style:normal; font-size:10px; color:var(--text-mute) }
+#ordDrawer{
+  position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
+  transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
+#ordDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
+.od-in{ border-radius:0 14px 14px 0 }
+.od-note{ font-size:11px; color:var(--text-dim); margin-bottom:10px }
+/* 特別采配(→docs/03 §3.50)。**使えないものも理由付きで並べる** */
+.od-k{ margin:14px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
 #tacDrawer{
   position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
   transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);

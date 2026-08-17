@@ -1502,8 +1502,17 @@ const STEPS = [
       learnTactic('highpress'); S.club.exp=99999; renderTac();
       const n1=document.querySelectorAll('#ordTac [data-tac]').length;
       if(n1<=n0)throw new Error('覚えても増えない: '+n0+' → '+n1);
+      // **3つのタブは同じ見た目**(→docs/06 §6.39)。別々に書いて崩れた経緯がある
+      const cs=id=>{ const c=getComputedStyle(document.getElementById(id));
+        return [c.borderTopRightRadius,c.borderBottomRightRadius,c.padding,
+                c.borderTopWidth,c.borderTopStyle].join('|'); };
+      if(cs('kpTab')!==cs('tacTab')||cs('kpTab')!==cs('ordTab'))
+        throw new Error('タブの見た目が揃っていない: '
+          +cs('kpTab')+' / '+cs('tacTab')+' / '+cs('ordTab'));
+      if(document.getElementById('ordTab').textContent.trim()!=='ORD')
+        throw new Error('指示タブが ORD になっていない');
       return TACTICS.length+'種 中 敷ける '+n0+' → '+n1+'（覚えて熟練度が足りた）'
-        +' ／ KP・TAC・指示 の順に並ぶ';
+        +' ／ KP・TAC・ORD の順・同じ見た目';
     })()`));
     await ctx.wait(400);
     await ctx.shot("07r-order-tactic");
@@ -1575,6 +1584,21 @@ const STEPS = [
     })()`));
     await ctx.js("openOrd()");
     await ctx.wait(400);
+    // **同時に開けるのは1つだけ**(→docs/06 §6.39)
+    ctx.log("  引き出しは1つだけ:", await ctx.js(`(()=>{
+      const ids=['kpDrawer','tacDrawer','ordDrawer','subDrawer'];
+      const open=()=>ids.filter(i=>document.getElementById(i).classList.contains('on'));
+      openKp();  if(open().join()!=='kpDrawer')throw new Error('KPだけにならない: '+open());
+      openTac(); if(open().join()!=='tacDrawer')throw new Error('TACに移らない: '+open());
+      openSub(); if(open().join()!=='subDrawer')throw new Error('交代に移らない: '+open());
+      if(!_mPaused)throw new Error('移っている間に試合が動いた');
+      openOrd(); if(open().join()!=='ordDrawer')throw new Error('ORDに移らない: '+open());
+      closeOrd();
+      if(open().length)throw new Error('閉じきらない: '+open());
+      if(_mPaused)throw new Error('全部閉じても再開しない');
+      openOrd();
+      return '移っても常に1つ ／ 移動中は止まったまま ／ 閉じたら再開';
+    })()`));
     ctx.log("  指示を出す:", await ctx.js(`(()=>{
       document.querySelector('#ordPad [data-ord="attack"]').click();
       if(document.getElementById('ordDrawer').classList.contains('on'))throw new Error('閉じない');
