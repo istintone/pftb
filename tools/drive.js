@@ -1149,19 +1149,30 @@ const STEPS = [
       const H=_M.home,A=_M.away;
       const atk=H.players.find(p=>p.role==='FW'), df=A.players.find(p=>p.role==='DF');
       const dch=(COUNTERS[df.sub]||COUNTERS.CB)[0];
-      // **自分側の札だけを出す**(→docs/06 §6.26)。攻めているのが相手なら守備側の札
+      // **攻守どちらの札も、その選手の下に出す**(→docs/06 §6.40)。
+      // 中央にまとめていた頃はどちらの札か読めなかった
       cutVs({side:'H',label:'マエストロの一差し',ch:'cfRun',vs:df.c.id,
         dch:dch.id,dlabel:dch.label,
         sk:['マエストロ','決定力'], dsk:['対人守備']},atk,df,'突破!',true);
-      const ally=(_M.fixture.h===S.club.id);
-      const want=ally?['マエストロ','決定力']:['対人守備'];
-      const tags=[...document.querySelectorAll('#mCut .cut-sk i')];
-      if(tags.map(t=>t.textContent).join()!==want.join())
-        throw new Error('自分側の札が出ていない: '+tags.map(t=>t.textContent));
-      const sig=tags.filter(t=>t.classList.contains('sig')).map(t=>t.textContent);
-      if(sig.join()!==(ally?'マエストロ':''))
-        throw new Error('金にする札が違う: '+sig);
-      const out=tags.map(t=>t.textContent+(t.classList.contains('sig')?'(金)':'')).join(' / ')
+      // **中央には置かない**。札は必ずどちらかの選手の中にある
+      if(document.querySelector('#mCut .cut-row > .cut-sk'))
+        throw new Error('札が中央に残っている');
+      const figOf=nm=>[...document.querySelectorAll('#mCut .cut-fig')]
+        .find(f=>f.querySelector('b')&&f.querySelector('b').textContent===nm);
+      const tagsOf=nm=>{ const f=figOf(nm); if(!f)throw new Error(nm+' の枠が無い');
+        return [...f.querySelectorAll('.cut-sk i')]; };
+      const aTags=tagsOf(shortName(atk.c)), dTags=tagsOf(shortName(df.c));
+      if(aTags.map(t=>t.textContent).join()!=='マエストロ,決定力')
+        throw new Error('攻撃側の札が本人の下に出ない: '+aTags.map(t=>t.textContent));
+      if(dTags.map(t=>t.textContent).join()!=='対人守備')
+        throw new Error('守備側の札が本人の下に出ない: '+dTags.map(t=>t.textContent));
+      // 固有スキルだけ金。**持ち主の側にだけ**付く
+      const sig=aTags.filter(t=>t.classList.contains('sig')).map(t=>t.textContent);
+      if(sig.join()!=='マエストロ')throw new Error('金にする札が違う: '+sig);
+      if(dTags.some(t=>t.classList.contains('sig')))
+        throw new Error('守備側に金が付いている');
+      const out='攻 '+aTags.map(t=>t.textContent+(t.classList.contains('sig')?'(金)':'')).join('/')
+        +' ／ 守 '+dTags.map(t=>t.textContent).join('/')
         +' ／ 見出し: '+document.querySelector('#mCut .cut-hd').textContent;
       // **撮るのは金の側**。自分が攻めている向きで出し直す(見た目の確認用)
       const mySide=(_M.fixture.h===S.club.id)?'H':'A';
@@ -1446,6 +1457,14 @@ const STEPS = [
         throw new Error('外しても光が残る');
       openKp();
       [...document.querySelectorAll('#kpBody [data-kp]')][9].click();
+      // **次の試合へ持ち越す**(→docs/03 §3.44)
+      const keep=S.career.kp;
+      if(kpCarry()!==keep)throw new Error('同じ11人なのに軸が外れる');
+      // **先発から外れたら外す**
+      const sq=S.squad.slice();
+      S.squad=S.squad.filter(x=>x!==keep);
+      if(kpCarry()!==null||S.career.kp)throw new Error('編成から外れても軸が残る');
+      S.squad=sq; S.career.kp=keep;
       return '11人が収まる(1行 '+Math.round(h)+'px) / ピッチと同じ高さ '
         +Math.round(pr.height)+'px / 固有スキルあり '+sig+'人 / 選ぶと閉じる / '
         +'ピッチで光る(自分1・相手1) / 指名: '+shortName(cardById(S.career.kp));

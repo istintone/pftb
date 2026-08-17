@@ -427,6 +427,22 @@ function startTenure(clubId){
 /** いま指名している軸。 */
 const kpOf=()=>(S.career&&S.career.kp)||null;
 /**
+ * 軸を次の試合へ持ち越す(→docs/03 §3.44)。
+ * **同じ11人で戦い続けるあいだは指名を引き継ぐ**。毎試合いちから選び直させると、
+ * 「この選手を軸に据えて戦う」という構えが節をまたいで続かない。
+ *
+ * ただし**先発から外れていたら外す**。売った・編成を変えた・ケガで外した、の
+ * どれでも同じ扱いでよい(いま先発に居るかどうかだけを見る)。
+ * 戻り値は持ち越した軸のID。外したときは null。
+ */
+function kpCarry(){
+  const id=kpOf(); if(!id)return null;
+  const xi=(S.squad||[]).slice(0,TUNING.squad.starters);
+  if(xi.includes(id))return id;
+  S.career.kp=null;
+  return null;
+}
+/**
  * 相手の軸。**クラブと節から決まる**ので、下見でも試合でも同じ選手になる。
  * 「いちばん強い1人」だと毎回エースで読み合いにならないので、**上位3人から1人**。
  */
@@ -2133,6 +2149,9 @@ function myFixtureOf(){
  */
 function beginMyMatch(){
   if(!S.career.hand)return null;
+  // **盤面を作る前に軸を確かめる**(→docs/03 §3.44)。持ち越した軸が先発から
+  // 外れていたら、ここで外さないと居ない選手に kp:true が付く
+  kpCarry();
   if(!S.career.comp&&!pickComp("league"))return null;
   if(S.career.comp==="cup"){
     const f=cupFixtureOf(); if(!f)return null;
@@ -2270,7 +2289,11 @@ function advanceNode(){
   hurtTick();                                               // 治療が1節ぶん進む(→§3.32)
   facTick();                                                // 建設が1節ぶん進む(→§3.5)
   S.club.coins+=gateIncome();                               // 観客収入(→§3.5)
-  C.hand=null; C.comp=null; C.chat=null; C.kp=null;         // 次節はまた選び直す
+  // **軸は持ち越す**(→docs/03 §3.44)。打ち手や大会と違って、軸は「この選手で
+  // 戦う」という構えなので、節をまたいで続くほうが自然。先発から外れていれば
+  // kpCarry() が外す
+  C.hand=null; C.comp=null; C.chat=null;                    // 次節はまた選び直す
+  kpCarry();
   checkTenureClosing();
   return closed;                                            // 戻り値は**カップの決着だけ**
 }

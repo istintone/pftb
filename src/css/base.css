@@ -1470,11 +1470,14 @@ body{
 .tr-aw.sig{ color:oklch(0.86 0.12 88) }
 .trophy.off .tr-aw.sig{ color:oklch(0.78 0.11 88) }
 /* 発動した札の帯(→docs/06 §6.26)。カットインの見出しの下に小さく並べる */
-.cut-sk{ display:flex; justify-content:center; gap:6px; margin:-4px 0 6px; flex-wrap:wrap }
+/* 発動した札(→docs/06 §6.40)。**その選手の下**に置く。中央にまとめていた頃は、
+   2人出ている帯でどちらの札か読めなかった(攻守も送受も同時に出ることがある)。 */
+.cut-sk{ display:flex; justify-content:center; gap:4px; margin:5px 0 0; flex-wrap:wrap }
 .cut-sk i{
-  font-style:normal; font:600 10px/1 var(--f-head); letter-spacing:1px;
-  padding:4px 8px; border-radius:999px;
+  font-style:normal; font:600 9px/1.2 var(--f-head); letter-spacing:.5px;
+  padding:3px 6px; border-radius:999px; max-width:100%;
   color:var(--text-2); background:oklch(0.28 0.02 255); border:1px solid var(--line);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 /* **固有スキルは金で光らせる**(→docs/03 §3.41)。普通の札と一目で違う */
 .cut-sk i.sig{

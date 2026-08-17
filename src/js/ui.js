@@ -2959,10 +2959,16 @@ function cutAvatar(p,side){
     +(src?'<img src="'+src+'" alt="">':p.c.ovr)+'</div>';
 }
 /** 選手1人ぶんの枠。cls に L/R と win/dim を渡す。 */
-function cutFig(p,side,cls,note){
+/**
+ * カットインの1人ぶん(→docs/06 §6.40)。
+ * **札はその選手の下に置く**。中央にまとめて並べていた頃は、2人出ている帯で
+ * どちらの札なのかが読めなかった(攻守も送受も、両方が同時に出ることがある)。
+ */
+function cutFig(p,side,cls,note,sk){
   if(!p)return '<div class="cut-fig '+cls+'"></div>';
   return '<div class="cut-fig '+cls+'">'+cutAvatar(p,side)
-    +'<b>'+esc(shortName(p.c))+'</b><span>'+(note||p.sub||"")+'</span></div>';
+    +'<b>'+esc(shortName(p.c))+'</b><span>'+(note||p.sub||"")+'</span>'
+    +cutSkills(sk)+'</div>';
 }
 /** 帯を出して、指定ミリ秒で閉じる。返り値=描画を止めておく時間。 */
 function cutShow(html,ms,extra){
@@ -2989,15 +2995,18 @@ function cutVs(e,atk,df,word,atkWon){
   // **勝敗は最初から見せない。** 両者が出そろってから決着させる
   // (同時に出すと速すぎて何が起きたか読めない → docs/06 §6.19)。
   // **固有スキルが出た帯は特別扱い**(→docs/06 §6.34)。金の縁・きらめき・揺れ
-  const sg=sigIn(mineSide===e.side?e.sk:e.dsk);
+  // **どちらの札も出す**(→docs/06 §6.40)。攻守で同時に出ることがあるので、
+  // 片側だけ見せると「相手は何もしていない」ように読めてしまう
+  const atkSk=e.sk, dfSk=e.dsk;
+  const mineSk=mineSide===e.side?atkSk:dfSk, oppSk=mineSide===e.side?dfSk:atkSk;
+  const sg=sigIn(atkSk)||sigIn(dfSk);
   const ms=cutShow('<div class="cut'+(sg?" sig":"")+'">'
     +(sg?cutSparks():"")
     +'<div class="cut-hd">'+esc(e.label||"MATCH UP")+'</div>'
-    +cutSkills(mineSide===e.side?e.sk:e.dsk)
     +'<div class="cut-row">'
-      +cutFig(mine,mineSide,"L",statNote(mine,e))
+      +cutFig(mine,mineSide,"L",statNote(mine,e),mineSk)
       +'<div class="cut-vs">VS</div>'
-      +cutFig(opp,oppSide,"R",statNote(opp,e))
+      +cutFig(opp,oppSide,"R",statNote(opp,e),oppSk)
     +'</div>'
     +'<div class="cut-word '+(mineWon?"win":"stop")+'">'+word+'</div>'
   +'</div>',TUNING.play.cutMs);
@@ -3045,9 +3054,9 @@ function cutPass(e,from,to){
   return cutShow('<div class="cut'+(sg?" sig":"")+'">'
     +(sg?cutSparks():"")
     +'<div class="cut-hd">'+esc(e.label||"PASS")+'</div>'
-    +cutSkills(e.sk)
     +'<div class="cut-row">'
-      +cutFig(from,e.side,"L")
+      // **出し手の下に置く**。パスの札は出した側のもの(→docs/06 §6.40)
+      +cutFig(from,e.side,"L",null,e.sk)
       +'<div class="cut-arrow">▶</div>'
       +cutFig(to,e.side,"R win")
     +'</div>'
@@ -3067,9 +3076,8 @@ function cutShot(e,sc,keeper,word,scored,assist){
   cutShow('<div class="cut'+(sg?" sig":"")+'">'
     +(sg?cutSparks():"")
     +'<div class="cut-hd">'+esc(e.flabel||"SHOT")+'</div>'
-    +cutSkills(e.sk)
     +'<div class="cut-row">'
-      +cutFig(sc,e.side,"L","ATK "+sc.c.atk+" / POW "+sc.c.pow)
+      +cutFig(sc,e.side,"L","ATK "+sc.c.atk+" / POW "+sc.c.pow,e.sk)
       +'<div class="cut-vs">VS</div>'
       +(keeper?cutFig(keeper,kSide,"R",(keeper.role==="GK"?"GK":keeper.sub)+" DEF "+keeper.c.def)
         :'<div class="cut-fig R"></div>')
