@@ -351,9 +351,11 @@ function renderHomeTrophy(){
 // ---------- 背景(→docs/06 §6.45) ----------
 // **端末枠の外側**を着せ替える。盤面(#app)の中は触らないので、
 // どの背景を選んでも画面の読みやすさは変わらない。
+// **既定はピッチ**。背景を選んだことが無いセーブもここに落ちる
+const BG_DEFAULT="pitch";
 const BGS=[
-  { id:"black", name:"ブラック",  note:"既定。盤面に集中する" },
-  { id:"pitch", name:"ピッチ",    note:"芝の縞とラインを敷く" },
+  { id:"pitch", name:"ピッチ",     note:"既定。芝の縞とラインを敷く" },
+  { id:"black", name:"ブラック",   note:"盤面に集中する" },
   { id:"wall",  name:"ロゴウォール", note:"会見の背景のように斜めに並べる" },
 ];
 /**
@@ -391,14 +393,14 @@ function buildWall(){
 }
 /** いま選んでいる背景を body に着せる。**セーブに持つ**ので次に開いても残る。 */
 function applyBg(){
-  const id=(S&&S.player&&S.player.bg)||"black";
+  const id=(S&&S.player&&S.player.bg)||BG_DEFAULT;
   document.body.classList.remove("bg-black","bg-pitch","bg-wall");
   document.body.classList.add("bg-"+id);
   if(id==="wall")buildWall();
   else{ const w=$("bgWall"); if(w)w.remove(); }
 }
 function renderCfg(){
-  const cur=(S.player&&S.player.bg)||"black";
+  const cur=(S.player&&S.player.bg)||BG_DEFAULT;
   $("cfgBg").innerHTML=BGS.map(b=>'<button class="cfg-o'+(b.id===cur?" on":"")+'"'
     +' data-bg="'+b.id+'"><i class="cfg-sw sw-'+b.id+'"></i>'
     +'<b>'+esc(b.name)+'</b><span>'+esc(b.note)+'</span></button>').join("");

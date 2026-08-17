@@ -2486,6 +2486,12 @@ const STEPS = [
             throw new Error('設定が開かない');
           const os=[...document.querySelectorAll('#cfgBg [data-bg]')];
           if(os.length!==BGS.length)throw new Error('背景の数が合わない: '+os.length);
+          // **既定はピッチ**。背景を選んだことが無いセーブもここに落ちる
+          if(BG_DEFAULT!=='pitch')throw new Error('既定がピッチでない: '+BG_DEFAULT);
+          const was=S.player.bg; delete S.player.bg; applyBg();
+          if(!document.body.classList.contains('bg-pitch'))
+            throw new Error('未設定のセーブがピッチにならない');
+          S.player.bg=was; applyBg();
           const out=[];
           for(const o of os){
             o.click();
