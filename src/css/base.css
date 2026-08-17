@@ -2028,7 +2028,10 @@ body{
 }
 .cal-n{ width:26px; text-align:center; font-size:10px; color:var(--text-dim); flex-shrink:0 }
 .cal-h{ width:22px; text-align:center; font-size:14px; flex-shrink:0 }
-.cal-c{ width:22px; height:22px; border-radius:50%; flex-shrink:0 }
+/* 相手の印(→docs/03 §3.54)。**色の丸ではなくエンブレム**。
+   中身がSVGなので地色も丸めも要らない */
+.cal-c{ width:22px; height:22px; flex-shrink:0; display:flex;
+  align-items:center; justify-content:center; line-height:0 }
 .cal-b{ flex:1; min-width:0 }
 .cal-b b{ display:block; font-size:12px; font-weight:400; color:oklch(0.92 0.01 90);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap }

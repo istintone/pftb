@@ -1630,7 +1630,9 @@ function renderSchedule(){
     return '<div class="cal foe'+(next?" next":"")+(done?" done":"")+'"'
       +' data-club="'+opp+'" role="button" tabindex="0">'
       +'<span class="cal-n num">'+md+'</span>'
-      +'<span class="cal-c" style="background:'+clubColor(opp)+'"></span>'
+      // **色の丸ではなくエンブレム**(→docs/03 §3.54)。同じ相手と2度当たるので、
+      // 節ごとに別の tag を渡して clipPath の id をぶつけない
+      +'<span class="cal-c">'+embSvg(opp,clubName(opp),22,{ tag:"sc"+md })+'</span>'
       +'<span class="cal-b"><b>'+esc(clubName(opp))+'</b>'
       +'<span class="lg">'+(home?"HOME":"AWAY")+'</span></span>'
       +(done?'<span class="cal-s num '+resClass(md)+'">'+scoreOf(md)+'</span>'
@@ -1694,9 +1696,11 @@ function currentRow(){
   // 相手が決まっていれば出す。決まるのはチャットで大会を選んでから
   const f=C.comp==="cup"?cupFixtureOf():null;
   const m=C.comp==="league"?myFixture():null;
-  const foe=f?{ name:f.side.name, sub:f.label, col:f.elite?"var(--rar-spe)":"var(--accent-dim)" }
+  // **相手はエンブレムで出す**(→docs/03 §3.54)。カップの相手はクラブIDを持たないので、
+  // 枠の名前をたねにする(架空の相手にも同じ作りの顔が付く)
+  const foe=f?{ name:f.side.name, sub:f.label, emb:embSvg("cup:"+f.side.name,f.side.name,22,{ tag:"cur" }) }
     :m?{ name:clubName(m.opp), sub:"リーグ 第"+S.world.matchday+"節 ／ "+(m.home?"HOME":"AWAY"),
-         col:clubColor(m.opp) }:null;
+         emb:embSvg(m.opp,clubName(m.opp),22,{ tag:"cur" }) }:null;
   // **タイルごとリンク**。ボタンは置かず、行き先を見出しそのものにする(→docs/06 §6.8)。
   // 前は見出しが「この節の準備」で、行き先は右下に小さく置いていた。
   // タイルの用は1つしかないので、**押したら何が起きるか**を見出しに上げた(→docs/06 §6.31)
@@ -1706,7 +1710,7 @@ function currentRow(){
     // 話しかけた後だけ、どこまで進んだかを添える(まだなら見出しだけでいい)
     +(ch?'<span class="lg">'+esc(state)+'</span>':"")+'</span>'
     +'<span class="cal-r">›</span></div>'
-    +(foe?'<div class="cal-target"><span class="cal-c" style="background:'+foe.col+'"></span>'
+    +(foe?'<div class="cal-target"><span class="cal-c">'+foe.emb+'</span>'
       +'<span class="cal-b"><b>'+esc(foe.name)+'</b>'
       +'<span class="lg">'+esc(foe.sub)+'</span></span></div>':"")
     // **いまの節はロッカーの絵で示す**(→docs/06 §6.31)。並んだ枠の中で1枚だけ絵が入る
