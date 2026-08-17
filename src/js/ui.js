@@ -139,7 +139,8 @@ function toast(msg){
 function headUI(){
   const name=S.club?clubById(S.club.id).name:"—";
   $("hdClubName").textContent=name;
-  $("hdEmblem").textContent=(name.trim()[0]||"P").toUpperCase();
+  // **エンブレムは絵ではなくSVG**(→docs/03 §3.54)。クラブIDから毎回同じ顔になる
+  $("hdEmblem").innerHTML=S.club?embSvg(S.club.id,name,30,{tag:"hd"}):"";
   $("hdCoin").textContent=fmtNum(S.club?S.club.coins:0);
 }
 
@@ -2492,7 +2493,7 @@ function renderStandings(){
 // ---------- CLUB(クラブハウス) ----------
 function renderClubhouse(){
   $("clubMgrName").textContent=S.coach||"監督";
-  renderClubMgr();
+  renderClubMgr(); renderClubCrest();
   $("clubFame").textContent=fmtNum(S.player.fame);
   $("clubTickets").textContent=ticketTotal();
   // **直近だけ見せる**(→docs/03 §3.2.3)。長く続けるほど経歴は伸びるので、
@@ -3691,8 +3692,13 @@ function startMatch(){
   // **左が自分・右が相手**。ピッチの下が自分なのに、名前だけホーム基準だと読み替えになる
   const mine=mMine()==="H"?_M.home:_M.away, opp=mMine()==="H"?_M.away:_M.home;
   $("mNameH").textContent=mine.name; $("mNameA").textContent=opp.name;
-  $("mEmbH").style.setProperty("--kit",clubColor(mMine()==="H"?_M.fixture.h:_M.fixture.a));
-  $("mEmbA").style.setProperty("--kit",clubColor(mMine()==="H"?_M.fixture.a:_M.fixture.h));
+  // スコアボードもエンブレム(→docs/03 §3.54)。カップの相手はクラブIDを持たないので、
+  // 枠の名前をたねにする(架空の相手にも同じ作りの顔が付く)
+  const eh=mMine()==="H"?_M.fixture.h:_M.fixture.a;
+  const ea=mMine()==="H"?_M.fixture.a:_M.fixture.h;
+  const embOf=(id,nm,tag)=>embSvg(id||("cup:"+nm),nm,34,{ tag });
+  $("mEmbH").innerHTML=embOf(eh,eh?clubName(eh):_M.home.name,"mh");
+  $("mEmbA").innerHTML=embOf(ea,ea?clubName(ea):_M.away.name,"ma");
   $("mSc").textContent="0 - 0"; $("mClock").textContent="KICK OFF";
   $("mFeed").innerHTML=""; $("mDone").style.display="none";
   $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=false;
@@ -4036,6 +4042,52 @@ function openFace(){
   $("faceModal").classList.add("on");
 }
 const closeFace=()=>$("faceModal").classList.remove("on");
+/**
+ * エンブレムを組み替える(→docs/03 §3.54)。**自分のクラブだけ**。
+ * 形・地の柄・紋章を選ぶ。既定はクラブIDから決まる意匠で、ここは上書き。
+ */
+function renderCrestPick(){
+  const id=S.club.id, nm=clubName(id);
+  $("crestPrev").innerHTML=embSvg(id,nm,96,{tag:"pv"+Math.random().toString(36).slice(2,6)});
+  const d=embDesign(id,nm);
+  const row=(key,list,label,draw)=>'<div class="cr-k">'+label+'</div><div class="cr-row">'
+    +list.map(v=>'<button class="cr-b'+(d[key]===v?" on":"")+'" data-k="'+key+'" data-v="'+v+'">'
+      +draw(v)+'</button>').join("")+'</div>';
+  // **見本は実物で描く**。名前だけ並べても、選ぶ前にどうなるか分からない
+  const mini=(over)=>{
+    const save=S.club.emblem;
+    S.club.emblem={ ...d, ...over };
+    const h=embSvg(id,nm,36,{ tag:"m"+over[Object.keys(over)[0]], stars:false });
+    S.club.emblem=save;
+    return h;
+  };
+  $("crestPick").innerHTML=
+    row("shape",EMB_SHAPES,"かたち",v=>mini({shape:v}))
+    +row("field",EMB_FIELDS,"地の柄",v=>mini({field:v}))
+    +row("crest",EMB_CRESTS,"紋章",v=>mini({crest:v}));
+  $("crestPick").querySelectorAll("[data-k]").forEach(el=>{
+    el.onclick=()=>{
+      const cur=embDesign(id,nm);
+      S.club.emblem={ shape:cur.shape, field:cur.field, crest:cur.crest, text:cur.text };
+      S.club.emblem[el.dataset.k]=el.dataset.v;
+      renderCrestPick(); renderClubCrest(); headUI(); save();
+    };
+  });
+}
+function openCrest(){ renderCrestPick(); $("crestModal").classList.add("on"); }
+const closeCrest=()=>$("crestModal").classList.remove("on");
+/** CLUB のエンブレム欄。★はワールドクラブチャンピオンカップの獲得数(→§3.54)。 */
+function renderClubCrest(){
+  const el=$("clubCrest"); if(!el||!S.club)return;
+  const id=S.club.id, nm=clubName(id);
+  el.innerHTML=embSvg(id,nm,84,{tag:"cl"});
+  $("clubCrestName").textContent=nm;
+  const n=embStars(id);
+  $("clubCrestStar").textContent=n
+    ? "★".repeat(n)+"　ワールドクラブチャンピオン "+n+"回"
+    : "ワールドクラブチャンピオンカップを獲ると★が付きます（最大"
+      +TUNING.emblem.maxStar+"）";
+}
 /** CLUB の監督の顔。名前の左に出す。 */
 function renderClubMgr(){
   const el=$("clubMgrFace"); if(!el)return;
@@ -4071,6 +4123,9 @@ $("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast
 $("btnForm").onclick=openForm;
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };
 $("clubMgrFace").onclick=openFace;
+$("clubCrest").onclick=openCrest;
+$("crestDone").onclick=closeCrest;
+$("crestModal").onclick=e=>{ if(e.target===$("crestModal"))closeCrest(); };
 $("faceDone").onclick=closeFace;
 $("faceModal").onclick=e=>{ if(e.target===$("faceModal"))closeFace(); };  // 外側タップで閉じる
 $("slotModal").onclick=e=>{ if(e.target===$("slotModal"))closeSlot(); };

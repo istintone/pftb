@@ -107,11 +107,9 @@ body{
 }
 #hdBack.off,#hdClub.off{ display:none }
 #hdClub{ display:flex; align-items:center; gap:10px; min-width:0 }
+/* ヘッダーのエンブレム(→docs/03 §3.54)。中身はSVGなので地も枠も持たない */
 .emblem{
-  width:34px; height:34px; border-radius:8px; flex-shrink:0;
-  background:radial-gradient(circle at 30% 30%, oklch(0.80 0.14 85), oklch(0.50 0.10 85));
-  border:1px solid oklch(0.35 0.02 255); color:var(--surface);
-  font:700 15px/1 var(--f-head);
+  width:34px; height:34px; flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
 }
 #hdClubName{
@@ -790,8 +788,12 @@ body{
 }
 .mteam{ width:76px; text-align:center; font-size:10px; color:var(--text-2);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.memb{ width:34px; height:34px; border-radius:50%; margin:0 auto 6px;
-  background:var(--kit, oklch(0.55 0.10 85)) }
+/* スコアボードのエンブレム(→docs/03 §3.54)。中身はSVGなので地色は要らない */
+.memb{ width:34px; height:34px; margin:0 auto 6px; display:flex;
+  align-items:center; justify-content:center }
+.memb .emb-svg,.emblem .emb-svg{ display:block }
+/* ★が付くと上に伸びるので、はみ出しを許す(枠を広げると並びが動く) */
+.emb-svg{ overflow:visible }
 .mmid{ text-align:center }
 .mclock{ font:9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-dim); margin-bottom:3px }
 .mclock.late{ color:var(--fit-bad) }
@@ -1536,6 +1538,27 @@ body{
 .ct-face img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
   transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
 .ct-face.on{ border-color:oklch(0.55 0.14 60); box-shadow:0 0 0 2px oklch(0.55 0.14 60) }
+/* CLUB のエンブレム(→docs/03 §3.54)。**押すと組み替えられる** */
+.crest-card{ display:flex; align-items:center; gap:14px }
+.crest-big{ flex:0 0 auto; cursor:pointer; position:relative; line-height:0 }
+.crest-big::after{
+  content:"✎"; position:absolute; right:-2px; bottom:0;
+  padding:1px 3px; border-radius:5px;
+  background:oklch(0.20 0.02 255 / .82); color:var(--accent-hi); font-size:10px; line-height:1;
+}
+.crest-big:active{ filter:brightness(1.12) }
+.crest-b{ flex:1; min-width:0 }
+.crest-nm{ font:600 14px/1.3 var(--f-head); letter-spacing:.5px; overflow-wrap:anywhere }
+/* 組み替えの見本。**実物で描く**ので、押す前に結果が分かる */
+.cr-sheet{ max-width:360px }
+.cr-prev{ text-align:center; margin:6px 0 12px; line-height:0 }
+.cr-k{ margin:12px 0 5px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
+.cr-row{ display:flex; gap:6px; flex-wrap:wrap }
+.cr-b{
+  padding:3px; border-radius:8px; cursor:pointer; line-height:0;
+  background:var(--panel); border:1px solid var(--line);
+}
+.cr-b.on{ border-color:var(--accent); box-shadow:0 0 0 2px oklch(0.70 0.14 85 / .45) }
 /* CLUB の監督の顔(→docs/03 §3.45)。**押すと選び直せる**。
    .emblem と同じ大きさに収めて、名前との並びを変えない */
 .mgr-face{

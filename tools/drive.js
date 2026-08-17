@@ -2315,6 +2315,50 @@ const STEPS = [
             +' / いまの表示: '+(dv?dv.textContent:'—');
         })()`));
         await ctx.shot("12e-club-career");
+        // エンブレム(→docs/03 §3.54)。**絵を持たずに描く**ので、
+        // クラブを足しても素材は要らない
+        ctx.log("  エンブレム:", await ctx.js(`(()=>{
+          // 144クラブが全部ちがう顔になる
+          const seen=new Set(CLUBS.map(c=>{ const d=embDesign(c.id,c.name);
+            if(!d.shape||!d.field||!d.crest)throw new Error('意匠が欠けている: '+c.id);
+            return d.shape+'/'+d.field+'/'+d.crest+'/'+d.text; }));
+          if(seen.size!==CLUBS.length)
+            throw new Error('同じ顔のクラブがある: '+seen.size+' / '+CLUBS.length);
+          // 頭文字はラテン(カタカナを盾に入れない)
+          for(const c of CLUBS.slice(0,30))
+            if(!/^[A-Z]{1,2}$/.test(embDesign(c.id,c.name).text))
+              throw new Error('モノグラムがラテンでない: '+c.name);
+          const el=document.getElementById('clubCrest');
+          if(!el||!el.querySelector('svg'))throw new Error('CLUB にエンブレムが出ない');
+          // ★はワールドクラブチャンピオンカップの数。**3つで打ち止め**
+          const keep=JSON.parse(JSON.stringify(S.player.trophies));
+          const put=n=>{ S.player.trophies=keep.filter(t=>t.id!=='world');
+            if(n)S.player.trophies.push({id:'world',name:'w',kind:'cup',n,season:1});
+            renderClubCrest(); return el.querySelectorAll('svg path[transform]').length; };
+          const got=[0,1,3,5].map(put);
+          if(got.join()!=='0,1,3,3')throw new Error('★の数が合わない: '+got.join());
+          S.player.trophies=keep; renderClubCrest();
+          // 組み替え
+          el.click();
+          if(!document.getElementById('crestModal').classList.contains('on'))
+            throw new Error('押しても組み替えられない');
+          const btns=[...document.querySelectorAll('#crestPick [data-k]')];
+          if(btns.length!==EMB_SHAPES.length+EMB_FIELDS.length+EMB_CRESTS.length)
+            throw new Error('選べる数が合わない: '+btns.length);
+          const before=JSON.stringify(embDesign(S.club.id,clubName(S.club.id)));
+          const other=btns.find(b=>b.dataset.k==='field'&&!b.classList.contains('on'));
+          other.click();
+          if(JSON.stringify(embDesign(S.club.id,clubName(S.club.id)))===before)
+            throw new Error('組み替えても変わらない');
+          if(!S.club.emblem)throw new Error('組み替えが保存されない');
+          document.getElementById('crestDone').click();
+          return CLUBS.length+'クラブが全部ちがう顔 ／ ★は0,1,3,3（3つ打ち止め）'
+            +' ／ '+btns.length+'通りから組み替えられる';
+        })()`));
+        await ctx.js("document.getElementById('clubCrest').click()");
+        await ctx.wait(300);
+        await ctx.shot("12g-club-crest");
+        await ctx.js("document.getElementById('crestDone').click()");
         // 監督の顔(→docs/03 §3.45)。**CLUB からいつでも選び直せる**
         ctx.log("  監督の顔:", await ctx.js(`(()=>{
           const keys=managerFaces();
