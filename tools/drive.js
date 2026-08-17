@@ -1509,6 +1509,18 @@ const STEPS = [
       if(cs('kpTab')!==cs('tacTab')||cs('kpTab')!==cs('ordTab'))
         throw new Error('タブの見た目が揃っていない: '
           +cs('kpTab')+' / '+cs('tacTab')+' / '+cs('ordTab'));
+      // **開いたあとの面も同じ形**。.hd-in(右から出る引き出しの形)が
+      // あとから定義されていて、ID付きで書いた KP だけが生き残っていた
+      const ds=id=>{ const e=document.querySelector('#'+id+' .hd-in');
+        const c=getComputedStyle(e);
+        return [c.borderTopRightRadius,c.borderBottomRightRadius,
+                c.borderRightWidth,c.borderLeftWidth].join('|'); };
+      if(ds('kpDrawer')!==ds('tacDrawer')||ds('kpDrawer')!==ds('ordDrawer'))
+        throw new Error('引き出しの面が揃っていない: '
+          +ds('kpDrawer')+' / '+ds('tacDrawer')+' / '+ds('ordDrawer'));
+      if(parseFloat(getComputedStyle(document.querySelector('#ordDrawer .hd-in'))
+          .borderTopRightRadius)<8)
+        throw new Error('右上の角が丸まっていない');
       if(document.getElementById('ordTab').textContent.trim()!=='ORD')
         throw new Error('指示タブが ORD になっていない');
       return TACTICS.length+'種 中 敷ける '+n0+' → '+n1+'（覚えて熟練度が足りた）'

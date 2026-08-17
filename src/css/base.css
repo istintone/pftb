@@ -1037,6 +1037,16 @@ body{
    わけではなく、無指示も普通の状態なので、光を「異常」の合図に使わない) */
 #kpTab.on, #tacTab.on{ border-color:var(--accent-hi);
   box-shadow:2px 0 16px oklch(0.70 0.14 85 / .6) }
+/* **左から出る引き出しは .hd-in を左右反転する**(→docs/06 §6.39)。
+   .hd-in は右から出る引き出し(HELP など)の形で、あとから定義されているぶん
+   `.od-in` の角丸を打ち消していた。**KP だけID付きで書いていたので生き残り**、
+   TAC と ORD だけ右角が四角いまま、という食い違いになっていた。
+   ここでまとめて上書きする(3つとも同じ形になる) */
+#kpDrawer .hd-in, #tacDrawer .hd-in, #ordDrawer .hd-in{
+  border-radius:0 14px 14px 0;
+  border-left:none; border-right:1px solid var(--line);
+  box-shadow:6px 0 18px oklch(0 0 0 / .55);
+}
 /* 上から 軸 → 采配 → 指示。**采配は指示より上位の構え**なので上に置く */
 #kpTab{ top:30% }
 #tacTab{ top:45% }
@@ -1048,7 +1058,6 @@ body{
   pointer-events:none;
 }
 #kpDrawer.on{ transform:translateX(0); pointer-events:auto }
-#kpDrawer .sb-in{ border-radius:0 14px 14px 0 }
 /* 中身をピッチの高さいっぱいに使う。**行はその中で伸びる** */
 #kpDrawer .sb-in{ height:100%; display:flex; flex-direction:column }
 #kpDrawer .sb-list{ flex:1; min-height:0; display:flex; flex-direction:column;
@@ -1071,7 +1080,6 @@ body{
   pointer-events:none;
 }
 #ordDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
-.od-in{ border-radius:0 14px 14px 0 }
 .od-note{ font-size:11px; color:var(--text-dim); margin-bottom:10px }
 /* 特別采配(→docs/03 §3.50)。**使えないものも理由付きで並べる** */
 .od-k{ margin:14px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
@@ -1094,40 +1102,6 @@ body{
 #kpTab:active{ background:oklch(0.40 0.11 85) }
 #kpTab.off{ display:none }
 #kpTab.on{ border-color:var(--accent-hi); box-shadow:2px 0 16px oklch(0.70 0.14 85 / .6) }
-/* 高さと上端は openKp() が**ピッチの実寸から**入れる(→docs/06 §6.37)。
-   ここの値は測る前の受け皿(ピッチが無い場面で開いても崩れないように) */
-#kpDrawer{
-  position:absolute; left:0; top:13%; z-index:70; width:min(88%,340px); height:70%;
-  transform:translateX(-105%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
-  pointer-events:none;
-}
-#kpDrawer.on{ transform:translateX(0); pointer-events:auto }
-/* 中身をピッチの高さいっぱいに使う。**行はその中で伸びる** */
-#kpDrawer .sb-in{ height:100%; display:flex; flex-direction:column }
-#kpDrawer .sb-list{ flex:1; min-height:0; display:flex; flex-direction:column;
-  justify-content:center; overflow:hidden }
-#kpDrawer .sb-in{ border-radius:0 14px 14px 0 }
-/* 軸に選ばれている行 */
-.sb-r.kp-on{ border-color:var(--accent); background:oklch(0.26 0.05 85) }
-/* **11人が一度に見えること**が要件(→docs/06 §6.37)。名前と固有スキルを横並びにし、
-   行を薄くする。ここは #kpDrawer の中だけに効かせる(.sb-r は交代の引き出しと共用) */
-#kpDrawer .sb-r{ padding:7px 10px; margin-bottom:3px; gap:8px }
-#kpDrawer .sb-r:last-child{ margin-bottom:0 }
-#kpDrawer .sb-pos{ flex:0 0 30px; font-size:9px }
-#kpDrawer .sb-nm{ flex:0 0 auto; max-width:40%; font-size:12px }
-#kpDrawer .sb-v{ margin-left:auto; font-size:11px }
-.kp-sig{ flex:1; min-width:0; font-style:normal; font-size:10px; letter-spacing:.3px;
-  color:var(--accent-hi); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-.kp-none{ flex:1; min-width:0; font-style:normal; font-size:10px; color:var(--text-mute) }
-#ordDrawer{
-  position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
-  transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
-  pointer-events:none;
-}
-#ordDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
-.od-in{ border-radius:0 14px 14px 0 }
-.od-note{ font-size:11px; color:var(--text-dim); margin-bottom:10px }
-/* 特別采配(→docs/03 §3.50)。**使えないものも理由付きで並べる** */
 .od-k{ margin:14px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
 .od-tac{ display:flex; flex-direction:column; gap:5px; max-height:44vh; overflow:auto }
 /* 敷けるものが1つも無いとき。**空欄にしない**(何が起きているか分からなくなる) */
