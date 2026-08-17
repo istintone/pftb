@@ -304,6 +304,19 @@ const STEPS = [
     await ctx.shot("07m-cup-plan");
     // **相手の数値は段の域内**(→docs/03 §3.53)。強さの差は★で出しているので、
     // ★が読めないと「なぜ強いのか」が画面から消える
+    ctx.log("  受信箱の並び:", await ctx.js(`(()=>{
+      const keep=S.player.mail.slice(), node=S.career.node, season=S.world.season;
+      S.player.mail=[];
+      S.world.season=1; S.career.node=95; mailPush('t:old',{from:'sec',title:'古い',text:'x'});
+      S.world.season=2; S.career.node=2;  mailPush('t:new',{from:'sec',title:'新しい',text:'x'});
+      const order=mailList().map(m=>mailDef(m).title);
+      if(order[0]!=='新しい')
+        throw new Error('任期をまたぐと古い連絡が上に浮く: '+order.join(' / '));
+      if(mailDef(mailLatest()).title!=='新しい')throw new Error('HOME に出る最新が古いほう');
+      if(!mailList()[0].season)throw new Error('季が記録されていない');
+      S.player.mail=keep; S.career.node=node; S.world.season=season;
+      return '任期をまたいでも新しい順（'+order.join(' → ')+'）／ 季も持つ';
+    })()`));
     ctx.log("  相手の段と★:", await ctx.js(`(()=>{
       let out=0, tot=0, star=0;
       for(const c of CLUBS.slice(0,40))
@@ -657,8 +670,7 @@ const STEPS = [
       const defs=trophyDefs(), got=defs.filter(d=>trophyOf(d.id)).length;
       if(tr.indexOf(got+' / '+defs.length)<0)
         throw new Error('実績の数が出ていない: '+tr);
-      if(tr.indexOf('次:')<0&&tr.indexOf('制覇')<0)
-        throw new Error('次に狙うものが出ていない: '+tr);
+      if(tr.indexOf('次:')>=0)throw new Error('「次:」が残っている: '+tr);
       // **市場は WC以上が居るときだけ「エントリ中」**
       const mk=document.getElementById('tileMarketSub').textContent;
       const hot=marketList().filter(c=>c.rarity==='WC'||c.rarity==='LEG')

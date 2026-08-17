@@ -1023,8 +1023,17 @@ const mailUnread=()=>mailAll().filter(m=>!m.read).length;
 /** 新しい順。**画面も HOME のひとこともこの並びを見る**。
  *  同じ節に2通届くことがある(チュートリアルと配布物)ので、**届いた順を同点の決着に使う**。
  *  これが無いと、同じ節の中では先に届いたほうが「最新」として上に出てしまう。 */
-const mailList=()=>mailAll().map((m,i)=>({ m, i }))
-  .sort((a,b)=>(b.m.at||0)-(a.m.at||0)||b.i-a.i).map(x=>x.m);
+/**
+ * 新しい順(→docs/03 §3.42)。**並びは配列の順そのもの**。
+ *
+ * 以前は `at`(節)で並べ替えていたが、`at` は**任期の中での節**なので、
+ * 任期が明けると 96 → 1 に戻る。2つ目の任期に入った瞬間、
+ * **前の任期の古い連絡が上に浮く**という不具合になっていた。
+ *
+ * 配列は `mailPush` / `mailTick` が末尾に足し、`mailTrim` が先頭から削るだけなので、
+ * **並びそのものが届いた順**。並べ替える必要がない。
+ */
+const mailList=()=>mailAll().slice().reverse();
 const mailLatest=()=>mailList()[0]||null;
 /** 届く条件を見て、まだ届いていない連絡を入れる。**同じ連絡は一度きり**。 */
 function mailTick(){
@@ -1033,7 +1042,8 @@ function mailTick(){
   for(const m of MAILS){
     if(mailHas(m.id))continue;
     if(m.when&&!m.when(S))continue;
-    mailAll().push({ id:m.id, at:S.career.node, read:false, got:false });
+    mailAll().push({ id:m.id, at:S.career.node, season:S.world.season,
+      read:false, got:false });
     n++;
   }
   return n;
@@ -1045,7 +1055,8 @@ const mailRead=id=>{ const m=mailAll().find(x=>x.id===id); if(m)m.read=true; ret
  */
 function mailPush(id,dyn){
   if(!id||mailHas(id))return null;
-  mailAll().push({ id, at:S.career.node, read:false, got:false, dyn });
+  mailAll().push({ id, at:S.career.node, season:S.world.season,
+    read:false, got:false, dyn });
   mailTrim();
   return id;
 }

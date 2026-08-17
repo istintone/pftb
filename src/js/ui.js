@@ -344,9 +344,7 @@ function renderHomeMarket(){
 function renderHomeTrophy(){
   const defs=trophyDefs();
   const got=defs.filter(d=>trophyOf(d.id)).length;
-  const next=defs.find(d=>!trophyOf(d.id));
-  $("tileTrophySub").innerHTML='<b class="tl-num">'+got+'</b> / '+defs.length
-    +(next?'<span class="tl-next">次: '+esc(next.short)+'</span>':'<span class="tl-next">制覇</span>');
+  $("tileTrophySub").innerHTML='<b class="tl-num">'+got+'</b> / '+defs.length;
   $("tileTrophyArt").innerHTML=stickerArt("trophy");
 }
 
@@ -495,7 +493,10 @@ function renderMail(){
     // **案内は行き先まで連れていく**(→docs/03 §3.43)。読んで終わりにさせない
     const go=d.go&&SCREENS[d.go]?d.go:null;
     return '<div class="ch-row"><div class="ch-b ml-b">'
-      +'<span class="ch-nm">秘書　'+(d.tut?"はじめかた "+d.tut+"/"+TUT_ALL:"第"+m.at+"節")
+      +'<span class="ch-nm">秘書　'+(d.tut?"はじめかた "+d.tut+"/"+TUT_ALL
+          // **季も添える**(→docs/03 §3.42)。節は任期の中で数え直すので、
+          // 番号だけだと任期をまたいだ連絡が見分けられない
+          :(m.season?"S"+m.season+" ":"")+"第"+m.at+"節")
         +(m.read?"":'　<i class="ml-new">NEW</i>')+'</span>'
       // **件名を出す**。溜まった連絡をあとから辿るとき、本文だけでは探せない
       +'<b class="ml-ti">'+esc(d.title)+'</b>'
