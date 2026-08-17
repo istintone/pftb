@@ -91,4 +91,23 @@ node tools/drive.js --mobile     # スマホ実寸(390x844)で確認する
 
 ---
 
+### ブラウザの後片づけ(2026-08-17)
+
+`tools/drive.js` は**自分が起こしたブラウザだけを、必ず落とす**。
+
+- **PID を指定して木ごと落とす**(`taskkill /PID <pid> /T /F`)。
+  `browser.kill()` は Windows では**起動役のプロセスしか殺さない**ので、
+  子プロセスが残って `chrome-profile` を掴んだままになり、
+  次の実行が `EPERM` で落ちる
+- **失敗した経路でも落とす**。`process.on("exit")` と SIGINT/SIGTERM に繋いである。
+  以前は `.catch()` の中で `browser.kill()` を呼んでおらず、
+  **検査が1つ落ちるたびに headless Chrome が1つ残っていた**
+
+> **`taskkill /IM chrome.exe` は絶対に使わない。** イメージ名で殺すと、
+> 作業している人が自分で開いているブラウザまで巻き添えにする。
+> EPERM を力技で潰すために一度これをやってしまい、
+> **利用者のブラウザが毎回落ちる**という迷惑をかけた。
+> 掴んでいるのは自分が残した残骸なので、直すべきは後片づけのほう。
+
+
 [← 前: 3. ゲームデザイン](03-game-design.md) ｜ [↑ 索引](../SPEC.md) ｜ [次: 5. 決定事項ログ →](05-decisions-backlog.md)

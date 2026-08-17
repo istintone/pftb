@@ -3488,6 +3488,31 @@ const STEPS = [
     "--hide-scrollbars", "--user-data-dir=" + profile, PAGE,
   ], { stdio: "ignore" });
 
+  // **必ず自分が起こしたブラウザだけを、必ず落とす**。
+  //   ・browser.kill() は Windows では**起動役のプロセスしか殺さない**。
+  //     Chrome は子プロセスを何個も持つので、残ったほうが chrome-profile を
+  //     掴んだままになり、次の実行が EPERM で落ちる
+  //   ・だから PID を指定して木ごと落とす。**イメージ名(chrome.exe)では絶対に殺さない**。
+  //     利用者が自分で開いているブラウザまで巻き添えにする(実際にやってしまった)
+  let shut = false;
+  const shutdown = () => {
+    if (shut) return; shut = true;
+    try { if (typeof ws !== "undefined" && ws) ws.close(); } catch (e) {}
+    if (process.platform === "win32") {
+      try {
+        require("child_process")
+          .execFileSync("taskkill", ["/PID", String(browser.pid), "/T", "/F"],
+            { stdio: "ignore" });
+      } catch (e) { try { browser.kill(); } catch (e2) {} }
+    } else {
+      try { process.kill(-browser.pid, "SIGKILL"); } catch (e) { try { browser.kill(); } catch (e2) {} }
+    }
+  };
+  // 途中で失敗しても、Ctrl-C でも落とす
+  process.on("exit", shutdown);
+  for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"])
+    process.on(sig, () => { shutdown(); process.exit(1); });
+
   const ws = new WebSocket(await findTarget());
   await new Promise(r => ws.addEventListener("open", r));
   const send = rpc(ws);
@@ -3540,6 +3565,6 @@ const STEPS = [
   if (problems.length) { console.error("\n⚠ ページ側の問題:\n" + problems.join("\n")); }
   else console.log("ページ側の例外/エラー: なし");
 
-  ws.close(); browser.kill();
+  shutdown();
   process.exit(problems.length ? 1 : 0);
 })().catch(e => { console.error("FAIL:", e.message); process.exit(1); });
