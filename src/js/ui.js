@@ -2713,6 +2713,14 @@ function matchLine(e,M){
 // 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
 let _M=null;          // 進行中の試合
 let _mTimer=null, _mSpeed=1, _mPaused=false;
+// **再生ループの周回札**(→docs/06 §6.43)。古いループが残っていても、
+// 札が違えば次の一歩で捨てられる。二重に走ると試合が倍速で進み、
+// **1点のつもりが2点入る**(実際に起きた)
+let _mRun=0;
+// **見せ終えていないイベント**(→docs/06 §6.43)。止めた時点の続きから見せるために持つ。
+// 持たずに再開すると stepMatch をやり直してしまい、**まだ見せていない分が捨てられる**。
+// 捨てた中にゴールがあると、次に出たイベントで**点が2つ増えたように見える**
+let _mEvs=null, _mIx=0;
 let _mPhase=0, _mLastSide="H", _mBall=[50,50], _mRestart=true;
 let _mCutT=null, _mCutJ=null, _mBallT=null, _mNext=null;  // 揺れの位相 / 直前に攻めていた側 / ボール位置(演出用)
 
@@ -3327,14 +3335,18 @@ function mFeed(min,text,cls){
 function mTick(){
   if(!_M||_mPaused)return;
   if(matchOver(_M)){ mFinish(); return; }
-  const evs=stepMatch(_M);
-  let i=0;
+  // **この周回だけの札**。あとから始まった周回が札を進めるので、
+  // 取り残された古い周回は次の一歩で自分から降りる
+  const run=++_mRun;
+  // **見せ残しがあれば、そこから続ける**。無いときだけ次のティックを解く
+  if(!_mEvs||_mIx>=_mEvs.length){ _mEvs=stepMatch(_M); _mIx=0; }
+  const evs=_mEvs;
   const gap=Math.max(180,Math.round(TUNING.ui.tickMs/_mSpeed/Math.max(1,evs.length)));
   const next=()=>{
-    if(!_M||_mPaused)return;
-    if(i>=evs.length){ _mTimer=setTimeout(mTick,gap); return; }
-    _mNext=evs[i+1]||null;                              // パスの受け手を先読みする(演出用)
-    const hold=mApply(evs[i++]);
+    if(!_M||_mPaused||run!==_mRun)return;
+    if(_mIx>=evs.length){ _mEvs=null; _mIx=0; _mTimer=setTimeout(mTick,gap); return; }
+    _mNext=evs[_mIx+1]||null;                           // パスの受け手を先読みする(演出用)
+    const hold=mApply(evs[_mIx++]);
     _mTimer=setTimeout(next,gap+hold);
   };
   next();
@@ -3342,7 +3354,8 @@ function mTick(){
 function mReset(){ const b=$("psoBox"); if(b){ b.hidden=true; $("psoRows").innerHTML="";
   $("psoSum").innerHTML=""; } clearTimeout(_psoTimer); _psoTimer=null; }
 function mFinish(){
-  clearTimeout(_mTimer); _mTimer=null;
+  clearTimeout(_mTimer); _mTimer=null; _mRun++;   // 残った周回も降ろす
+  _mEvs=null; _mIx=0;
   // **必ずここで試合を締める**。再生ループは matchOver で抜けるので stepMatch を
   // 通らずに終わることがあり、締めないと _M.over が立たず結果画面に中身が渡らない。
   finishTick(_M);
@@ -3719,6 +3732,7 @@ function startMatch(){
   $("mPlay").disabled=$("mSpeed").disabled=$("mSkip").disabled=false;
   $("mPlay").textContent="⏸ 一時停止"; $("mSpeed").textContent="×1";
   show("match");
+  _mEvs=null; _mIx=0;                   // 前の試合の見せ残しを持ち越さない
   mDrawSquads();
   kpTabUI(); tacTabUI();          // タブの光り方を試合の頭で合わせる
   $("mBall").style.left="50%"; $("mBall").style.top="50%";
@@ -4178,7 +4192,11 @@ $("tileDeck").onclick=()=>show("deck");
 function mPause(on){
   _mPaused=on;
   $("mPlay").textContent=on?"▶ 再生":"⏸ 一時停止";
-  if(!on)mTick();
+  // **再開する前に、待っている一歩を消す**(→docs/06 §6.43)。
+  // 消さずに mTick() を呼ぶと、止める前の周回が生き返って**二重に走る**。
+  // 引き出し(軸・采配・指示・交代)は開くたびに止めて閉じるたびに再開するので、
+  // 開け閉てのたびに1本ずつ増えていた
+  if(!on){ clearTimeout(_mTimer); _mTimer=null; mTick(); }
 }
 $("mPlay").onclick=()=>mPause(!_mPaused);
 $("subTab").onclick=()=>{ subOpen()?closeSub():openSub(); };

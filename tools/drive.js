@@ -1739,6 +1739,26 @@ const STEPS = [
       if(_mPaused!==false&&!_M.over)throw new Error('閉じても再生に戻らない');
       return '再生に戻った';
     })()`));
+    // **止めて再開しても、見せ残しを捨てない**(→docs/06 §6.43)。
+    // 捨てていた頃は、捨てた中にゴールがあると次のイベントで点が2つ増えて見えた
+    ctx.log("  止めても取りこぼさない:", await ctx.js(`(()=>{
+      const evs=stepMatch(_M);
+      if(evs.length<3)return '（このティックは短いので省略）';
+      // 途中まで見せたところで止める
+      _mEvs=evs; _mIx=1; _mPaused=true;
+      const keep=_mIx, len=_mEvs.length;
+      // 再開しても**同じ配列の続き**から始まること
+      mPause(false);
+      if(_mEvs!==evs)throw new Error('再開で見せ残しが捨てられた');
+      if(_mIx<keep)throw new Error('見せた分まで巻き戻っている');
+      mPause(true);
+      // **周回は1本だけ**。開け閉てのたびに増えない
+      const r0=_mRun;
+      mPause(false); mPause(true); mPause(false); mPause(true);
+      if(_mRun-r0<2)throw new Error('再開しても周回が起きていない');
+      _mPaused=false;
+      return '見せ残し '+(len-keep)+' 件を持ち越す ／ 周回の札 '+r0+' → '+_mRun;
+    })()`));
     // 最後まで再生して終える(スキップではなく**実際に見終わったときと同じ経路**)。
     // ここで締め忘れると結果画面に試合の中身が渡らないので、over を確かめる。
     ctx.log("自然終了:", await ctx.js(`(()=>{
