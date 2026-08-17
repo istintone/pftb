@@ -34,7 +34,7 @@ function setupTitle(exists){
     show("offer");                       // 名声0 → 下位クラブだけが声をかけてくる
   };
   const resume=async()=>{
-    await loadGame(); headUI();
+    await loadGame(); headUI(); applyBg();
     show(S.club?"home":"offer");         // 就任前で終わっていたら就任先選択から
   };
   const once=fn=>async()=>{              // 二重起動を防ぐ
@@ -52,7 +52,7 @@ function setupTitle(exists){
 
 (async()=>{
   try{
-    headUI();
+    headUI(); applyBg();
     setupTitle(await hasSave());
     window.__boot&&window.__boot("2/2: 起動完了!",true);
   }catch(e){

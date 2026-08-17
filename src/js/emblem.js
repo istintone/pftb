@@ -17,19 +17,55 @@ const EMB_CRESTS=["none","star","crown","wing","bird","wolf","helm","ball","towe
  * ホーム=地の色 / アウェイ=柄の色。
  */
 const EMB_HUES=[
-  { id:"red",    h:28,  name:"レッド" },
-  { id:"orange", h:62,  name:"オレンジ" },
-  { id:"gold",   h:92,  name:"ゴールド" },
-  { id:"lime",   h:126, name:"ライム" },
-  { id:"green",  h:152, name:"グリーン" },
-  { id:"teal",   h:186, name:"ティール" },
-  { id:"sky",    h:224, name:"スカイ" },
-  { id:"blue",   h:258, name:"ブルー" },
-  { id:"violet", h:292, name:"バイオレット" },
-  { id:"purple", h:318, name:"パープル" },
-  { id:"pink",   h:348, name:"ピンク" },
-  { id:"slate",  h:250, name:"スレート", c:0.03 },
+  // --- サッカーで実際によく使われる色 ---
+  { id:"red",     hex:"#E11B22", name:"レッド" },
+  { id:"crimson", hex:"#A5122B", name:"クリムゾン" },
+  { id:"maroon",  hex:"#6B1F2E", name:"マルーン" },
+  { id:"orange",  hex:"#F2751A", name:"オレンジ" },
+  { id:"gold",    hex:"#F2B713", name:"ゴールド" },
+  { id:"green",   hex:"#128A3E", name:"グリーン" },
+  { id:"forest",  hex:"#0B5027", name:"フォレスト" },
+  { id:"sky",     hex:"#4FB3E8", name:"スカイ" },
+  { id:"royal",   hex:"#1B4FD8", name:"ロイヤル" },
+  { id:"navy",    hex:"#172B54", name:"ネイビー" },
+  { id:"purple",  hex:"#6B2FA0", name:"パープル" },
+  { id:"black",   hex:"#1A1A1E", name:"ブラック" },
+  { id:"white",   hex:"#F2F2EF", name:"ホワイト" },
+  // --- インクカラー(いただいた見本そのまま) ---
+  // **推測で作らない**。指定された hex をそのまま置く
+  { id:"ink-violet",  hex:"#761AFF", name:"インクバイオレット" },
+  { id:"ink-indigo",  hex:"#6E1BFF", name:"インクインディゴ" },
+  { id:"ink-purple",  hex:"#AA1BFF", name:"インクパープル" },
+  { id:"ink-blue",    hex:"#4422FF", name:"インクブルー" },
+  { id:"ink-cyan",    hex:"#1BFAFF", name:"インクシアン" },
+  { id:"ink-mint",    hex:"#23FFB5", name:"インクミント" },
+  { id:"ink-green",   hex:"#23FF17", name:"インクグリーン" },
+  { id:"ink-lemon",   hex:"#F8FF26", name:"インクレモン" },
+  { id:"ink-yellow",  hex:"#FFF021", name:"インクイエロー" },
+  { id:"ink-orange",  hex:"#FFB530", name:"インクオレンジ" },
+  { id:"ink-magenta", hex:"#F215FF", name:"インクマゼンタ" },
+  { id:"ink-pink",    hex:"#FF21B2", name:"インクピンク" },
+  { id:"ink-rose",    hex:"#FF1F91", name:"インクローズ" },
 ];
+/**
+ * その色の明るさ(0..1)。**字を白にするか黒にするか**を決めるのに使う。
+ * インクカラーはレモンのように非常に明るいものがあり、白字だと消える。
+ */
+function embLum(hex){
+  const v=String(hex||"").replace("#","");
+  if(v.length<6)return 0.5;
+  const r=parseInt(v.slice(0,2),16)/255, g=parseInt(v.slice(2,4),16)/255,
+        b=parseInt(v.slice(4,6),16)/255;
+  return 0.2126*r+0.7152*g+0.0722*b;      // sRGB の相対輝度(ざっくり)
+}
+/** 少し暗くした色(縁や字の縁取りに使う)。 */
+function embShade(hex,k){
+  const v=String(hex||"").replace("#","");
+  if(v.length<6)return hex;
+  const f=x=>Math.max(0,Math.min(255,Math.round(parseInt(x,16)*k)));
+  const h=n=>n.toString(16).padStart(2,"0");
+  return "#"+h(f(v.slice(0,2)))+h(f(v.slice(2,4)))+h(f(v.slice(4,6)));
+}
 const embHueById=id=>EMB_HUES.find(x=>x.id===id)||null;
 
 // 盾の輪郭。clip と縁取りで同じパスを使う
@@ -183,11 +219,13 @@ function embSvg(clubId,name,size,opts){
   const ph=embHueById(d.home), pa=embHueById(d.away);
   const hue=ph?ph.h:(i>=0?((i*137.5+20)%360):(hashStr("hue:"+clubId)%360));
   const hue2=pa?pa.h:(hue+((h2%2)?150:40))%360;
-  const ca=ph&&ph.c!=null?ph.c:0.16, cb=pa&&pa.c!=null?pa.c:0.10;
-  const a="oklch(0.62 "+ca+" "+hue.toFixed(1)+")";
-  const b="oklch(0.34 "+cb+" "+hue2.toFixed(1)+")";
-  const ink="oklch(0.96 0.03 "+hue.toFixed(1)+")";
-  const rim="oklch(0.92 0.05 "+hue.toFixed(1)+")";
+  // 選んだ色は hex をそのまま使い、選んでいなければ色相から作る
+  const a=ph?ph.hex:"oklch(0.72 0.22 "+hue.toFixed(1)+")";
+  const b=pa?pa.hex:"oklch(0.38 0.14 "+hue2.toFixed(1)+")";
+  // **地が明るいときは字を暗く**。レモンや白の上に白字を置くと消える
+  const la=ph?embLum(ph.hex):0.62;
+  const ink=la>=0.62?"#1A1A1E":"#FFFFFF";
+  const rim=ph?embShade(ph.hex,la>=0.62?0.55:1.35):"oklch(0.93 0.06 "+hue.toFixed(1)+")";
   const path=EMB_PATH[d.shape]||EMB_PATH.shield;
   // **idはクラブごとに変える**。同じ画面に2つ出したとき clipPath がぶつかる
   const cid="ec"+String(clubId).replace(/[^A-Za-z0-9]/g,"")+(o.tag||"");

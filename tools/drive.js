@@ -2477,6 +2477,43 @@ const STEPS = [
         await ctx.js("document.getElementById('clubCrest').click()");
         await ctx.wait(300);
         await ctx.shot("12g-club-crest");
+        // 背景(→docs/06 §6.45)。**端末枠の外側だけ**が変わる
+        ctx.log("  背景の設定:", await ctx.js(`(()=>{
+          const btn=document.getElementById('clubCfg');
+          if(!btn)throw new Error('設定ボタンが無い');
+          btn.click();
+          if(!document.getElementById('cfgModal').classList.contains('on'))
+            throw new Error('設定が開かない');
+          const os=[...document.querySelectorAll('#cfgBg [data-bg]')];
+          if(os.length!==BGS.length)throw new Error('背景の数が合わない: '+os.length);
+          const out=[];
+          for(const o of os){
+            o.click();
+            const id=o.dataset.bg;
+            if(S.player.bg!==id)throw new Error(id+' が保存されない');
+            if(!document.body.classList.contains('bg-'+id))
+              throw new Error(id+' が body に付かない');
+            // **盤面の中は変えない**
+            const app=getComputedStyle(document.getElementById('app')).backgroundColor;
+            out.push(id+'('+app.replace(/\s/g,'')+')');
+          }
+          // ロゴウォールは**絵を持たずその場で描く**
+          S.player.bg='wall'; applyBg();
+          const bi=document.body.style.backgroundImage;
+          if(bi.indexOf('svg')<0)throw new Error('ロゴウォールが描かれない');
+          if(bi.indexOf('%23F8FF26')<0&&bi.indexOf('F8FF26')<0)
+            throw new Error('インクカラーが使われていない');
+          S.player.bg='black'; applyBg();
+          document.getElementById('cfgDone').click();
+          return BGS.length+'種 ／ '+out.join(' ')+' ／ 盤面の色は変わらない';
+        })()`));
+        await ctx.js("S.player.bg='wall'; applyBg(); 1");
+        await ctx.wait(250);
+        await ctx.shot("12h-bg-wall");
+        await ctx.js("S.player.bg='pitch'; applyBg(); 1");
+        await ctx.wait(250);
+        await ctx.shot("12i-bg-pitch");
+        await ctx.js("S.player.bg='black'; applyBg(); 1");
         await ctx.js("document.getElementById('crestDone').click()");
         // 監督の顔(→docs/03 §3.45)。**CLUB からいつでも選び直せる**
         ctx.log("  監督の顔:", await ctx.js(`(()=>{

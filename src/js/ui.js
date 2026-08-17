@@ -348,6 +348,58 @@ function renderHomeTrophy(){
   $("tileTrophyArt").innerHTML=stickerArt("trophy");
 }
 
+// ---------- 背景(→docs/06 §6.45) ----------
+// **端末枠の外側**を着せ替える。盤面(#app)の中は触らないので、
+// どの背景を選んでも画面の読みやすさは変わらない。
+const BGS=[
+  { id:"black", name:"ブラック",  note:"既定。盤面に集中する" },
+  { id:"pitch", name:"ピッチ",    note:"芝の縞とラインを敷く" },
+  { id:"wall",  name:"ロゴウォール", note:"会見の背景のように斜めに並べる" },
+];
+/**
+ * ロゴウォール(→docs/06 §6.45)。**絵は持たず、その場で描く**。
+ * 会見のバックボードのように、白地へ斜めの帯で社名を敷き詰める。
+ * 色はエンブレムと同じ水彩の並び(→docs/03 §3.54)から採る。
+ */
+function bgWallUrl(){
+  const pick=["ink-violet","ink-magenta","ink-blue","ink-lemon","ink-mint",
+              "ink-cyan","ink-orange","ink-green","ink-pink","ink-purple"]
+    .map(id=>embHueById(id)).filter(Boolean);
+  const W=520, H=150, rows=3;
+  let g="";
+  for(let r=0;r<rows;r++){
+    const y=28+r*48;
+    for(let i=0;i<4;i++){
+      const H2=pick[(r*4+i)%pick.length];
+      const x=-40+i*150+(r%2?70:0);
+      g+='<text x="'+x+'" y="'+y+'" font-family="Georgia,serif" font-weight="700"'
+        +' font-size="26" fill="'+H2.hex+'" opacity="0.92">P-FootBall</text>';
+    }
+  }
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'">'
+    +'<rect width="'+W+'" height="'+H+'" fill="oklch(0.97 0.005 95)"/>'
+    +'<g transform="rotate(-14 '+(W/2)+' '+(H/2)+')">'+g+'</g></svg>';
+  return "url(\"data:image/svg+xml;utf8,"+encodeURIComponent(svg)+"\")";
+}
+/** いま選んでいる背景を body に着せる。**セーブに持つ**ので次に開いても残る。 */
+function applyBg(){
+  const id=(S&&S.player&&S.player.bg)||"black";
+  document.body.classList.remove("bg-black","bg-pitch","bg-wall");
+  document.body.classList.add("bg-"+id);
+  document.body.style.backgroundImage=id==="wall"?bgWallUrl():"";
+}
+function renderCfg(){
+  const cur=(S.player&&S.player.bg)||"black";
+  $("cfgBg").innerHTML=BGS.map(b=>'<button class="cfg-o'+(b.id===cur?" on":"")+'"'
+    +' data-bg="'+b.id+'"><i class="cfg-sw sw-'+b.id+'"></i>'
+    +'<b>'+esc(b.name)+'</b><span>'+esc(b.note)+'</span></button>').join("");
+  $("cfgBg").querySelectorAll("[data-bg]").forEach(el=>{
+    el.onclick=()=>{ S.player.bg=el.dataset.bg; applyBg(); renderCfg(); save(); };
+  });
+}
+function openCfg(){ renderCfg(); $("cfgModal").classList.add("on"); }
+const closeCfg=()=>$("cfgModal").classList.remove("on");
+
 // ---------- HOME(監督のデバイス → docs/06 §6.8) ----------
 function renderHome(){
   const W=S.world;
@@ -2489,7 +2541,7 @@ function titleWall(){
  *  **明るく・鮮やかに**(→docs/06 §6.28)。暗い盤面の上に暗い丸を置くと
  *  クラブの見分けが付かなかったので、パステル寄りのネオンに寄せてある。
  *  **文字を載せる丸は clubInk() を使う**(白では読めなくなる)。 */
-const CLUB_L=0.80, CLUB_C=0.17;
+const CLUB_L=0.78, CLUB_C=0.22;   // **ビビッドに**(→docs/06 §6.45)
 const clubHue=clubId=>((CLUBS.findIndex(c=>c.id===clubId)*137.5+20)%360).toFixed(1);
 /**
  * クラブの色。**自分のクラブでホームカラーを選んでいればそれを使う**
@@ -2497,7 +2549,8 @@ const clubHue=clubId=>((CLUBS.findIndex(c=>c.id===clubId)*137.5+20)%360).toFixed
  */
 function clubColor(clubId){
   const p=embPickedHue(clubId);
-  return "oklch("+CLUB_L+" "+(p&&p.c!=null?p.c:CLUB_C)+" "+(p?p.h:clubHue(clubId))+")";
+  // 選んだ色は hex をそのまま。選んでいなければ色相から作る
+  return p?p.hex:"oklch("+CLUB_L+" "+CLUB_C+" "+clubHue(clubId)+")";
 }
 /** 自分のクラブが選んでいるホームの色相(選んでいなければ null)。 */
 function embPickedHue(clubId){
@@ -2507,7 +2560,9 @@ function embPickedHue(clubId){
 /** その丸の上に載せる字の色。明るい地なので**暗い側**で取る。 */
 function clubInk(clubId){
   const p=embPickedHue(clubId);
-  return "oklch(0.26 0.06 "+(p?p.h:clubHue(clubId))+")";
+  // **地の明るさで決める**。インクカラーは非常に明るいものがある
+  if(p)return embLum(p.hex)>=0.62?"#1A1A1E":"#FFFFFF";
+  return "oklch(0.26 0.06 "+clubHue(clubId)+")";
 }
 /** 消化済みの節のスコア表示。順位表からは復元できないので保存済みの結果を使う。 */
 function scoreOf(md){
@@ -4126,9 +4181,7 @@ function renderCrestPick(){
   };
   // 色は**見本ではなく色そのもの**を並べる(小さい盾を12個並べても色が読めない)
   const sw=(key,v)=>{ const H=embHueById(v);
-    return '<i class="cr-sw" style="background:oklch('
-      +(key==="home"?"0.62 "+(H.c!=null?H.c:0.16):"0.42 "+(H.c!=null?H.c:0.12))
-      +" "+H.h+')" title="'+esc(H.name)+'"></i>'; };
+    return '<i class="cr-sw" style="background:'+H.hex+'" title="'+esc(H.name)+'"></i>'; };
   const crow=(key,label)=>'<div class="cr-k">'+label+'</div><div class="cr-row">'
     +EMB_HUES.map(H=>'<button class="cr-b cr-c'+(d[key]===H.id?" on":"")
       +'" data-k="'+key+'" data-v="'+H.id+'">'+sw(key,H.id)+'</button>').join("")+'</div>';
@@ -4199,6 +4252,9 @@ $("btnForm").onclick=openForm;
 $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };
 $("clubMgrFace").onclick=openFace;
 $("clubCrest").onclick=openCrest;
+$("clubCfg").onclick=openCfg;
+$("cfgDone").onclick=closeCfg;
+$("cfgModal").onclick=e=>{ if(e.target===$("cfgModal"))closeCfg(); };
 $("tileMarket").onclick=()=>show("market",{push:1});
 $("tileTrophy").onclick=()=>show("clubhouse");
 $("crestDone").onclick=closeCrest;
