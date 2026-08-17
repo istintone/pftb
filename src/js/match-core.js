@@ -244,6 +244,8 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic){
  * **発動したときカットインのバッジに采配名が出る**(演出が自動で付いてくる)。
  * 新しい判定を1つも足さずに済むのが、この形にした理由。
  */
+/** 采配の効きの倍率(→docs/03 §3.50)。1からの隔たりを伸ばす(0.94 → もっと下へ)。 */
+const tacAmp=v=>v==null?v:1+(v-1)*TUNING.tactic.k;
 function setTeamTactic(T,id){
   const t=id?tacticById(id):null;
   T.tactic=t?t.id:null;
@@ -263,18 +265,22 @@ function setTeamTactic(T,id){
       // **効果ごとに役割を絞れる**(→docs/03 §3.50)。フォルス9のように
       // 「前は下がり、2列目が出る」という采配は、1つの倍率では書けない
       if(e.role&&p.role!==e.role)continue;
+      // **強さだけ倍率で持ち上げる**(→docs/03 §3.50)。w(札の選ばれやすさ)は
+      // 采配の「性格」そのものなので触らない。ここを一括で動かせるようにしてあるのは、
+      // シュート側の勾配(→docs/07 §7.22)を変えると采配の効きも一緒に潰れるため
       if(e.grp)p.sk.ch.push({ name:t.label, at:e.at2||e.at, grp:e.grp,
-        w:e.w||1, s:e.s||1, move:null, when:e.when||null, tactic:true });
-      if(e.k!=null)p.sk.k[e.at]=(p.sk.k[e.at]||1)*e.k;
+        w:e.w||1, s:tacAmp(e.s||1), move:null, when:e.when||null, tactic:true });
+      if(e.k!=null)p.sk.k[e.at]=(p.sk.k[e.at]||1)*tacAmp(e.k);
     }
     // **枠適性のロスを埋める**(トータルフットボール)。1に近づける
-    if(t.fitK&&p.fit!=null&&p.fit<1)p.fit=p.fit+(1-p.fit)*t.fitK;
+    if(t.fitK&&p.fit!=null&&p.fit<1)
+      p.fit=p.fit+(1-p.fit)*Math.min(0.95,t.fitK*TUNING.tactic.k);
     // **相手の軸に人を付ける**(マンマーク)。resolveChannel が見る
     if(t.manMark)p.manMark=true;
     // **連携の効きを増幅する**(オートマティズム)。bondK が見る
-    if(t.bondX)p.bondX=t.bondX;
+    if(t.bondX)p.bondX=tacAmp(t.bondX);
     // **止めるためなら反則も辞さない**(戦術的ファウル)。連鎖のファウル判定が見る
-    if(t.foulX)p.foulX=t.foulX;
+    if(t.foulX)p.foulX=tacAmp(t.foulX);
   }
   return T.tactic;
 }
@@ -293,7 +299,8 @@ function setTeamOrder(T,id){
     if(!om&&!(tc&&tc.ordM))return null;
     const out={};
     for(const k of STAT_KEYS){
-      const a=(om&&om[k])||1, b=(tc&&tc.ordM&&tc.ordM[k])||1;
+      // 采配ぶんだけ効きの倍率を掛ける(指示ぶんは素のまま →docs/03 §3.50)
+      const a=(om&&om[k])||1, b=tacAmp((tc&&tc.ordM&&tc.ordM[k])||1);
       if(a*b!==1)out[k]=a*b;
     }
     return Object.keys(out).length?out:null;
