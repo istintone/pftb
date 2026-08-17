@@ -2722,6 +2722,22 @@ function mDrawSquads(){
     });
   }
   $("mSlots").innerHTML=html.join("");
+  mKpMark();
+}
+/**
+ * ピッチの軸に印を付ける(→docs/03 §3.44 / docs/06 §6.37)。
+ * **両チームぶん**。自分の指名はタブを開かなくても分かり、相手の軸も盤面で分かる
+ * (だから指名の画面から相手の軸の行を外せた)。
+ * 光はクラブカラー(`--kit`)なので、**どちらの軸かは色で読む**。
+ */
+function mKpMark(){
+  if(!_M)return;
+  const box=$("mSlots"); if(!box)return;
+  for(const T of [_M.home,_M.away])
+    T.players.forEach((p,i)=>{
+      const el=box.querySelector('.mp[data-side="'+T.side+'"][data-ix="'+i+'"]');
+      if(el)el.classList.toggle("kp",!!(p.c&&p.c.kp));
+    });
 }
 
 // ---------- 選手の動き(**演出専用** → docs/06 §6.18) ----------
@@ -3338,7 +3354,7 @@ function setKp(id){
   // **写しの側も切り替える**。エンジンはカードの kp しか見ない
   for(const p of T.players)p.c.kp=(p.c.id===now);
   for(const b of T.bench||[])if(b.c)b.c.kp=false;
-  save(); renderKp(); kpTabUI();
+  save(); renderKp(); kpTabUI(); mKpMark();
   toast(now?shortName(cardById(now))+" を KP にしました":"KP を外しました");
 }
 /** ピッチから居なくなったら自動で外す(交代・退場 →docs/03 §3.44)。 */
@@ -3348,7 +3364,7 @@ function kpSync(){
   const T=subSide();
   if(T.players.some(p=>p.c.id===id))return;
   S.career.kp=null;
-  kpTabUI();
+  kpTabUI(); mKpMark();
   if(kpOpen())renderKp();
   toast("KP の選手がピッチを離れました");
 }
@@ -3356,29 +3372,29 @@ function kpTabUI(){
   const t=$("kpTab"); if(!t)return;
   t.classList.toggle("on",!!(S.career&&S.career.kp));
 }
+/**
+ * 軸の指名(→docs/03 §3.44 / docs/06 §6.37)。
+ * **11人が一度に見えることがこの画面の要件**。試合を止めて開く画面なので、
+ * 送って探すぶんだけ試合が止まる。説明も相手の軸もここには置かない
+ * (軸の効果はヘルプへ、相手の軸はピッチの光へ)。
+ */
 function renderKp(){
   const T=subSide(), cur=S.career.kp;
-  const foe=(mMine()==="H"?_M.away:_M.home);
-  const fk=foe&&foe.players.find(p=>p.c.kp);
-  $("kpNote").innerHTML="ボールが集まり、札も出やすくなります。"
-    +"かわりに<b>消耗が早く、相手のマークも厳しく</b>なります。"
-    +"<br>何度でも指名し直せますが、<b>軸を張った時間ぶんの消耗は残ります</b>。"
-    +(fk?'<br>相手の KP は <b>'+esc(shortName(fk.c))+'</b> です。':"");
-  $("kpBody").innerHTML='<div class="sb-sec">ピッチ</div>'
-    +T.players.map((p,i)=>{
+  $("kpBody").innerHTML=T.players.map((p,i)=>{
       const on=p.c.id===cur, sig=sigOf(p.c);
       // **番号で渡す**。カードのIDは数字のことも文字のこともあり、
       // data 属性を経由すると全部文字になって比較が壊れる(実際に壊れた)
       return '<div class="sb-r'+(on?" kp-on":"")+'" data-kp="'+i+'">'
         +'<div class="sb-pos">'+(p.sub||p.role)+'</div>'
-        +'<div class="sb-b"><div class="sb-nm">'+esc(shortName(p.c))+'</div>'
-        +(sig?'<i class="kp-sig">'+esc(sig)+'</i>':'<span class="kp-none">固有スキルなし</span>')
-        +'</div>'
-        +(on?'<div class="sb-tag">KP</div>':"")
+        +'<div class="sb-nm">'+esc(shortName(p.c))+'</div>'
+        // **固有スキルは名前の横**。縦に積むと1人ぶんが倍になって11人が入らない
+        +(sig?'<i class="kp-sig">'+esc(sig)+'</i>':'<i class="kp-none">—</i>')
         +'<div class="sb-v">'+Math.round((p.stam==null?1:p.stam)*100)+'%</div></div>';
     }).join("");
   $("kpBody").querySelectorAll("[data-kp]").forEach(el=>{
-    el.onclick=()=>{ const p=T.players[+el.dataset.kp]; if(p)setKp(p.c.id); };
+    // **選んだら閉じる**(→docs/06 §6.22 の采配と同じ作法)。
+    // 指名は1人だけなので、選んだあとに残っていても続きの操作が無い
+    el.onclick=()=>{ const p=T.players[+el.dataset.kp]; if(p){ setKp(p.c.id); closeKp(); } };
   });
 }
 function openSub(){

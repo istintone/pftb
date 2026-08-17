@@ -827,6 +827,26 @@ body{
 .mp.on{ transform:scale(1.35) }
 .mp.on .mp-sh{ opacity:1; box-shadow:0 0 0 2px oklch(1 0 0 / .85) }
 .mp.vs .mp-sh{ opacity:1; box-shadow:0 0 0 2px var(--fit-bad) }
+/* 軸(→docs/03 §3.44 / docs/06 §6.37)。**クラブカラーで光らせる**ので、
+   どちらのチームの軸かは色で読む。両チームぶん出る。
+   関与中(.on)や競り合い(.vs)は一瞬の印なので、そちらを上に出せるよう
+   足元のリングは触らず、**絵そのものの発光**と足元の輪で分ける。 */
+.mp.kp img{
+  filter:drop-shadow(0 0 2px var(--kit)) drop-shadow(0 0 5px var(--kit))
+         drop-shadow(0 1px 1px oklch(0 0 0 / .6));
+}
+.mp.kp .mp-dot{ box-shadow:0 0 6px 2px var(--kit) }
+/* 足元に回る輪。**呼吸させる**ことで「いま効いている指名」だと分かる */
+.mp.kp::before{
+  content:""; position:absolute; left:50%; bottom:-3px; transform:translateX(-50%);
+  width:26px; height:9px; border-radius:50%;
+  border:1.5px solid var(--kit); opacity:.9;
+  animation:kpRing 1.6s ease-in-out infinite;
+}
+@keyframes kpRing{
+  0%,100%{ transform:translateX(-50%) scale(1);    opacity:.9 }
+  50%    { transform:translateX(-50%) scale(1.22); opacity:.45 }
+}
 /* =========================================================================
    カットイン(→docs/06 §6.19)
    **順に見せる**: 帯が開く → 両者が入る → 勝敗が表れる → 決着語。
@@ -1007,8 +1027,15 @@ body{
 #kpDrawer .sb-in{ border-radius:0 14px 14px 0 }
 /* 軸に選ばれている行 */
 .sb-r.kp-on{ border-color:var(--accent); background:oklch(0.26 0.05 85) }
-.kp-sig{ font-style:normal; font-size:10px; color:var(--accent-hi); letter-spacing:.5px }
-.kp-none{ font-size:10px; color:var(--text-mute) }
+/* **11人が一度に見えること**が要件(→docs/06 §6.37)。名前と固有スキルを横並びにし、
+   行を薄くする。ここは #kpDrawer の中だけに効かせる(.sb-r は交代の引き出しと共用) */
+#kpDrawer .sb-r{ padding:5px 8px; margin-bottom:3px; gap:6px }
+#kpDrawer .sb-pos{ flex:0 0 26px; font-size:8px }
+#kpDrawer .sb-nm{ flex:0 0 auto; max-width:38%; font-size:11px }
+#kpDrawer .sb-v{ margin-left:auto }
+.kp-sig{ flex:1; min-width:0; font-style:normal; font-size:9px; letter-spacing:.3px;
+  color:var(--accent-hi); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.kp-none{ flex:1; min-width:0; font-style:normal; font-size:9px; color:var(--text-mute) }
 #ordDrawer{
   position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
   transform:translate(-105%,-50%); transition:transform .28s cubic-bezier(.2,.8,.2,1);

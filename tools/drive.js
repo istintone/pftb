@@ -1401,11 +1401,16 @@ const STEPS = [
     ctx.log("  KPタブ:", await ctx.js(`(()=>{
       const rows=[...document.querySelectorAll('#kpBody [data-kp]')];
       if(rows.length!==11)throw new Error('ピッチの11人が並ばない: '+rows.length);
-      const note=document.getElementById('kpNote').textContent;
-      if(note.indexOf('相手の KP')<0)throw new Error('相手のKPが出ない');
+      // **説明も相手の軸もここには置かない**(→docs/06 §6.37)。11人ぶんの高さが要る
+      if(document.getElementById('kpNote'))throw new Error('説明の欄が残っている');
       const sig=document.querySelectorAll('#kpBody .kp-sig').length;
       const none=document.querySelectorAll('#kpBody .kp-none').length;
       if(sig+none!==11)throw new Error('固有スキルの欄が全員に無い');
+      // **11人が引き出しの中に収まっているか**。送って探すと試合が止まったままになる
+      const box=document.getElementById('kpBody');
+      const last=rows[10].getBoundingClientRect(), lid=box.getBoundingClientRect();
+      if(last.bottom>lid.bottom+1)
+        throw new Error('11人目が見切れている: '+Math.round(last.bottom-lid.bottom)+'px はみ出し');
       rows[10].click();
       const T=mMine()==='H'?_M.home:_M.away;
       const id=S.career.kp;
@@ -1413,16 +1418,34 @@ const STEPS = [
       const p=T.players.find(x=>x.c.id===id);
       if(!p||!p.c.kp)throw new Error('写しに反映されていない');
       if(T.players.filter(x=>x.c.kp).length!==1)throw new Error('KPが2人以上いる');
-      rows[10].click();                                  // もう一度押すと外れる
+      // **選んだら閉じる**
+      if(document.getElementById('kpDrawer').classList.contains('on'))
+        throw new Error('選んでも閉じない');
+      // **ピッチで光る**(→docs/03 §3.44)。両チームぶん出る
+      const mine=document.querySelectorAll('#mSlots .mp.kp[data-side="'+T.side+'"]').length;
+      if(mine!==1)throw new Error('自分の軸が光らない: '+mine);
+      const foeSide=T.side==='H'?'A':'H';
+      const foe=document.querySelectorAll('#mSlots .mp.kp[data-side="'+foeSide+'"]').length;
+      if(foe!==1)throw new Error('相手の軸が光らない: '+foe);
+      openKp();
+      const rows2=[...document.querySelectorAll('#kpBody [data-kp]')];
+      rows2[10].click();                                 // もう一度押すと外れる
       if(S.career.kp)throw new Error('同じ選手を押しても外れない');
-      rows[9].click();
-      return '11人 / 固有スキルあり '+sig+'人 / '
-        +note.slice(note.indexOf('相手の KP')).slice(0,20)
-        +' / 指名: '+shortName(cardById(S.career.kp));
+      if(document.querySelectorAll('#mSlots .mp.kp[data-side="'+T.side+'"]').length)
+        throw new Error('外しても光が残る');
+      openKp();
+      [...document.querySelectorAll('#kpBody [data-kp]')][9].click();
+      return '11人が収まる / 固有スキルあり '+sig+'人 / 選ぶと閉じる / '
+        +'ピッチで光る(自分1・相手1) / 指名: '+shortName(cardById(S.career.kp));
     })()`));
+    await ctx.wait(250);
+    await ctx.js("openKp()");
     await ctx.wait(250);
     await ctx.shot("07q-kp");
     await ctx.js("document.getElementById('kpClose').click()");
+    // **ピッチの光**(→docs/03 §3.44)。引き出しを閉じた状態で撮る
+    await ctx.wait(500);
+    await ctx.shot("07q2-kp-pitch");
     await ctx.wait(300);
     ctx.log("  采配タブ:", await ctx.js(`(()=>{
       const tab=document.getElementById('ordTab');
