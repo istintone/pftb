@@ -4274,13 +4274,35 @@ function renderOffers(){
   const fame=S.player.fame;
   const list=offersFor(fame).sort((a,b)=>b.grade-a.grade||a.rank-b.rank).slice(0,12);
   $("offerHead").textContent="OFFERS · 名声 "+fmtNum(fame);
-  $("offerNote").textContent="名声が届いたクラブから声がかかります。格が高いほど期待も高くなります。";
+  // **初めての就任か、次の行き先か**で言うことを変える(→docs/06 §6.47)。
+  // 一枚目は「これから監督人生が始まる」、二枚目からは「次はどこへ」
+  const first=!S.club;
+  const lgs=[...new Set(list.map(c=>leagueById(c.league).name))];
+  const top=list[0];
+  $("offerIntro").innerHTML=
+    '<div class="of-tag">'+(first?"就任のご案内":"次の行き先")+'</div>'
+    +'<div class="of-h">あなたに <b>'+list.length+'件</b> のオファーが届いています。</div>'
+    +'<div class="of-sub">'
+      +(first
+        ? "無名の監督に声をかけたクラブがあります。"
+          +"どこから始めるかで、これからの道のりが変わります。"
+        : "名声 "+fmtNum(fame)+" に届いたクラブから声がかかりました。"
+          +"格が高いほど、オーナーの期待も高くなります。")
+    +'</div>'
+    +'<div class="of-meta">'+esc(lgs.slice(0,3).join(" ／ "))
+      +(lgs.length>3?" ほか":"")
+      +(top?"　最上位 "+esc(top.name)+"（格★"+top.grade+"）":"")+'</div>'
+    +'<div class="of-go">&gt; 向かうクラブを選んで、契約を結びましょう</div>';
   $("offerList").innerHTML=list.map(c=>{
     const lg=leagueById(c.league);
     return '<div class="offer" data-club="'+c.id+'">'
       +'<div class="of-l"><b>'+esc(c.name)+'</b>'
       +'<div class="lg">'+lg.name+' '+divName(c.div)+' ／ 部内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
-      +'<div class="of-r num">'+fmtNum(requiredFame(c))+'</div></div>';
+      // **必要名声は要るときだけ出す**。0 が裸で並ぶと、何の数字か読めない
+      +(requiredFame(c)>0
+        ? '<div class="of-r"><i>必要名声</i><b class="num">'+fmtNum(requiredFame(c))+'</b></div>'
+        : '<div class="of-r ok">いつでも</div>')
+    +'</div>';
   }).join("");
   $("offerList").querySelectorAll("[data-club]").forEach(el=>{
     el.onclick=async()=>{

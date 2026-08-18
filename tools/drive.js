@@ -97,6 +97,22 @@ const STEPS = [
     await ctx.wait(700);
     ctx.log("画面:", await ctx.screen(),
       "/ オファー数:", await ctx.js("document.querySelectorAll('#offerList [data-club]').length"));
+    // 就任の導入(→docs/06 §6.47)。**何が起きていて、次に何をするのか**
+    ctx.log("  導入:", await ctx.js(`(()=>{
+      const box=document.getElementById('offerIntro');
+      if(!box)throw new Error('導入が無い');
+      const n=document.querySelectorAll('#offerList [data-club]').length;
+      const t=box.textContent.replace(/\s+/g,' ');
+      if(t.indexOf('オファーが届いています')<0)throw new Error('オファーの知らせが無い: '+t);
+      if(t.indexOf(n+'件')<0)throw new Error('件数が合っていない: '+t);
+      if(t.indexOf('契約')<0)throw new Error('次にすることが書かれていない: '+t);
+      // **初回は「就任のご案内」**(まだクラブを持っていない)
+      if(S.club)throw new Error('この段は初回のはず');
+      if(box.querySelector('.of-tag').textContent!=='就任のご案内')
+        throw new Error('初回の見出しでない: '+box.querySelector('.of-tag').textContent);
+      return t.slice(0,58)+'…';
+    })()`));
+
     await ctx.shot("02-offers");
   }],
   ["クラブを選ぶ → 契約書", async ctx => {
