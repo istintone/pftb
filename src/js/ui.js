@@ -3410,21 +3410,46 @@ function mCoach(side){
  */
 function cutCoachFig(side,cls){
   const c=mCoach(side);
-  const kit=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
   return '<div class="cut-fig '+cls+'">'
-    +'<div class="cut-mgr'+(c.art?"":" none")+'" style="--kit:'+kit+'">'
+    +'<div class="cut-mgr'+(c.art?"":" none")+'">'
     +(c.art?'<img src="'+c.art+'" alt="">':'<i>MGR</i>')+'</div>'
     +'<b>'+esc(c.name)+'</b></div>';
 }
-/** 采配を敷き替えたときの一枚。**掛け声も出す**(→docs/03 §3.50 の line)。 */
+/**
+ * 采配の帯1本(→docs/06 §6.46)。**チームカラーで染める**。
+ * 自軍は上・左から、敵軍は下・右から走らせるので、どちらの手かが位置と色で分かる。
+ */
+function cutTacBand(side,tacId,pos){
+  const t=tacId?tacticById(tacId):null; if(!t)return "";
+  const kit=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
+  const ink=clubInk(side==="H"?_M.fixture.h:_M.fixture.a);
+  const from=pos==="top"?"L":"R";
+  return '<div class="cut tac '+pos+'" style="--kit:'+kit+';--kit-ink:'+ink+'">'
+    +'<div class="cut-row cut-one">'+cutCoachFig(side,from)+'</div>'
+    +'<div class="tac-b"><i>'+t.icon+'</i><b>'+esc(t.label)+'</b>'
+    +'<span>'+esc(t.line||"")+'</span></div>'
+  +'</div>';
+}
+/**
+ * 采配のカットイン(→docs/06 §6.46)。
+ * **両軍に采配があれば2本同時に走らせる**。片方だけなら1本。
+ * 返り値は止めておく時間(何も無ければ 0)。
+ */
+function cutTacticPair(){
+  if(!_M)return 0;
+  const me=mMine(), foe=me==="H"?"A":"H";
+  const mt=(me==="H"?_M.home:_M.away).tactic;
+  const ft=(foe==="H"?_M.home:_M.away).tactic;
+  if(!mt&&!ft)return 0;
+  const html=cutTacBand(me,mt,"top")+cutTacBand(foe,ft,"bot");
+  return cutShow(html,TUNING.play.cutMs," tacpair");
+}
+/** 采配を敷き替えたときの一枚。**その監督だけ**を出す。 */
 function cutTactic(e){
-  const t=e.tactic?tacticById(e.tactic):null;
-  const side=e.side;
-  return cutShow('<div class="cut sig">'+cutSparks()
-    +'<div class="cut-hd">'+esc(t?t.label:"采配なし")+'</div>'
-    +'<div class="cut-row cut-one">'+cutCoachFig(side,"L")+'</div>'
-    +'<div class="cut-word win">'+esc(t&&t.line?t.line:"形を変える")+'</div>'
-  +'</div>',TUNING.play.cutMs);
+  if(!e.tactic)return 0;
+  const top=e.side===mMine();
+  return cutShow(cutTacBand(e.side,e.tactic,top?"top":"bot"),
+    TUNING.play.cutMs," tacpair");
 }
 function cutKick(){
   const f=(T,side,cls)=>{
@@ -3439,9 +3464,6 @@ function cutKick(){
   // **ピッチ脇の看板**(→docs/06 §6.32)。契約中で、その会社の絵があるときだけ出る
   return cutShow('<div class="cut">'
     +'<div class="cut-hd">KICK OFF</div>'
-    // **監督も並べる**(→docs/06 §6.46)。誰が指揮しているかを開始で見せる
-    +'<div class="cut-row cut-mgrs">'+cutCoachFig("H","L")
-      +'<div class="cut-vs">VS</div>'+cutCoachFig("A","R")+'</div>'
     +'<div class="cut-row">'+f(_M.home,"H","L")
       +'<div class="cut-vs">VS</div>'+f(_M.away,"A","R")+'</div>'
     +sponAd("ad-cut")
@@ -3961,7 +3983,15 @@ function startMatch(pre){
   // キックオフのイベントは createMatch が積んでいるので、ここで自分で見せる
   // (stepMatch は返さない)。card-eleven と同じく**開始からカットインする**。
   const hold=mApply(_M.events[0]);
-  _mTimer=setTimeout(mTick,600+hold);
+  // **キックオフのあとに采配を見せる**(→docs/06 §6.46)。
+  // 開始の帯に監督まで載せると盛りだくさんになるので、段を分ける
+  let extra=0;
+  const P=TUNING.play;
+  if((_M.home.tactic||_M.away.tactic)){
+    extra=P.cutMs+240;
+    setTimeout(()=>{ if(_M&&!_M.over&&!_mPaused)cutTacticPair(); },hold+220);
+  }
+  _mTimer=setTimeout(mTick,600+hold+extra);
 }
 function doMatchday(){
   const done=_M&&_M.over?_M:null;

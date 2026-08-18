@@ -1326,6 +1326,10 @@ const STEPS = [
       // **中央には置かない**。札は必ずどちらかの選手の中にある
       if(document.querySelector('#mCut .cut-row > .cut-sk'))
         throw new Error('札が中央に残っている');
+      // **画面端に縦積み**(→docs/06 §6.46)。下に置くと帯が縦に伸びる
+      const sk=document.querySelector('#mCut .cut-fig .cut-sk');
+      if(sk&&getComputedStyle(sk).position!=='absolute')
+        throw new Error('札が流し込みのままで帯を押し広げる');
       const figOf=nm=>[...document.querySelectorAll('#mCut .cut-fig')]
         .find(f=>f.querySelector('b')&&f.querySelector('b').textContent===nm);
       const tagsOf=nm=>{ const f=figOf(nm); if(!f)throw new Error(nm+' の枠が無い');
@@ -1731,41 +1735,11 @@ const STEPS = [
         throw new Error('タブが光らない');
       return tacticById(S.tactic).label+' を敷いた';
     })()`));
-    // **掛かるまで待つ**(→docs/06 §6.43)。止めて再開すると見せ残しを先に流すので、
-    // 次のティック(=積んだ指示が効く瞬間)までの時間は一定ではない
-    for(let i=0;i<40&&!(await ctx.js("(mMine()==='H'?_M.home:_M.away).tactic===S.tactic"));i++)
+    // **帯が出るまで待つ**(→docs/06 §6.43)。エンジンが掛けた時点ではなく、
+    // **そのイベントが再生された時点**で帯が出る。engine の状態を見ると1拍早い
+    for(let i=0;i<50&&!(await ctx.js(
+        "document.getElementById('mTacMine').classList.contains('on')"));i++)
       await ctx.wait(200);
-    // **采配を敷き替えると監督が出る**(→docs/06 §6.46)
-    ctx.log("  監督のカットイン:", await ctx.js(`(()=>{
-      const mySide=mMine();
-      cutTactic({ side:mySide, tactic:S.tactic, label:'x' });
-      const band=document.querySelector('#mCut .cut');
-      if(!band)throw new Error('帯が出ない');
-      const fig=document.querySelectorAll('#mCut .cut-mgr');
-      if(fig.length!==1)throw new Error('監督が1人で出ない: '+fig.length);
-      if(!fig[0].querySelector('img'))throw new Error('顔が出ない');
-      const t=tacticById(S.tactic);
-      const word=document.querySelector('#mCut .cut-word').textContent;
-      if(t&&t.line&&word!==t.line)throw new Error('掛け声が違う: '+word);
-      // **キックオフでは両監督**
-      cutKick();
-      const k=document.querySelectorAll('#mCut .cut-mgrs .cut-mgr');
-      if(k.length!==2)throw new Error('キックオフに両監督が出ない: '+k.length);
-      const withArt=[...k].filter(e=>e.querySelector('img')).length;
-      // **監督の名前が選手に隠れない**(立ち絵は上へはみ出す →§6.19)
-      const nm=document.querySelector('#mCut .cut-mgrs .cut-fig b');
-      const rows=[...document.querySelectorAll('#mCut .cut-row')];
-      const a=nm.getBoundingClientRect(), b=rows[1].getBoundingClientRect();
-      if(a.bottom>b.top+1)
-        throw new Error('監督の名前が選手の段に食い込む: '+Math.round(a.bottom-b.top)+'px');
-      return '采配で1人（'+word+'）／ キックオフで2人（絵つき '+withArt+'）'
-        +'／ 名前は隠れない';
-    })()`));
-    await ctx.wait(250);
-    await ctx.shot("07s-cutin-coach");
-    await ctx.js("cutTactic({ side:mMine(), tactic:S.tactic })");
-    await ctx.wait(1100);          // 掛け声は 0.62 秒遅れて出る(→§6.19)
-    await ctx.shot("07s2-cutin-tactic");
     ctx.log("  ピッチの帯:", await ctx.js(`(()=>{
       const mine=document.getElementById('mTacMine');
       const foe=document.getElementById('mTacFoe');
@@ -1812,7 +1786,8 @@ const STEPS = [
         throw new Error('タブの光が残る');
       return '解除した（帯は次のティックで消える）';
     })()`));
-    for(let i=0;i<40&&!(await ctx.js("!(mMine()==='H'?_M.home:_M.away).tactic"));i++)
+    for(let i=0;i<50&&(await ctx.js(
+        "document.getElementById('mTacMine').classList.contains('on')"));i++)
       await ctx.wait(200);
     ctx.log("  帯も消えたか:", await ctx.js(`(()=>{
       const T=mMine()==='H'?_M.home:_M.away;
@@ -1821,6 +1796,59 @@ const STEPS = [
         throw new Error('帯が残っている');
       return '盤面からも外れた';
     })()`));
+    // **采配を敷き替えると監督が出る**(→docs/06 §6.46)
+    ctx.log("  監督のカットイン:", await ctx.js(`(()=>{
+      const mySide=mMine();
+      cutTactic({ side:mySide, tactic:'direct' });
+      const band=document.querySelector('#mCut .cut');
+      if(!band)throw new Error('帯が出ない');
+      const fig=document.querySelectorAll('#mCut .cut-mgr');
+      if(fig.length!==1)throw new Error('監督が1人で出ない: '+fig.length);
+      if(!fig[0].querySelector('img'))throw new Error('顔が出ない');
+      const t=tacticById('direct');
+      const word=document.querySelector('#mCut .tac-b span').textContent;
+      if(t&&t.line&&word!==t.line)throw new Error('掛け声が違う: '+word);
+      // **キックオフには監督を出さない**(→docs/06 §6.46)。盛りだくさんにしない
+      cutKick();
+      if(document.querySelector('#mCut .cut-mgr'))
+        throw new Error('キックオフに監督が出ている');
+      // **両軍に采配があれば2本同時に走る**
+      // 盤面をいじるので、**元の値を控えて必ず戻す**(戻さずに後続の検査を壊した)
+      const me=mMine(), fo=me==='H'?'A':'H';
+      const MT=me==='H'?_M.home:_M.away, FT=fo==='H'?_M.home:_M.away;
+      const keepM=MT.tactic, keepF=FT.tactic;
+      MT.tactic='direct'; FT.tactic='highpress';
+      cutTacticPair();
+      const bands=[...document.querySelectorAll('#mCut .cut.tac')];
+      if(bands.length!==2)throw new Error('2本走らない: '+bands.length);
+      if(!bands[0].classList.contains('top')||!bands[1].classList.contains('bot'))
+        throw new Error('自軍が上・敵軍が下になっていない');
+      // **上が自軍・下が敵軍**。位置で見分けられること
+      const r0=bands[0].getBoundingClientRect(), r1=bands[1].getBoundingClientRect();
+      if(!(r0.top<r1.top))throw new Error('上下が逆');
+      // **それぞれのクラブカラー**
+      const c0=bands[0].style.getPropertyValue('--kit');
+      const c1=bands[1].style.getPropertyValue('--kit');
+      if(!c0||!c1||c0===c1)throw new Error('チームカラーが分かれていない');
+      const withArt=[...document.querySelectorAll('#mCut .cut-mgr')]
+        .filter(e=>e.querySelector('img')).length;
+      // 片方だけなら1本
+      FT.tactic=null;
+      cutTacticPair();
+      if(document.querySelectorAll('#mCut .cut.tac').length!==1)
+        throw new Error('片方だけのとき1本にならない');
+      // 2本版を撮るために戻す前に並べておく
+      MT.tactic='direct'; FT.tactic='highpress'; cutTacticPair();
+      window.__restore=()=>{ MT.tactic=keepM; FT.tactic=keepF; mTacBars(); };
+      return '采配で1人（'+word+'）／ キックオフに監督なし／'
+        +'両軍あれば2本（上=自軍・下=敵軍・色は別）／絵つき '+withArt;
+    })()`));
+    await ctx.wait(1100);
+    await ctx.shot("07s-cutin-coach");        // 2本同時（上=自軍・下=敵軍）
+    await ctx.js("window.__restore&&window.__restore(); 1");
+    await ctx.js("cutTactic({ side:mMine(), tactic:'direct' })");
+    await ctx.wait(1100);          // 掛け声は 0.62 秒遅れて出る(→§6.19)
+    await ctx.shot("07s2-cutin-tactic");
     await ctx.js("openOrd()");
     await ctx.wait(400);
     // **同時に開けるのは1つだけ**(→docs/06 §6.39)
