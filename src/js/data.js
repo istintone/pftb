@@ -337,6 +337,33 @@ const SKILL_FX={
     fx:[{ at:"origin", grp:"spd", s:1.07 },{ at:"start", k:1.18 }] },
   "奔放な足":       { sig:"estevao", move:"止まらない仕掛け",
     fx:[{ at:"origin", grp:"cut", w:1.85, s:1.36, when:"fresh" },{ at:"mood", k:1.05 }] },
+  // --- ミランの面々(2026-08-18) ---
+  // **札の組み合わせは既にある形から採る**(→docs/03 §3.41)。
+  // 層とグループごとの s は careertest が価値の帯で見張っている。個性は2枚目で出す
+  "神の手袋":       { sig:"dida",
+    fx:[{ at:"gk", k:1.10 },{ at:"psoGk", k:1.30 }] },
+  "静かな壁":       { sig:"maldini", move:"間合いで消す",
+    fx:[{ at:"counter", grp:"tec", s:1.14 },{ at:"clean", k:0.70 }] },
+  "最後の砦":       { sig:"costacruta",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"block", k:1.18 }] },
+  "巨岩":           { sig:"stam", move:"押し返す",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"aerial", k:1.20 }] },
+  "堅実な左":       { sig:"kaladze",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"tough", k:1.12 }] },
+  "レジスタ":       { sig:"pirlo", move:"静かな一差し",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"spDeliver", k:1.15 }] },
+  "闘犬":           { sig:"gattuso", move:"噛みつく",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"mid", k:1.10 }] },
+  "汗かき役":       { sig:"ambrosini",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"stam", k:0.80 }] },
+  "四つの持ち場":   { sig:"seedorf", move:"持ち上がって撃つ",
+    fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"recv", k:1.25 }] },
+  "十番の芸":       { sig:"ruicosta", move:"針の穴を通す",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"vision", k:1.20 }] },
+  "撃ち抜く":       { sig:"shevchenko", move:"迷いのない一撃",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"onTarget", k:1.12 }] },
+  "獲物を待つ":     { sig:"crespo", move:"背中で外す",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"start", k:1.20 }] },
 };
 /**
  * 固有スキルの発動条件(→docs/03 §3.41)。**文脈が分からなければ発動しない**

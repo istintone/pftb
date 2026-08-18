@@ -362,6 +362,103 @@ const SIGNATURES=[
     atk:15, def:5, pow:11, tec:18, spd:17, sta:12,               // 78
     skills:["奔放な足","ドリブル突破","切れ込みの鋭さ"],
   },
+  // --- ミランの面々(2026-08-18) ---
+  {
+    n:41, id:"dida", art:"le_gk03_dida", rarity:"LEG",
+    name:"ジーダ", short:"ジーダ",
+    club:"ミラノ・ロッソネリ", nation:"bra",
+    pos:"GK", subs:["GK"], age:30,
+    atk:3, def:20, pow:17, tec:14, spd:14, sta:14,               // 82
+    skills:["神の手袋","セービング","反射神経","1対1の強さ"],
+  },
+  {
+    n:42, id:"maldini", art:"le_lsb02_maldini", rarity:"LEG",
+    name:"P. マルディーニ", short:"マルディーニ",
+    club:"ミラノ・ロッソネリ", nation:"ita",
+    pos:"DF", subs:["LSB","CB"], age:30,
+    atk:8, def:20, pow:16, tec:17, spd:14, sta:15,               // 90
+    skills:["静かな壁","対人守備","カバーリング","キャプテンシー"],
+  },
+  {
+    n:44, id:"costacruta", art:"le_cb03_costacruta", rarity:"LEG",
+    name:"B. コスタクルタ", short:"コスタクルタ",
+    club:"ミラノ・ロッソネリ", nation:"ita",
+    pos:"DF", subs:["CB","RSB"], age:31,
+    atk:6, def:19, pow:15, tec:14, spd:13, sta:15,               // 82
+    skills:["最後の砦","シュートブロック","カバーリング","守備の統率"],
+  },
+  {
+    n:45, id:"stam", art:"le_cb04_stam", rarity:"LEG",
+    name:"J. スタム", short:"スタム",
+    club:"ミラノ・ロッソネリ", nation:"ned",
+    pos:"DF", subs:["CB"], age:30,
+    atk:6, def:20, pow:20, tec:12, spd:14, sta:13,               // 85
+    skills:["巨岩","対人守備","空中戦","タックル"],
+  },
+  {
+    n:46, id:"kaladze", art:"le_lsb03_kaladze", rarity:"LEG",
+    name:"K. カラーゼ", short:"カラーゼ",
+    club:"ミラノ・ロッソネリ", nation:"geo", nat:"ジョージア",
+    pos:"DF", subs:["LSB","CB"], age:28,
+    atk:7, def:18, pow:15, tec:13, spd:15, sta:14,               // 82
+    skills:["堅実な左","対人守備","ケガ耐性","カバーリング"],
+  },
+  {
+    n:47, id:"pirlo", art:"le_dmf04_pirlo", rarity:"LEG",
+    name:"A. ピルロ", short:"ピルロ",
+    club:"ミラノ・ロッソネリ", nation:"ita",
+    pos:"MF", subs:["DMF","CMF"], age:28,
+    atk:12, def:11, pow:13, tec:20, spd:11, sta:15,              // 82
+    skills:["レジスタ","展開力","パスの精度","セットプレーの名手"],
+  },
+  {
+    n:48, id:"gattuso", art:"le_cmf05_gattuso", rarity:"LEG",
+    name:"G. ガットゥーゾ", short:"ガットゥーゾ",
+    club:"ミラノ・ロッソネリ", nation:"ita",
+    pos:"MF", subs:["CMF","DMF"], age:28,
+    atk:9, def:19, pow:17, tec:12, spd:13, sta:18,               // 88
+    skills:["闘犬","ボール奪取","厳しい寄せ","運動量"],
+  },
+  {
+    n:49, id:"ambrosini", art:"le_dmf03_ambrosini", rarity:"LEG",
+    name:"M. アンブロジーニ", short:"アンブロジーニ",
+    club:"ミラノ・ロッソネリ", nation:"ita",
+    pos:"MF", subs:["DMF","CMF"], age:29,
+    atk:10, def:17, pow:15, tec:13, spd:13, sta:17,              // 85
+    skills:["汗かき役","セカンドボール","運動量","ケガ耐性"],
+  },
+  {
+    n:50, id:"seedorf", art:"le_cmf04_seedorf", rarity:"LEG",
+    name:"C. セードルフ", short:"セードルフ",
+    club:"ミラノ・ロッソネリ", nation:"ned",
+    pos:"MF", subs:["CMF","OMF","LMF"], age:29,
+    atk:14, def:13, pow:16, tec:17, spd:13, sta:15,              // 88
+    skills:["四つの持ち場","ロングシュート","キープ力","展開力"],
+  },
+  {
+    n:51, id:"ruicosta", art:"le_omf03_rui_costa", rarity:"LEG",
+    name:"M. ルイ・コスタ", short:"ルイ・コスタ",
+    club:"ミラノ・ロッソネリ", nation:"por",
+    pos:"MF", subs:["OMF","CMF"], age:29,
+    atk:15, def:8, pow:13, tec:20, spd:12, sta:14,               // 82
+    skills:["十番の芸","スルーパス","視野の広さ","キープ力"],
+  },
+  {
+    n:52, id:"shevchenko", art:"le_cf01_shevchenko", rarity:"LEG",
+    name:"A. シェフチェンコ", short:"シェフチェンコ",
+    club:"ミラノ・ロッソネリ", nation:"ukr", nat:"ウクライナ",
+    pos:"FW", subs:["CF","ST"], age:27,
+    atk:20, def:5, pow:16, tec:15, spd:18, sta:14,               // 88
+    skills:["撃ち抜く","決定力","スピード","ゴール前の嗅覚"],
+  },
+  {
+    n:53, id:"crespo", art:"le_cf02_crespo", rarity:"LEG",
+    name:"H. クレスポ", short:"クレスポ",
+    club:"ミラノ・ロッソネリ", nation:"arg",
+    pos:"FW", subs:["CF","ST"], age:29,
+    atk:19, def:4, pow:16, tec:14, spd:16, sta:13,               // 82
+    skills:["獲物を待つ","オフザボール","決定力","詰めの速さ"],
+  },
 ];
 const signatureById=id=>SIGNATURES.find(s=>s.id===id);
 
