@@ -212,7 +212,7 @@ function pickCaptain(xi,want){
   const w=c=>c.ovr+(c.age-18)*1.5;
   return xi.reduce((b,p)=>w(p.c)>w(b.c)?p:b,xi[0]);
 }
-function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic){
+function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic,coach){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
     p.y0=p.y; p.ordM=null;                      // y0 = 采配で動かす前の縦位置
@@ -226,6 +226,8 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic){
   const T={ players:xi, bench, form, name, side, score:0,
     kickers:kickers||null, captain:cap, subOut:[], sentOff:[], order:null, lane:null,
     tactic:null,
+    // 相手監督(→docs/03 §3.56)。**CPU側だけが持つ**。自分の側は UI が手を入れる
+    coach:coach||null,
     med:med||1 };                                    // 医療施設のケガ倍率(→docs/03 §3.5)
   // **采配が先**(→docs/03 §3.50)。指示の上げ下げを合成するので、
   // setTeamOrder は T.tactic が決まったあとに呼ぶ
@@ -932,8 +934,8 @@ function matchClock(rng){
 /** 試合の状態を作る。ここではまだ1ティックも解かない。 */
 function createMatch(home,away,seed,opts){
   const s=seed>>>0;
-  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain,home.order,home.med,home.tactic);
-  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain,away.order,away.med,away.tactic);
+  const H=buildTeam(home.cards,home.form,home.name,"H",home.kickers,home.captain,home.order,home.med,home.tactic,home.coach);
+  const A=buildTeam(away.cards,away.form,away.name,"A",away.kickers,away.captain,away.order,away.med,away.tactic,away.coach);
   const M={
     seed:s, home:H, away:A, ix:0,
     clock:matchClock(mulberry32((s^hashStr("clock"))>>>0)),  // ATを含む全ティックは開始時に確定
@@ -964,6 +966,87 @@ function orderMatch(M,side,order){
   }
   M.orders[side].push(order);
   return true;
+}
+/**
+ * 相手監督(→docs/03 §3.56)。**できるのは指示と交代の2つだけ**。
+ * 采配は動かさない(掛け直すと編成の意味が薄れるので、そこは監督の領分にしない)。
+ *
+ * **自分のチームには一切触らない**。`T.coach` を持っているのはCPU側だけで、
+ * プレイヤーの側は UI からしか手が入らない。
+ */
+function coachTick(M,t,rng){
+  for(const side of ["H","A"]){
+    const T=side==="H"?M.home:M.away, D=side==="H"?M.away:M.home;
+    if(!T.coach)continue;
+    const c=coachById(T.coach);
+    T._cx=T._cx||{ done:{}, subs:0, last:-99 };
+    // --- 指示 ---
+    // **節目を過ぎた最初のティックで1度だけ**考える(毎ティック迷わない)
+    const due=(c.at||[]).find(mn=>t.min>=mn&&!T._cx.done[mn]);
+    if(due!=null){
+      T._cx.done[due]=1;
+      const want=coachPick(c,T,D,rng);
+      if(want!==T.order)orderMatch(M,side,{ type:"order", id:want });
+    }
+    // --- 交代 ---
+    // 疲れた選手から替える。**枠の上限と、監督の性分の上限**の両方を見る
+    if(c.subAt!=null&&t.min>=c.subAt&&t.min-T._cx.last>=c.subGap
+       &&T._cx.subs<c.subMax&&M.subs[side]<TUNING.squad.subMax){
+      const out=coachSubOut(T);
+      const inn=coachSubIn(T,out);
+      if(out>=0&&inn>=0){
+        T._cx.last=t.min; T._cx.subs++;
+        orderMatch(M,side,{ type:"sub", out, in:inn });
+      }
+    }
+  }
+}
+/**
+ * その監督が出したい指示。
+ * **`cpuOrder` という名前は使えない** — world.js が順位の並べ替えで先に使っており、
+ * 結合順(world → match-core)のせいで**あとから上書きしてしまう**。実際に踏んだ。
+ */
+function coachPick(c,T,D,rng){
+  const lead=T.score-D.score;
+  switch(c.order){
+    case "fixed":  return T.order;                      // 変えない
+    case "half":   return T.order==="attack"?"center":"attack";
+    // 負けていれば前へ、勝っていれば後ろへ(ふつうの追い方)
+    case "chase":  return lead<0?"attack":lead>0?"defend":"center";
+    // **勝っていれば押し切り、負けていれば畳む**(→docs/03 §3.56)
+    case "press":  return lead>0?"attack":lead<0?"defend":"center";
+    case "keyman":{
+      // 軸の居る側へ振る。軸が居なければ中央
+      const kp=T.players.find(p=>p.c&&p.c.kp);
+      if(!kp)return "center";
+      return kp.x<40?"left":kp.x>60?"right":"center";
+    }
+    default:{                                            // whim
+      const list=ORDERS.filter(o=>o.id!==T.order);
+      return list[Math.floor(rng()*list.length)].id;
+    }
+  }
+}
+/** 替える枠。**GKは替えない**。いちばん疲れている選手から。 */
+function coachSubOut(T){
+  let ix=-1, worst=2;
+  T.players.forEach((p,i)=>{
+    if(p.role==="GK")return;
+    const v=p.stam==null?1:p.stam;
+    if(v<worst){ worst=v; ix=i; }
+  });
+  return worst<=TUNING.coach.tired?ix:-1;
+}
+/** 入れる控え。**同じ枠をこなせる中でいちばん強い人**。 */
+function coachSubIn(T,outIx){
+  const out=T.players[outIx]; if(!out)return -1;
+  let ix=-1, best=-1;
+  (T.bench||[]).forEach((b,i)=>{
+    if(!b||b.used||b.role==="GK")return;
+    const v=slotFit(b.c,out.sub)*ovrOf(b.c);
+    if(v>best){ best=v; ix=i; }
+  });
+  return ix;
 }
 /** 積まれた指示をティックの頭で適用する。適用できたものだけ events に残す。 */
 function applyOrders(M,t){
@@ -1033,6 +1116,7 @@ function stepMatch(M){
     M.events.push({ min:45, half:1, at:false, side:null, type:"halftime",
       hg:H.score, ag:A.score });
   }
+  coachTick(M,t,rng);                                        // 相手監督が手を打つ(→§3.56)
   applyOrders(M,t);                                         // 監督の指示は**ここで**効く
   refreshStamina(M,t.min);                                  // スタミナはティックの頭で確定する
 

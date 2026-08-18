@@ -527,7 +527,9 @@ function matchSide(clubId){
   const cards=base.map(c=>({ ...c, cond:condCpu(clubId,rng),
     ...(c.id===kp?{ kp:true }:{}) }));
   // **上の部は采配を敷いてくる**(→docs/03 §3.51)。盗む相手になる
-  return { cards, form, name:club.name, kp, tactic:clubTactic(clubId) };
+  // **相手監督**(→docs/03 §3.56)。名前と同じ key から決まるので、下見と試合で食い違わない
+  return { cards, form, name:club.name, kp, tactic:clubTactic(clubId),
+           coach:coachType("club:"+clubId).id };
 }
 /**
  * CPUクラブの編成(→docs/03 §3.34)。**試合も下見もここを通す**ので、
@@ -537,7 +539,9 @@ function cpuSquad(clubId){
   const form=formFor(clubId);
   const cards=bestXI(clubRoster(S.world.seed,clubId),form);
   // **軸と采配もここで決める**(→§3.44 / §3.51)。試合も下見も見立ても同じになる
-  return { cards, form, kp:cpuKp(clubId,cards), tactic:clubTactic(clubId) };
+  // **下見も試合と同じものを見る**(→docs/03 §3.34)。監督もここで付ける
+  return { cards, form, kp:cpuKp(clubId,cards), tactic:clubTactic(clubId),
+           coach:coachType("club:"+clubId).id };
 }
 /** クラブの陣形。クラブIDから決定的に選ぶ(クラブごとに一貫した色になる)。 */
 // 陣形は名簿から決まる = 世界のたねが変わらない限り不変。毎回引き直すと重いので覚えておく。
@@ -1211,8 +1215,10 @@ function memSide(m){
   let cards=m.xi.concat(m.bench).map(one).filter(Boolean);
   if(T.gold)cards=goldWeb(cards);
   const kp=(()=>{ const i=m.xi.indexOf(m.kp); return i>=0&&cards[i]?cards[i].id:null; })();
+  // メモラビリアの監督は**決め打ち**(→§3.55)。誰が指揮しているかも記録の一部
   return { cards, form:m.form, name:m.name, kp,
-           order:m.order||null, tactic:m.tactic||null, med:1 };
+           order:m.order||null, tactic:m.tactic||null,
+           coach:m.coachType||"steady", med:1 };
 }
 /**
  * 一戦の後始末(→docs/03 §3.55)。**節は進めない**。
@@ -2224,7 +2230,9 @@ function cupSide(cup,round,foe){
   const smart=Math.round(cup.bias+round*1.5+(elite?3:0));
   const pool=TACTICS.filter(t=>t.exp<=smart*2200&&(!t.form||t.form.includes(form)));
   const tactic=pool.length?pool[Math.floor(rng()*pool.length)].id:null;
-  return { cards:bestXI(roster,form), form, name:cupTeamName(c,foe), elite, tactic };
+  const ckey="cup:"+cup.id+":"+W.season+":"+c.node0+":"+foe;
+  return { cards:bestXI(roster,form), form, name:cupTeamName(c,foe), elite, tactic,
+           coach:coachType(ckey).id };
 }
 /** カップの組み合わせ。相手はクラブ一覧に居ないので、ここで全部持つ。 */
 function cupFixtureOf(){

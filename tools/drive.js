@@ -340,6 +340,47 @@ const STEPS = [
       return '域外0/'+tot+'人 ／ 最大★'+star+' ／ 強豪★'+top+'(黄金線あり) 弱小★'+bottom
         +' ／ 表示 '+html;
     })()`));
+    // 相手監督(→docs/03 §3.56)。**できるのは指示と交代の2つだけ**
+    ctx.log("  相手監督:", await ctx.js(`(()=>{
+      if(COACHES.length<5)throw new Error('性分が少なすぎる: '+COACHES.length);
+      // **名前と同じ key から決まる**(下見と試合で食い違わない)
+      const a=coachType('club:eng-1').id, b=coachType('club:eng-1').id;
+      if(a!==b)throw new Error('同じ相手で性分が変わる');
+      // 全部の性分が実際に配られること
+      const seen=new Set(CLUBS.map(c=>coachType('club:'+c.id).id));
+      if(seen.size<COACHES.length)
+        throw new Error('出てこない性分がある: '+seen.size+'/'+COACHES.length);
+      // 相手の側にだけ監督が付く。**自分の側には付かない**
+      const side=cpuSquad(myFixture().opp);
+      if(!side.coach)throw new Error('相手に監督が付いていない');
+      if(matchSide(S.club.id).coach)throw new Error('自分の側に監督が付いている');
+      // 実際に手を打つ
+      const base=bestXI(clubRoster(S.world.seed,'ger-4'),'4-4-2');
+      const run=id=>{ let o=0,s2=0;
+        for(let i=0;i<40;i++){
+          const r=simulateMatch(
+            { cards:bestXI(clubRoster(S.world.seed,'eng-1'),'4-4-2'), form:'4-4-2', name:'me' },
+            { cards:base, form:'4-4-2', name:'foe', coach:id, order:'center' }, 500+i);
+          o+=r.events.filter(e=>e.type==='order'&&e.side==='A').length;
+          s2+=r.events.filter(e=>e.type==='sub'&&e.side==='A').length;
+        }
+        return { o:o/40, s:s2/40 }; };
+      const fixed=run('steady'), whim=run('whim');
+      // **堅物は自分からは動かない**
+      if(fixed.o!==0||fixed.s!==0)
+        throw new Error('堅物型が動いてしまう: 指示'+fixed.o+' 交代'+fixed.s);
+      // **気まぐれはよく動く**
+      if(whim.o<3||whim.s<1)
+        throw new Error('気まぐれ型が動かない: 指示'+whim.o+' 交代'+whim.s);
+      // 下見に性分が出る
+      openFoe({ kind:'club', clubId:myFixture().opp });
+      const txt=document.getElementById('foeCoach').textContent;
+      if(txt.indexOf('型')<0)throw new Error('下見に性分が出ない: '+txt);
+      goBack();
+      return COACHES.length+'種 ／ 堅物 指示'+fixed.o+'・交代'+fixed.s
+        +' ／ 気まぐれ 指示'+whim.o.toFixed(1)+'・交代'+whim.s.toFixed(1)
+        +' ／ 下見「'+txt.trim()+'」';
+    })()`));
     // 組み合わせ表の枠からも相手を下見できる(→docs/03 §3.34)。
     // **その回戦で当たったときの相手**が出る(回戦が上がるほど強くなる)
     ctx.log("  カップの下見:", await ctx.js(`(()=>{

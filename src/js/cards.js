@@ -39,6 +39,14 @@ function coachName(key){
   const rng=mulberry32((hashStr("coach:"+key)^0x9e3779b9)>>>0);
   return rpick(rng,GIVEN)+" "+rpick(rng,COACH_SUR);
 }
+/**
+ * 監督の性分(→docs/03 §3.56)。**名前と同じ key から決まる**ので、
+ * 同じ相手はいつ当たっても同じ運びをする(下見と試合で食い違わない)。
+ */
+function coachType(key){
+  const rng=mulberry32((hashStr("ctype:"+key)^0x85ebca6b)>>>0);
+  return COACHES[Math.floor(rng()*COACHES.length)];
+}
 // 姓は**国籍ごと**に20個(計320個)。1クラブ16人は複数の国籍から集まるので、
 // makeRoster が姓が重ならないように配る(同じクラブに同姓が並ぶと見分けが付かない)。
 const FAMILY={

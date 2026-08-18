@@ -1398,7 +1398,10 @@ function renderFoe(){
   const cards=_foeCards=side.cards;
   const start=cards.slice(0,TUNING.squad.starters);
 
-  $("foeCoach").textContent="監督 "+coach;
+  // **監督の性分も出す**(→docs/03 §3.56)。誰が指揮しているかで運びが変わる
+  const ct=side.coach?coachById(side.coach):null;
+  $("foeCoach").innerHTML="監督 "+esc(coach)
+    +(ct?'<i class="foe-ct">'+esc(ct.name)+'型</i>':"");
   $("foeForm").textContent="陣形: "+side.form+"　"+esc(f.sub||"");
   $("foePower").textContent=squadPowerAt(cards,side.form);
   $("foeName").textContent=name;

@@ -1265,6 +1265,7 @@ const MEMORABILIA=[
     note:"欧州の頂点まで届きかけた、赤と黒の完成形。",
     club:"ミラノ・ロッソネリ",
     coach:"C. アンチェロッティ",
+    coachType:"canny",   // 勝っていれば押し切る(→§3.56)
     form:"4-4-2ダイヤ",
     // 枠の並びは FORMATIONS["4-4-2ダイヤ"] と同じ順に置く
     //   GK / LSB / CB / CB / RSB / DMF / CMF / CMF / OMF / ST / CF
@@ -1277,6 +1278,39 @@ const MEMORABILIA=[
   },
 ];
 const memById=id=>MEMORABILIA.find(m=>m.id===id);
+
+// ---------- 相手監督(→docs/03 §3.56) ----------
+// **できるのは指示と交代の2つだけ**。采配(→§3.50)は動かさない。
+// 同じ11人でも「誰が指揮しているか」で試合の運びが変わるようにする。
+//
+//   at      … 手を打つ節目(分)。ここを過ぎた最初のティックで考える
+//   order   … 指示の決め方
+//               fixed  そのまま動かさない
+//               half   前後半で入れ替える
+//               chase  負けていれば攻撃・勝っていれば守備(ふつうの追い方)
+//               press  勝っていれば攻撃・負けていれば守備(押し切る/畳む)
+//               keyman 軸の居る側へ振る
+//               whim   その都度でたらめに
+//   subAt   … 交代を考え始める分。null なら**自分からは代えない**
+//   subGap  … 続けて代えるまでに空ける分
+//   subMax  … その試合で使う枚数の上限(枠の上限とは別に、監督の性分)
+const COACHES=[
+  { id:"steady", name:"堅物",     note:"最初の形を変えない",
+    at:[], order:"fixed", subAt:null, subGap:0, subMax:0 },
+  { id:"normal", name:"標準",     note:"前後半で手を変え、交代も使う",
+    at:[46,70], order:"half", subAt:55, subGap:12, subMax:3 },
+  { id:"whim",   name:"気まぐれ", note:"短い間隔で手も選手も変える",
+    at:[15,30,45,60,75], order:"whim", subAt:25, subGap:9, subMax:3 },
+  { id:"smart",  name:"知能",     note:"形勢が悪いと手を変える",
+    at:[30,50,65,78], order:"chase", subAt:58, subGap:10, subMax:3 },
+  { id:"late",   name:"出し惜しみ", note:"終盤まで動かず、最後に一気に",
+    at:[75], order:"chase", subAt:75, subGap:3, subMax:3 },
+  { id:"canny",  name:"知将",     note:"勝っていれば攻め、負けていれば守る",
+    at:[35,55,70,80], order:"press", subAt:60, subGap:11, subMax:3 },
+  { id:"keyman", name:"キーマン", note:"軸の居る側へ振る",
+    at:[20,40,60,75], order:"keyman", subAt:62, subGap:12, subMax:2 },
+];
+const coachById=id=>COACHES.find(c=>c.id===id)||COACHES[1];
 
 // ---------- クラブチャット(→docs/03 §3.29) ----------
 // 節の進行を**秘書と選手とのやり取り**で行う。打ち手も大会の選択もここで決まる。
@@ -1952,6 +1986,8 @@ const TUNING={
   //   tactic    … 相手の采配を覚える確率。**勝たなくても引ける**(見て盗む)
   //   winK      … 勝ったときの倍率(負けても引けるが、勝てば厚い)
   mem:{ star:5, gold:true, card:0.08, tactic:0.12, winK:2.5 },
+  // 相手監督(→docs/03 §3.56)。tired … これを下回った選手から替える
+  coach:{ tired:0.72 },
   // 相手の育ち具合(→docs/03 §3.53)。**段の数値は域内に収め、強さの差は★で出す**。
   // 段のバッジが意味を保ったまま、上位の相手が強くなる。
   //   max      … 選手あたりの★の上限。**プレイヤー側と同じ上限**にそろえる
