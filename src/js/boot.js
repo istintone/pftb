@@ -35,6 +35,9 @@ function setupTitle(exists){
   };
   const resume=async()=>{
     await loadGame(); headUI(); applyBg();
+    // **QRで配った合言葉**(→docs/03 §3.55)。URL に付いていればここで開く
+    const got=memFromUrl();
+    if(got){ await save(); toast("「"+got.name+"」が開きました"); }
     show(S.club?"home":"offer");         // 就任前で終わっていたら就任先選択から
   };
   const once=fn=>async()=>{              // 二重起動を防ぐ

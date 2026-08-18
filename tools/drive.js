@@ -2477,6 +2477,57 @@ const STEPS = [
         await ctx.js("document.getElementById('clubCrest').click()");
         await ctx.wait(300);
         await ctx.shot("12g-club-crest");
+        // メモラビリア(→docs/03 §3.55)
+        ctx.log("  メモラビリア:", await ctx.js(`(()=>{
+          S.player.mem=[]; renderMem();
+          if(document.querySelector('#memList [data-mem]'))throw new Error('開く前から並ぶ');
+          if(memUnlock('NOPE'))throw new Error('でたらめな合言葉で開く');
+          // **大文字小文字と前後の空白は無視**(QRから来た文字列がそのまま入るとは限らない)
+          const m=memUnlock('  rossoneri-2005 ');
+          if(!m||m==='have')throw new Error('正しい合言葉で開かない');
+          if(memUnlock('ROSSONERI-2005')!=='have')throw new Error('二度目が弾かれない');
+          renderMem();
+          const rows=[...document.querySelectorAll('#memList [data-mem]')];
+          if(rows.length!==1)throw new Error('一覧に出ない: '+rows.length);
+          // 相手は**常に最強**
+          const side=memSide(m);
+          if(side.cards.length!==16)throw new Error('16人でない: '+side.cards.length);
+          const up=c=>STAT_KEYS.reduce((n,k)=>n+((c.up&&c.up[k])||0),0);
+          if(side.cards.some(c=>up(c)!==TUNING.mem.star))throw new Error('★が上限でない');
+          if(side.cards.some(c=>!c.gold))throw new Error('黄金線が張られていない');
+          if(!side.kp)throw new Error('軸が決まっていない');
+          if(side.form!==m.form||side.tactic!==m.tactic)throw new Error('陣形か采配が違う');
+          // **枠の並びどおりに置かれる**
+          const slots=FORMATIONS[side.form];
+          const gk=side.cards[0];
+          if(slots[0][0]!=='GK'||gk.pos!=='GK')throw new Error('並びが陣形と合っていない');
+          // 限定の采配は**その所属にしか効かない**
+          const M=createMatch(matchSide(S.club.id),memSide(m),7);
+          const mil=M.away.players.filter(p=>p.c.club===m.club);
+          if(!mil.length||!mil.every(p=>p.ordM&&p.ordM.tec>1))
+            throw new Error('ミランの選手に効いていない');
+          const other=createMatch(
+            { cards:bestXI(clubRoster(S.world.seed,'ger-4'),m.form), form:m.form,
+              name:'x', tactic:m.tactic, order:'attack', med:1 },
+            matchSide(S.club.id), 7);
+          if(other.home.players.some(p=>p.ordM&&p.ordM.tec>1))
+            throw new Error('よその選手にも効いてしまう');
+          // URL の合言葉
+          S.player.mem=[];
+          location.hash='#mem=ROSSONERI-2005';
+          const byUrl=memFromUrl();
+          if(!byUrl)throw new Error('URL の合言葉で開かない');
+          if(location.hash.indexOf('mem=')>=0)throw new Error('URL から消えない');
+          return '合言葉で開く／16人・★'+TUNING.mem.star+'・黄金線・軸あり／'
+            +'限定采配はミランにだけ効く／URLでも開く';
+        })()`));
+        await ctx.js(`(()=>{
+          document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));
+          memUnlock('ROSSONERI-2005'); renderMem();
+          document.getElementById('appBody').scrollTop=0; return 1;
+        })()`);
+        await ctx.wait(300);
+        await ctx.shot("12j-memorabilia");
         // 背景(→docs/06 §6.45)。**端末枠の外側だけ**が変わる
         ctx.log("  背景の設定:", await ctx.js(`(()=>{
           const btn=document.getElementById('clubCfg');

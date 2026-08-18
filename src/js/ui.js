@@ -2608,7 +2608,7 @@ function renderStandings(){
 // ---------- CLUB(クラブハウス) ----------
 function renderClubhouse(){
   $("clubMgrName").textContent=S.coach||"監督";
-  renderClubMgr(); renderClubCrest();
+  renderClubMgr(); renderClubCrest(); renderMem();
   $("clubFame").textContent=fmtNum(S.player.fame);
   $("clubTickets").textContent=ticketTotal();
   // **直近だけ見せる**(→docs/03 §3.2.3)。長く続けるほど経歴は伸びるので、
@@ -3811,8 +3811,42 @@ function mSkip(){
   mFinish();
 }
 /** 試合を始める。ここから先はエンジンが解いたものを再生するだけ。 */
-function startMatch(){
-  _M=beginMyMatch();
+// いま戦っているメモラビリア(→docs/03 §3.55)。**節を進めない一戦**の目印
+let _memNow=null;
+/**
+ * メモラビリアの一戦(→docs/03 §3.55)。**キャリアの進行には触らない**。
+ * 日程も節も動かさないので、何度でも挑める。
+ */
+function startMem(id){
+  const m=memById(id);
+  if(!m||!memHas(id)){ toast("まだ開いていません"); return; }
+  _memNow=m;
+  // **たねは毎回変える**。同じ相手に何度も挑めるので、結果が固定だと意味が無い
+  const seed=(S.world.seed^hashStr("mem:"+id+":"+Date.now()))>>>0;
+  const M=createMatch(matchSide(S.club.id),memSide(m),seed);
+  M.fixture={ h:S.club.id, a:null, mem:id, label:m.name };
+  M.away.name=m.name;
+  M.memSeed=seed;
+  startMatch(M);
+}
+/** メモラビリアの締め。**節は進めず**、その場で戦利品を引く。 */
+function doMemDone(){
+  const m=_memNow, M=_M;
+  _memNow=null;
+  if(!m||!M){ show("home"); return; }
+  const mine=mMine()==="H"?M.home:M.away, foe=mMine()==="H"?M.away:M.home;
+  const win=mine.score>foe.score;
+  const r=memReward(m,win,M.memSeed||0);
+  _M=null;
+  _lastResult={ my:{ opp:null, oppName:m.name, home:true, gf:mine.score, ga:foe.score,
+      win, draw:mine.score===foe.score, cup:true, label:m.name, mem:m.id },
+    M, others:[], mem:r };
+  save(); headUI(); show("result");
+  if(r.card)toast(RARITY[r.card.rarity].label+" "+shortName(r.card)+" が加入しました");
+  if(r.tactic)toast("采配「"+r.tactic.label+"」を覚えました");
+}
+function startMatch(pre){
+  _M=pre||beginMyMatch();
   _mBall=[50,50]; _mPhase=0; _mRestart=true;
   mReset();                                   // 前の試合のPK戦が残らないように
   if(!_M){ toast("試合を開始できません"); return; }
@@ -3880,6 +3914,15 @@ function renderResult(){
       +fmtNum(inc.reduce((a,r)=>a+r.v,0))+'</b></div>'
     :'<div class="rs-in none"><span>この試合の収入はありません</span>'
       +'<b>賞金は大会の決着で</b></div>';
+  // メモラビリアの戦利品(→docs/03 §3.55)。**引けなかったことも書く**
+  if(o.mem){
+    const r=o.mem;
+    $("rsReward").innerHTML+=
+      '<div class="rs-in mem-got"><span>選手</span><b>'
+      +(r.card?esc(RARITY[r.card.rarity].abbr+" "+shortName(r.card)):"—")+'</b></div>'
+      +'<div class="rs-in mem-got"><span>采配</span><b>'
+      +(r.tactic?esc(r.tactic.label):"—")+'</b></div>';
+  }
   $("rsOthers").innerHTML=o.others.map(x=>'<div class="fx"><span class="nm">'+esc(clubName(x.h))+'</span>'
     +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
     +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("")||'<div class="lg">なし</div>';
@@ -4227,6 +4270,50 @@ function renderClubCrest(){
     : "ワールドクラブチャンピオンカップを獲ると★が付きます（最大"
       +TUNING.emblem.maxStar+"）";
 }
+/**
+ * メモラビリア(→docs/03 §3.55)。**開いたものだけ並ぶ**。
+ * 押すとその場で一戦できる。節も日程も消費しない。
+ */
+function renderMem(){
+  const box=$("memList"); if(!box)return;
+  const list=memList();
+  box.innerHTML=list.length?list.map(m=>{
+    const t=m.tactic?tacticById(m.tactic):null;
+    return '<div class="mem" data-mem="'+esc(m.id)+'" role="button" tabindex="0">'
+      +'<div class="mem-l"><b>'+esc(m.name)+'</b>'
+      +'<span class="lg">'+esc(m.sub||"")+'</span>'
+      +'<span class="mem-n">'+esc(m.coach)+' ／ '+esc(m.form)
+      +(t?' ／ '+esc(t.label):"")+'</span></div>'
+      +'<div class="mem-r">戦う ›</div></div>';
+  }).join("")
+   :'<div class="lg">まだありません。合言葉を読み込むと開きます。</div>';
+  box.querySelectorAll("[data-mem]").forEach(el=>{
+    el.onclick=()=>startMem(el.dataset.mem);
+  });
+}
+/**
+ * URL の後ろに付いた合言葉を読む(→docs/03 §3.55)。
+ * **QRはこれを開くために配る** — `…/index.html#mem=ROSSONERI-2005` を読ませれば、
+ * 起動しただけで開く。カメラを使わずに済むので、単一HTMLのまま成立する。
+ * 一度読んだら URL からは消す(再読み込みで何度も知らせが出ないように)。
+ */
+function memFromUrl(){
+  const h=String(location.hash||"");
+  const m=/[#&]mem=([^&]+)/.exec(h);
+  if(!m)return null;
+  const r=memUnlock(decodeURIComponent(m[1]));
+  try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){}
+  return r&&r!=="have"?r:null;
+}
+/** 合言葉で開ける。**開いたらその場で一覧に出る**。 */
+async function memTry(code){
+  const r=memUnlock(code);
+  if(!r){ toast("その合言葉では開きません"); return; }
+  if(r==="have"){ toast("それはもう持っています"); return; }
+  $("memCode").value="";
+  await save(); renderMem();
+  toast("「"+r.name+"」が開きました");
+}
 /** CLUB の監督の顔。名前の左に出す。 */
 function renderClubMgr(){
   const el=$("clubMgrFace"); if(!el)return;
@@ -4264,6 +4351,8 @@ $("cardModal").onclick=e=>{ if(e.target===$("cardModal"))closeCard(); };
 $("clubMgrFace").onclick=openFace;
 $("clubCrest").onclick=openCrest;
 $("clubCfg").onclick=openCfg;
+$("memGo").onclick=()=>memTry($("memCode").value);
+$("memCode").onkeydown=e=>{ if(e.key==="Enter")memTry($("memCode").value); };
 $("cfgDone").onclick=closeCfg;
 $("cfgModal").onclick=e=>{ if(e.target===$("cfgModal"))closeCfg(); };
 $("tileMarket").onclick=()=>show("market",{push:1});
@@ -4317,7 +4406,7 @@ $("mSpeed").onclick=()=>{
   $("mSpeed").textContent="×"+_mSpeed;
 };
 $("mSkip").onclick=mSkip;
-$("mDone").onclick=doMatchday;
+$("mDone").onclick=()=>{ _memNow?doMemDone():doMatchday(); };
 // **任期が明けたら次の任期へ**(→docs/03 §3.2.3)。名声・実績・カードは持ち越す。
 // ここで newGame() を呼ぶと、積み上げたものが毎回消えて周回にならない
 $("btnNewCareer").onclick=async()=>{

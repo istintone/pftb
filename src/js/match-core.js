@@ -260,6 +260,9 @@ function setTeamTactic(T,id){
     p.fit=p.fit0;
     p.manMark=false; p.bondX=0; p.foulX=0;
     if(!t)continue;
+    // **所属で絞る采配**(→docs/03 §3.55)。メモラビリアから持ち帰った手は、
+    // その所属の選手にしか効かない(強い手を無条件に配らないための鍵)
+    if(t.club&&(!p.c||p.c.club!==t.club))continue;
     if(t.role&&p.role!==t.role)continue;
     for(const e of (t.fx||[])){
       // **効果ごとに役割を絞れる**(→docs/03 §3.50)。フォルス9のように
@@ -305,8 +308,16 @@ function setTeamOrder(T,id){
     }
     return Object.keys(out).length?out:null;
   })();
+  // 所属で絞る采配は、**指示ぶんだけ**を他所の選手に渡す
+  const mmOrd=(function(){
+    if(!om)return null;
+    const out={};
+    for(const k of STAT_KEYS)if(om[k]&&om[k]!==1)out[k]=om[k];
+    return Object.keys(out).length?out:null;
+  })();
+  const club=tc&&tc.club||null;
   T.players.forEach(p=>{
-    p.ordM=mm;
+    p.ordM=(club&&(!p.c||p.c.club!==club))?mmOrd:mm;
     if(p.role==="GK")return;                     // GKは前に出ない
     // 陣形の縦は 13〜87 なので、押し出しぶんの余白(±shiftY)まで許す。
     // 13 で切ると最前線だけ動かず、押し上げているのに絵が変わらない

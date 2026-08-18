@@ -1235,8 +1235,48 @@ const TACTICS=[
     fx:[{ at:"origin", grp:"carry", w:0.72 }],
     line:"型どおりに！",
   },
+  // --- メモラビリア限定(→docs/03 §3.55) ---
+  // **所属で絞る采配**。持ち帰っても、その所属の選手にしか効かない。
+  // 熟練度の縛りは無い(覚えること自体が難しいので、二重の鍵にしない)
+  {
+    id:"meraviglioso", label:"イル・メラヴィリオーゾ", icon:"⚜",
+    form:["4-4-2ダイヤ"], exp:0, mem:true, club:"ミラノ・ロッソネリ",
+    desc:"技巧で崩す。ミラノ・ロッソネリの選手だけが応えられる、消耗の激しい形",
+    ordM:{ tec:1.10, pow:0.96 },
+    fx:[{ at:"stam", k:1.05 }],
+    line:"美しく崩せ！",
+  },
 ];
 const tacticById=id=>TACTICS.find(t=>t.id===id);
+
+// ---------- メモラビリア(→docs/03 §3.55) ----------
+// **普段は戦えない編成**との一戦。QRで配る合言葉(hash)を読ませると開く。
+// 相手は常に最強の状態(★上限・全ペア黄金線)で、限定の采配を敷いてくる。
+// 勝てば相手の選手を1人もらえることがあり、采配も見て盗める。
+//
+// **合言葉はそのまま置く**(難読化しない)。オフラインの単一HTMLなので隠しても
+// 読めてしまうし、隠すと配った側が確かめられなくなる。
+const MEMORABILIA=[
+  {
+    id:"acm2005",
+    hash:"ROSSONERI-2005",
+    name:"2005 CL 決勝 ACミラン",
+    sub:"あの夜の11人",
+    note:"欧州の頂点まで届きかけた、赤と黒の完成形。",
+    club:"ミラノ・ロッソネリ",
+    coach:"C. アンチェロッティ",
+    form:"4-4-2ダイヤ",
+    // 枠の並びは FORMATIONS["4-4-2ダイヤ"] と同じ順に置く
+    //   GK / LSB / CB / CB / RSB / DMF / CMF / CMF / OMF / ST / CF
+    xi:["dida","maldini","nesta","stam","cafu",
+        "pirlo","gattuso","seedorf","kaka","crespo","shevchenko"],
+    bench:["inzaghi","ambrosini","ruicosta","kaladze","costacruta"],
+    kp:"kaka",
+    order:"attack",
+    tactic:"meraviglioso",
+  },
+];
+const memById=id=>MEMORABILIA.find(m=>m.id===id);
 
 // ---------- クラブチャット(→docs/03 §3.29) ----------
 // 節の進行を**秘書と選手とのやり取り**で行う。打ち手も大会の選択もここで決まる。
@@ -1906,6 +1946,12 @@ const TUNING={
   career:{ show:20 },
   // エンブレム(→docs/03 §3.54)。**ワールドクラブチャンピオンカップの獲得数**が★になる
   emblem:{ maxStar:3 },
+  // メモラビリア(→docs/03 §3.55)。**普段は戦えない編成**との一戦。
+  //   star/gold … 相手は常に最強の状態(★上限・全ペア黄金線)
+  //   card      … 勝ったときに相手の選手を1人もらえる確率
+  //   tactic    … 相手の采配を覚える確率。**勝たなくても引ける**(見て盗む)
+  //   winK      … 勝ったときの倍率(負けても引けるが、勝てば厚い)
+  mem:{ star:5, gold:true, card:0.08, tactic:0.12, winK:2.5 },
   // 相手の育ち具合(→docs/03 §3.53)。**段の数値は域内に収め、強さの差は★で出す**。
   // 段のバッジが意味を保ったまま、上位の相手が強くなる。
   //   max      … 選手あたりの★の上限。**プレイヤー側と同じ上限**にそろえる

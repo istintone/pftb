@@ -2037,6 +2037,25 @@ body.bg-wall #app{ position:relative; z-index:1 }
   repeating-linear-gradient(90deg, oklch(0.32 0.075 150) 0 6px, oklch(0.28 0.065 150) 6px 12px) }
 .sw-wall{ background:linear-gradient(135deg,#761AFF 0 20%,#F8FF26 20% 40%,
   #23FFB5 40% 60%,#FF21B2 60% 80%,#1BFAFF 80% 100%) }
+/* メモラビリア(→docs/03 §3.55)。開いたものだけ並ぶ */
+.mem{ display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:6px;
+  border-radius:11px; cursor:pointer;
+  background:linear-gradient(100deg, oklch(0.24 0.05 85), var(--panel) 62%);
+  border:1px solid var(--accent-dim) }
+.mem:active{ border-color:var(--accent) }
+.mem-l{ flex:1; min-width:0 }
+.mem-l b{ display:block; font:600 13px/1.35 var(--f-head); color:var(--accent-hi) }
+.mem-n{ display:block; margin-top:2px; font-size:10px; color:var(--text-mute) }
+.mem-r{ flex:0 0 auto; font:600 11px/1 var(--f-head); color:var(--accent) }
+.mem-key{ display:flex; gap:8px; margin-top:10px; align-items:stretch }
+.mem-key input{
+  flex:1 1 auto; min-width:0; padding:8px 10px; border-radius:8px;
+  background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+  font:400 12px/1.4 var(--f-body);
+}
+/* **ボタンは伸ばさない**。.btn は幅いっぱいに広がるので、ここで止める */
+.mem-key .btn{ flex:0 0 auto; width:auto; padding:8px 16px }
+.rs-in.mem-got b{ color:var(--accent-hi) }
 /* HOME のタイルに載せる状態(→docs/06 §6.44) */
 .tl-hot{ color:var(--accent-hi); font-weight:600 }
 .tl-num{ color:var(--accent-hi); font:700 14px/1 var(--f-head) }

@@ -1148,6 +1148,76 @@ function drawSig(rng,rarity,pos){
 }
 const drawLegend=rng=>drawSig(rng,"LEG");
 
+// ---------- メモラビリア(→docs/03 §3.55) ----------
+// **普段は戦えない編成**との一戦。合言葉(hash)を読ませると開き、以後いつでも戦える。
+// 節も日程も消費しない**エキシビション**なので、キャリアの進行には一切触らない。
+
+const memOwned=()=>(S.player&&S.player.mem)||(S.player?(S.player.mem=[]):[]);
+const memHas=id=>memOwned().includes(id);
+/** 開いているものだけ。CLUB に並ぶのはこれ。 */
+const memList=()=>MEMORABILIA.filter(m=>memHas(m.id));
+/**
+ * 合言葉で開ける。**大文字小文字と前後の空白は無視**する
+ * (QRから来た文字列がそのまま入るとは限らない)。
+ * 返り値は開いたメモラビリア。合わなければ null、既に持っていれば "have"。
+ */
+function memUnlock(code){
+  const key=String(code||"").trim().toUpperCase();
+  if(!key)return null;
+  const m=MEMORABILIA.find(x=>x.hash.toUpperCase()===key);
+  if(!m)return null;
+  if(memHas(m.id))return "have";
+  memOwned().push(m.id);
+  return m;
+}
+/**
+ * 相手の11人+控え(→docs/03 §3.55)。**常に最強の状態**で組む。
+ * 枠の並びは陣形の並びと同じ順に置いてあるので、そのまま渡せば意図した配置になる。
+ */
+function memSide(m){
+  const T=TUNING.mem;
+  const one=sid=>{
+    const def=signatureById(sid);
+    if(!def)return null;
+    const c=makeSignature(def);
+    // **★は上限まで**。段の数値は域内のままなので、強さはここで出る(→§3.53)
+    const st={}; for(const k of STAT_KEYS)st[k]=c[k];
+    const up=starUps(st,T.star);
+    return up?{ ...c, up }:c;
+  };
+  let cards=m.xi.concat(m.bench).map(one).filter(Boolean);
+  if(T.gold)cards=goldWeb(cards);
+  const kp=(()=>{ const i=m.xi.indexOf(m.kp); return i>=0&&cards[i]?cards[i].id:null; })();
+  return { cards, form:m.form, name:m.name, kp,
+           order:m.order||null, tactic:m.tactic||null, med:1 };
+}
+/**
+ * 一戦の後始末(→docs/03 §3.55)。**節は進めない**。
+ * 勝てば相手の選手を1人もらえることがあり、采配は**負けても盗める**(見て覚える)。
+ */
+function memReward(m,win,seed){
+  const T=TUNING.mem;
+  const rng=mulberry32((S.world.seed^hashStr("mem:"+m.id+":"+(seed||0)))>>>0);
+  const out={ card:null, tactic:null };
+  const k=win?T.winK:1;
+  // 選手は**勝ったときだけ**。まだ持っていない人からしか出ない
+  if(win&&rng()<T.card*k){
+    const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+    const pool=m.xi.concat(m.bench).filter(sid=>!mine.has(sid)).map(signatureById).filter(Boolean);
+    if(pool.length){
+      const c=makeSignature(pool[Math.floor(rng()*pool.length)]);
+      S.player.coll.push(c);
+      out.card=c;
+    }
+  }
+  // 采配は**見ていれば盗める**。一度覚えれば二度は出ない
+  if(m.tactic&&!knowsTactic(m.tactic)&&rng()<T.tactic*k){
+    learnTactic(m.tactic);
+    out.tactic=tacticById(m.tactic);
+  }
+  return out;
+}
+
 // ---------- スポンサー(→docs/03 §3.40) ----------
 // **クラブを支える企業と契約する**。契約は24節前後で、任期のあいだに何度か入れ替わる。
 // 価値は2つ: 期限つきの課題(達成で大きな報酬)と、契約中だけ使える4つ目の打ち手。
