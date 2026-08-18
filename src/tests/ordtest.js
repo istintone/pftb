@@ -262,11 +262,19 @@ const E=setup({tmpName:"_tmp_ord.js"});
     }
     assert.ok(lo < got, "負けたときのほうが覚えにくい: " + lo + " < " + got);
 
-    // **覚えたら連絡が届く**
+    // **連絡が届き、受け取って初めて覚える**(→docs/03 §3.50)。
+    // 選手も采配も、届くものは秘書の受信箱を通す
     S.player.tactics = ["direct"]; S.player.mail = []; S.career.node = 1;
     for (let i = 1; i <= 200; i++) { S.career.node = i;
       if (E.learnRoll("highpress", "win", i, false)) break; }
-    assert.ok(E.tacticsKnown().includes("highpress"), "覚えている");
+    assert.ok(!E.tacticsKnown().includes("highpress"), "受け取る前は覚えていない");
+    const lm = E.mailList().find(m => String(m.id).indexOf("learn:") === 0);
+    assert.ok(lm, "采配の連絡が届く");
+    const ld = E.mailDef(lm);
+    assert.ok(ld.title.indexOf("を習得しました") >= 0, "「習得しました」と書く: " + ld.title);
+    assert.ok(ld.text.indexOf("熟練度") >= 0, "熟練度の但し書きがある");
+    E.mailTake(lm.id);
+    assert.ok(E.tacticsKnown().includes("highpress"), "受け取ると覚えている");
     assert.strictEqual(S.player.mail.length, 1, "受信箱に連絡が届く");
     console.log("采配を盗むOK 1部2部だけが敷く ／ 上のリーグほど賢い ／"
       + " 勝ち " + (rate * 100).toFixed(0) + "% > 負け ／ 覚えたら連絡");

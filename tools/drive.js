@@ -2682,6 +2682,36 @@ const STEPS = [
             matchSide(S.club.id), 7);
           if(other.home.players.some(p=>p.ordM&&p.ordM.tec>1))
             throw new Error('よその選手にも効いてしまう');
+          // **戦利品は受信箱で受け取る**(→docs/03 §3.55)。その場では配らない。
+          // coll は編成が参照しているので、**必ず元に戻す**
+          // (空にしたまま進めてシーズンが止まった)
+          const bk={ mail:S.player.mail.slice(), coll:S.player.coll.slice(),
+                     tac:S.player.tactics.slice() };
+          S.player.mail=[]; S.player.coll=[]; S.player.tactics=['direct'];
+          let spoil=null;
+          for(let i=0;i<400&&!(spoil&&spoil.card&&spoil.tactic);i++){
+            S.player.mail=[]; S.player.coll=[]; S.player.tactics=['direct'];
+            spoil=memReward(m,true,i);
+          }
+          if(!spoil||!spoil.card||!spoil.tactic)throw new Error('戦利品が出ない');
+          if(S.player.coll.length)throw new Error('受け取る前に選手が増えている');
+          if(tacticsKnown().length!==1)throw new Error('受け取る前に采配を覚えている');
+          const ms=mailList().map(x=>mailDef(x));
+          if(!ms.some(d=>d.gift&&d.gift.card))throw new Error('選手の連絡が無い');
+          const tm=ms.find(d=>d.gift&&d.gift.tactic);
+          if(!tm)throw new Error('采配の連絡が無い');
+          // **文言は「習得しました」**
+          if(tm.title.indexOf('を習得しました')<0)throw new Error('文言が違う: '+tm.title);
+          // **但し書きが付く**。熟練度の要る采配は「選手がまだ出せない」と書き、
+          // 要らない采配(メモラビリア限定は exp:0)は「すぐ試せる」と書く
+          const need=tacticById(tm.gift.tactic).exp;
+          const want=need?'熟練度':'すぐ試せます';
+          if(tm.text.indexOf(want)<0)
+            throw new Error('但し書きが無い('+(need||0)+'): '+tm.text.slice(-40));
+          for(const x of mailList().slice())mailTake(x.id);
+          if(!S.player.coll.length)throw new Error('受け取っても選手が増えない');
+          if(tacticsKnown().length!==2)throw new Error('受け取っても采配を覚えない');
+          S.player.mail=[]; S.player.coll=bk.coll.slice(); S.player.tactics=bk.tac.slice();
           // **世界の頂点を獲ると1つ届く**(→docs/03 §3.55)
           S.player.mem=[]; S.player.mail=[];
           const got=memAward('world');
@@ -2697,6 +2727,7 @@ const STEPS = [
           if(mailList().length!==n0)throw new Error('空の連絡が増える');
           // URL の合言葉
           S.player.mem=[];
+          S.player.mail=bk.mail.slice();          // 受信箱も元に戻す
           location.hash='#mem=ROSSONERI-2005';
           const byUrl=memFromUrl();
           if(!byUrl)throw new Error('URL の合言葉で開かない');
@@ -2721,6 +2752,7 @@ const STEPS = [
             throw new Error('敷いてくる采配が出ない');
           return '合言葉で開く／16人・★'+TUNING.mem.star+'・黄金線・軸あり／'
             +'限定采配はミランにだけ効く／URLでも開く／世界の頂点で1つ届く／'
+            +'戦利品は受信箱で受け取る／'
             +'見出しから下見（'+nm+'）';
         })()`));
         await ctx.js(`(()=>{

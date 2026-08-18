@@ -552,6 +552,7 @@ function renderMail(){
       :g.ticket?ticketById(g.ticket).name
       :g.spon?(g.coin?fmtNum(g.coin)+" コイン":g.label)
       :g.mem?g.label                                  // メモラビリア(→§3.55)
+      :g.tactic?g.label                               // 采配(→§3.50)
       :g.card?(g.label||shortName(g.card))            // トレードの選手(→§3.49)
       :g.coin?fmtNum(g.coin)+" コイン":null;
     // **案内は行き先まで連れていく**(→docs/03 §3.43)。読んで終わりにさせない
@@ -597,6 +598,9 @@ function renderMail(){
         toast(fmtNum(g.got.coin||g.coin||0)+" コインを受け取りました");
       }else if(g.ticket){
         toast(ticketById(g.ticket).name+" を受け取りました");
+      }else if(g.tactic){
+        const t=tacticById(g.tactic);
+        toast("采配「"+(t?t.label:g.label)+"」を習得しました");
       }else if(g.mem){
         // **開いたらそのまま CLUB へ**。どこから挑むのかを迷わせない
         toast("「"+g.label+"」が開きました");
@@ -3952,8 +3956,8 @@ function doMemDone(){
       win, draw:mine.score===foe.score, cup:true, label:m.name, mem:m.id },
     M, others:[], mem:r };
   save(); headUI(); show("result");
-  if(r.card)toast(RARITY[r.card.rarity].label+" "+shortName(r.card)+" が加入しました");
-  if(r.tactic)toast("采配「"+r.tactic.label+"」を覚えました");
+  // **ここでは配らない**(→docs/03 §3.55)。届いたことだけ知らせ、受け取りは受信箱で
+  if(r.card||r.tactic)toast("秘書から連絡が届いています");
 }
 function startMatch(pre){
   _M=pre||beginMyMatch();

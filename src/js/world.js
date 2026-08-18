@@ -1105,6 +1105,8 @@ function mailTake(id,pos){
   if(g.coin)S.club.coins+=g.coin;
   // **メモラビリア**(→docs/03 §3.55)。受け取った時点で開く
   if(g.mem&&!memHas(g.mem))memOwned().push(g.mem);
+  // **采配**(→docs/03 §3.50)。受け取った時点で監督の引き出しに入る
+  if(g.tactic)learnTactic(g.tactic);
   // **カードそのものを添えた連絡**(トレード →§3.49)。写しを入れる
   if(g.card&&!S.player.coll.some(x=>x.id===g.card.id))S.player.coll.push(g.card);
   return g;
@@ -1229,20 +1231,32 @@ function memReward(m,win,seed){
   const rng=mulberry32((S.world.seed^hashStr("mem:"+m.id+":"+(seed||0)))>>>0);
   const out={ card:null, tactic:null };
   const k=win?T.winK:1;
-  // 選手は**勝ったときだけ**。まだ持っていない人からしか出ない
+  // **戦利品は秘書の受信箱へ届ける**(→docs/03 §3.55)。その場で手に入れると
+  // 「いつ増えたのか」が残らない。選手も采配も、届くものは同じ道を通す
   if(win&&rng()<T.card*k){
     const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
     const pool=m.xi.concat(m.bench).filter(sid=>!mine.has(sid)).map(signatureById).filter(Boolean);
     if(pool.length){
       const c=makeSignature(pool[Math.floor(rng()*pool.length)]);
-      S.player.coll.push(c);
       out.card=c;
+      mailPush("memcard:"+m.id+":"+c.sig,{
+        from:"sec", title:shortName(c)+" が加入を申し出ています",
+        text:"監督、「"+m.name+"」との一戦をご覧になっていた"+shortName(c)+"から連絡がありました。"
+          +"あの戦いぶりに心を動かされたそうです。",
+        gift:{ card:c, label:RARITY[c.rarity].abbr+" "+shortName(c) },
+      });
     }
   }
   // 采配は**見ていれば盗める**。一度覚えれば二度は出ない
   if(m.tactic&&!knowsTactic(m.tactic)&&rng()<T.tactic*k){
-    learnTactic(m.tactic);
-    out.tactic=tacticById(m.tactic);
+    const t=tacticById(m.tactic);
+    out.tactic=t;
+    mailPush("learn:"+m.tactic,{
+      from:"sec", title:"「"+t.label+"」を習得しました",
+      text:"監督、「"+m.name+"」が敷いていた形——「"+t.label+"」ですね。"+t.desc+"。"
+        +tacticNote(t),
+      gift:{ tactic:m.tactic, label:t.label },
+    });
   }
   return out;
 }
@@ -1461,6 +1475,19 @@ function tacticWhy(id){
   return null;
 }
 const tacticOk=id=>!!id&&!tacticWhy(id);
+/**
+ * 采配の但し書き(→docs/03 §3.50)。
+ * **采配は監督が恒久的に覚えるもの**で、クラブを渡り歩いても消えない。
+ * ただし**熟練度はクラブに帰属する**ので、移った先では 0 から。
+ * 監督が戦い方を知っていても、選手がまだ応えられない、という関係になっている。
+ */
+function tacticNote(t){
+  if(!t.exp)return "うちでもすぐ試せます。";
+  const now=S.club?S.club.exp:0;
+  return "監督の引き出しには入りましたが、選手がこの形を出せるようになるには"
+    +"クラブの熟練度が要ります（"+fmtNum(t.exp)+" 必要／いま "+fmtNum(now)+"）。"
+    +"試合を重ねれば届きます。";
+}
 /** 覚える(→§3.50)。**同じ采配は一度だけ**。 */
 function learnTactic(id){
   if(!tacticById(id)||knowsTactic(id))return false;
@@ -1498,13 +1525,14 @@ function learnRoll(tacticId,res,seed,cup){
   const p=(res==="win"?L.win:res==="draw"?L.draw:L.lose)+(cup?L.cup:0);
   const rng=mulberry32((S.world.seed^hashStr("learn:"+tacticId+":"+S.career.node+":"+seed))>>>0);
   if(rng()>=p)return null;
-  learnTactic(tacticId);
   const t=tacticById(tacticId);
+  // **受け取ってから覚える**(→docs/03 §3.50)。選手も采配も、届くものは
+  // 秘書の受信箱を通す。ここで直接覚えさせると「いつ増えたのか」が残らない
   mailPush("learn:"+tacticId,{
-    from:"sec", title:"「"+t.label+"」を持ち帰りました",
-    text:"監督、先日の相手の戦い方——「"+t.label+"」ですね。"
-      +t.desc+"。うちでも試せます。"
-      +(t.exp?"（チーム熟練度 "+fmtNum(t.exp)+" 以上で使えます）":""),
+    from:"sec", title:"「"+t.label+"」を習得しました",
+    text:"監督、先日の相手の戦い方——「"+t.label+"」ですね。"+t.desc+"。"
+      +tacticNote(t),
+    gift:{ tactic:tacticId, label:t.label },
   });
   return tacticId;
 }
