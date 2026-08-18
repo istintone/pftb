@@ -2518,9 +2518,35 @@ const STEPS = [
           const byUrl=memFromUrl();
           if(!byUrl)throw new Error('URL の合言葉で開かない');
           if(location.hash.indexOf('mem=')>=0)throw new Error('URL から消えない');
+          // **見出しは下見へ、› で開戦**(→docs/03 §3.55)
+          memUnlock('ROSSONERI-2005'); renderMem();
+          const row=document.querySelector('#memList .mem');
+          if(!row.querySelector('[data-look]'))throw new Error('見出しから下見に行けない');
+          const go=row.querySelector('[data-mem]');
+          if(go.textContent.trim()!=='›')throw new Error('開戦は記号だけにする: '+go.textContent);
+          row.querySelector('[data-look]').click();
+          if((document.querySelector('.screen.on')||{}).id!=='scr-foe')
+            throw new Error('下見に行かない');
+          // **リーグ戦と同じ画面**を使い回す
+          const nm=document.getElementById('foeName').textContent;
+          if(nm!==memById('acm2005').name)throw new Error('下見の名前が違う: '+nm);
+          if(document.getElementById('foeCoach').textContent.indexOf('アンチェロッティ')<0)
+            throw new Error('監督が出ない');
+          if(document.querySelectorAll('#foeSlots .slot').length!==11)
+            throw new Error('11人が並ばない');
+          if(document.getElementById('foeNote').textContent.indexOf('メラヴィリオーゾ')<0)
+            throw new Error('敷いてくる采配が出ない');
           return '合言葉で開く／16人・★'+TUNING.mem.star+'・黄金線・軸あり／'
-            +'限定采配はミランにだけ効く／URLでも開く';
+            +'限定采配はミランにだけ効く／URLでも開く／見出しから下見（'+nm+'）';
         })()`));
+        await ctx.js(`(()=>{
+          document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));
+          memUnlock('ROSSONERI-2005'); renderMem();
+          document.getElementById('appBody').scrollTop=0; return 1;
+        })()`);
+        await ctx.wait(300);
+        await ctx.shot("12k-mem-foe");        // 下見(リーグ戦と同じ画面)
+        await ctx.js("goBack()");
         await ctx.js(`(()=>{
           document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));
           memUnlock('ROSSONERI-2005'); renderMem();

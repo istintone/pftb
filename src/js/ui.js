@@ -1379,12 +1379,15 @@ function wireFoeLinks(root){
 }
 function renderFoe(){
   const f=_foe; if(!f)return;
-  // リーグの相手はクラブそのもの、カップの相手は**その回戦の枠**(→docs/03 §3.23)
-  const side=f.kind==="cup"
-    ? cupSide(cupById(f.cup),f.round,f.slot)
+  // リーグの相手はクラブそのもの、カップの相手は**その回戦の枠**(→docs/03 §3.23)、
+  // メモラビリアは**決め打ちの11人**(→§3.55)。**下見の画面は1つで使い回す**
+  const mem=f.kind==="mem"?memById(f.mem):null;
+  const side=mem?memSide(mem)
+    :f.kind==="cup" ? cupSide(cupById(f.cup),f.round,f.slot)
     : cpuSquad(f.clubId);
-  const name=f.kind==="cup"?side.name:clubName(f.clubId);
-  const coach=f.kind==="cup"
+  const name=mem?mem.name:(f.kind==="cup"?side.name:clubName(f.clubId));
+  const coach=mem?mem.coach
+    :f.kind==="cup"
     ? coachName("cup:"+f.cup+":"+S.world.season+":"+S.career.cup.node0+":"+f.slot)
     : coachName("club:"+f.clubId);
   const cards=_foeCards=side.cards;
@@ -1415,7 +1418,11 @@ function renderFoe(){
   $("foeKickers").querySelectorAll(".kk").forEach((el,i)=>{
     el.onclick=()=>{ const c=autoKicker(start,SP_KINDS[i][0]); if(c)openCard(c,{ club:name }); };
   });
-  $("foeNote").innerHTML="この11人がそのまま出てきます　／　編成は変えられません";
+  // メモラビリアは**敷いてくる采配まで見せる**。盗む相手が何を使うかは下見の値打ち
+  $("foeNote").innerHTML=mem
+    ? "この11人がそのまま出てきます　／　采配「"
+      +esc(mem.tactic?tacticById(mem.tactic).label:"なし")+"」"
+    : "この11人がそのまま出てきます　／　編成は変えられません";
 }
 
 // 一覧やピッチに出す短い名前 = **姓**。表示名の並び順は国籍で変わる(日本は姓が先)ので、
@@ -3927,7 +3934,14 @@ function renderResult(){
     +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
     +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("")||'<div class="lg">なし</div>';
   $("btnResultOk").onclick=()=>show("home");
-  $("btnResultNext").onclick=()=>show("season");
+  // **メモラビリアは何度でも挑める**(→docs/03 §3.55)。次の予定ではなく再戦へ
+  if(m.mem){
+    $("btnResultNext").textContent="再戦する";
+    $("btnResultNext").onclick=()=>startMem(m.mem);
+  }else{
+    $("btnResultNext").textContent="次の予定へ";
+    $("btnResultNext").onclick=()=>show("season");
+  }
 
   // 試合の中身が無い(古いセーブ等)ときはスコアだけで成立させる
   if(!M){ $("rsMom").innerHTML=""; $("rsBars").innerHTML=""; $("rsList").innerHTML=""; return; }
@@ -4279,16 +4293,22 @@ function renderMem(){
   const list=memList();
   box.innerHTML=list.length?list.map(m=>{
     const t=m.tactic?tacticById(m.tactic):null;
-    return '<div class="mem" data-mem="'+esc(m.id)+'" role="button" tabindex="0">'
-      +'<div class="mem-l"><b>'+esc(m.name)+'</b>'
+    // **見出しは下見へ、› で開戦**(→docs/03 §3.55)。下見はリーグ戦と同じ画面
+    return '<div class="mem">'
+      +'<div class="mem-l" data-look="'+esc(m.id)+'" role="button" tabindex="0">'
+      +'<b>'+esc(m.name)+'</b>'
       +'<span class="lg">'+esc(m.sub||"")+'</span>'
       +'<span class="mem-n">'+esc(m.coach)+' ／ '+esc(m.form)
       +(t?' ／ '+esc(t.label):"")+'</span></div>'
-      +'<div class="mem-r">戦う ›</div></div>';
+      +'<div class="mem-r" data-mem="'+esc(m.id)+'" role="button" tabindex="0"'
+      +' aria-label="戦う">›</div></div>';
   }).join("")
    :'<div class="lg">まだありません。合言葉を読み込むと開きます。</div>';
   box.querySelectorAll("[data-mem]").forEach(el=>{
     el.onclick=()=>startMem(el.dataset.mem);
+  });
+  box.querySelectorAll("[data-look]").forEach(el=>{
+    el.onclick=()=>openFoe({ kind:"mem", mem:el.dataset.look });
   });
 }
 /**
