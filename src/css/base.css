@@ -1482,28 +1482,31 @@ body{
 .tr-aw.sig{ color:oklch(0.86 0.12 88) }
 .trophy.off .tr-aw.sig{ color:oklch(0.78 0.11 88) }
 /* 発動した札の帯(→docs/06 §6.26)。カットインの見出しの下に小さく並べる */
-/* 発動した札(→docs/06 §6.40 / §6.46)。**その選手の外側・画面端**へ縦に積む。
-   下に置いていた頃は札の数だけ帯が縦に伸びて、カットインが肥大化していた。
-   持ち主は「どちら側にあるか」で分かるので、位置だけで足りる。 */
+/* 発動した札(→docs/06 §6.40 / §6.46)。**選手の絵に半透明で重ねる**。
+   下に置いていた頃は札の数だけ帯が縦に伸びて肥大し、
+   端に寄せた頃は枠に収まらず**札の名前が途中で切れていた**。
+   重ねてしまえば、幅に縛られず全文が載る。 */
 .cut-sk{
-  position:absolute; top:50%; transform:translateY(-50%); z-index:0;
-  display:flex; flex-direction:column; gap:3px; max-width:30%;
+  /* **絵の上に寄せる**。真ん中に置くと名前の帯を覆ってしまう */
+  position:absolute; left:50%; top:34%; transform:translate(-50%,-50%);
+  z-index:2; display:flex; flex-direction:column; align-items:center; gap:3px;
+  pointer-events:none;
 }
 .cut-fig{ position:relative }
-.cut-fig.L .cut-sk{ left:-6% }
-.cut-fig.R .cut-sk{ right:-6% }
-/* 選手より後ろに敷く(→§6.46)。絵と重なっても読める濃さにする */
 .cut-fig .cut-av,.cut-fig b,.cut-fig span{ position:relative; z-index:1 }
+/* **切らない**。絵の上に載るので幅の縛りが無い。
+   地は半透明にして、下の選手が透けるようにする */
 .cut-sk i{
-  font-style:normal; font:600 9px/1.2 var(--f-head); letter-spacing:.5px;
-  padding:3px 6px; border-radius:999px; max-width:100%;
-  color:var(--text-2); background:oklch(0.28 0.02 255); border:1px solid var(--line);
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-style:normal; font:600 10px/1.2 var(--f-head); letter-spacing:.5px;
+  padding:3px 8px; border-radius:999px; white-space:nowrap;
+  color:oklch(0.97 0.01 90); background:oklch(0.14 0.02 255 / .74);
+  border:1px solid oklch(1 0 0 / .18);
+  backdrop-filter:blur(2px);
 }
 /* **固有スキルは金で光らせる**(→docs/03 §3.41)。普通の札と一目で違う */
 .cut-sk i.sig{
-  color:oklch(0.96 0.06 88); border-color:var(--accent);
-  background:linear-gradient(135deg, oklch(0.52 0.13 85), oklch(0.36 0.09 80));
+  color:oklch(0.98 0.06 88); border-color:var(--accent);
+  background:linear-gradient(135deg, oklch(0.50 0.13 85 / .88), oklch(0.34 0.09 80 / .88));
   box-shadow:0 0 10px oklch(0.75 0.15 85 / .45);
 }
 /* 固有スキルが出た帯(→docs/06 §6.34)。**金の縁・強い掃引・きらめき・揺れ**。

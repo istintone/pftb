@@ -1326,10 +1326,24 @@ const STEPS = [
       // **中央には置かない**。札は必ずどちらかの選手の中にある
       if(document.querySelector('#mCut .cut-row > .cut-sk'))
         throw new Error('札が中央に残っている');
-      // **画面端に縦積み**(→docs/06 §6.46)。下に置くと帯が縦に伸びる
+      // **選手の絵に重ねる**(→docs/06 §6.46)。下に流すと帯が縦に伸び、
+      // 端に寄せると枠に収まらず名前が切れる
       const sk=document.querySelector('#mCut .cut-fig .cut-sk');
       if(sk&&getComputedStyle(sk).position!=='absolute')
         throw new Error('札が流し込みのままで帯を押し広げる');
+      // **切らない**。中身の幅が枠に収まりきらなくても省略しない
+      const chip=document.querySelector('#mCut .cut-sk i');
+      if(chip){
+        const cs=getComputedStyle(chip);
+        if(cs.textOverflow==='ellipsis')throw new Error('札の名前が省略されている');
+        if(chip.scrollWidth>chip.clientWidth+1)
+          throw new Error('札の名前が切れている: '+chip.textContent);
+        // **選手の名前を覆わない**。札は絵の上に寄せる
+        const fig=chip.closest('.cut-fig'), nm=fig.querySelector('b');
+        const cr=chip.getBoundingClientRect(), nr=nm.getBoundingClientRect();
+        if(cr.bottom>nr.top+1)
+          throw new Error('札が選手の名前に被る: '+Math.round(cr.bottom-nr.top)+'px');
+      }
       const figOf=nm=>[...document.querySelectorAll('#mCut .cut-fig')]
         .find(f=>f.querySelector('b')&&f.querySelector('b').textContent===nm);
       const tagsOf=nm=>{ const f=figOf(nm); if(!f)throw new Error(nm+' の枠が無い');
