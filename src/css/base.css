@@ -1192,10 +1192,16 @@ body{
   border-radius:10px; padding:10px 12px;
 }
 .mgr-av{
+  position:relative; overflow:hidden;
   width:36px; height:36px; border-radius:6px; flex-shrink:0;
   background:oklch(0.30 0.03 255); display:flex; align-items:center; justify-content:center;
   font:8px/1 var(--f-mono); color:var(--text-dim);
 }
+/* 顔が入ったら座布団を明るくする(→docs/03 §3.56)。
+   切り出しはチャットの丸・契約書と同じ(→§6.23)ので、枠が違っても顔がずれない */
+.mgr-av.has{ background:oklch(0.90 0.02 85) }
+.mgr-av img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
+  transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
 .mgr-b{ flex:1; min-width:0 }
 .mgr-name{ font-size:12px; font-weight:600; color:oklch(0.92 0.01 90);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis }

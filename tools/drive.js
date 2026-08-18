@@ -372,14 +372,29 @@ const STEPS = [
       // **気まぐれはよく動く**
       if(whim.o<3||whim.s<1)
         throw new Error('気まぐれ型が動かない: 指示'+whim.o+' 交代'+whim.s);
-      // 下見に性分が出る
+      // 下見に性分と**顔**が出る(→docs/03 §3.56)
       openFoe({ kind:'club', clubId:myFixture().opp });
       const txt=document.getElementById('foeCoach').textContent;
       if(txt.indexOf('型')<0)throw new Error('下見に性分が出ない: '+txt);
+      if(!document.querySelector('#foeFace img'))throw new Error('相手監督の顔が出ない');
       goBack();
+      // **有名どころは有名な顔、それ以外は汎用の顔**
+      const d1=CLUBS.find(c=>divOfClub(c)===1), d3=CLUBS.find(c=>divOfClub(c)===3);
+      const big=coachFace('club:'+d1.id,true), mob=coachFace('club:'+d3.id,false);
+      if(!big||!mob)throw new Error('顔が引けない');
+      const A=window.ASSETS.manager;
+      const nameOf=src=>Object.keys(A).find(k=>A[k]===src)||'?';
+      if(nameOf(big).indexOf('mob')===0)throw new Error('DIV1 に汎用の顔が出ている');
+      if(nameOf(mob).indexOf('mob')!==0)throw new Error('DIV3 に有名な顔が出ている');
+      // **同じ相手はいつも同じ顔**
+      if(coachFace('club:'+d1.id,true)!==big)throw new Error('顔が毎回変わる');
+      // 自分の顔も同じ枠に出る
+      show('deck');
+      if(!document.querySelector('#deckFace img'))throw new Error('自分の監督の顔が出ない');
+      show('home');
       return COACHES.length+'種 ／ 堅物 指示'+fixed.o+'・交代'+fixed.s
         +' ／ 気まぐれ 指示'+whim.o.toFixed(1)+'・交代'+whim.s.toFixed(1)
-        +' ／ 下見「'+txt.trim()+'」';
+        +' ／ 下見「'+txt.trim()+'」／ DIV1 '+nameOf(big)+' / DIV3 '+nameOf(mob);
     })()`));
     // 組み合わせ表の枠からも相手を下見できる(→docs/03 §3.34)。
     // **その回戦で当たったときの相手**が出る(回戦が上がるほど強くなる)

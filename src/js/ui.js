@@ -1280,6 +1280,8 @@ function renderDeck(){
   const raw=squadPower(start.map(c=>c&&liveCard(c))), fit=myPower(cards);
   $("deckPower").textContent=fit;
   $("deckCoach").textContent=S.coach?("監督 "+S.coach):"監督";
+  // 自分の顔は**契約で選んだもの**(→docs/03 §3.45)。相手と同じ枠に同じ作りで出す
+  setFace("deckFace",managerArt());
   $("deckForm").textContent="陣形: "+S.form
     +(fit<raw?"　適性ロス −"+(raw-fit):"");
 
@@ -1398,6 +1400,12 @@ function renderFoe(){
   const cards=_foeCards=side.cards;
   const start=cards.slice(0,TUNING.squad.starters);
 
+  // **顔も出す**(→docs/03 §3.56)。DIV1 とカップの上位、メモラビリアは有名な顔
+  const famous=mem?true
+    :f.kind==="cup"?(cupById(f.cup).bias>=9)
+    :(divOfClub(clubById(f.clubId))===1);
+  setFace("foeFace",coachFace(mem?("mem:"+mem.id):(f.kind==="cup"
+    ?("cup:"+f.cup+":"+f.slot):("club:"+f.clubId)),famous));
   // **監督の性分も出す**(→docs/03 §3.56)。誰が指揮しているかで運びが変わる
   const ct=side.coach?coachById(side.coach):null;
   $("foeCoach").innerHTML="監督 "+esc(coach)
@@ -2308,6 +2316,28 @@ function managerArt(key){
   const keys=managerFaces();
   if(!keys.length)return null;
   return A[keys[Math.abs(hashStr("mgr:"+(S.coach||"")))%keys.length]];
+}
+/**
+ * 相手監督の顔(→docs/03 §3.56)。**key から決まる**ので、同じ相手はいつも同じ顔。
+ *
+ * **有名どころは有名な顔で出す**(プレイヤーが選ぶのと同じ mg01/mg02)。
+ * それ以外は汎用の顔(mob01)。格の高い相手だけ顔で分かるようにしておくと、
+ * 「上へ行くほど相手の顔ぶれが変わる」という手応えになる。
+ */
+function coachFace(key,famous){
+  const A=(window.ASSETS&&window.ASSETS.manager)||{};
+  const keys=Object.keys(A).sort();
+  if(!keys.length)return null;
+  const mob=keys.filter(k=>k.indexOf("mob")===0);
+  const big=keys.filter(k=>k.indexOf("mob")!==0);
+  const pool=(famous?big:mob).length?(famous?big:mob):keys;
+  return A[pool[Math.abs(hashStr("cface:"+key))%pool.length]];
+}
+/** 監督の顔を枠に流し込む。**絵が無ければ MGR の字のまま**。 */
+function setFace(id,src){
+  const el=$(id); if(!el)return;
+  el.innerHTML=src?'<img src="'+src+'" alt="">':"MGR";
+  el.classList.toggle("has",!!src);
 }
 function chatAvatar(w,cls){
   const box=(kind,src)=>'<div class="'+(cls||"ch-sm")+' '+kind+'">'
