@@ -1717,10 +1717,21 @@ const STEPS = [
       if(parseFloat(getComputedStyle(document.querySelector('#ordDrawer .hd-in'))
           .borderTopRightRadius)<8)
         throw new Error('右上の角が丸まっていない');
+      const rc=id=>document.getElementById(id).getBoundingClientRect();
+      // **3つは1つの柱に見えること**。間隔が広いと別々の飾りに見える
+      const g1=Math.round(rc('tacTab').top-rc('kpTab').bottom);
+      const g2=Math.round(rc('ordTab').top-rc('tacTab').bottom);
+      if(g1>16||g2>16)throw new Error('タブの間隔が開きすぎ: '+g1+'px / '+g2+'px'
+        +' / 位置 '+JSON.stringify(['kpTab','tacTab','ordTab'].map(i=>
+          [Math.round(rc(i).top),Math.round(rc(i).height),getComputedStyle(
+            document.getElementById(i)).top])));
+      if(g1<0||g2<0)throw new Error('タブが重なっている: '+g1+'px / '+g2+'px');
+      if(Math.abs(g1-g2)>2)throw new Error('間隔が揃っていない: '+g1+'px / '+g2+'px');
+      window.__tabs='高さ '+Math.round(rc('kpTab').height)+'px ／ 間隔 '+g1+'px / '+g2+'px';
       if(document.getElementById('ordTab').textContent.trim()!=='ORD')
         throw new Error('指示タブが ORD になっていない');
       return TACTICS.length+'種 中 敷ける '+n0+' → '+n1+'（覚えて熟練度が足りた）'
-        +' ／ KP・TAC・ORD の順・同じ見た目';
+        +' ／ KP・TAC・ORD の順・同じ見た目 ／ '+window.__tabs;
     })()`));
     await ctx.wait(400);
     await ctx.shot("07r-order-tactic");
