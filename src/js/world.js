@@ -1099,6 +1099,8 @@ function mailTake(id,pos){
   m.got=true; m.read=true;
   if(g.ticket)ticketAdd(g.ticket,1);
   if(g.coin)S.club.coins+=g.coin;
+  // **メモラビリア**(→docs/03 §3.55)。受け取った時点で開く
+  if(g.mem&&!memHas(g.mem))memOwned().push(g.mem);
   // **カードそのものを添えた連絡**(トレード →§3.49)。写しを入れる
   if(g.card&&!S.player.coll.some(x=>x.id===g.card.id))S.player.coll.push(g.card);
   return g;
@@ -1168,6 +1170,27 @@ function memUnlock(code){
   if(!m)return null;
   if(memHas(m.id))return "have";
   memOwned().push(m.id);
+  return m;
+}
+/**
+ * 世界の頂点を獲ったときの贈り物(→docs/03 §3.55)。
+ * **まだ持っていないものから1つ**を秘書の受信箱へ届ける。
+ * 全部そろっていれば何も起きない(空の連絡を出さない)。
+ */
+function memAward(tag){
+  if(!S.player)return null;
+  const left=MEMORABILIA.filter(m=>!memHas(m.id));
+  if(!left.length)return null;
+  const rng=mulberry32((S.world.seed^hashStr("memaward:"+(tag||"")+":"
+    +S.world.season+":"+S.career.node))>>>0);
+  const m=left[Math.floor(rng()*left.length)];
+  mailPush("mem:"+m.id,{
+    from:"sec", title:"「"+m.name+"」の記録が届きました",
+    text:"監督、世界の頂点に立ったクラブへ、ある記録が贈られる慣わしがあります。"
+      +"「"+m.name+"」——"+m.note
+      +"いつでも挑めます。勝てば、あの選手たちが力を貸してくれるかもしれません。",
+    gift:{ mem:m.id, label:m.name },
+  });
   return m;
 }
 /**
@@ -2244,6 +2267,9 @@ function closeCup(){
     if(last)last.champ=true;
     trophyAdd(cup.id,cup.trophy,"cup");
     sponHit("cup",cup.id);                                // スポンサーの課題(→§3.40)
+    // **世界の頂点を獲るとメモラビリアが1つ届く**(→docs/03 §3.55)。
+    // 最高峰のクラブに勝てるチームだけが挑める、その先の遊びへの入口
+    memAward(cup.id);
   }
   // **オーナーの評価**(→docs/03 §3.9)。優勝は上げ、**初戦敗退は下げる**。
   // 賞金や名声と違って、ここは順位ではなく「どう戦ったか」を見ている

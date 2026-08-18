@@ -551,6 +551,7 @@ function renderMail(){
     const gname=!g?null
       :g.ticket?ticketById(g.ticket).name
       :g.spon?(g.coin?fmtNum(g.coin)+" コイン":g.label)
+      :g.mem?g.label                                  // メモラビリア(→§3.55)
       :g.card?(g.label||shortName(g.card))            // トレードの選手(→§3.49)
       :g.coin?fmtNum(g.coin)+" コイン":null;
     // **案内は行き先まで連れていく**(→docs/03 §3.43)。読んで終わりにさせない
@@ -596,6 +597,10 @@ function renderMail(){
         toast(fmtNum(g.got.coin||g.coin||0)+" コインを受け取りました");
       }else if(g.ticket){
         toast(ticketById(g.ticket).name+" を受け取りました");
+      }else if(g.mem){
+        // **開いたらそのまま CLUB へ**。どこから挑むのかを迷わせない
+        toast("「"+g.label+"」が開きました");
+        renderMem();
       }else if(g.coin){
         toast(fmtNum(g.coin)+" コインを受け取りました");
       }

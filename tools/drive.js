@@ -2512,6 +2512,19 @@ const STEPS = [
             matchSide(S.club.id), 7);
           if(other.home.players.some(p=>p.ordM&&p.ordM.tec>1))
             throw new Error('よその選手にも効いてしまう');
+          // **世界の頂点を獲ると1つ届く**(→docs/03 §3.55)
+          S.player.mem=[]; S.player.mail=[];
+          const got=memAward('world');
+          if(!got)throw new Error('優勝しても届かない');
+          const ml=mailList()[0], gd=mailDef(ml);
+          if(!gd.gift||!gd.gift.mem)throw new Error('連絡にメモラビリアが付いていない');
+          if(memHas(got.id))throw new Error('受け取る前から開いている');
+          mailTake(ml.id);
+          if(!memHas(got.id))throw new Error('受け取っても開かない');
+          // **全部そろっていれば何も起きない**(空の連絡を出さない)
+          const n0=mailList().length;
+          if(memAward('world')!==null)throw new Error('全部持っていても届く');
+          if(mailList().length!==n0)throw new Error('空の連絡が増える');
           // URL の合言葉
           S.player.mem=[];
           location.hash='#mem=ROSSONERI-2005';
@@ -2537,7 +2550,8 @@ const STEPS = [
           if(document.getElementById('foeNote').textContent.indexOf('メラヴィリオーゾ')<0)
             throw new Error('敷いてくる采配が出ない');
           return '合言葉で開く／16人・★'+TUNING.mem.star+'・黄金線・軸あり／'
-            +'限定采配はミランにだけ効く／URLでも開く／見出しから下見（'+nm+'）';
+            +'限定采配はミランにだけ効く／URLでも開く／世界の頂点で1つ届く／'
+            +'見出しから下見（'+nm+'）';
         })()`));
         await ctx.js(`(()=>{
           document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));
