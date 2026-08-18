@@ -1487,11 +1487,15 @@ body{
    端に寄せた頃は枠に収まらず**札の名前が途中で切れていた**。
    重ねてしまえば、幅に縛られず全文が載る。 */
 .cut-sk{
-  /* **絵の上に寄せる**。真ん中に置くと名前の帯を覆ってしまう */
-  position:absolute; left:50%; top:34%; transform:translate(-50%,-50%);
-  z-index:2; display:flex; flex-direction:column; align-items:center; gap:3px;
-  pointer-events:none;
+  /* **外側の端に寄せて縦に積む**。真ん中に置くと選手が完全に隠れて見栄えが悪い。
+     長い名前は内側(選手の上)へ伸びるが、地が半透明なので下の絵は透ける。
+     縦は**絵の上のほう**に置く。真ん中だと名前の帯を覆ってしまう */
+  position:absolute; top:34%; transform:translateY(-50%);
+  z-index:2; display:flex; flex-direction:column; gap:3px;
+  pointer-events:none; white-space:nowrap;
 }
+.cut-fig.L .cut-sk{ left:-14%; align-items:flex-start }
+.cut-fig.R .cut-sk{ right:-14%; align-items:flex-end }
 .cut-fig{ position:relative }
 .cut-fig .cut-av,.cut-fig b,.cut-fig span{ position:relative; z-index:1 }
 /* **切らない**。絵の上に載るので幅の縛りが無い。

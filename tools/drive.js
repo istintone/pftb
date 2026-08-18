@@ -1338,11 +1338,21 @@ const STEPS = [
         if(cs.textOverflow==='ellipsis')throw new Error('札の名前が省略されている');
         if(chip.scrollWidth>chip.clientWidth+1)
           throw new Error('札の名前が切れている: '+chip.textContent);
-        // **選手の名前を覆わない**。札は絵の上に寄せる
+        // **選手の名前を覆わない**。札は絵の上のほうに寄せる
         const fig=chip.closest('.cut-fig'), nm=fig.querySelector('b');
         const cr=chip.getBoundingClientRect(), nr=nm.getBoundingClientRect();
         if(cr.bottom>nr.top+1)
           throw new Error('札が選手の名前に被る: '+Math.round(cr.bottom-nr.top)+'px');
+        // **外側の端に寄る**。左の選手は左へ、右の選手は右へ。
+        // **枠との相対で見る**(帯との絶対位置は滑り込みの最中で動くので測れない)
+        for(const f of document.querySelectorAll('#mCut .cut-fig')){
+          const c=f.querySelector('.cut-sk i'); if(!c)continue;
+          const r=c.getBoundingClientRect(), fr=f.getBoundingClientRect();
+          if(f.classList.contains('L')&&r.left>fr.left+2)
+            throw new Error('左の札が外に寄っていない');
+          if(f.classList.contains('R')&&r.right<fr.right-2)
+            throw new Error('右の札が外に寄っていない');
+        }
       }
       const figOf=nm=>[...document.querySelectorAll('#mCut .cut-fig')]
         .find(f=>f.querySelector('b')&&f.querySelector('b').textContent===nm);
