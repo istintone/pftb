@@ -3388,6 +3388,44 @@ function cutCard(e,p){
  * キックオフ。**両チームのキャプテンを向かい合わせる**(→docs/03 §3.20)。
  * クラブ名だけだと毎試合まったく同じ絵になり、誰の試合なのかが立ち上がらない。
  */
+/**
+ * 試合中の監督の顔と名前(→docs/03 §3.56)。
+ * 自分の側は契約書で選んだ顔、相手はクラブ(または大会の枠)から決まる顔。
+ */
+function mCoach(side){
+  const f=_M&&_M.fixture; if(!f)return { art:null, name:"監督" };
+  if(side===mMine())return { art:managerArt(), name:S.coach||"監督" };
+  if(f.mem){ const m=memById(f.mem);
+    return { art:coachFace("mem:"+f.mem,true), name:m?m.coach:"監督" }; }
+  if(f.cup){ const key="cup:"+f.cup+":"+S.world.season+":"+S.career.cup.node0+":"+f.foe;
+    return { art:coachFace(key,cupById(f.cup).bias>=9), name:coachName(key) }; }
+  const id=side==="H"?f.h:f.a;
+  const key="club:"+id;
+  return { art:coachFace(key,divOfClub(clubById(id))===1), name:coachName(key) };
+}
+/**
+ * 監督のカットイン(→docs/06 §6.46)。**バストアップ**で出す。
+ * キックオフでは両監督、采配を敷き替えたときはその監督だけ。
+ * 絵が無ければ顔の枠を出さない(字だけで成立させる)。
+ */
+function cutCoachFig(side,cls){
+  const c=mCoach(side);
+  const kit=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
+  return '<div class="cut-fig '+cls+'">'
+    +'<div class="cut-mgr'+(c.art?"":" none")+'" style="--kit:'+kit+'">'
+    +(c.art?'<img src="'+c.art+'" alt="">':'<i>MGR</i>')+'</div>'
+    +'<b>'+esc(c.name)+'</b></div>';
+}
+/** 采配を敷き替えたときの一枚。**掛け声も出す**(→docs/03 §3.50 の line)。 */
+function cutTactic(e){
+  const t=e.tactic?tacticById(e.tactic):null;
+  const side=e.side;
+  return cutShow('<div class="cut sig">'+cutSparks()
+    +'<div class="cut-hd">'+esc(t?t.label:"采配なし")+'</div>'
+    +'<div class="cut-row cut-one">'+cutCoachFig(side,"L")+'</div>'
+    +'<div class="cut-word win">'+esc(t&&t.line?t.line:"形を変える")+'</div>'
+  +'</div>',TUNING.play.cutMs);
+}
 function cutKick(){
   const f=(T,side,cls)=>{
     const cap=T.captain;
@@ -3401,6 +3439,9 @@ function cutKick(){
   // **ピッチ脇の看板**(→docs/06 §6.32)。契約中で、その会社の絵があるときだけ出る
   return cutShow('<div class="cut">'
     +'<div class="cut-hd">KICK OFF</div>'
+    // **監督も並べる**(→docs/06 §6.46)。誰が指揮しているかを開始で見せる
+    +'<div class="cut-row cut-mgrs">'+cutCoachFig("H","L")
+      +'<div class="cut-vs">VS</div>'+cutCoachFig("A","R")+'</div>'
     +'<div class="cut-row">'+f(_M.home,"H","L")
       +'<div class="cut-vs">VS</div>'+f(_M.away,"A","R")+'</div>'
     +sponAd("ad-cut")
@@ -3421,6 +3462,8 @@ function mCut(e){
   const gk=e.gk&&mPlayer(_M,e.side==="H"?"A":"H",e.gk);
   switch(e.type){
     case "kickoff": return cutKick();
+    // **采配を敷き替えたら監督が出る**(→docs/06 §6.46)
+    case "tactic":  return cutTactic(e);
     // セットプレーは**必ず見せる**。試合の山場であり、誰が蹴るかが読み物になる
     case "setpiece": return cutSet(e,by);
     case "card":     return e.off?cutCard(e,by):0;

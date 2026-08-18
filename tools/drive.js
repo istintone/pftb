@@ -1615,9 +1615,13 @@ const STEPS = [
       // **ピッチで光る**(→docs/03 §3.44)。両チームぶん出る
       const mine=document.querySelectorAll('#mSlots .mp.kp[data-side="'+T.side+'"]').length;
       if(mine!==1)throw new Error('自分の軸が光らない: '+mine);
+      // **相手の軸は交代で下がることがある**(→docs/03 §3.56 で監督が代えるようになった)。
+      // 数を決め打ちせず、**盤面の実状と突き合わせる**
       const foeSide=T.side==='H'?'A':'H';
+      const F=foeSide==='H'?_M.home:_M.away;
       const foe=document.querySelectorAll('#mSlots .mp.kp[data-side="'+foeSide+'"]').length;
-      if(foe!==1)throw new Error('相手の軸が光らない: '+foe);
+      const want=F.players.filter(p=>p.c&&p.c.kp).length;
+      if(foe!==want)throw new Error('相手の軸の光が盤面と合わない: '+foe+' / '+want);
       openKp();
       const rows2=[...document.querySelectorAll('#kpBody [data-kp]')];
       rows2[10].click();                                 // もう一度押すと外れる
@@ -1636,7 +1640,7 @@ const STEPS = [
       S.squad=sq; S.career.kp=keep;
       return '11人が収まる(1行 '+Math.round(h)+'px) / ピッチと同じ高さ '
         +Math.round(pr.height)+'px / 固有スキルあり '+sig+'人 / 選ぶと閉じる / '
-        +'ピッチで光る(自分1・相手1) / 指名: '+shortName(cardById(S.career.kp));
+        +'ピッチで光る(自分1・相手は盤面どおり) / 指名: '+shortName(cardById(S.career.kp));
     })()`));
     await ctx.wait(250);
     await ctx.js("openKp()");
@@ -1731,6 +1735,37 @@ const STEPS = [
     // 次のティック(=積んだ指示が効く瞬間)までの時間は一定ではない
     for(let i=0;i<40&&!(await ctx.js("(mMine()==='H'?_M.home:_M.away).tactic===S.tactic"));i++)
       await ctx.wait(200);
+    // **采配を敷き替えると監督が出る**(→docs/06 §6.46)
+    ctx.log("  監督のカットイン:", await ctx.js(`(()=>{
+      const mySide=mMine();
+      cutTactic({ side:mySide, tactic:S.tactic, label:'x' });
+      const band=document.querySelector('#mCut .cut');
+      if(!band)throw new Error('帯が出ない');
+      const fig=document.querySelectorAll('#mCut .cut-mgr');
+      if(fig.length!==1)throw new Error('監督が1人で出ない: '+fig.length);
+      if(!fig[0].querySelector('img'))throw new Error('顔が出ない');
+      const t=tacticById(S.tactic);
+      const word=document.querySelector('#mCut .cut-word').textContent;
+      if(t&&t.line&&word!==t.line)throw new Error('掛け声が違う: '+word);
+      // **キックオフでは両監督**
+      cutKick();
+      const k=document.querySelectorAll('#mCut .cut-mgrs .cut-mgr');
+      if(k.length!==2)throw new Error('キックオフに両監督が出ない: '+k.length);
+      const withArt=[...k].filter(e=>e.querySelector('img')).length;
+      // **監督の名前が選手に隠れない**(立ち絵は上へはみ出す →§6.19)
+      const nm=document.querySelector('#mCut .cut-mgrs .cut-fig b');
+      const rows=[...document.querySelectorAll('#mCut .cut-row')];
+      const a=nm.getBoundingClientRect(), b=rows[1].getBoundingClientRect();
+      if(a.bottom>b.top+1)
+        throw new Error('監督の名前が選手の段に食い込む: '+Math.round(a.bottom-b.top)+'px');
+      return '采配で1人（'+word+'）／ キックオフで2人（絵つき '+withArt+'）'
+        +'／ 名前は隠れない';
+    })()`));
+    await ctx.wait(250);
+    await ctx.shot("07s-cutin-coach");
+    await ctx.js("cutTactic({ side:mMine(), tactic:S.tactic })");
+    await ctx.wait(1100);          // 掛け声は 0.62 秒遅れて出る(→§6.19)
+    await ctx.shot("07s2-cutin-tactic");
     ctx.log("  ピッチの帯:", await ctx.js(`(()=>{
       const mine=document.getElementById('mTacMine');
       const foe=document.getElementById('mTacFoe');

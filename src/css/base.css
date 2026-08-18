@@ -2043,6 +2043,27 @@ body.bg-wall #app{ position:relative; z-index:1 }
   repeating-linear-gradient(90deg, oklch(0.32 0.075 150) 0 6px, oklch(0.28 0.065 150) 6px 12px) }
 .sw-wall{ background:linear-gradient(135deg,#761AFF 0 20%,#F8FF26 20% 40%,
   #23FFB5 40% 60%,#FF21B2 60% 80%,#1BFAFF 80% 100%) }
+/* 監督のカットイン(→docs/06 §6.46)。**バストアップ**で見せる。
+   立ち絵の上のほう(顔から胸まで)だけを枠で抜く */
+.cut-mgr{
+  position:relative; width:56px; height:56px; margin:0 auto 6px;
+  border-radius:10px; overflow:hidden;
+  background:var(--kit, oklch(0.30 0.03 255));
+  border:2px solid oklch(1 0 0 / .22);
+}
+.cut-mgr img{ position:absolute; left:50%; top:0; width:190%; height:auto; max-width:none;
+  transform:translate(-50%,-2%); image-rendering:pixelated }
+.cut-mgr.none{ display:flex; align-items:center; justify-content:center }
+.cut-mgr i{ font-style:normal; font:8px/1 var(--f-mono); color:oklch(1 0 0 / .6) }
+/* キックオフは監督の段を上に小さく重ねる(主役は選手の段)。
+   **選手の立ち絵は上へはみ出す**(→§6.19)ので、間を十分に空けないと
+   監督の名前が隠れる(実際に隠れた) */
+.cut-mgrs{ margin-bottom:26px }
+.cut-mgrs .cut-mgr{ width:40px; height:40px; margin-bottom:3px }
+.cut-mgrs b{ font-size:10px; color:var(--text-dim) }
+/* 采配のときは1人だけ。中央に置く */
+.cut-one{ justify-content:center }
+.cut-one .cut-fig{ width:auto; min-width:38% }
 /* 相手監督の性分(→docs/03 §3.56)。名前の右に小さく添える */
 .foe-ct{
   font-style:normal; margin-left:8px; padding:2px 6px; border-radius:4px;
