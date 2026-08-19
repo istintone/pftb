@@ -2554,6 +2554,27 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cur-st{ position:absolute; right:-16px; top:50%; width:124px; z-index:0;
   transform:translateY(-50%) rotate(4deg); pointer-events:none }
 .cur-st .stk{ opacity:.40 }
+/* **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.41)。ロッカーを背に2人を並べる。
+   立ち絵は 420x500 の全身で、膝がだいたい高さの 78% にある。
+   **枠は付けず、足元はタイルの縁で切り落とす** ので、タイルの高さから逆算して
+   「膝上まで」が出るように図の高さを決めてある(104px の枠に 132px の図)。 */
+/* **タイルの高さは他の節と同じまま**(→§6.40)。2人のほうを小さくして収める。
+   **切る高さは枠のほうで持つ**。タイル自身の overflow に任せると、
+   相手が決まってタイルが伸びたときに足まで出てしまい、宙に浮いて見える。
+   枠の下端をタイルの下端にぴったり付けると、**カメラの画角で切れている**ように見える
+   (途中でぷつりと切れると、絵が足りていないように見える)。 */
+.cur-crew{
+  position:absolute; right:14px; bottom:0; z-index:0;
+  height:54px; overflow:hidden;
+  display:flex; align-items:flex-start; pointer-events:none;
+}
+/* 54 / 72 = 75%。立ち絵は膝が高さの 76% あたりにあるので、**膝下が切れる** */
+.cur-crew img{ height:72px; width:auto; display:block; image-rendering:pixelated }
+/* 立ち絵は左右に透明の余白を持つ。**その分だけ重ねて**2人の間を詰める */
+.cur-crew .cc-m{ margin-left:-26px }
+/* 相手が決まるとタイルが伸びる。**相手の行に右の列を空けさせる**ので、
+   2人が行の裏に回って脚だけがのぞく、が起きない */
+.cal.cur .cal-target{ margin-right:112px }
 /* 予定の行のトロフィー(→docs/06 §6.31)。**行の右に大きく置いて、枠で切り落とす**。
    アイコンの枠(22px)に収めると豆粒で何の絵か分からない。行の高さは変えずに、
    はみ出たぶんは overflow で切る(タイトルの壁と同じ「貼ってある」見せ方) */

@@ -1848,7 +1848,15 @@ function currentRow(){
       +'<span class="cal-b"><b>'+esc(foe.name)+'</b>'
       +'<span class="lg">'+esc(foe.sub)+'</span></span></div>':"")
     // **いまの節はロッカーの絵で示す**(→docs/06 §6.31)。並んだ枠の中で1枚だけ絵が入る
-    +'<div class="cur-st">'+stickerArt("locker")+'</div></div>';
+    +'<div class="cur-st">'+stickerArt("locker")+'</div>'
+    // **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.41)。ロッカーを背に2人を並べる。
+    // 枠は付けず、足元はタイルの縁で切り落とす(立ち止まっている絵ではなく、
+    // 「これから始まる」に見せたい)
+    // **秘書が先、監督が右**。並び順はそのまま見た目の左右になる
+    +'<div class="cur-crew">'
+      +(secretaryArt()?'<img class="cc-s" src="'+secretaryArt()+'" alt="">':"")
+      +(managerArt()?'<img class="cc-m" src="'+managerArt()+'" alt="">':"")
+    +'</div></div>';
 }
 const cupJoinedName=()=>{ const c=cupJoined(); return c?c.name:"カップ戦"; };
 /** カップに出られない理由。**条件が見えないと待つ理由が分からない**。 */
