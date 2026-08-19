@@ -1449,6 +1449,92 @@ const shortName=c=>c.sur||c.name.split(" ").slice(-1)[0];
 
 // ---------- SCOUT(→docs/03 §3.22) ----------
 // **コインで引くパック。** 稼ぎをいつ補強に回すかを監督に選ばせる。
+/**
+ * 見本市(→docs/06 §6.46)。**まだ持っていない実在選手を並べて見せる**。
+ * 「何が入っているのか」が分からないままコインを積むのは、賭けであって補強ではない。
+ *
+ * **節から決まる**ので、画面を開き直しても顔ぶれは変わらない。毎回引き直せると、
+ * 見本市が「当たりを探す場所」になってしまう。
+ */
+function renderScoutFair(){
+  const box=$("scoutFair"); if(!box)return;
+  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+  const pool=signatureCards().filter(c=>!mine.has(c.sig)
+    &&(c.rarity==="WC"||c.rarity==="LEG"));
+  if(!pool.length){ box.innerHTML=""; return; }
+  const rng=mulberry32((S.world.seed^hashStr("fair:"+(S.career?S.career.node:0)))>>>0);
+  const p=pool.slice(), pick=[];
+  for(let i=0;i<4&&p.length;i++)pick.push(p.splice(Math.floor(rng()*p.length),1)[0]);
+  box.innerHTML='<div class="sc-fair-h"><span class="eyebrow">SHOWCASE</span>'
+    +'<span class="lg">いま出会える切り札</span></div>'
+    +'<div class="sc-fair-row">'+pick.map(c=>cardTile(c)).join("")+'</div>';
+  box.querySelectorAll("[data-card]").forEach((el,i)=>{
+    el.onclick=()=>openCard(pick[i]);
+  });
+}
+/**
+ * パックのタイルに敷く選手の絵(→§6.46)。**その段で出る絵**から1枚。
+ * 値段と説明だけの行が3つ並ぶと、どれも同じ重さに見えて選ぶ気にならない。
+ * **パックIDから決まる**ので、開き直しても同じ顔が出る。
+ */
+function scoutArt(pk){
+  const p=artPool(pk.floor||"REG","out");
+  const k=p.length?p[hashStr("scoutart:"+pk.id)%p.length]:null;
+  const src=k&&artOf(k+"_play");
+  return src?'<img class="sc-art" src="'+src+'" alt="">':"";
+}
+
+/**
+ * 開封の演出(→docs/06 §6.46)。**紙のパックから出てくる**ように見せる。
+ *
+ * 引いた瞬間に一覧が書き換わるだけだと、いちばん嬉しい所が一瞬で終わる。
+ * ①袋が震える → ②裂ける → ③カードが裏から翻る → ④段の色で光る、の4拍。
+ *
+ * **いつでも飛ばせる。** 演出は2度目からは邪魔になるので、
+ * タップで最後まで送り、もう一度タップで閉じる。
+ */
+let _rvT=[], _rvDone=null;
+function revealCards(cards,label){
+  const box=$("scoutReveal");
+  if(!box||!cards||!cards.length)return;
+  _rvT.forEach(clearTimeout); _rvT=[];
+  const c=cards[0];                                  // パックは1枚(→§3.22)
+  $("rvPackName").textContent=label||"SCOUT";
+  $("rvCard").innerHTML=cardTile(c);
+  $("rvCard").className="rv-card";
+  $("rvCap").innerHTML="";
+  $("rvBurst").className="rv-burst";
+  $("rvBurst").style.setProperty("--rar","var(--rar-"+c.rarity.toLowerCase()+")");
+  box.classList.remove("open","lit");
+  $("rvPack").className="rv-pack";
+  box.classList.add("on");
+  const at=(ms,fn)=>_rvT.push(setTimeout(fn,ms));
+  at(80,  ()=>$("rvPack").classList.add("shake"));
+  at(760, ()=>{ $("rvPack").classList.add("tear"); box.classList.add("open"); });
+  at(1080,()=>{ $("rvCard").classList.add("out"); $("rvBurst").classList.add("go"); });
+  at(1700,()=>{ box.classList.add("lit"); showRvCap(c); });
+  _rvDone=()=>{                                      // 飛ばしたときの落としどころ
+    _rvT.forEach(clearTimeout); _rvT=[];
+    $("rvPack").className="rv-pack tear";
+    $("rvCard").className="rv-card out";
+    $("rvBurst").className="rv-burst go";
+    box.classList.add("open","lit"); showRvCap(c);
+    _rvDone=null;
+  };
+}
+function showRvCap(c){
+  $("rvCap").innerHTML='<b class="rv-rar r-'+c.rarity.toLowerCase()+'">'
+    +esc(RARITY[c.rarity].label)+'</b>'
+    +'<span class="rv-nm">'+esc(shortName(c))+'</span>'
+    +'<span class="rv-sub">'+esc(primarySub(c))+' ／ OVR '+c.ovr+'</span>';
+  $("rvHint").textContent="タップで閉じる";
+}
+function closeReveal(){
+  _rvT.forEach(clearTimeout); _rvT=[]; _rvDone=null;
+  $("scoutReveal").classList.remove("on","open","lit");
+  $("rvHint").textContent="タップでスキップ";
+}
+
 let _scoutGot=null;                    // 直前に引いたカード(画面を出し直しても残す)
 function renderScout(){
   $("scoutCoins").innerHTML="所持コイン <b class=\"num\">"+fmtNum(S.club?S.club.coins:0)+"</b>";
@@ -1469,7 +1555,9 @@ function renderScout(){
   }).join("");
   $("scoutList").innerHTML=tk+TUNING.scout.map((pk,i)=>{
     const can=S.club&&S.club.coins>=pk.cost;
-    return '<div class="sc-row'+(i?" hi":"")+'">'
+    // **行に選手の絵を敷く**(→§6.46)。行の右にはみ出させ、枠で切り落とす
+    return '<div class="sc-row art'+(i?" hi":"")+'">'
+      +scoutArt(pk)
       +'<div class="sc-b"><div class="sc-nm">'+esc(pk.name)
         +(pk.cards>1?'　'+pk.cards+'枚':'')+'</div>'
         +'<div class="sc-de">'+esc(pk.note)+'</div></div>'
@@ -1483,6 +1571,7 @@ function renderScout(){
   $("scoutList").querySelectorAll("[data-ticket]").forEach(el=>{
     el.onclick=()=>useTicket(el.dataset.ticket,el.dataset.pos||null);
   });
+  renderScoutFair();
   drawScoutGot();
 }
 function drawScoutGot(){
@@ -1509,7 +1598,7 @@ function useTicket(id,pos){
   _scoutGot=[card];
   S.player.coll.push(card);
   save(); headUI(); renderScout();
-  toast(RARITY[card.rarity].label+"　"+shortName(card)+" が加入しました");
+  revealCards(_scoutGot,t.name);
 }
 function buyScout(id){
   const pk=TUNING.scout.find(x=>x.id===id); if(!pk||!S.club)return;
@@ -1522,8 +1611,7 @@ function buyScout(id){
   S.player.coll.push(..._scoutGot);
   seeNow("scoutDone");                           // 補強を「やった」(→docs/03 §3.43)
   save(); headUI(); renderScout();
-  const best=_scoutGot.reduce((b,c)=>RAR_KEYS.indexOf(c.rarity)>RAR_KEYS.indexOf(b.rarity)?c:b);
-  toast(pk.name+"：最高 "+RARITY[best.rarity].label+" "+shortName(best));
+  revealCards(_scoutGot,pk.name);
 }
 
 /**
@@ -4535,7 +4623,6 @@ $("ctCoach").oninput=updateSignature;
 document.querySelectorAll("#scr-schedule .comp").forEach(b=>{
   b.onclick=()=>{ _comp=b.dataset.comp; renderSchedule(); };
 });
-$("scoutMarket").onclick=()=>show("market",{push:1});
 $("cardsBulk").onclick=toggleBulk;
 $("btnAutoSquad").onclick=()=>{ S.squad=autoSquad(); save(); renderDeck(); toast("自動編成しました"); };
 $("btnForm").onclick=openForm;
@@ -4548,6 +4635,8 @@ $("memCode").onkeydown=e=>{ if(e.key==="Enter")memTry($("memCode").value); };
 $("cfgDone").onclick=closeCfg;
 $("cfgModal").onclick=e=>{ if(e.target===$("cfgModal"))closeCfg(); };
 $("tileMarket").onclick=()=>show("market",{push:1});
+// 開封は**1回目のタップで最後まで送り、2回目で閉じる**(→docs/06 §6.46)
+$("scoutReveal").onclick=()=>{ if(_rvDone)_rvDone(); else closeReveal(); };
 $("tileTrophy").onclick=()=>show("clubhouse");
 $("crestDone").onclick=closeCrest;
 $("crestModal").onclick=e=>{ if(e.target===$("crestModal"))closeCrest(); };

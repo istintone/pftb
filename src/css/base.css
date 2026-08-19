@@ -1834,7 +1834,6 @@ body{
 .sc-buy:disabled{ opacity:.45 }
 /* 移籍市場(→docs/03 §3.53)。スカウトの行と**同じ骨格**にする。
    やることは同じ「コインで選手を得る」で、違うのは引くか選ぶかだけ。 */
-.mk-go{ margin-top:18px }
 .mk-note{ display:block; margin-top:4px; font-size:11px; color:var(--text-dim) }
 .mk-row{
   display:flex; align-items:center; gap:12px; margin-top:10px; padding:12px;
@@ -2655,3 +2654,97 @@ body.bg-wall #app{ position:relative; z-index:1 }
 @media (prefers-reduced-motion:reduce){
   *{ animation:none!important; transition:none!important }
 }
+
+/* ---------- SCOUT の見本市と開封(→docs/06 §6.46) ---------- */
+/* 見本市。**横に流す**。縦に積むとパックの行が画面から押し出される */
+.sc-fair{ margin:10px 0 14px }
+.sc-fair-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px }
+.sc-fair-row{
+  display:flex; gap:8px; overflow-x:auto; padding-bottom:4px;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch;
+}
+.sc-fair-row::-webkit-scrollbar{ display:none }
+.sc-fair-row .pcard{ flex:0 0 96px; width:96px }
+/* パックの行に敷く絵。**行の右にはみ出させ、枠で切り落とす**(→§6.31 と同じ見せ方) */
+.sc-row.art{ position:relative; overflow:hidden }
+.sc-row.art>*:not(.sc-art){ position:relative; z-index:1 }
+/* **値段のボタンより外に置く**。文字と値段の間に立たせると、ただの散らかりになる。
+   左は透かして消し、行の右端で切り落とす */
+.sc-art{
+  position:absolute; right:-8px; bottom:-16px; width:104px; z-index:0;
+  opacity:.24; pointer-events:none; image-rendering:pixelated;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 46%);
+  mask-image:linear-gradient(90deg,transparent,#000 46%);
+}
+/* 値段のボタンは絵の上に。**読めなくなってはいけない** */
+.sc-row.art .sc-buy,.sc-row.art .sc-pick{ position:relative; z-index:1 }
+
+/* 開封。**画面いっぱいに被せる**。周りが見えていると儀式にならない */
+.rv{
+  position:fixed; inset:0; z-index:90; display:none;
+  align-items:center; justify-content:center; flex-direction:column;
+  background:oklch(0.12 0.02 255 / .94); backdrop-filter:blur(3px);
+}
+.rv.on{ display:flex }
+.rv-stage{ position:relative; width:220px; height:300px }
+/* 袋。**紙の合わせ目を中央に**置き、そこから裂く */
+.rv-pack{
+  position:absolute; inset:0; border-radius:12px; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+.rv-pack i{
+  position:absolute; top:0; bottom:0; width:50%;
+  background:linear-gradient(150deg,oklch(0.32 0.05 255),oklch(0.20 0.03 255) 46%,
+    oklch(0.42 0.07 260) 52%,oklch(0.18 0.03 255));
+  border:1px solid var(--line); transition:transform .42s cubic-bezier(.4,0,.2,1), opacity .42s;
+}
+/* **上下に金の縁**。これが無いと、ただの青い長方形に見えて袋にならない */
+.rv-pack i::before,.rv-pack i::after{
+  content:""; position:absolute; left:0; right:0; height:7px;
+  background:linear-gradient(180deg,oklch(0.86 0.14 88),oklch(0.58 0.11 80));
+}
+.rv-pack i::before{ top:9px }
+.rv-pack i::after{ bottom:9px }
+.rv-p1{ left:0;  border-radius:12px 0 0 12px }
+.rv-p2{ right:0; border-radius:0 12px 12px 0 }
+.rv-pn{
+  position:relative; z-index:1; font:600 13px/1 var(--f-head); letter-spacing:2px;
+  color:var(--accent); text-shadow:0 1px 3px oklch(0 0 0 / .6);
+  transition:opacity .2s;
+}
+.rv-pack.shake{ animation:rvShake .62s ease-in-out }
+@keyframes rvShake{
+  0%,100%{ transform:translateX(0) rotate(0) }
+  20%{ transform:translateX(-5px) rotate(-1.4deg) }
+  45%{ transform:translateX(5px) rotate(1.4deg) }
+  70%{ transform:translateX(-3px) rotate(-.8deg) }
+}
+.rv-pack.tear .rv-p1{ transform:translateX(-124%) rotate(-9deg); opacity:0 }
+.rv-pack.tear .rv-p2{ transform:translateX(124%) rotate(9deg);  opacity:0 }
+.rv-pack.tear .rv-pn{ opacity:0 }
+/* カード。**裏から翻して出す**。単に大きくするだけだと「出てきた」に見えない */
+.rv-card{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  opacity:0; transform:translateY(26px) scale(.72) rotateY(180deg);
+  transform-origin:50% 50%; perspective:800px;
+  transition:opacity .28s, transform .62s cubic-bezier(.2,.9,.3,1.2);
+}
+.rv-card.out{ opacity:1; transform:translateY(0) scale(1) rotateY(0) }
+.rv-card .pcard{ width:200px }
+/* 段の色の光。**カードの後ろから**出す */
+.rv-burst{
+  position:absolute; width:300px; height:300px; border-radius:50%;
+  background:radial-gradient(circle,var(--rar,var(--accent)) 0%,transparent 68%);
+  opacity:0; transform:scale(.3); pointer-events:none;
+}
+.rv-burst.go{ animation:rvBurst .9s ease-out forwards }
+@keyframes rvBurst{
+  0%{ opacity:0; transform:scale(.3) }
+  35%{ opacity:.55; transform:scale(1.05) }
+  100%{ opacity:.16; transform:scale(1.25) }
+}
+.rv-cap{ margin-top:14px; text-align:center; min-height:56px }
+.rv-rar{ display:block; font:600 12px/1.6 var(--f-head); letter-spacing:2px }
+.rv-nm{ display:block; font:600 20px/1.4 var(--f-head); color:var(--text) }
+.rv-sub{ display:block; font-size:11px; color:var(--text-dim) }
+.rv-hint{ margin-top:10px; font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--text-mute) }

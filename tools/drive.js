@@ -2295,15 +2295,49 @@ const STEPS = [
     })()`));
     await ctx.wait(400);
     await ctx.shot("20d-scout-le");
+
+    // --- 見本市と開封の演出(→docs/06 §6.46) ---
+    await ctx.js("closeReveal(); show('gacha'); S.club.coins=99999; renderScout()");
+    await ctx.wait(300);
+    ctx.log("  見本市:", await ctx.js(`(()=>{
+      const n=document.querySelectorAll('#scoutFair .pcard').length;
+      if(!n)throw new Error('見本市が空');
+      const art=document.querySelectorAll('#scoutList .sc-art').length;
+      if(art!==TUNING.scout.length)throw new Error('パックの絵が足りない: '+art);
+      // **節から決まる**ので、描き直しても顔ぶれが変わらない
+      const a=document.getElementById('scoutFair').innerHTML;
+      renderScoutFair();
+      if(document.getElementById('scoutFair').innerHTML!==a)
+        throw new Error('開き直すと顔ぶれが変わる');
+      return n+'枚 ／ パックの絵 '+art+'件 ／ 開き直しても同じ';
+    })()`));
+    await ctx.shot("20e-scout-fair");
+    ctx.log("  開封:", await ctx.js(`(()=>{
+      const n0=S.player.coll.length;
+      buyScout('pro');
+      if(S.player.coll.length!==n0+1)throw new Error('カードが増えない');
+      const rv=document.getElementById('scoutReveal');
+      if(!rv.classList.contains('on'))throw new Error('演出が出ない');
+      if(!document.querySelector('#rvCard .pcard'))throw new Error('カードが入っていない');
+      rv.click();                                    // 1回目は最後まで送る
+      if(!rv.classList.contains('lit'))throw new Error('飛ばしても終わらない');
+      const cap=document.getElementById('rvCap').textContent;
+      rv.click();                                    // 2回目で閉じる
+      if(rv.classList.contains('on'))throw new Error('閉じられない');
+      return '袋→カード ／ 1回で送り、2回で閉じる ／ '+cap.slice(0,20);
+    })()`));
+    await ctx.wait(200);
   }],
 
   ["移籍市場(名指しで買う)", async ctx => {
-    await ctx.js("show('gacha')");
+    // **入口は HOME のタイルだけ**(→docs/06 §6.46)。SCOUT からの導線は外した
+    await ctx.js("show('home')");
     await ctx.wait(200);
-    ctx.log("  スカウトからの入口:", await ctx.js(`(()=>{
-      const b=document.getElementById('scoutMarket');
-      if(!b)throw new Error('入口が無い');
-      b.click(); return b.textContent;
+    ctx.log("  HOMEからの入口:", await ctx.js(`(()=>{
+      if(document.getElementById('scoutMarket'))throw new Error('SCOUT に導線が残っている');
+      const b=document.getElementById('tileMarket');
+      if(!b)throw new Error('HOME に入口が無い');
+      b.click(); return (b.textContent||'').replace(/\s+/g,' ').trim().slice(0,24);
     })()`));
     await ctx.wait(300);
     await ctx.shot("23-market");
