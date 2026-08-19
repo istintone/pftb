@@ -8,8 +8,11 @@
 
 const EMB_SHAPES=["shield","round","oval","pointed","banner"];
 const EMB_FIELDS=["solid","stripe","half","quarter","sash","hoop","chevron","cross","saltire"];
-// 紋章。**文字の代わりに置ける**(→docs/03 §3.54)。どれも 100x100 の中で完結させる
-const EMB_CRESTS=["none","star","crown","eagle","lion","horse","helm","ball","tower","sword","bolt"];
+// 紋章。**文字の代わりに置ける**(→docs/03 §3.54)。どれも 100x100 の中で完結させる。
+// 生き物と器物の大半は**描いた意匠を輪郭追跡してパスにしたもの**(→§3.54b / EMB_ART)。
+// 星・ボール・剣・稲妻だけは幾何で組んだほうが綺麗なので手で持っている。
+const EMB_CRESTS=["none","star","crown","eagle","lion","horse","helm","ball","tower","sword","bolt",
+                  "dragon","fleur","cannon","griffin","wyvern","athena"];
 
 /**
  * 選べる色(→docs/03 §3.54)。**色相だけ持つ**ので、明るさと彩度は
@@ -129,120 +132,20 @@ function embMonogram(name){
  *   ・盾いっぱいに大きく置く
  * の3点で「本物らしさ」が決まる。曲線を減らし、直線と鋭角で組み直してある。
  */
-/**
- * 王冠(→docs/03 §3.54a)。**盾の中と盾の外で同じ形を使う**ので切り出してある。
- * 0..100 の枠に収めてあり、外装側は transform で縮めて載せる。
- *
- * 閉じた王冠(インペリアル)。**塊を作ってから隙間を抜く**のが要で、
- * リボンを何本も描く式だと交点が濁って冠に見えない。
- */
-function embCrownPath(ink,edge,sw){
-  const st=' fill="'+ink+'" stroke="'+edge+'" stroke-width="'+sw+'" paint-order="stroke"';
-  // 隙間は左半分だけ書き、右半分は x を折り返して作る。
-  // M と C しか使っていないので、**0から数えて偶数番目の数がx**で通る
-  const mirrorX=d=>{ let i=0;
-    return d.replace(/-?\d+(?:\.\d+)?/g,n=>((i++)%2===0)?String(100-parseFloat(n)):n); };
-  const holeA='M17 43 C12 52 14 63 20 69 C24 72 28 69 27 64'
-             +' C24 56 26 47 32 41 C28 34 20 36 17 43 Z';
-  const holeB='M35 36 C29 46 31 59 37 67 C41 71 45 68 44 63'
-             +' C41 54 42 45 44 34 C41 30 37 32 35 36 Z';
-  const arch='M22 74 C4 64 6 33 24 27 C34 23 43 25 46 29 L46 19 L54 19 L54 29'
-            +' C57 25 66 23 76 27 C94 33 96 64 78 74 Z';
-  return ''
-    // **隙間は縁色で塗らず、evenodd で本当に抜く**。塗ってしまうと盾の中では
-    // 黒い塊に見え、王冠が裏返って見える
-    +'<path fill-rule="evenodd" d="'+arch+' '+holeA+' '+holeB+' '
-    +mirrorX(holeA)+' '+mirrorX(holeB)+'"'+st+'/>'
-    // 台座。**下辺をたわませる**と金属の輪に見え、真っ直ぐだと箱になる
-    +'<path d="M19 68 Q50 76 81 68 L76 89 Q50 94 24 89 Z"'+st+'/>'
-    // 宝珠と頂の十字
-    +'<circle cx="50" cy="15" r="9"'+st+'/>'
-    +'<path d="M47 5 V2 H44 V-2 H47 V-6 H53 V-2 H56 V2 H53 V5 Z"'+st+'/>';
-}
 function embCrestPath(kind,ink,edge){
   const st=' fill="'+ink+'" stroke="'+edge+'" stroke-width="2.2" paint-order="stroke"';
   const cut=' fill="'+edge+'"';
+  // **描いた意匠が先**(→docs/03 §3.54b)。生き物や兜のように輪郭で語る形は、
+  // 手で座標を置くと必ずどこか可愛くなる。輪郭追跡したパスをそのまま使う。
+  // ベクターなので**クラブの2色がそのまま乗る**。穴は evenodd に任せる
+  const art=(typeof EMB_ART!=="undefined")&&EMB_ART[kind];
+  if(art)return '<path fill-rule="evenodd" d="'+art+'"'+st+'/>';
+  // ここから下は**幾何で組んだほうが綺麗なもの**。星や剣は直線と角度で決まるので、
+  // 描いた絵を追跡するとかえって辺が揺れる
   switch(kind){
     // 星(マレット)。**5つの尖りを細長く**。太いと漫画の星になる
     case "star":  return '<path d="M50 16 L57.5 41 L84 41 L62.5 56.5 L70.5 82 L50 66.5'
                         +' L29.5 82 L37.5 56.5 L16 41 L42.5 41 Z"'+st+'/>';
-    // 王冠。**盾の外の外装と同じ形**を使う(→embCrownPath)。
-    // 素の王冠は頂の十字が y=-6 まで伸びるので、盾に入れるときは一回り縮める
-    case "crown": return '<g transform="translate(5,8) scale(0.9)">'
-                        +embCrownPath(ink,edge,2.4)+'</g>';
-    // 鷲(デプロイド)。**翼は面で取り、後縁を段で抉る**。
-    // 細い羽根を並べると骨格標本や鳩に見えるので、まず塊を作ってから刻む
-    case "eagle": return (function(){
-      // 左翼。前縁は肩から先へ一息に、後縁は4段の切り込みで羽を表す
-      const L='M44 28 Q25 15 4 20 L15 29 L3 33 L19 41 L9 46 L26 50 L19 57'
-             +' L36 53 L34 63 L45 47 Z';
-      const R='M56 28 Q75 15 96 20 L85 29 L97 33 L81 41 L91 46 L74 50 L81 57'
-             +' L64 53 L66 63 L55 47 Z';
-      let tail="";
-      for(let i=-2;i<=2;i++){
-        const L2=(i===0)?30:27-Math.abs(i)*4;
-        tail+='<path d="M'+(50-5).toFixed(1)+' 58 L'+(50+Math.sin(i*0.36)*L2).toFixed(1)+' '
-             +(58+Math.cos(i*0.36)*L2).toFixed(1)+' L'+(50+5).toFixed(1)+' 58 Z"'+st+'/>';
-      }
-      return '<path d="'+L+'"'+st+'/><path d="'+R+'"'+st+'/>'+tail
-        // 胴。首から尾まで一本の塊にして頭が浮かないようにする
-        +'<path d="M50 14 L61 24 L60 44 L57 62 L43 62 L40 44 L39 24 Z"'+st+'/>'
-        +'<path d="M46 34 L50 44 L54 34 Z"'+cut+'/>'
-        // 頭と嘴(左を向く)
-        +'<circle cx="50" cy="18" r="8"'+st+'/>'
-        +'<path d="M43 15 L30 13 L43 24 Z"'+st+'/>'
-        +'<circle cx="53" cy="15" r="2"'+cut+'/>';
-    })();
-    // 獅子。**一方向へなびく鬣**＋**横顔**。放射状に均等な棘を並べると
-    // 太陽の光線になってしまうので、根元から先までを同じ向きに捻って流す
-    case "lion":  return (function(){
-      const cx=54, cy=52, rb=15, sweep=0.62, n=13;
-      const P=(ang,r)=>[(cx+Math.cos(ang)*r).toFixed(1),(cy+Math.sin(ang)*r).toFixed(1)];
-      let mane="";
-      for(let i=0;i<n;i++){
-        const ang=(i/n)*Math.PI*2;
-        const rt=[36,30,34][i%3];
-        const b1=P(ang-0.24,rb), b2=P(ang+0.24,rb), tp=P(ang+sweep,rt);
-        const c1=P(ang-0.06+sweep*0.45,(rb+rt)*0.60);
-        const c2=P(ang+0.34+sweep*0.45,(rb+rt)*0.52);
-        mane+='<path d="M'+b1[0]+' '+b1[1]+' Q'+c1[0]+' '+c1[1]+' '+tp[0]+' '+tp[1]
-             +' Q'+c2[0]+' '+c2[1]+' '+b2[0]+' '+b2[1]+' Z"'+st+'/>';
-      }
-      return mane
-        // 束の根元が透けないよう中心を埋める
-        +'<circle cx="'+cx+'" cy="'+cy+'" r="17"'+st+'/>'
-        // 横顔(左向き)。額→鼻筋→口先→顎→頬
-        +'<path d="M42 26 L30 30 L21 38 L14 49 L17 59 L26 65 L38 66 L50 60'
-        +' L54 46 L51 33 Z"'+st+'/>'
-        +'<path d="M30 40 L40 43 L39 46 L29 44 Z"'+cut+'/>'
-        +'<path d="M15 47 L21 45 L20 51 Z"'+cut+'/>'
-        +'<path d="M17 55 L30 57 L30 60 L18 58 Z"'+cut+'/>'
-        +'<path d="M44 30 Q50 44 44 62 L48 62 Q54 44 48 30 Z"'+cut+'/>';
-    })();
-    // 馬。**長い鼻筋と反った首**が特徴。耳を2本立てただけでは犬になる
-    case "horse": return '<path d="M20 62 L26 46 L34 36 L42 30 L44 18 L52 28'
-                        +' L58 16 L62 30 L70 40 L76 56 L80 76 L74 88 L60 88 L58 74'
-                        +' L50 62 L38 62 L30 70 L22 72 Z"'+st+'/>'
-                        +'<path d="M52 28 L64 26 L60 34 Z"'+cut+'/>'
-                        +'<path d="M60 36 L72 36 L66 44 Z"'+cut+'/>'
-                        +'<path d="M66 46 L78 50 L70 56 Z"'+cut+'/>'
-                        +'<circle cx="40" cy="44" r="2.6"'+cut+'/>'
-                        +'<path d="M24 58 L30 56 L28 62 Z"'+cut+'/>';
-    // 騎士の兜(グレートヘルム)。**天面を平らに切る**のが決め手。
-    // 上を丸めると盾や卵に見え、羽根飾りを足すと葉や蜂に化けたので飾りは持たせない
-    case "helm":  return ""
-      // 本体。平天面 → まっすぐな側面 → 顎で少しすぼめる
-      +'<path d="M30 14 H70 L75 26 V54 Q75 72 62 82 L50 88 L38 82'
-      +' Q25 72 25 54 V26 Z"'+st+'/>'
-      // 目のスリット(細い横一文字)
-      +'<path d="M26 38 H74 V46 H26 Z"'+cut+'/>'
-      // 鼻梁の補強帯。スリットを跨いで縦に通す
-      +'<path d="M45 16 H55 V60 H45 Z"'+st+'/>'
-      // 通気孔
-      +'<circle cx="34" cy="55" r="2.6"'+cut+'/><circle cx="40" cy="60" r="2.6"'+cut+'/>'
-      +'<circle cx="34" cy="65" r="2.6"'+cut+'/><circle cx="41" cy="70" r="2.6"'+cut+'/>'
-      +'<circle cx="66" cy="55" r="2.6"'+cut+'/><circle cx="60" cy="60" r="2.6"'+cut+'/>'
-      +'<circle cx="66" cy="65" r="2.6"'+cut+'/><circle cx="59" cy="70" r="2.6"'+cut+'/>';
     // サッカーボール。**五角形と接する六角を抜く**。丸だけだと風船に見える
     case "ball":  return '<circle cx="50" cy="50" r="26"'+st+'/>'
                         +'<path d="M50 34 L61 42 L57 55 L43 55 L39 42 Z"'+cut+'/>'
@@ -251,11 +154,6 @@ function embCrestPath(kind,ink,edge){
                         +'<path d="M73 44 L67 50 L64 40 Z"'+cut+'/>'
                         +'<path d="M36 72 L41 62 L48 68 Z"'+cut+'/>'
                         +'<path d="M64 72 L52 68 L59 62 Z"'+cut+'/>';
-    // 塔(城)。**狭間を刻み、窓を抜く**
-    case "tower": return '<path d="M30 80 V40 H26 V28 H34 V34 H42 V28 H50 V34 H58 V28 H66 V34'
-                        +' H74 V28 H74 V40 H70 V80 Z"'+st+'/>'
-                        +'<path d="M44 56 H56 V80 H44 Z"'+cut+'/>'
-                        +'<circle cx="38" cy="50" r="3"'+cut+'/><circle cx="62" cy="50" r="3"'+cut+'/>';
     // 剣。**十字の護拳**を付けると紋章らしい
     case "sword": return '<path d="M50 12 L56 24 V56 H44 V24 Z"'+st+'/>'
                         +'<path d="M28 56 H72 V64 H28 Z"'+st+'/>'
@@ -283,8 +181,9 @@ function embOrnPad(kind){
 }
 function embOrnPath(kind,gold,dark){
   const st=' fill="'+gold+'" stroke="'+dark+'" stroke-width="2.2" paint-order="stroke"';
-  const crown='<g transform="translate(24,-52) scale(0.52)">'
-    +embCrownPath(gold,dark,4)+'</g>';
+  const crown='<g transform="translate(15,-62) scale(0.7)">'
+    +'<path fill-rule="evenodd" d="'+EMB_ART.crown+'" fill="'+gold+'"'
+    +' stroke="'+dark+'" stroke-width="3.2" paint-order="stroke"/></g>';
   // 月桂樹。**葉を1枚ずつ置く**(束で描くと草の塊になる)
   const leaf=(cx,cy,rot,sc)=>'<path transform="translate('+cx+','+cy+') rotate('+rot+') scale('+sc+')"'
     +' d="M0 0 C6 -5 14 -4 17 2 C12 8 4 7 0 0 Z"'+st+'/>';
@@ -320,9 +219,11 @@ function embOrnPath(kind,gold,dark){
     return g;
   };
   switch(kind){
-    // 盾の外は**同じ形を縮めて載せる**。別に描くと2つの王冠が食い違う
-    case "crown": return '<g transform="translate(21,-55) scale(0.58)">'
-                        +embCrownPath(gold,dark,3.6)+'</g>';
+    // **盾の中と同じ意匠を縮めて載せる**(→docs/03 §3.54b)。
+    // 別に描くと、紋章の王冠と外装の王冠が食い違う
+    case "crown": return '<g transform="translate(10,-70) scale(0.8)">'
+                        +'<path fill-rule="evenodd" d="'+EMB_ART.crown+'" fill="'+gold+'"'
+                        +' stroke="'+dark+'" stroke-width="3" paint-order="stroke"/></g>';
     case "laurel": return bough(-1)+bough(1);
     case "ribbon": return ""
       // 折り返した端(奥に回る面)。**先に暗い面を敷く**と紙が巻いて見える

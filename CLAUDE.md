@@ -37,6 +37,7 @@ headless Chrome を自動操作してスクリーンショットを撮り、**PN
 | スポンサーの看板を足す | 依頼書 `src/assets/design/sponsor-banner-prompt.md` で4社ぶんのシートを作る → `src/assets/art/banner/` に置く → `python tools/slice_banner.py <シート> <id>×4` → `python build.py`。**id はスポンサーの id と同じ**。絵の無い会社は社名の表示のまま(→[docs/06 §6.32](docs/06-design-system.md)) |
 | 監督の絵を足す | 4×2の立ち絵シートを `src/assets/art/manager/<名前>_managers.png` に置く → `python tools/slice_manager.py` → `python build.py`。書き出しは `mg01a`〜(シート名＋並び順)。契約書の第三条で選べるようになる。**`mob` で始まるシートは `--all` を付けないと書き出さない**(相手監督用の予備)(→[docs/03 §3.45](docs/03-game-design.md)) |
 | ステッカーを足す | 白地の絵を `src/assets/art/sticker/<中身が分かる名前>.png` に置く → `python tools/slice_sticker.py` → `python build.py`。タイトルの壁に自動で混ざる。**ファイル名がそのまま引き当てキー**なので後から変えない(HOMEが名指しで使う)。**素材を `src/assets/sticker/` に直接置かない**(10MB級がそのまま index.html に埋まる)(→[docs/06 §6.29](docs/06-design-system.md) / [§6.30](docs/06-design-system.md)) |
+| 紋章の意匠を差し替える | 4列×3行の白いシルエットのシートを `src/assets/art/emblem/` に置く → `python tools/slice_emblem.py`(輪郭追跡して `src/js/emblem-art.js` を書き出す) → `python build.py`。**位置で名前が決まる**ので並びを合わせる。`emblem-art.js` は生成物なので手で編集しない(→[docs/03 §3.54b](docs/03-game-design.md)) |
 | 選手の絵を足す | 3枚組シートを `src/assets/art/commons/<段>/<ポジション>/`(汎用)または `src/assets/art/signature/<段>/<ポジション>/`(実在選手)に置く(段は std/reg/spe/wc/leg/any、ポジションは gk/df/mf/fw/out。**GKは必ず gk**) → `python tools/slice_commons.py` → `python build.py`。書き出しは `src/assets/players/`(汎用)と `src/assets/sig/`(実在選手)に分かれる。**書き出しフォルダは手で触らない**(→[docs/03 §3.19](docs/03-game-design.md)) |
 
 ## 姉妹プロジェクト card-eleven の参照方針
