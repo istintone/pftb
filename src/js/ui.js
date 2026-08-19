@@ -1810,8 +1810,14 @@ function logRow(e){
             :"S"+e.season+" 第"+e.md+"節 ／ "+(e.home?"HOME":"AWAY");
   // **済んだ節に飾りは要らない**(→docs/06 §6.31)。ここで読みたいのはスコアなので、
   // トロフィーの絵も打ち手の絵文字も置かない。打ち手は title に残す
+  // **どこと戦ったのかをエンブレムで出す**(→docs/06 §6.42)。名前だけだと、
+  // 過去の行を辿るときに毎回読まないと分からない。カップの相手はクラブIDを
+  // 持たないので、枠の名前をたねにする(予定のタイルと同じ作り)
+  const emb=cup?embSvg("cup:"+name,name,22,{ tag:"lg"+e.node })
+               :embSvg(e.opp,name,22,{ tag:"lg"+e.node });
   return '<div class="cal done'+(e.champ?" champ":"")+'">'
     +'<span class="cal-n num">'+e.node+'</span>'
+    +'<span class="cal-c">'+emb+'</span>'
     +'<span class="cal-b" title="'+esc(h?h.label:"")+'"><b>'+esc(name)+'</b>'
     +'<span class="lg">'+esc(sub)+'</span></span>'
     +'<span class="cal-s num '+cls+'">'+mark+' '+e.gf+'-'+e.ga+'</span></div>';
@@ -1838,15 +1844,21 @@ function currentRow(){
   // **タイルごとリンク**。ボタンは置かず、行き先を見出しそのものにする(→docs/06 §6.8)。
   // 前は見出しが「この節の準備」で、行き先は右下に小さく置いていた。
   // タイルの用は1つしかないので、**押したら何が起きるか**を見出しに上げた(→docs/06 §6.31)
-  return '<div class="cal cur" id="calCur" role="button" tabindex="0">'
+  //
+  // **相手が決まったら、見出しを相手で上書きする**(→docs/06 §6.42)。
+  // 以前は下に相手の行を足していたが、タイルが2段になるうえ、済んだ節の行と
+  // 形が変わってしまう。決まった後は**済んだ節と同じ並び**にするのが正しい
+  return '<div class="cal cur'+(foe?" set":"")+'" id="calCur" role="button" tabindex="0">'
     +'<div class="cal-cur-h"><span class="cal-n num">'+C.node+'</span>'
-    +'<span class="cal-b"><b class="cur-go">第'+C.node+'節を開始する</b>'
-    // 話しかけた後だけ、どこまで進んだかを添える(まだなら見出しだけでいい)
-    +(ch?'<span class="lg">'+esc(state)+'</span>':"")+'</span>'
+    +(foe?'<span class="cal-c">'+foe.emb+'</span>':"")
+    +'<span class="cal-b">'
+    +(foe?'<b>'+esc(foe.name)+'</b><span class="lg">'+esc(foe.sub)+'</span>'
+        // まだ決まっていない間は、押したら何が起きるかを見出しに置く
+        :'<b class="cur-go">第'+C.node+'節を開始する</b>'
+         // 話しかけた後だけ、どこまで進んだかを添える(まだなら見出しだけでいい)
+         +(ch?'<span class="lg">'+esc(state)+'</span>':""))
+    +'</span>'
     +'<span class="cal-r">›</span></div>'
-    +(foe?'<div class="cal-target"><span class="cal-c">'+foe.emb+'</span>'
-      +'<span class="cal-b"><b>'+esc(foe.name)+'</b>'
-      +'<span class="lg">'+esc(foe.sub)+'</span></span></div>':"")
     // **いまの節はロッカーの絵で示す**(→docs/06 §6.31)。並んだ枠の中で1枚だけ絵が入る
     +'<div class="cur-st">'+stickerArt("locker")+'</div>'
     // **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.41)。ロッカーを背に2人を並べる。

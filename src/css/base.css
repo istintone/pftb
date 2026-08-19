@@ -2537,11 +2537,13 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cal.judge.go:active{ background:oklch(0.30 0.06 85) }
 
 /* 現在節は行ではなくカード(打ち手の選択を内蔵する) */
+/* 余白も他の節と同じにする(→§6.42)。相手が決まると中身が2行になるので、
+   ここだけ 12px にしていると 60px に収まらず、並びから浮く */
 .cal.cur{
-  display:block; padding:12px; margin:10px 0;
+  display:block; padding:9px 10px; margin:10px 0;
   background:oklch(0.24 0.04 85 / .30); border-color:var(--accent-dim);
 }
-.cal-cur-h{ display:flex; align-items:center; gap:10px; margin-bottom:10px }
+.cal-cur-h{ display:flex; align-items:center; gap:10px }
 /* **タイルは入口だけ**(→docs/03 §3.29)。中身の操作はクラブチャットが持つ */
 .cal.cur{ cursor:pointer }
 .cal.cur .cal-r{ margin-left:auto; font-size:18px; color:var(--accent) }
@@ -2550,7 +2552,9 @@ body.bg-wall #app{ position:relative; z-index:1 }
 /* いまの節にだけロッカーの絵を貼る。**並んだ枠の中で1枚だけ絵が入る**ので、
    どこが「いま」かが、数字を読まなくても分かる */
 .cal.cur{ position:relative; overflow:hidden }
-.cal-cur-h,.cal-target{ position:relative; z-index:1 }
+.cal-cur-h{ position:relative; z-index:1 }
+/* **2人ぶんの列を空ける**(→§6.41)。空けないと相手の名前が絵の裏へ回る */
+.cal-cur-h{ padding-right:96px }
 .cur-st{ position:absolute; right:-16px; top:50%; width:124px; z-index:0;
   transform:translateY(-50%) rotate(4deg); pointer-events:none }
 .cur-st .stk{ opacity:.40 }
@@ -2572,9 +2576,8 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cur-crew img{ height:72px; width:auto; display:block; image-rendering:pixelated }
 /* 立ち絵は左右に透明の余白を持つ。**その分だけ重ねて**2人の間を詰める */
 .cur-crew .cc-m{ margin-left:-26px }
-/* 相手が決まるとタイルが伸びる。**相手の行に右の列を空けさせる**ので、
-   2人が行の裏に回って脚だけがのぞく、が起きない */
-.cal.cur .cal-target{ margin-right:112px }
+/* 相手が決まっても**タイルは1段のまま**(→§6.42)。見出しを相手で上書きするので、
+   2段にする必要がない。他の節と同じ高さで並ぶ(→§6.40) */
 /* 予定の行のトロフィー(→docs/06 §6.31)。**行の右に大きく置いて、枠で切り落とす**。
    アイコンの枠(22px)に収めると豆粒で何の絵か分からない。行の高さは変えずに、
    はみ出たぶんは overflow で切る(タイトルの壁と同じ「貼ってある」見せ方) */
@@ -2600,10 +2603,6 @@ body.bg-wall #app{ position:relative; z-index:1 }
 }
 .compbtn.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
 .compbtn:disabled{ opacity:.35; cursor:default }
-.cal-target{
-  display:flex; align-items:center; gap:10px; margin:10px 0;
-  padding:9px 10px; border-radius:9px; background:oklch(0.17 0.02 255); border:1px solid var(--line);
-}
 /* 予定が確定している枠(カップの連戦など) */
 .cal.planned{ border-color:var(--accent-dim); background:oklch(0.20 0.03 85 / .18) }
 /* 空枠。**高さは詰めない**(→docs/06 §6.40)。96〜120枠あるので以前は
