@@ -1164,9 +1164,7 @@ function renderSell(c){
     toast(r.name+" を "+fmtNum(r.coin)+" コインで売却しました");
   };
 }
-const closeCard=()=>{ _sellArm=null; $("cardModal").classList.remove("on");
-  // 開封から開いた詳細は、**閉じた時点で演出も片付ける**(→docs/06 §6.46)
-  if(_rvAfter){ const f=_rvAfter; _rvAfter=null; f(); } };
+const closeCard=()=>{ _sellArm=null; $("cardModal").classList.remove("on"); };
 /** PROFILE の紹介文。カードの属性から組み立てる(専用のテキストは持たない)。 */
 function bioOf(c){
   const n=nationById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
@@ -1530,11 +1528,11 @@ function scoutArt(pk){
  * **いつでも飛ばせる。** 演出は2度目からは邪魔になるので、
  * タップで最後まで送り、もう一度タップで閉じる。
  */
-let _rvT=[], _rvDone=null, _rvAfter=null;
+let _rvT=[], _rvDone=null;
 function revealCards(cards,label){
   const box=$("scoutReveal");
   if(!box||!cards||!cards.length)return;
-  _rvT.forEach(clearTimeout); _rvT=[]; _rvAfter=null;   // 前回の後始末を残さない
+  _rvT.forEach(clearTimeout); _rvT=[];
   const c=cards[0];                                  // パックは1枚(→§3.22)
   // **封の印**(→docs/06 §6.46)。実在選手の WC / LEGENDS を引いたときだけ
   // 「TOP SECRET!!!」になる。**開ける前に分かる**のが、この演出のいちばんの山
@@ -1568,8 +1566,13 @@ function revealCards(cards,label){
     _rvDone=null;
   };
 }
-/** 出たカードを押したら詳細へ。**閉じるとそのまま演出ごと消える**(→§6.46)。 */
-function rvOpenCard(c){ _rvAfter=closeReveal; openCard(c); }
+/**
+ * 出たカードを押したら詳細へ(→§6.46)。
+ * **押した時点で演出を閉じる。** カードが残ったまま後ろに詳細が出ると、
+ * 何も起きていないように見える(演出のほうが手前に立っているため)。
+ * 詳細を閉じたら SCOUT に戻り、以後は CARDS で見る。
+ */
+function rvOpenCard(c){ closeReveal(); openCard(c); }
 function showRvCap(c){
   $("rvCap").innerHTML='<b class="rv-rar r-'+c.rarity.toLowerCase()+'">'
     +esc(RARITY[c.rarity].label)+'</b>'
@@ -1578,7 +1581,7 @@ function showRvCap(c){
   $("rvHint").textContent="カードを押すと詳細 ／ 外を押すと閉じる";
 }
 function closeReveal(){
-  _rvT.forEach(clearTimeout); _rvT=[]; _rvDone=null; _rvAfter=null;
+  _rvT.forEach(clearTimeout); _rvT=[]; _rvDone=null;
   $("scoutReveal").classList.remove("on","open","lit");
   $("rvHint").textContent="タップでスキップ";
 }

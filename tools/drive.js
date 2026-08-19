@@ -2342,14 +2342,17 @@ const STEPS = [
       document.getElementById('rvCard').click();
       if(!document.getElementById('cardModal').classList.contains('on'))
         throw new Error('カードを押しても詳細が出ない');
+      // **押した時点で演出は消えている**。残っていると詳細の手前に立ってしまう
+      if(rv.classList.contains('on'))throw new Error('詳細の手前に演出が残る');
       closeCard();
-      if(rv.classList.contains('on'))throw new Error('詳細を閉じても演出が残る');
       // **引いた結果の置き場は無い**(CARDS で見る)
       if(document.getElementById('scoutOpen'))throw new Error('結果の置き場が残っている');
       return '袋→カード ／ 印 '+pn.textContent+' ／ 押すと詳細→閉じて消える ／ '+cap.slice(0,16);
     })()`));
-    // **飛ばさずに待った場合も1回で開く**(検証の順番でだけ通る、を作らない)
-    await ctx.js("buyScout('open')");
+    // **飛ばさずに待った場合も1回で開く**(検証の順番でだけ通る、を作らない)。
+    // **引いたぶんは後で戻す**。ここで手札が増えたままだと編成が変わり、
+    // 後ろの試合の検査(誰の札が出るか)が揺れる
+    await ctx.js(`window.__rvKeep={ n:S.player.coll.length, coin:S.club.coins }; buyScout('open')`);
     await ctx.wait(2000);
     ctx.log("  待ってから押す:", await ctx.js(`(()=>{
       const rv=document.getElementById('scoutReveal');
@@ -2357,9 +2360,13 @@ const STEPS = [
       document.getElementById('rvCard').click();
       if(!document.getElementById('cardModal').classList.contains('on'))
         throw new Error('1回のタップで詳細が開かない');
+      if(rv.classList.contains('on'))throw new Error('詳細の手前に演出が残る');
       closeCard();
-      if(rv.classList.contains('on'))throw new Error('詳細を閉じても演出が残る');
-      return '1回のタップで詳細 ／ 閉じて消える';
+      // 検証で増やしたものは戻す(→上のコメント)
+      const K=window.__rvKeep;
+      S.player.coll.length=K.n; S.club.coins=K.coin; delete window.__rvKeep;
+      refitSquad(); headUI();
+      return '1回のタップで詳細 ／ 演出はその場で消える';
     })()`));
     await ctx.wait(200);
   }],
