@@ -129,6 +129,36 @@ function embMonogram(name){
  *   ・盾いっぱいに大きく置く
  * の3点で「本物らしさ」が決まる。曲線を減らし、直線と鋭角で組み直してある。
  */
+/**
+ * 王冠(→docs/03 §3.54a)。**盾の中と盾の外で同じ形を使う**ので切り出してある。
+ * 0..100 の枠に収めてあり、外装側は transform で縮めて載せる。
+ *
+ * 閉じた王冠(インペリアル)。**塊を作ってから隙間を抜く**のが要で、
+ * リボンを何本も描く式だと交点が濁って冠に見えない。
+ */
+function embCrownPath(ink,edge,sw){
+  const st=' fill="'+ink+'" stroke="'+edge+'" stroke-width="'+sw+'" paint-order="stroke"';
+  // 隙間は左半分だけ書き、右半分は x を折り返して作る。
+  // M と C しか使っていないので、**0から数えて偶数番目の数がx**で通る
+  const mirrorX=d=>{ let i=0;
+    return d.replace(/-?\d+(?:\.\d+)?/g,n=>((i++)%2===0)?String(100-parseFloat(n)):n); };
+  const holeA='M17 43 C12 52 14 63 20 69 C24 72 28 69 27 64'
+             +' C24 56 26 47 32 41 C28 34 20 36 17 43 Z';
+  const holeB='M35 36 C29 46 31 59 37 67 C41 71 45 68 44 63'
+             +' C41 54 42 45 44 34 C41 30 37 32 35 36 Z';
+  const arch='M22 74 C4 64 6 33 24 27 C34 23 43 25 46 29 L46 19 L54 19 L54 29'
+            +' C57 25 66 23 76 27 C94 33 96 64 78 74 Z';
+  return ''
+    // **隙間は縁色で塗らず、evenodd で本当に抜く**。塗ってしまうと盾の中では
+    // 黒い塊に見え、王冠が裏返って見える
+    +'<path fill-rule="evenodd" d="'+arch+' '+holeA+' '+holeB+' '
+    +mirrorX(holeA)+' '+mirrorX(holeB)+'"'+st+'/>'
+    // 台座。**下辺をたわませる**と金属の輪に見え、真っ直ぐだと箱になる
+    +'<path d="M19 68 Q50 76 81 68 L76 89 Q50 94 24 89 Z"'+st+'/>'
+    // 宝珠と頂の十字
+    +'<circle cx="50" cy="15" r="9"'+st+'/>'
+    +'<path d="M47 5 V2 H44 V-2 H47 V-6 H53 V-2 H56 V2 H53 V5 Z"'+st+'/>';
+}
 function embCrestPath(kind,ink,edge){
   const st=' fill="'+ink+'" stroke="'+edge+'" stroke-width="2.2" paint-order="stroke"';
   const cut=' fill="'+edge+'"';
@@ -136,17 +166,10 @@ function embCrestPath(kind,ink,edge){
     // 星(マレット)。**5つの尖りを細長く**。太いと漫画の星になる
     case "star":  return '<path d="M50 16 L57.5 41 L84 41 L62.5 56.5 L70.5 82 L50 66.5'
                         +' L29.5 82 L37.5 56.5 L16 41 L42.5 41 Z"'+st+'/>';
-    // 王冠(コロネット)。**尖りの先に宝珠を載せ、谷を深く抉る**。
-    // 台座は下辺をたわませると金属の輪に見え、真っ直ぐだと箱になる
-    case "crown": return '<path d="M13 54 L18 27 L27 47 L34 21 L42 45 L50 11 L58 45'
-                        +' L66 21 L73 47 L82 27 L87 54 Z"'+st+'/>'
-                        +'<circle cx="50" cy="10" r="5"'+st+'/>'
-                        +'<circle cx="34" cy="20" r="4.2"'+st+'/>'
-                        +'<circle cx="66" cy="20" r="4.2"'+st+'/>'
-                        +'<path d="M11 52 H89 L86 72 Q50 80 14 72 Z"'+st+'/>'
-                        +'<circle cx="31" cy="63" r="3"'+cut+'/>'
-                        +'<circle cx="50" cy="65" r="3"'+cut+'/>'
-                        +'<circle cx="69" cy="63" r="3"'+cut+'/>';
+    // 王冠。**盾の外の外装と同じ形**を使う(→embCrownPath)。
+    // 素の王冠は頂の十字が y=-6 まで伸びるので、盾に入れるときは一回り縮める
+    case "crown": return '<g transform="translate(5,8) scale(0.9)">'
+                        +embCrownPath(ink,edge,2.4)+'</g>';
     // 鷲(デプロイド)。**翼は面で取り、後縁を段で抉る**。
     // 細い羽根を並べると骨格標本や鳩に見えるので、まず塊を作ってから刻む
     case "eagle": return (function(){
@@ -252,7 +275,7 @@ const EMB_ORNS=["none","crown","laurel","ribbon","wreath"];
 /** その外装がはみ出す量(上・下)。viewBox を広げるのに使う。 */
 function embOrnPad(kind){
   switch(kind){
-    case "crown":  return { t:52, b:0,  x:4 };
+    case "crown":  return { t:58, b:0,  x:4 };
     case "ribbon": return { t:0,  b:30, x:12 };
     case "wreath": return { t:52, b:30, x:27 };
     default:       return { t:0,  b:0,  x:0 };
@@ -260,10 +283,8 @@ function embOrnPad(kind){
 }
 function embOrnPath(kind,gold,dark){
   const st=' fill="'+gold+'" stroke="'+dark+'" stroke-width="2.2" paint-order="stroke"';
-  const crown='<path d="M24 -6 L28 -30 L38 -18 L44 -34 L50 -20 L56 -34 L62 -18 L72 -30 L76 -6 Z"'+st+'/>'
-    +'<circle cx="44" cy="-38" r="3.4"'+st+'/><circle cx="56" cy="-38" r="3.4"'+st+'/>'
-    +'<circle cx="50" cy="-24" r="3.4"'+st+'/>'
-    +'<path d="M22 -6 H78 V2 H22 Z"'+st+'/>';
+  const crown='<g transform="translate(24,-52) scale(0.52)">'
+    +embCrownPath(gold,dark,4)+'</g>';
   // 月桂樹。**葉を1枚ずつ置く**(束で描くと草の塊になる)
   const leaf=(cx,cy,rot,sc)=>'<path transform="translate('+cx+','+cy+') rotate('+rot+') scale('+sc+')"'
     +' d="M0 0 C6 -5 14 -4 17 2 C12 8 4 7 0 0 Z"'+st+'/>';
@@ -299,15 +320,9 @@ function embOrnPath(kind,gold,dark){
     return g;
   };
   switch(kind){
-    case "crown": return '<path d="M14 -2 L20 -30 L30 -10 L38 -34 L46 -12 L50 -42'
-                        +' L54 -12 L62 -34 L70 -10 L80 -30 L86 -2 Z" fill="'+gold+'"'
-                        +' stroke="'+dark+'" stroke-width="2.4" paint-order="stroke"/>'
-                        +'<circle cx="50" cy="-45" r="4.6" fill="'+gold+'" stroke="'+dark+'"'
-                        +' stroke-width="2.4" paint-order="stroke"/>'
-                        +'<circle cx="38" cy="-37" r="3.8" fill="'+gold+'" stroke="'+dark+'"'
-                        +' stroke-width="2.4" paint-order="stroke"/>'
-                        +'<circle cx="62" cy="-37" r="3.8" fill="'+gold+'" stroke="'+dark+'"'
-                        +' stroke-width="2.4" paint-order="stroke"/>';
+    // 盾の外は**同じ形を縮めて載せる**。別に描くと2つの王冠が食い違う
+    case "crown": return '<g transform="translate(21,-55) scale(0.58)">'
+                        +embCrownPath(gold,dark,3.6)+'</g>';
     case "laurel": return bough(-1)+bough(1);
     case "ribbon": return ""
       // 折り返した端(奥に回る面)。**先に暗い面を敷く**と紙が巻いて見える
