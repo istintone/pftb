@@ -268,25 +268,33 @@ function embOrnPath(kind,gold,dark){
   const leaf=(cx,cy,rot,sc)=>'<path transform="translate('+cx+','+cy+') rotate('+rot+') scale('+sc+')"'
     +' d="M0 0 C6 -5 14 -4 17 2 C12 8 4 7 0 0 Z"'+st+'/>';
   /**
-   * 月桂樹の枝。**茎を1本通し、そこから葉を外側・内側の二列に生やす**。
-   * 葉を一列だけ点々と置くと隙間が空いて草の切れ端に見える。
+   * 月桂樹の枝。**中心(50,52)・半径44の円弧を素直になぞる**。
+   * 以前は「縦線を中央でくぼませる」式で置いていたが、それは真ん中が一番内側に
+   * 入る砂時計の形で、円のラインにならなかった。
+   *
+   * 葉の向きは**接線と外向き法線の中間**。φ を上からの角度とすると
+   * 接線 = φ-180、法線 = φ-90 なので、葉 = φ-135 で出る。
    */
   const bough=side=>{
-    const N=9;
-    const P=t=>[50+side*(45-Math.sin(t*Math.PI)*12), 16+t*72];
+    const CX=50, CY=52, R=44, A0=32, A1=166, N=10;
+    const rad=d=>d*Math.PI/180;
+    const P=phi=>[CX+side*R*Math.sin(rad(phi)), CY-R*Math.cos(rad(phi))];
     let stem="M";
-    for(let i=0;i<=12;i++){ const q=P(i/12); stem+=(i?" L":"")+q[0].toFixed(1)+" "+q[1].toFixed(1); }
-    let g='<path d="'+stem+'" fill="none" stroke="'+gold+'" stroke-width="4"'
+    for(let i=0;i<=16;i++){
+      const q=P(A0+(A1-A0)*i/16);
+      stem+=(i?" L":"")+q[0].toFixed(1)+" "+q[1].toFixed(1);
+    }
+    let g='<path d="'+stem+'" fill="none" stroke="'+gold+'" stroke-width="4.4"'
          +' stroke-linecap="round"/>'
          +'<path d="'+stem+'" fill="none" stroke="'+dark+'" stroke-width="1.4"'
          +' stroke-linecap="round"/>';
     for(let i=0;i<N;i++){
-      const t=i/(N-1), q=P(t);
-      const sc=0.92-Math.abs(t-0.45)*0.5;
-      // **葉は根元(下)から先(上)へなびかせる**。t は上から下へ進むので、
-      // 角度を素直に増やすと下向きに流れて、月桂冠が上下逆さに見える
-      g+=leaf(q[0],q[1], side>0?(-100+t*66):(280-t*66), sc);
-      g+=leaf(q[0],q[1], side>0?(-64+t*66):(244-t*66), sc*0.72);
+      const t=i/(N-1), phi=A0+(A1-A0)*t, q=P(phi);
+      const sc=0.94-Math.abs(t-0.5)*0.42;
+      const r0=phi-135;                       // 外側(大きい葉)
+      // 左側は鏡像。葉のもとの形が +x を向いているので 180 から引く
+      g+=leaf(q[0],q[1], side>0?r0:(180-r0), sc);
+      g+=leaf(q[0],q[1], side>0?(r0-30):(210-r0), sc*0.7);
     }
     return g;
   };
