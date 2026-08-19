@@ -1854,12 +1854,6 @@ body{
 .mk-de{ font-size:11px; color:var(--text-dim); margin-top:3px; line-height:1.5 }
 .mk-buy{ flex:0 0 auto; width:auto; min-width:104px; padding:12px 14px }
 .mk-buy:disabled{ opacity:.45 }
-/* 開封。**1枚ずつ間を置いて出す**(まとめて出すと引きの手応えが消える) */
-.scout-open{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px }
-.scout-open .pcard{ animation:pkPop .42s cubic-bezier(.2,1.3,.4,1) backwards }
-.scout-open .pcard:nth-child(2){ animation-delay:.28s }
-.scout-open .pcard:nth-child(3){ animation-delay:.56s }
-@keyframes pkPop{ from{ transform:scale(.7) rotate(-6deg); opacity:0 } to{ transform:none; opacity:1 } }
 
 /* **1人を指名する枠は同じタイル**(→docs/06 §6.15)。
    キャプテンもセットプレー担当も、やることは「誰に任せるか」で同じ。 */
@@ -2664,7 +2658,16 @@ body.bg-wall #app{ position:relative; z-index:1 }
   scrollbar-width:none; -webkit-overflow-scrolling:touch;
 }
 .sc-fair-row::-webkit-scrollbar{ display:none }
-.sc-fair-row .pcard{ flex:0 0 96px; width:96px }
+.sc-fair-c{ flex:0 0 96px; width:96px; cursor:pointer;
+  transition:opacity .24s, transform .24s }
+.sc-fair-c .pcard{ width:96px }
+/* **1枚ずつ入れ替える**(→§6.46)。抜けるときは奥へ、入るときは手前から */
+.sc-fair-c.out{ opacity:0; transform:translateY(-10px) scale(.90) }
+.sc-fair-c.in{ animation:fairIn .32s cubic-bezier(.2,.9,.3,1.2) }
+@keyframes fairIn{
+  from{ opacity:0; transform:translateY(14px) scale(.90) }
+  to{ opacity:1; transform:none }
+}
 /* パックの行に敷く絵。**行の右にはみ出させ、枠で切り落とす**(→§6.31 と同じ見せ方) */
 .sc-row.art{ position:relative; overflow:hidden }
 .sc-row.art>*:not(.sc-art){ position:relative; z-index:1 }
@@ -2707,10 +2710,26 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .rv-pack i::after{ bottom:9px }
 .rv-p1{ left:0;  border-radius:12px 0 0 12px }
 .rv-p2{ right:0; border-radius:0 12px 12px 0 }
+/* 封の印(→§6.46)。**斜めの二重枠**で押した印に見せる。
+   小さい字を1行置くだけだと、袋が「ラベルの付いた箱」になってしまう */
 .rv-pn{
-  position:relative; z-index:1; font:600 13px/1 var(--f-head); letter-spacing:2px;
-  color:var(--accent); text-shadow:0 1px 3px oklch(0 0 0 / .6);
+  position:relative; z-index:1;
+  font:900 30px/1 var(--f-head); letter-spacing:3px;
+  color:oklch(0.86 0.14 88); border:3px double currentColor;
+  border-radius:6px; padding:8px 14px; white-space:nowrap;
+  transform:rotate(-9deg); opacity:.88;
+  text-shadow:0 2px 5px oklch(0 0 0 / .55);
   transition:opacity .2s;
+}
+/* **大物が入っている封**。赤で押し直し、脈を打たせる */
+.rv-pn.secret{
+  font-size:21px; letter-spacing:2px;
+  color:oklch(0.66 0.24 26); transform:rotate(-7deg) scale(1.02);
+  animation:rvSeal 1.1s ease-in-out infinite;
+}
+@keyframes rvSeal{
+  0%,100%{ opacity:.86; transform:rotate(-7deg) scale(1.00) }
+  50%    { opacity:1;   transform:rotate(-7deg) scale(1.07) }
 }
 .rv-pack.shake{ animation:rvShake .62s ease-in-out }
 @keyframes rvShake{
@@ -2730,7 +2749,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   transition:opacity .28s, transform .62s cubic-bezier(.2,.9,.3,1.2);
 }
 .rv-card.out{ opacity:1; transform:translateY(0) scale(1) rotateY(0) }
-.rv-card .pcard{ width:200px }
+.rv-card .pcard{ width:200px; cursor:pointer }
 /* 段の色の光。**カードの後ろから**出す */
 .rv-burst{
   position:absolute; width:300px; height:300px; border-radius:50%;

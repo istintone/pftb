@@ -1164,7 +1164,9 @@ function renderSell(c){
     toast(r.name+" を "+fmtNum(r.coin)+" コインで売却しました");
   };
 }
-const closeCard=()=>{ _sellArm=null; $("cardModal").classList.remove("on"); };
+const closeCard=()=>{ _sellArm=null; $("cardModal").classList.remove("on");
+  // 開封から開いた詳細は、**閉じた時点で演出も片付ける**(→docs/06 §6.46)
+  if(_rvAfter){ const f=_rvAfter; _rvAfter=null; f(); } };
 /** PROFILE の紹介文。カードの属性から組み立てる(専用のテキストは持たない)。 */
 function bioOf(c){
   const n=nationById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);
@@ -1450,28 +1452,63 @@ const shortName=c=>c.sur||c.name.split(" ").slice(-1)[0];
 // ---------- SCOUT(→docs/03 §3.22) ----------
 // **コインで引くパック。** 稼ぎをいつ補強に回すかを監督に選ばせる。
 /**
- * 見本市(→docs/06 §6.46)。**まだ持っていない実在選手を並べて見せる**。
- * 「何が入っているのか」が分からないままコインを積むのは、賭けであって補強ではない。
+ * 見本市(→docs/06 §6.46)。**まだ持っていない実在選手を並べ、少しずつ入れ替える**。
+ * 何が入っているのか分からないままコインを積むのは、補強ではなく賭けになる。
  *
- * **節から決まる**ので、画面を開き直しても顔ぶれは変わらない。毎回引き直せると、
- * 見本市が「当たりを探す場所」になってしまう。
+ * **並びの始まりは節から決まる**(開くたびに総入れ替えだと落ち着かない)が、
+ * そこからは時間で送っていく。止めて眺めるものではなく、流れている棚にしたい。
  */
+let _fairQ=[], _fairIx=0, _fairT=null;
 function renderScoutFair(){
   const box=$("scoutFair"); if(!box)return;
+  fairStop();
   const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
   const pool=signatureCards().filter(c=>!mine.has(c.sig)
     &&(c.rarity==="WC"||c.rarity==="LEG"));
   if(!pool.length){ box.innerHTML=""; return; }
+  // **節のたねで並べ替える**。以後はこの列を頭から順に送る
   const rng=mulberry32((S.world.seed^hashStr("fair:"+(S.career?S.career.node:0)))>>>0);
-  const p=pool.slice(), pick=[];
-  for(let i=0;i<4&&p.length;i++)pick.push(p.splice(Math.floor(rng()*p.length),1)[0]);
+  _fairQ=pool.slice();
+  for(let i=_fairQ.length-1;i>0;i--){
+    const j=Math.floor(rng()*(i+1));
+    const t=_fairQ[i]; _fairQ[i]=_fairQ[j]; _fairQ[j]=t;
+  }
+  const n=Math.min(TUNING.fair.n,_fairQ.length);
+  _fairIx=n;
   box.innerHTML='<div class="sc-fair-h"><span class="eyebrow">SHOWCASE</span>'
     +'<span class="lg">いま出会える切り札</span></div>'
-    +'<div class="sc-fair-row">'+pick.map(c=>cardTile(c)).join("")+'</div>';
-  box.querySelectorAll("[data-card]").forEach((el,i)=>{
-    el.onclick=()=>openCard(pick[i]);
+    +'<div class="sc-fair-row">'
+    +_fairQ.slice(0,n).map(c=>'<div class="sc-fair-c">'+cardTile(c)+'</div>').join("")
+    +'</div>';
+  box.querySelectorAll(".sc-fair-c").forEach((el,i)=>{ el._card=_fairQ[i]; });
+  bindFair();
+  if(_fairQ.length>n)_fairT=setInterval(fairTick,TUNING.fair.ms);
+}
+function bindFair(){
+  const box=$("scoutFair"); if(!box)return;
+  box.querySelectorAll(".sc-fair-c").forEach(cell=>{
+    cell.onclick=()=>{ const c=cell._card; if(c)openCard(c); };
   });
 }
+/** 1枚だけ入れ替える。**同時に何枚も変えない**(どこを見ればいいのか分からなくなる)。 */
+function fairTick(){
+  const box=$("scoutFair"), scr=$("scr-gacha");
+  // **画面を離れたら自分で止まる**。画面ごとの後始末が要らない
+  if(!box||!scr||!scr.classList.contains("on")||!_fairQ.length){ fairStop(); return; }
+  const cells=box.querySelectorAll(".sc-fair-c");
+  if(!cells.length){ fairStop(); return; }
+  const slot=cells[_fairIx%cells.length];
+  const c=_fairQ[_fairIx%_fairQ.length];
+  _fairIx++;
+  slot.classList.add("out");
+  setTimeout(()=>{
+    slot.innerHTML=cardTile(c); slot._card=c;
+    slot.classList.remove("out"); slot.classList.add("in");
+    setTimeout(()=>slot.classList.remove("in"),320);
+  },240);
+}
+function fairStop(){ if(_fairT){ clearInterval(_fairT); _fairT=null; } }
+
 /**
  * パックのタイルに敷く選手の絵(→§6.46)。**その段で出る絵**から1枚。
  * 値段と説明だけの行が3つ並ぶと、どれも同じ重さに見えて選ぶ気にならない。
@@ -1493,15 +1530,21 @@ function scoutArt(pk){
  * **いつでも飛ばせる。** 演出は2度目からは邪魔になるので、
  * タップで最後まで送り、もう一度タップで閉じる。
  */
-let _rvT=[], _rvDone=null;
+let _rvT=[], _rvDone=null, _rvAfter=null;
 function revealCards(cards,label){
   const box=$("scoutReveal");
   if(!box||!cards||!cards.length)return;
-  _rvT.forEach(clearTimeout); _rvT=[];
+  _rvT.forEach(clearTimeout); _rvT=[]; _rvAfter=null;   // 前回の後始末を残さない
   const c=cards[0];                                  // パックは1枚(→§3.22)
-  $("rvPackName").textContent=label||"SCOUT";
+  // **封の印**(→docs/06 §6.46)。実在選手の WC / LEGENDS を引いたときだけ
+  // 「TOP SECRET!!!」になる。**開ける前に分かる**のが、この演出のいちばんの山
+  const big=!!c.sig&&(c.rarity==="WC"||c.rarity==="LEG");
+  const pn=$("rvPackName");
+  pn.textContent=big?"TOP SECRET!!!":"SCOUT!";
+  pn.className="rv-pn"+(big?" secret":"");
   $("rvCard").innerHTML=cardTile(c);
   $("rvCard").className="rv-card";
+  $("rvCard").onclick=e=>{ e.stopPropagation(); if(_rvDone)_rvDone(); else rvOpenCard(c); };
   $("rvCap").innerHTML="";
   $("rvBurst").className="rv-burst";
   $("rvBurst").style.setProperty("--rar","var(--rar-"+c.rarity.toLowerCase()+")");
@@ -1522,15 +1565,17 @@ function revealCards(cards,label){
     _rvDone=null;
   };
 }
+/** 出たカードを押したら詳細へ。**閉じるとそのまま演出ごと消える**(→§6.46)。 */
+function rvOpenCard(c){ _rvAfter=closeReveal; openCard(c); }
 function showRvCap(c){
   $("rvCap").innerHTML='<b class="rv-rar r-'+c.rarity.toLowerCase()+'">'
     +esc(RARITY[c.rarity].label)+'</b>'
     +'<span class="rv-nm">'+esc(shortName(c))+'</span>'
     +'<span class="rv-sub">'+esc(primarySub(c))+' ／ OVR '+c.ovr+'</span>';
-  $("rvHint").textContent="タップで閉じる";
+  $("rvHint").textContent="カードを押すと詳細 ／ 外を押すと閉じる";
 }
 function closeReveal(){
-  _rvT.forEach(clearTimeout); _rvT=[]; _rvDone=null;
+  _rvT.forEach(clearTimeout); _rvT=[]; _rvDone=null; _rvAfter=null;
   $("scoutReveal").classList.remove("on","open","lit");
   $("rvHint").textContent="タップでスキップ";
 }
@@ -1572,13 +1617,6 @@ function renderScout(){
     el.onclick=()=>useTicket(el.dataset.ticket,el.dataset.pos||null);
   });
   renderScoutFair();
-  drawScoutGot();
-}
-function drawScoutGot(){
-  $("scoutOpen").innerHTML=_scoutGot?_scoutGot.map(c=>cardTile(c)).join(""):"";
-  $("scoutOpen").querySelectorAll("[data-card]").forEach((el,i)=>{
-    el.onclick=()=>openCard(_scoutGot[i]);
-  });
 }
 /**
  * 引換券を使う(→docs/03 §3.42 / §3.40a)。**コインは減らない**。

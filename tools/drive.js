@@ -2169,7 +2169,8 @@ const STEPS = [
       const btn=document.querySelector('#scoutList [data-pack="focus"]');
       if(btn.disabled)throw new Error('コインが足りているのに押せない');
       btn.click();
-      const got=document.querySelectorAll('#scoutOpen .pcard');
+      // **出たカードは開封の演出の中に居る**(→docs/06 §6.46)。一覧の下には置かない
+      const got=document.querySelectorAll('#rvCard .pcard');
       const pk=TUNING.scout.find(p=>p.id==='focus');
       if(got.length!==pk.cards)throw new Error('出た枚数が違う: '+got.length);
       if(S.player.coll.length!==N0+pk.cards)throw new Error('所持カードが増えていない');
@@ -2184,6 +2185,7 @@ const STEPS = [
     })()`));
     await ctx.wait(900);
     await ctx.shot("21-scout-open");
+    await ctx.js("closeReveal()");
 
     // プロスカウト(→docs/03 §3.26)。**3枚とも SPECIALS 以上**で、まれに WORLD CLASS
     ctx.log("プロスカウト:", await ctx.js(`(()=>{
@@ -2309,7 +2311,13 @@ const STEPS = [
       renderScoutFair();
       if(document.getElementById('scoutFair').innerHTML!==a)
         throw new Error('開き直すと顔ぶれが変わる');
-      return n+'枚 ／ パックの絵 '+art+'件 ／ 開き直しても同じ';
+      // **時間で1枚ずつ入れ替わる**(→§6.46)
+      const before=[...document.querySelectorAll('#scoutFair .sc-fair-c')]
+        .map(e=>e._card&&e._card.sig);
+      fairTick();
+      if(!document.querySelector('#scoutFair .sc-fair-c.out'))
+        throw new Error('入れ替えが始まらない');
+      return n+'枚 ／ パックの絵 '+art+'件 ／ 開き直しても同じ ／ 先頭 '+before[0];
     })()`));
     await ctx.shot("20e-scout-fair");
     ctx.log("  開封:", await ctx.js(`(()=>{
@@ -2319,12 +2327,25 @@ const STEPS = [
       const rv=document.getElementById('scoutReveal');
       if(!rv.classList.contains('on'))throw new Error('演出が出ない');
       if(!document.querySelector('#rvCard .pcard'))throw new Error('カードが入っていない');
+      // **封の印は中身で変わる**。実在の WC/LEG のときだけ TOP SECRET
+      const c=S.player.coll[S.player.coll.length-1];
+      const pn=document.getElementById('rvPackName');
+      const big=!!c.sig&&(c.rarity==='WC'||c.rarity==='LEG');
+      if(pn.textContent!==(big?'TOP SECRET!!!':'SCOUT!'))
+        throw new Error('封の印が合わない: '+pn.textContent);
+      if(pn.classList.contains('secret')!==big)throw new Error('封の印の色が合わない');
       rv.click();                                    // 1回目は最後まで送る
       if(!rv.classList.contains('lit'))throw new Error('飛ばしても終わらない');
       const cap=document.getElementById('rvCap').textContent;
-      rv.click();                                    // 2回目で閉じる
-      if(rv.classList.contains('on'))throw new Error('閉じられない');
-      return '袋→カード ／ 1回で送り、2回で閉じる ／ '+cap.slice(0,20);
+      // **カードを押すと詳細**。閉じると演出ごと消える
+      document.getElementById('rvCard').click();
+      if(!document.getElementById('cardModal').classList.contains('on'))
+        throw new Error('カードを押しても詳細が出ない');
+      closeCard();
+      if(rv.classList.contains('on'))throw new Error('詳細を閉じても演出が残る');
+      // **引いた結果の置き場は無い**(CARDS で見る)
+      if(document.getElementById('scoutOpen'))throw new Error('結果の置き場が残っている');
+      return '袋→カード ／ 印 '+pn.textContent+' ／ 押すと詳細→閉じて消える ／ '+cap.slice(0,16);
     })()`));
     await ctx.wait(200);
   }],
