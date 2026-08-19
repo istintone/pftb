@@ -2199,8 +2199,13 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .tb-note{ margin-top:6px; font-size:10px; color:var(--text-dim) }
 .tb-note.warn{ color:var(--accent-hi) }
 
+/* **節の枠はどれも同じ高さ**(→docs/06 §6.40)。
+   済んだ節は「相手＋節・HOME/AWAY」の2行、予定と空枠は1行しかないため、
+   放っておくと 28 / 39 / 42 / 60px が混ざって並びが不揃いに見える。
+   **いちばん背の高い「済んだ節」を基準**にそろえる(2行ぶん + 上下の余白)。 */
 .cal{
   display:flex; align-items:center; gap:10px; padding:9px 10px; margin-bottom:6px;
+  min-height:60px;
   background:var(--panel); border:1px solid var(--line); border-radius:10px;
 }
 .cal-n{ width:26px; text-align:center; font-size:10px; color:var(--text-dim); flex-shrink:0 }
@@ -2580,8 +2585,9 @@ body.bg-wall #app{ position:relative; z-index:1 }
 }
 /* 予定が確定している枠(カップの連戦など) */
 .cal.planned{ border-color:var(--accent-dim); background:oklch(0.20 0.03 85 / .18) }
-/* 空枠は詰めて出す(96〜120枠あるため) */
-.cal.none{ padding:5px 10px; margin-bottom:3px }
+/* 空枠。**高さは詰めない**(→docs/06 §6.40)。96〜120枠あるので以前は
+   padding を削っていたが、そこだけ背が低いと並びが不揃いに見える。
+   字だけ落として、枠の大きさは他の節と同じにする */
 .cal.none .cal-b b{ font-size:10px; color:var(--text-mute); font-weight:400 }
 .hands{ display:flex; gap:6px; margin-bottom:8px }
 .hand{
