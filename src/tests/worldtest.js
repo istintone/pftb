@@ -391,5 +391,45 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   assert.strictEqual(E.offersFor(999999).length, E.CLUBS.length, "名声が十分なら全クラブが開く");
   console.log("名声の階段OK 名声0:", E.offersFor(0).length, "クラブ / 上限:", E.CLUBS.length);
 
+  // ---------- クラブの顔は名前から決まる(→docs/03 §3.54d) ----------
+  {
+    let named = 0, crest = 0;
+    const seen = new Set();
+    for (const c of E.CLUBS) {
+      const d = E.embDesign(c.id, c.name);
+      // **色は必ず引ける**。引けないと盤面もエンブレムも既定色に落ちる
+      assert.ok(E.embHueById(d.home), c.name + " のホームカラーが引けない: " + d.home);
+      assert.ok(E.embHueById(d.away), c.name + " のアウェイカラーが引けない: " + d.away);
+      assert.ok(E.EMB_CRESTS.includes(d.crest), c.name + " の紋章が一覧に無い: " + d.crest);
+      assert.ok(E.EMB_LAYS.includes(d.lay), c.name + " の並べ方が一覧に無い: " + d.lay);
+      if (E.EMB_WORDS.some(w => c.name.includes(w[0]))) named++;
+      if (d.crest !== "none") crest++;
+      seen.add([d.shape, d.field, d.crest, d.orn, d.lay, d.home, d.away, d.text].join("/"));
+    }
+    // **全クラブが名前から引ける**。ここが欠けると、そのクラブだけ乱数の色になる
+    assert.strictEqual(named, E.CLUBS.length, "名前から引けないクラブがある");
+    assert.strictEqual(seen.size, E.CLUBS.length, "同じ顔のクラブがある: " + seen.size);
+
+    // **名前が別の生き物を名乗るクラブに、紋章を当てない**(カナリーズに獅子を付けない)
+    for (const w of E.EMB_WORDS.filter(x => x[3] === "")) {
+      for (const c of E.CLUBS.filter(x => x.name.includes(w[0]))) {
+        assert.strictEqual(E.embDesign(c.id, c.name).crest, "none",
+          c.name + " は「" + w[0] + "」を名乗るので紋章を付けない");
+      }
+    }
+    // **名乗った意匠は必ず出る**
+    const say = [["レオン", "lion"], ["ガナーズ", "cannon"], ["グリフォーニ", "griffin"],
+                 ["アドラー", "eagle"], ["ヴィオラ", "fleur"]];
+    for (const [w, k] of say) {
+      const c = E.CLUBS.find(x => x.name.includes(w));
+      assert.strictEqual(E.embDesign(c.id, c.name).crest, k, c.name + " は " + k);
+    }
+    // **盤面の色もエンブレムと同じ**(片方だけ別の色にしない)
+    const c0 = E.CLUBS[0], h0 = E.embHueById(E.embDesign(c0.id, c0.name).home);
+    assert.strictEqual(E.clubColor(c0.id), h0.hex, "盤面の色がエンブレムと違う");
+    console.log("クラブの顔OK " + E.CLUBS.length + "件すべて名前から ／ 紋章 " + crest
+      + "件 ／ 顔はすべて別 ／ 盤面の色も同じ");
+  }
+
   process.exit(0);
 })().catch(e => { console.error("FAIL:", e); process.exit(1); });

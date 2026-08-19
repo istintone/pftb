@@ -2600,10 +2600,12 @@ const STEPS = [
         // エンブレム(→docs/03 §3.54)。**絵を持たずに描く**ので、
         // クラブを足しても素材は要らない
         ctx.log("  エンブレム:", await ctx.js(`(()=>{
-          // 144クラブが全部ちがう顔になる
+          // 144クラブが全部ちがう顔になる。**顔を決める要素を全部入れて数える**
+          // (色と文字の並べ方も顔のうち。形と柄と紋章だけだと、色違いを同じと数える)
           const seen=new Set(CLUBS.map(c=>{ const d=embDesign(c.id,c.name);
-            if(!d.shape||!d.field||!d.crest)throw new Error('意匠が欠けている: '+c.id);
-            return d.shape+'/'+d.field+'/'+d.crest+'/'+d.text; }));
+            if(!d.shape||!d.field||!d.crest||!d.home||!d.away||!d.lay)
+              throw new Error('意匠が欠けている: '+c.id);
+            return [d.shape,d.field,d.crest,d.orn,d.lay,d.home,d.away,d.text].join('/'); }));
           if(seen.size!==CLUBS.length)
             throw new Error('同じ顔のクラブがある: '+seen.size+' / '+CLUBS.length);
           // 頭文字はラテン(カタカナを盾に入れない)

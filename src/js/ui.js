@@ -2634,23 +2634,23 @@ function titleWall(){
 const CLUB_L=0.78, CLUB_C=0.22;   // **ビビッドに**(→docs/06 §6.45)
 const clubHue=clubId=>((CLUBS.findIndex(c=>c.id===clubId)*137.5+20)%360).toFixed(1);
 /**
- * クラブの色。**自分のクラブでホームカラーを選んでいればそれを使う**
- * (→docs/03 §3.54)。エンブレムだけ選んだ色で、ピッチの影が別の色、を作らない。
+ * クラブの色。**エンブレムのホームカラーと同じ**(→docs/03 §3.54d)。
+ *
+ * 以前は並び順から色相を振っていたので、盤面は虹色で、エンブレムとも別物だった。
+ * いまは名前から引いた色(→embDesign)を1か所から配る。**マンチェスター・レッズは
+ * どこで見ても赤**になり、クラブを足しても他の色がずれない。
  */
+const clubHueOf=clubId=>{
+  const c=clubById(clubId);
+  return c?embHueById(embDesign(c.id,c.name).home):null;
+};
 function clubColor(clubId){
-  const p=embPickedHue(clubId);
-  // 選んだ色は hex をそのまま。選んでいなければ色相から作る
+  const p=clubHueOf(clubId);
   return p?p.hex:"oklch("+CLUB_L+" "+CLUB_C+" "+clubHue(clubId)+")";
 }
-/** 自分のクラブが選んでいるホームの色相(選んでいなければ null)。 */
-function embPickedHue(clubId){
-  if(!S.club||S.club.id!==clubId||!S.club.emblem)return null;
-  return embHueById(S.club.emblem.home);
-}
-/** その丸の上に載せる字の色。明るい地なので**暗い側**で取る。 */
+/** その色の上に載せる字の色。**地の明るさで決める**(白の上に白を置かない)。 */
 function clubInk(clubId){
-  const p=embPickedHue(clubId);
-  // **地の明るさで決める**。インクカラーは非常に明るいものがある
+  const p=clubHueOf(clubId);
   if(p)return embLum(p.hex)>=0.62?"#1A1A1E":"#FFFFFF";
   return "oklch(0.26 0.06 "+clubHue(clubId)+")";
 }

@@ -87,6 +87,124 @@ const EMB_PATH={
 };
 
 /**
+ * クラブ名から読み取る顔(→docs/03 §3.54d)。**名前が既に答えを持っている。**
+ *
+ * クラブ名は実在クラブの愛称をもとにしていて、**色と生き物の語が入っている**。
+ * 「ミラノ・ロッソネーリ」は赤と黒、「レシフェ・レオン」は獅子、
+ * 「ロンドン・ガナーズ」は大砲。ここに乱数を当てる理由がない。
+ *
+ *   [語, ホーム, アウェイ, 紋章]  … アウェイと紋章は省略可
+ *
+ * 紋章の欄は3通り。**意匠名**なら出す、**空文字**なら何も出さない(その語は
+ * 紋章に無い生き物を名乗っている)、**省略**ならハッシュに任せる。
+ *
+ * **上から順に見て、最初に当たったものを使う。** 複合語を先に置くこと
+ * (`ロッソネーリ` を `ロッソ` より先に見ないと、黒が落ちる)。
+ */
+const EMB_WORDS=[
+  // --- 2色を名乗るもの。**まとめて言い切っている**ので最優先 ---
+  ["ビアンコネーリ","white","black"],   ["ロッソネーリ","red","black"],
+  ["ネラッズーリ","royal","black"],     ["ジャッロロッシ","crimson","gold"],
+  ["ジャッロブル","gold","royal"],      ["ロッソブル","red","royal"],
+  ["ロザネロ","ink-pink","black"],      ["アランチョネロ","orange","black"],
+  ["シュヴァルツゲルプ","gold","black"],["グリューンヴァイス","green","white"],
+  ["ルージュブラン","red","white"],     ["ルージュノワール","red","black"],
+  ["マリーヌエブラン","navy","white"],  ["シエルエマリーヌ","sky","navy"],
+  ["ブランキビオレタ","white","purple"],["ロヒブランコス","red","white"],
+  ["フランヒベルデス","white","green"], ["ブラウグラナ","maroon","royal"],
+  ["ルブロネグロ","red","black"],       ["フーブロネグロ","red","black"],
+  ["スカイブルーズ","sky","white"],     ["ブラックキャッツ","black","red",""],
+  // --- 生き物・意匠を名乗るもの。**紋章はここで決まる** ---
+  ["ガナーズ","red","white","cannon"],
+  ["グリフォーニ","red","navy","griffin"],
+  ["アドラー","black","red","eagle"],       ["エーグロン","red","black","eagle"],
+  ["ライオンズ","crimson","white","lion"],  ["レオネス","red","white","lion"],
+  ["レーヴェン","gold","royal","lion"],     ["レオン","red","black","lion"],
+  ["カヴァルッチ","white","black","horse"], ["フォーレン","white","green","horse"],
+  ["リコルヌ","white","royal","horse"],
+  ["ローテトイフェル","red","white","dragon"],
+  ["オリンピアン","sky","white","athena"],  ["オリンピスタ","white","black","athena"],
+  ["レアレス","royal","white","crown"],     ["ヴィオラ","purple","white","fleur"],
+  // --- 色の語。**綴りの長いほうを先に** ---
+  ["ブランコス","white","royal"],  ["ブランキ","white","royal"],
+  ["ホワイツ","white","royal"],    ["ヴァイス","white","red"],
+  ["ブラン","white","royal"],
+  ["マグパイズ","black","white",""],  ["シュヴァルツ","black","gold"],
+  ["ノワール","black","white"],    ["ネグロ","black","white"],
+  ["チマォン","black","white"],    ["カルボネーロ","black","gold"],
+  ["ガロ","black","white",""],        ["スコイスト","black","white"],
+  ["レッズ","red","white"],        ["ローテン","red","white"],
+  ["ローテ","red","white"],        ["ルージュ","red","white"],
+  ["ロヒ","red","white"],          ["コロラド","red","white"],
+  ["ベルメジョネス","red","black"],["ロッソ","red","white"],
+  ["コップ","red","white"],        ["ブレイズ","red","white"],
+  ["セインツ","red","white"],      ["ポッターズ","red","white",""],
+  ["グラナータ","maroon","white"], ["グルナ","maroon","white"],
+  ["ヴィランズ","maroon","sky"],
+  ["ジャッロ","gold","royal"],     ["アマリージョス","gold","royal"],
+  ["カナリーズ","gold","green",""],   ["カナリーニ","gold","royal",""],
+  ["カナリ","gold","green",""],       ["スブマリノ","gold","royal",""],
+  ["アティグレス","gold","black",""], ["ボンボネーラ","royal","gold"],
+  ["カナージャ","royal","gold"],
+  ["タイガース","orange","black",""], ["メルル","orange","black",""],
+  ["ヴェルダン","green","white"],  ["ヴェール","green","white"],
+  ["ベルデ","green","white"],      ["ベティコス","green","white"],
+  ["エスメラウジーノ","green","white"], ["アスカレロス","green","white"],
+  ["フッゲライ","green","white"],  ["ラシンギスタス","white","green"],
+  ["カリファレス","white","green"],
+  ["フォレスターズ","forest","white"],  ["パイルグリムズ","forest","white"],
+  ["スカイ","sky","white"],        ["セレステス","sky","white"],
+  ["チェレスティ","sky","white"],  ["パルテノペイ","sky","white"],
+  ["シーガルズ","sky","white",""],
+  ["マリーヌ","navy","white"],     ["キャピタル","navy","red"],
+  ["スパーズ","white","navy"],     ["ドーグ","red","navy",""],
+  ["ヴィオレ","purple","white"],
+  ["ブルーズ","royal","white"],    ["アッズッリ","royal","white"],
+  ["ブル","royal","white"],
+  // --- 色を名乗ってはいないが、由来のはっきりするもの ---
+  ["コルチョネロス","red","white"],  ["ネルビオン","white","red"],
+  ["ナサリエス","red","white"],      ["ピメントネロス","red","white"],
+  ["チェ","white","orange"],         ["マニョス","white","royal"],
+  ["マンチェゴス","white","royal"],  ["チチャレロス","royal","white"],
+  ["アスレホス","royal","white"],    ["カルバジョネス","royal","white"],
+  ["フォクシーズ","royal","white",""],  ["ホーネッツ","gold","black",""],
+  ["ローヴァーズ","royal","white"],  ["トラクターズ","royal","white",""],
+  ["オロビチ","royal","black"],      ["フリウラーニ","white","black"],
+  ["イゾラーニ","crimson","royal"],  ["ガッレッティ","white","red"],
+  ["デルフィーニ","royal","white",""],  ["クロチャーティ","white","royal"],
+  ["ロンディネッレ","royal","white",""],
+  ["ヴェルクセルフ","red","black"],  ["クナッペン","royal","white"],
+  ["ガイスボック","white","red",""],    ["ハウプトシュテッター","royal","white"],
+  ["アルトマイスター","crimson","white"], ["ウンアプシュタイクバー","royal","white"],
+  ["ライン","red","white"],          ["エルプフローレンツ","gold","black"],
+  ["オストゼー","royal","white"],    ["アルミネン","royal","white"],
+  ["ルールポット","red","white"],
+  ["ゴーヌ","white","royal"],        ["サンエオール","red","white"],
+  ["アルザシアン","royal","white"],  ["パイヨラン","royal","orange"],
+  ["アイジェオワ","white","royal"],  ["ピラート","red","white",""],
+  ["ムタルディエ","red","white",""],    ["ドーファン","royal","white",""],
+  ["ミジョナリオス","white","red"],  ["ペイシェ","white","black",""],
+  ["トリコロール","red","royal"],    ["コエーリョ","royal","white",""],
+  ["レプロ","red","black"],          ["エスカラーダ","royal","red"],
+  ["ヴォゾン","royal","red"],        ["アルボレータ","white","royal"],
+  ["クレマ","white","crimson"],
+];
+/** 名前に入っている語。**最初に当たったもの**を返す(無ければ null)。 */
+const embWordOf=name=>EMB_WORDS.find(w=>String(name||"").includes(w[0]))||null;
+/**
+ * 語を持たないクラブの色(→§3.54d)。**サッカーで実際に使う13色から引く**。
+ * インクカラーまで混ぜると、CPUのクラブが蛍光色だらけになってサッカーに見えない。
+ */
+const EMB_CLASSIC=["red","crimson","maroon","orange","gold","green","forest",
+                   "sky","royal","navy","purple","black","white"];
+/** 地の色に対して**読める相方**。明るい地には暗い柄、暗い地には白を返す。 */
+const embMate=id=>{
+  const H=embHueById(id);
+  if(!H)return "white";
+  return embLum(H.hex)>=0.55?"navy":"white";
+};
+
+/**
  * カタカナ → ラテン文字(→docs/03 §3.54)。**頭の1音だけ**を引く。
  * クラブ名は日本語なので、そのまま盾に入れるとカタカナが窮屈に収まる。
  * 実在クラブの紋章にならって、**2文字のモノグラム**にする。
@@ -281,17 +399,29 @@ function embDesign(clubId,name){
   // **符号なしでずらす**。hashStr は 32bit いっぱいを返すので、`>>` だと
   // 負になって配列の外(undefined)を引く。実際に地の柄が消えた
   const h=hashStr("emb:"+clubId);
+  const w=embWordOf(name);                           // 名前が名乗っている顔(→§3.54d)
   const d={
     shape:EMB_SHAPES[h%EMB_SHAPES.length],
     field:EMB_FIELDS[(h>>>5)%EMB_FIELDS.length],
-    // **既定は文字**。紋章は3回に1回くらい出る(全部が紋章だと名前が読めない)
-    crest:((h>>>9)%3===0)?EMB_CRESTS[1+((h>>>11)%(EMB_CRESTS.length-1))]:"none",
+    // **既定は文字**。紋章は3回に1回くらい出る(全部が紋章だと名前が読めない)。
+    // ただし**名前が紋章を名乗っていれば必ずそれを出す**(→§3.54d)
+    // 紋章は3段階(→§3.54d)。
+    //   語が意匠を名乗る    → それを出す(レオン → 獅子)
+    //   語が別の生き物を名乗る → **何も出さない**("" 印。カナリーズに獅子は付けない)
+    //   どちらでもない      → 3回に1回くらいハッシュで出す
+    crest:(w&&w[3])?w[3]
+      :(w&&w[3]==="")?"none"
+      :((h>>>9)%3===0)?EMB_CRESTS[1+((h>>>11)%(EMB_CRESTS.length-1))]:"none",
     // 外装も3回に1回くらい。**全部に王冠を載せると格が語れなくなる**
     orn:((h>>>15)%3===0)?EMB_ORNS[1+((h>>>17)%(EMB_ORNS.length-1))]:"none",
     // 文字の並べ方(→§3.54c)。横・縦・斜めの3通り
     lay:EMB_LAYS[(h>>>21)%EMB_LAYS.length],
     text:embMonogram(name),
+    // **色も名前から引く**(→§3.54d)。名乗っていなければサッカーで使う13色から、
+    // クラブIDで決まる1色を当てる(並び順ではないので、クラブを足してもずれない)
+    home:(w&&w[1])||EMB_CLASSIC[(h>>>25)%EMB_CLASSIC.length],
   };
+  d.away=(w&&w[2])||embMate(d.home);
   const out=mine?{ ...d, ...mine, text:mine.text||d.text }:d;
   // **一覧から消えた指定は既定へ戻す**(→§3.54c)。紋章を廃止したとき、
   // 昔の保存が指したままだと、紋章も文字も出ない空の盾になる
