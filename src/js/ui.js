@@ -4426,13 +4426,16 @@ function renderCrestPick(){
     +row("shape",EMB_SHAPES,"かたち",v=>mini({shape:v}))
     +row("field",EMB_FIELDS,"地の柄",v=>mini({field:v}))
     +row("crest",EMB_CRESTS,"紋章",v=>mini({crest:v}))
+    // 文字の並べ方(→§3.54c)。**紋章を「なし」にしたときだけ効く**ので、
+    // 見本も文字で描く(紋章を出したままだと何も変わらないように見える)
+    +row("lay",EMB_LAYS,"文字の並べ方",v=>mini({lay:v,crest:"none"}))
     // 外装は**盾の外にはみ出す**ので、見本は盾より一回り大きく描く(→§3.54)
     +row("orn",EMB_ORNS,"外装",v=>mini({orn:v}));
   $("crestPick").querySelectorAll("[data-k]").forEach(el=>{
     el.onclick=()=>{
       const cur=embDesign(id,nm);
       S.club.emblem={ shape:cur.shape, field:cur.field, crest:cur.crest, text:cur.text,
-        orn:cur.orn, home:cur.home||null, away:cur.away||null };
+        orn:cur.orn, lay:cur.lay, home:cur.home||null, away:cur.away||null };
       S.club.emblem[el.dataset.k]=el.dataset.v;
       // **色は盤面にも効く**ので、開いている画面を描き直す(→docs/03 §3.54)
       renderCrestPick(); renderClubCrest(); headUI(); save();

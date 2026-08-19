@@ -2626,7 +2626,7 @@ const STEPS = [
             throw new Error('押しても組み替えられない');
           const btns=[...document.querySelectorAll('#crestPick [data-k]')];
           const want=EMB_SHAPES.length+EMB_FIELDS.length+EMB_CRESTS.length
-            +EMB_ORNS.length+EMB_HUES.length*2;
+            +EMB_ORNS.length+EMB_LAYS.length+EMB_HUES.length*2;
           if(btns.length!==want)
             throw new Error('選べる数が合わない: '+btns.length+' / 期待 '+want);
           // **色は盤面にも効く**(→docs/03 §3.54)。エンブレムだけ別色にしない

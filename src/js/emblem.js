@@ -9,10 +9,15 @@
 const EMB_SHAPES=["shield","round","oval","pointed","banner"];
 const EMB_FIELDS=["solid","stripe","half","quarter","sash","hoop","chevron","cross","saltire"];
 // 紋章。**文字の代わりに置ける**(→docs/03 §3.54)。どれも 100x100 の中で完結させる。
-// 生き物と器物の大半は**描いた意匠を輪郭追跡してパスにしたもの**(→§3.54b / EMB_ART)。
-// 星・ボール・剣・稲妻だけは幾何で組んだほうが綺麗なので手で持っている。
-const EMB_CRESTS=["none","star","crown","eagle","lion","horse","helm","ball","tower","sword","bolt",
+// 中身は**描いた意匠を輪郭追跡してパスにしたもの**(→§3.54b / EMB_ART)。
+// 星だけは直線と角度で決まるので手で持っている。
+//
+// 剣・稲妻・塔・ボールは**外した**(→§3.54c)。幾何で組んだ形は、輪郭で語る意匠と
+// 並ぶと絵の密度が違いすぎて浮く。星は単純すぎるので逆に浮かない。
+const EMB_CRESTS=["none","star","crown","eagle","lion","horse","helm",
                   "dragon","fleur","cannon","griffin","wyvern","athena"];
+// 文字の並べ方(→§3.54c)。**2文字をどう置くか**で、紋章を持たないクラブにも個性が出る
+const EMB_LAYS=["row","col","diag"];
 
 /**
  * 選べる色(→docs/03 §3.54)。**色相だけ持つ**ので、明るさと彩度は
@@ -132,6 +137,27 @@ function embMonogram(name){
  *   ・盾いっぱいに大きく置く
  * の3点で「本物らしさ」が決まる。曲線を減らし、直線と鋭角で組み直してある。
  */
+/**
+ * モノグラムの並べ方(→docs/03 §3.54c)。**横・縦・斜めの3通り**。
+ * 紋章を持たないクラブは3分の2あるので、文字の置き方だけで顔が変わると効きが大きい。
+ *
+ * 縦と斜めは**1文字ずつ置く**。`<text>` に改行は無く、`textLength` で潰すと字が歪む。
+ */
+function embTextPath(lay,text,ink,edge){
+  const t=String(text||"");
+  const font=' font-family="Georgia,&apos;Times New Roman&apos;,serif" font-weight="700"'
+    +' text-anchor="middle" fill="'+ink+'" stroke="'+edge+'"'
+    +' stroke-width="5" paint-order="stroke"';
+  const one=(ch,x,y,sz,rot)=>'<text x="'+x+'" y="'+y+'" font-size="'+sz+'"'
+    +(rot?' transform="rotate('+rot+' '+x+' '+y+')"':"")+font+'>'+esc(ch)+'</text>';
+  if(lay==="col")
+    // 縦積み。**字を少し小さく**しないと、盾のすぼまりに肩が当たる
+    return one(t[0]||"",50,45,34)+one(t[1]||"",50,81,34);
+  if(lay==="diag")
+    // 斜め。**たすき(sash)と同じ向き**に流すので、地の柄と喧嘩しない
+    return one(t[0]||"",34,44,34,-30)+one(t[1]||"",66,74,34,-30);
+  return '<text x="50" y="65" font-size="40" letter-spacing="-2"'+font+'>'+esc(t)+'</text>';
+}
 function embCrestPath(kind,ink,edge){
   const st=' fill="'+ink+'" stroke="'+edge+'" stroke-width="2.2" paint-order="stroke"';
   const cut=' fill="'+edge+'"';
@@ -146,21 +172,6 @@ function embCrestPath(kind,ink,edge){
     // 星(マレット)。**5つの尖りを細長く**。太いと漫画の星になる
     case "star":  return '<path d="M50 16 L57.5 41 L84 41 L62.5 56.5 L70.5 82 L50 66.5'
                         +' L29.5 82 L37.5 56.5 L16 41 L42.5 41 Z"'+st+'/>';
-    // サッカーボール。**五角形と接する六角を抜く**。丸だけだと風船に見える
-    case "ball":  return '<circle cx="50" cy="50" r="26"'+st+'/>'
-                        +'<path d="M50 34 L61 42 L57 55 L43 55 L39 42 Z"'+cut+'/>'
-                        +'<path d="M50 24 L44 32 L56 32 Z"'+cut+'/>'
-                        +'<path d="M27 44 L36 40 L33 50 Z"'+cut+'/>'
-                        +'<path d="M73 44 L67 50 L64 40 Z"'+cut+'/>'
-                        +'<path d="M36 72 L41 62 L48 68 Z"'+cut+'/>'
-                        +'<path d="M64 72 L52 68 L59 62 Z"'+cut+'/>';
-    // 剣。**十字の護拳**を付けると紋章らしい
-    case "sword": return '<path d="M50 12 L56 24 V56 H44 V24 Z"'+st+'/>'
-                        +'<path d="M28 56 H72 V64 H28 Z"'+st+'/>'
-                        +'<path d="M46 64 H54 V78 H46 Z"'+st+'/>'
-                        +'<path d="M40 78 H60 V86 H40 Z"'+st+'/>';
-    // 稲妻。**折れを鋭く**
-    case "bolt":  return '<path d="M58 14 L30 56 H46 L40 86 L70 42 H54 Z"'+st+'/>';
     default:      return "";
   }
 }
@@ -277,9 +288,17 @@ function embDesign(clubId,name){
     crest:((h>>>9)%3===0)?EMB_CRESTS[1+((h>>>11)%(EMB_CRESTS.length-1))]:"none",
     // 外装も3回に1回くらい。**全部に王冠を載せると格が語れなくなる**
     orn:((h>>>15)%3===0)?EMB_ORNS[1+((h>>>17)%(EMB_ORNS.length-1))]:"none",
+    // 文字の並べ方(→§3.54c)。横・縦・斜めの3通り
+    lay:EMB_LAYS[(h>>>21)%EMB_LAYS.length],
     text:embMonogram(name),
   };
-  return mine?{ ...d, ...mine, text:mine.text||d.text }:d;
+  const out=mine?{ ...d, ...mine, text:mine.text||d.text }:d;
+  // **一覧から消えた指定は既定へ戻す**(→§3.54c)。紋章を廃止したとき、
+  // 昔の保存が指したままだと、紋章も文字も出ない空の盾になる
+  if(!EMB_CRESTS.includes(out.crest))out.crest=d.crest;
+  if(!EMB_ORNS.includes(out.orn))out.orn=d.orn;
+  if(!EMB_LAYS.includes(out.lay))out.lay=d.lay;
+  return out;
 }
 
 /**
@@ -342,10 +361,7 @@ function embSvg(clubId,name,size,opts){
     +'<path d="'+path+'" fill="none" stroke="'+rim+'" stroke-width="4"/>'
     +(d.crest&&d.crest!=="none"
       ? embCrestPath(d.crest,ink,b)
-      : '<text x="50" y="65" text-anchor="middle" font-family="Georgia,\'Times New Roman\',serif"'
-        +' font-weight="700" font-size="40" letter-spacing="-2"'
-        +' fill="'+ink+'" stroke="'+b+'" stroke-width="5" paint-order="stroke">'
-        +esc(d.text)+'</text>')
+      : embTextPath(d.lay,d.text,ink,b))
     // 王冠とリボンは**盾の前**(重なっても手前に出す)
     +(orn==="crown"?embOrnPath("crown",gold,dark)
       :orn==="ribbon"?embOrnPath("ribbon",gold,dark)
