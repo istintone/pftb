@@ -458,12 +458,12 @@ function runSeason(hand) {
     assert.strictEqual(C7.streak, 0, "引き分けで連勝が切れる");
     E.streakAdd("win"); E.streakAdd("win"); E.streakAdd("win");
     assert.ok(sp.hit, "課題を達成する");
-    const coin0 = S7.club.coins, coll0 = S7.player.coll.length;
-    const r = E.sponPay(null);
+    const coin0 = S7.club.coins, tk0 = E.ticketTotal();
+    const r = E.sponPay();
     assert.ok(r, "報酬が出る");
     if (r.kind === "coin") assert.ok(S7.club.coins > coin0, "コインが入る");
-    else assert.strictEqual(S7.player.coll.length, coll0 + 1, "カードが1枚入る");
-    assert.strictEqual(E.sponPay(null), null, "報酬は一度きり");
+    else assert.strictEqual(E.ticketTotal(), tk0 + 1, "引換券が1枚入る");
+    assert.strictEqual(E.sponPay(), null, "報酬は一度きり");
 
     // --- 期限を越えると契約が切れる。達成していれば名声は減らない ---
     C7.node = sp.until + 1;
@@ -505,19 +505,23 @@ function runSeason(hand) {
       assert.ok(E.sponsor().paid, "受け取ると清算済みになる");
       assert.strictEqual(E.mailTake(m.id), null, "二度は受け取れない");
 
-      // **枠を選ぶ報酬は、枠を渡すまで受け取れない**
+      // **報酬は引換券**(→docs/03 §3.40a)。受け取りで枠は訊かない
       S6.player.mail = [];
       S6.club.sponsor = { id: E.SPONSORS.find(x => x.tier === 2).id, tier: 2, aid: "atk",
         goal: { kind: "league" }, node0: 2, until: 90, hit: false, paid: false };
       E.sponHit("league");
       const m2 = E.mailList()[0], d2 = E.mailDef(m2);
-      assert.ok(d2.gift.pick, "枠を選ぶ報酬だと分かる");
-      assert.strictEqual(E.mailTake(m2.id), null, "枠を渡さないと受け取れない");
-      const r2 = E.mailTake(m2.id, "FW");
-      assert.ok(r2 && r2.got.card, "枠を渡せば受け取れる");
-      assert.strictEqual(r2.got.card.pos, "FW", "選んだ枠で来る");
+      assert.ok(!d2.gift.pick, "受け取りで枠は訊かない");
+      const coll2 = S6.player.coll.length, tk2 = E.ticketTotal();
+      const r2 = E.mailTake(m2.id);
+      assert.ok(r2 && r2.got.ticket, "券が渡る: " + JSON.stringify(r2.got));
+      assert.strictEqual(S6.player.coll.length, coll2, "その場では選手は増えない");
+      assert.strictEqual(E.ticketTotal(), tk2 + 1, "券が1枚増える");
+      // **枠は券を引くときに選ぶ**
+      const t2 = E.ticketById(r2.got.ticket);
+      assert.ok(t2.pick, "この券は枠を選ぶ");
       console.log("スポンサーの報酬OK 達成で連絡が届く ／ 受信箱で受け取る ／"
-        + " 枠は受け取る前に選ぶ");
+        + " 渡るのは引換券 ／ 枠は引くときに選ぶ");
     }
 
     // --- 溜まった連絡は上限で落ちる(→docs/03 §3.42) ---
@@ -547,18 +551,19 @@ function runSeason(hand) {
       const P = E.sponPrize(tier);
       S7.club.sponsor = { id: co.id, tier: tier, aid: "atk", goal: { kind: "league" },
         node0: 1 + tier, until: 90, hit: true, paid: false };
-      // **ポジションを選ぶ段だけ**監督に聞く。それ以外は null で渡る(ui と同じ)
-      const r = E.sponPay(P.pick ? "FW" : null);
+      // **報酬は引換券**(→docs/03 §3.40a)。選手をその場で渡さない
+      const tk1 = E.ticketTotal(), coll1 = S7.player.coll.length;
+      const r = E.sponPay();
       assert.ok(r, tier + "段の報酬が出る");
       assert.strictEqual(r.kind, P.kind, tier + "段は " + P.kind);
-      if (P.pick) assert.strictEqual(r.card.pos, "FW",
-        tier + "段は呼んだポジションで来る: " + r.card.pos);
-      if (P.kind === "scoutWc" || P.kind === "scoutWcPos") {
-        assert.strictEqual(r.card.rarity, "WC", tier + "段は WORLD CLASS 確定");
-        // **実在選手が先**(→docs/03 §3.13)。持っていない人が居るうちは必ずそちら
-        assert.ok(r.card.sig, tier + "段で手で作った選手が出ない: " + r.card.name);
+      assert.strictEqual(S7.player.coll.length, coll1,
+        tier + "段でその場では選手が増えない");
+      if (P.kind !== "coin") {
+        assert.strictEqual(E.ticketTotal(), tk1 + 1, tier + "段は券が1枚入る");
+        const t = E.ticketById(P.kind);
+        assert.ok(t, tier + "段の券が定義されている: " + P.kind);
+        assert.strictEqual(E.ticketCount(P.kind) > 0, true, tier + "段の券を持っている");
       }
-      if (P.kind === "scoutLe") assert.strictEqual(r.card.rarity, "LEG", "5段は LEGENDS 確定");
       kinds.push(P.label);
     }
     // **LEGENDS の重さは動かさない**。4段を挟んでも5段の課題は前のままにしてある
@@ -933,6 +938,35 @@ function runSeason(hand) {
     assert.strictEqual(E.tradePending(), null, "同じ節目は二度と来ない");
     console.log("トレードOK " + T.nodes.join("/") + "節に1度ずつ ／ 編成外のWC以上だけ ／"
       + " 候補は先に確定 ／ 出す選手は消え、来る選手は受信箱");
+  }
+
+  // ---------- 引換券(→docs/03 §3.40a) ----------
+  // **スポンサーの報酬はここへ集約**。選手をその場で渡さず、券で持たせる。
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; S.world.seed = 20260819;
+    E.startTenure("sam-8");
+
+    // 段の報酬はすべて券として定義されている(コインを除く)
+    for (const P of E.SPON_PRIZE) {
+      if (P.kind === "coin") continue;
+      const t = E.ticketById(P.kind);
+      assert.ok(t, P.kind + " の券がある");
+      assert.strictEqual(t.name, P.label, P.kind + " の名前がそろっている");
+    }
+    // **枠を選ぶ券は2種**。段を名指しした券は実在選手を先に当てる
+    assert.deepStrictEqual(Object.keys(E.TICKETS).filter(k => E.TICKETS[k].pick),
+      ["scoutPos", "scoutWcPos"], "枠を選ぶ券");
+    assert.strictEqual(E.ticketById("scoutWc").sig, "WC", "WC確定は実在選手が先");
+    assert.strictEqual(E.ticketById("scoutLe").sig, "LEG", "LEGENDS確定は実在選手が先");
+    assert.ok(!E.ticketById("scoutPos").sig, "ポジション確定は自動生成から");
+
+    // 枠を選ぶ券は、枠を渡さないと減らない
+    E.ticketAdd("scoutWcPos", 1);
+    const n = E.ticketCount("scoutWcPos");
+    assert.strictEqual(E.ticketUse("scoutWcPos"), true, "券は使える");
+    assert.strictEqual(E.ticketCount("scoutWcPos"), n - 1, "使うと1枚減る");
+    console.log("引換券OK 段の報酬はすべて券 ／ 枠を選ぶ券は2種 ／ 段の指定は実在選手が先");
   }
 
   // ---------- 実在選手の固定idと受信箱(→docs/03 §3.49) ----------

@@ -1378,13 +1378,14 @@ const SPONSORS=[
 ];
 const sponsorById=id=>SPONSORS.find(s=>s.id===id);
 /** 段ごとの報酬。**最上位が LEGENDS の入手経路**(→docs/03 §3.13)。 */
+// **報酬は引換券で配る**(→docs/03 §3.40a)。kind は TICKETS の id と同じ。
+// その場で選手を渡していたが、券にしておけば引く時機を監督が選べる。
 const SPON_PRIZE=[
-  // pick … 受け取るときに**どのポジションを呼ぶか**を監督が選ぶ
   { kind:"coin",       label:"コイン" },
-  { kind:"scoutPos",   label:"ポジション確定スカウト",   note:"SPECIALS か WORLD CLASS", pick:true },
+  { kind:"scoutPos",   label:"ポジション確定スカウト",   note:"SPECIALS か WORLD CLASS" },
   { kind:"scoutWc",    label:"WORLD CLASS 確定スカウト", note:"世界屈指の1枚" },
   { kind:"scoutWcPos", label:"WORLD CLASS ポジション確定スカウト",
-                       note:"欲しい枠の、世界屈指の1枚", pick:true },
+                       note:"欲しい枠の、世界屈指の1枚" },
   { kind:"scoutLe",    label:"LEGENDS 確定スカウト",     note:"歴史に残る1枚" },
 ];
 const sponPrize=tier=>SPON_PRIZE[Math.min(tier,SPON_PRIZE.length)-1];
@@ -1472,9 +1473,23 @@ const mailById=id=>MAILS.find(m=>m.id===id);
 /** チュートリアルの案内は何通あるか(見出しの「n/N」に出す)。 */
 const TUT_ALL=MAILS.filter(m=>m.tut).length;
 // 引換券(→docs/03 §3.42)。**コインでは買えないパック**。スカウト画面に並ぶ。
+/**
+ * 引換券(→docs/03 §3.42 / §3.40)。**持っておいて好きなときに引ける**。
+ * スポンサーの報酬はここへ集約してある(→§3.40a)。選手をその場で渡すと、
+ * いつ引くかを選べないうえ、時限の催しを足したときに「今すぐ引くしかない」になる。
+ *
+ *   sig  … 実在選手を先に当てる段(→§3.13)。無ければ自動生成
+ *   pick … **引くときに枠を選ぶ**。受け取るときではない(券のまま持てるように)
+ */
 const TICKETS={
-  scoutLe:{ id:"scoutLe", name:"LEGENDS 確定スカウト", cards:1, floor:"LEG", w:{ LEG:100 },
-            note:"歴史に残る1枚。まだ持っていない選手から招く" },
+  scoutPos:  { id:"scoutPos",  name:"ポジション確定スカウト", pick:true,
+               note:"選んだ枠から SPECIALS か WORLD CLASS" },
+  scoutWc:   { id:"scoutWc",   name:"WORLD CLASS 確定スカウト", sig:"WC",
+               note:"世界屈指の1枚。まだ持っていない選手から招く" },
+  scoutWcPos:{ id:"scoutWcPos",name:"WORLD CLASS ポジション確定スカウト", sig:"WC", pick:true,
+               note:"選んだ枠の、世界屈指の1枚" },
+  scoutLe:   { id:"scoutLe",   name:"LEGENDS 確定スカウト", sig:"LEG",
+               note:"歴史に残る1枚。まだ持っていない選手から招く" },
 };
 const ticketById=id=>TICKETS[id]||null;
 /** 台詞。**どれも1行**。監督の発言は選んだ選択肢がそのまま入る。 */

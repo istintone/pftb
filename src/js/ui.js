@@ -550,7 +550,7 @@ function renderMail(){
     const g=d.gift;
     const gname=!g?null
       :g.ticket?ticketById(g.ticket).name
-      :g.spon?(g.coin?fmtNum(g.coin)+" コイン":g.label)
+      :g.spon?(g.coin?fmtNum(g.coin)+" コイン":g.label)   // 券の名前(→§3.40a)
       :g.mem?g.label                                  // メモラビリア(→§3.55)
       :g.tactic?g.label                               // 采配(→§3.50)
       :g.card?(g.label||shortName(g.card))            // トレードの選手(→§3.49)
@@ -570,12 +570,10 @@ function renderMail(){
         +esc(SCREENS[go].title||go)+' をひらく ›</button></div>':"")
       +(gname?'<div class="ml-gift">'
         +'<b>'+esc(gname)+'</b>'
+        // **枠を選ぶのは受け取りではなく、券を引くとき**(→docs/03 §3.40a)。
+        // ここで決めさせると、券のまま持っておく意味がなくなる
         +(m.got?'<span class="ml-done">受け取り済み</span>'
-          // **枠を選ぶ報酬**(→docs/03 §3.40)は、受け取る前にどこを呼ぶか決める
-          :(g.spon&&g.pick)
-            ?'<span class="ml-pick">'+POS.map(x=>'<button class="btn ml-take" '
-              +'data-mail="'+esc(m.id)+'" data-pos="'+x+'">'+x+'</button>').join("")+'</span>'
-            :'<button class="btn ml-take" data-mail="'+esc(m.id)+'">受け取る</button>')
+          :'<button class="btn ml-take" data-mail="'+esc(m.id)+'">受け取る</button>')
         +'</div>':"")
     +'</div></div>';
   }).join(""):'<div class="lg">まだ何も届いていません。</div>';
@@ -591,9 +589,9 @@ function renderMail(){
       if(g.card){                                    // トレードの選手(→§3.49)
         toast(RARITY[g.card.rarity].label+" "+shortName(g.card)+" が加入しました");
         openCard(g.card);
-      }else if(g.spon&&g.got&&g.got.card){
-        toast(RARITY[g.got.card.rarity].label+" "+shortName(g.got.card)+" が加入しました");
-        openCard(g.got.card);
+      }else if(g.spon&&g.got&&g.got.ticket){
+        // **スポンサーの報酬は引換券**(→docs/03 §3.40a)。SCOUT で好きなときに引く
+        toast(ticketById(g.got.ticket).name+" を受け取りました");
       }else if(g.spon){
         toast(fmtNum(g.got.coin||g.coin||0)+" コインを受け取りました");
       }else if(g.ticket){
@@ -1461,7 +1459,12 @@ function renderScout(){
       +'<div class="sc-b"><div class="sc-nm">'+esc(t.name)
         +'　<i class="sc-n">×'+ticketCount(id)+'</i></div>'
         +'<div class="sc-de">'+esc(t.note)+'</div></div>'
-      +'<button class="btn sc-buy" data-ticket="'+esc(id)+'">使う</button>'
+      // **枠を選ぶ券は、引くときに選ぶ**(→docs/03 §3.40a)。
+      // 受け取りの時点で決めさせると、券のまま持っておく意味がなくなる
+      +(t.pick
+        ?'<span class="sc-pick">'+POS.map(x=>'<button class="btn sc-buy" '
+          +'data-ticket="'+esc(id)+'" data-pos="'+x+'">'+x+'</button>').join("")+'</span>'
+        :'<button class="btn sc-buy" data-ticket="'+esc(id)+'">使う</button>')
     +'</div>';
   }).join("");
   $("scoutList").innerHTML=tk+TUNING.scout.map((pk,i)=>{
@@ -1478,7 +1481,7 @@ function renderScout(){
     el.onclick=()=>buyScout(el.dataset.pack);
   });
   $("scoutList").querySelectorAll("[data-ticket]").forEach(el=>{
-    el.onclick=()=>useTicket(el.dataset.ticket);
+    el.onclick=()=>useTicket(el.dataset.ticket,el.dataset.pos||null);
   });
   drawScoutGot();
 }
@@ -1489,13 +1492,20 @@ function drawScoutGot(){
   });
 }
 /**
- * 引換券を使う(→docs/03 §3.42)。**コインは減らない**。
- * LEGENDS の券は、手で作った12人からまだ持っていない選手を招く。
+ * 引換券を使う(→docs/03 §3.42 / §3.40a)。**コインは減らない**。
+ * 段を名指しした券は**実在選手を先に当てる**(→§3.13)。全員そろってから自動生成に落ちる。
+ * 枠を選ぶ券は、ここで枠を受け取る(受け取りの時点では決めない)。
  */
-function useTicket(id){
-  const t=ticketById(id); if(!t||!ticketUse(id))return;
+function useTicket(id,pos){
+  const t=ticketById(id); if(!t)return;
+  if(t.pick&&!pos)return;                        // 枠を選んでもらってから
+  if(!ticketUse(id))return;
+  // **たねは引くたびに変える**。資産が増える場所なので再現できてはいけない
   const rng=mulberry32((Date.now()^Math.floor(Math.random()*0xffffffff))>>>0);
-  const card=id==="scoutLe"?drawLegend(rng):openScout(t,rng,1)[0];
+  const card=t.sig
+    ? drawSig(rng,t.sig,t.pick?pos:null)
+    : makeCard(rng,pos||rpick(rng,POS),
+        { rarity:rng()<TUNING.spon.wcInPos?"WC":"SPE" });
   _scoutGot=[card];
   S.player.coll.push(card);
   save(); headUI(); renderScout();

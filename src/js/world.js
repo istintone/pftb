@@ -1106,8 +1106,8 @@ function mailTake(id,pos){
   if(!m||!def||!def.gift||m.got)return null;
   const g=def.gift;
   if(g.spon){
-    if(g.pick&&!pos)return null;                 // 枠を選んでもらってから
-    const r=sponPay(pos||null);
+    // **枠は券を引くときに選ぶ**(→§3.40a)。受け取りでは訊かない
+    const r=sponPay();
     if(!r)return null;
     m.got=true; m.read=true;
     return { ...g, got:r };
@@ -1389,8 +1389,8 @@ function sponMail(sp){
     from:"sec", title:co.name+" から報酬が届きました",
     text:"監督、"+co.name+"の課題を達成しました。「"+sponGoalText(sp)+"」——見事です。"
       +"先方から"+(coin?fmtNum(coin)+"コインの支援":"「"+P.label+"」")+"が届いています。"
-      +(P.pick?"どのポジションを厚くするか、決めていただけますか。":""),
-    gift:{ spon:true, pick:!!P.pick, label:P.label, coin:coin },
+      +(coin?"":"SCOUT で、お好きなときにお使いください。"),
+    gift:{ spon:true, label:P.label, coin:coin },
   });
 }
 /** 連勝を数える(→§3.40)。引き分けと負けで途切れる。 */
@@ -1411,27 +1411,22 @@ function sponTick(end){
   S.club.sponsor=null;
   return { id:sp.id, hit:sp.hit, lost };
 }
-/** 報酬を渡す(→§3.40)。カードは呼び出し側が受け取って手札に入れる。 */
-function sponPay(pos){
+/**
+ * 報酬を渡す(→§3.40 / §3.40a)。**選手ではなく引換券を渡す**。
+ * 券は SCOUT で好きなときに引ける。枠を選ぶ券は、引くときに枠を選ぶ。
+ */
+function sponPay(){
   const sp=sponsor();
   if(!sp||!sp.hit||sp.paid)return null;
   sp.paid=true;
-  const P=sponPrize(sp.tier), T=TUNING.spon;
-  const rng=mulberry32((S.world.seed^hashStr("spp:"+sp.id+":"+sp.node0))>>>0);
+  const P=sponPrize(sp.tier);
   if(P.kind==="coin"){
     const v=sponCoin(sp);
     S.club.coins+=v;
     return { kind:"coin", coin:v };
   }
-  // **段を名指しして1枚引く**(→docs/03 §3.26 のプロスカウトと同じ作り)
-  // **実在選手が先**(→docs/03 §3.13)。自動生成に落とすのは全員そろってから。
-  // WORLD CLASS 確定は2種類あり、**ポジションまで選べるのが上の段**(→§3.40)
-  const wc=P.kind==="scoutWc"||P.kind==="scoutWcPos";
-  const card=P.kind==="scoutLe"?drawSig(rng,"LEG")
-    :wc?drawSig(rng,"WC",P.pick?pos:null)
-    :makeCard(rng,pos||rpick(rng,POS),{ rarity:rng()<T.wcInPos?"WC":"SPE" });
-  S.player.coll.push(card);
-  return { kind:P.kind, card };
+  ticketAdd(P.kind,1);
+  return { kind:P.kind, ticket:P.kind };
 }
 
 // ---------- 信頼と師弟(→docs/03 §3.39) ----------
