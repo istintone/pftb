@@ -2616,7 +2616,7 @@ const STEPS = [
           const keep=JSON.parse(JSON.stringify(S.player.trophies));
           const put=n=>{ S.player.trophies=keep.filter(t=>t.id!=='world');
             if(n)S.player.trophies.push({id:'world',name:'w',kind:'cup',n,season:1});
-            renderClubCrest(); return el.querySelectorAll('svg path[transform]').length; };
+            renderClubCrest(); return el.querySelectorAll('svg .emb-star').length; };
           const got=[0,1,3,5].map(put);
           if(got.join()!=='0,1,3,3')throw new Error('★の数が合わない: '+got.join());
           S.player.trophies=keep; renderClubCrest();
@@ -2625,7 +2625,8 @@ const STEPS = [
           if(!document.getElementById('crestModal').classList.contains('on'))
             throw new Error('押しても組み替えられない');
           const btns=[...document.querySelectorAll('#crestPick [data-k]')];
-          const want=EMB_SHAPES.length+EMB_FIELDS.length+EMB_CRESTS.length+EMB_HUES.length*2;
+          const want=EMB_SHAPES.length+EMB_FIELDS.length+EMB_CRESTS.length
+            +EMB_ORNS.length+EMB_HUES.length*2;
           if(btns.length!==want)
             throw new Error('選べる数が合わない: '+btns.length+' / 期待 '+want);
           // **色は盤面にも効く**(→docs/03 §3.54)。エンブレムだけ別色にしない

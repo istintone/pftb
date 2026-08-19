@@ -4395,12 +4395,14 @@ function renderCrestPick(){
     +crow("away","アウェイカラー（柄）")
     +row("shape",EMB_SHAPES,"かたち",v=>mini({shape:v}))
     +row("field",EMB_FIELDS,"地の柄",v=>mini({field:v}))
-    +row("crest",EMB_CRESTS,"紋章",v=>mini({crest:v}));
+    +row("crest",EMB_CRESTS,"紋章",v=>mini({crest:v}))
+    // 外装は**盾の外にはみ出す**ので、見本は盾より一回り大きく描く(→§3.54)
+    +row("orn",EMB_ORNS,"外装",v=>mini({orn:v}));
   $("crestPick").querySelectorAll("[data-k]").forEach(el=>{
     el.onclick=()=>{
       const cur=embDesign(id,nm);
       S.club.emblem={ shape:cur.shape, field:cur.field, crest:cur.crest, text:cur.text,
-        home:cur.home||null, away:cur.away||null };
+        orn:cur.orn, home:cur.home||null, away:cur.away||null };
       S.club.emblem[el.dataset.k]=el.dataset.v;
       // **色は盤面にも効く**ので、開いている画面を描き直す(→docs/03 §3.54)
       renderCrestPick(); renderClubCrest(); headUI(); save();
