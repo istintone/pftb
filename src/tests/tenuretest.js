@@ -935,5 +935,47 @@ function runSeason(hand) {
       + " 候補は先に確定 ／ 出す選手は消え、来る選手は受信箱");
   }
 
+  // ---------- 実在選手の固定idと受信箱(→docs/03 §3.49) ----------
+  // **実在選手の型紙は 8000000+通し番号 の固定id**を持つ。同じ人が2つの経路で
+  // 届くと id がぶつかり、受け取ったのに手元に居ない、が起きていた。
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; S.world.seed = 20260819;
+    E.startTenure("sam-8"); S.career.opened = true;
+    const sig = E.signatureCards().find(c => c.rarity === "WC");
+    const cp = () => JSON.parse(JSON.stringify(sig));
+
+    // ① 同じ人の連絡が2通あっても、どちらも手元に入る
+    E.mailPush("tdup1", { from:"sec", title:"a", text:"a", gift:{ card:cp(), label:"x" } });
+    E.mailPush("tdup2", { from:"sec", title:"b", text:"b", gift:{ card:cp(), label:"x" } });
+    const n1 = S.player.coll.length;
+    const g1 = E.mailTake("tdup1"), g2 = E.mailTake("tdup2");
+    assert.ok(g1 && g2, "どちらも受け取れる");
+    assert.strictEqual(S.player.coll.length, n1 + 2, "2通ぶん手元に増える");
+    assert.notStrictEqual(g1.card.id, g2.card.id, "手元に入る瞬間に別の通し番号になる");
+    assert.ok(E.cardById(g1.card.id) && E.cardById(g2.card.id), "どちらも手札から引ける");
+
+    // ② 先に同じ人が手元に居ても、受け取ったぶんは必ず増える
+    S.player.coll.push(cp());
+    const n2 = S.player.coll.length;
+    E.mailPush("tdup3", { from:"sec", title:"c", text:"c", gift:{ card:cp(), label:"y" } });
+    const g3 = E.mailTake("tdup3");
+    assert.strictEqual(S.player.coll.length, n2 + 1, "固定idが被っても取りこぼさない");
+    assert.ok(E.cardById(g3.card.id), "手札から引ける");
+
+    // ③ **連絡で待っている人は、もう配られない**
+    await E.newGame();
+    const S3 = E.getS(); S3.world.seed = 20260819; E.startTenure("sam-8");
+    const le = E.signatureCards().find(c => c.rarity === "LEG");
+    E.mailPush("tpend", { from:"sec", title:"d", text:"d",
+      gift:{ card:JSON.parse(JSON.stringify(le)), label:"z" } });
+    let again = 0;
+    for (let i = 0; i < 400; i++)
+      if (E.drawSig(E.mulberry32(i + 1), "LEG").sig === le.sig) again++;
+    assert.strictEqual(again, 0, "受け取り待ちの実在選手は二重に配られない");
+    console.log("受信箱の実在選手OK 手元に入る瞬間に採番 ／ 固定idが被っても取りこぼさない ／"
+      + " 受け取り待ちは二重に配らない");
+  }
+
   process.exit(0);
 })().catch(e => { console.error("FAIL:", e); process.exit(1); });

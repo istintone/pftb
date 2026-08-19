@@ -684,7 +684,8 @@ function marketPrice(card){
 function marketList(){
   if(!S.club||!S.career)return [];
   const M=TUNING.market, rng=mulberry32(marketSeed());
-  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean)
+    .concat(pendingSigs()));
   const sold=S.career.market||(S.career.market={});
   const out=[];
   for(let i=0;i<M.slots;i++){
@@ -1020,6 +1021,17 @@ function trainAdd(id,k,n){
 // **クラブチャットとは別のチャット**。1節の判断ではなく、溜まっていく連絡を扱う。
 // 配布物とチュートリアルの入口で、HOME の秘書のひとことがその最新を映す。
 const mailAll=()=>S.player.mail||(S.player.mail=[]);
+/**
+ * **まだ受け取っていない連絡に入っている実在選手**(→docs/03 §3.49)。
+ * 「持っていない人からしか出さない」の判定は `S.player.coll` を見るが、
+ * 連絡の中で待っているカードはそこに居ない。これを混ぜないと、同じ人が
+ * 2つの経路から同時に届く。
+ */
+const pendingSigs=()=>mailAll().reduce((a,m)=>{
+  const d=!m.got&&mailDef(m);
+  if(d&&d.gift&&d.gift.card&&d.gift.card.sig)a.push(d.gift.card.sig);
+  return a;
+},[]);
 /** その連絡の中身。**その場で作った連絡は自分で中身を持つ**(dyn)。 */
 const mailDef=m=>m&&(m.dyn||mailById(m.id));
 const mailHas=id=>mailAll().some(m=>m.id===id);
@@ -1107,8 +1119,15 @@ function mailTake(id,pos){
   if(g.mem&&!memHas(g.mem))memOwned().push(g.mem);
   // **采配**(→docs/03 §3.50)。受け取った時点で監督の引き出しに入る
   if(g.tactic)learnTactic(g.tactic);
-  // **カードそのものを添えた連絡**(トレード →§3.49)。写しを入れる
-  if(g.card&&!S.player.coll.some(x=>x.id===g.card.id))S.player.coll.push(g.card);
+  // **カードそのものを添えた連絡**(トレード →§3.49 / 実績 →§3.47)。
+  // **手元に入れる瞬間に通し番号へ載せ替える**(市場と同じ始末 →marketBuy)。
+  // 実在選手の型紙は 8000000+通し番号 の固定idを持つので、同じ人が2つの経路で
+  // 届くとidがぶつかる。以前は「同じidが居たら入れない」で弾いていたが、
+  // m.got は先に立っているため**受け取り済みなのに手元に居ない**が起きた。
+  if(g.card){
+    g.card={ ...g.card, id:nextCardId() };
+    S.player.coll.push(g.card);
+  }
   return g;
 }
 // --- 見たもの・やったこと(→docs/03 §3.43) ---
@@ -1148,7 +1167,8 @@ function ticketUse(id){
  * **その枠の実在選手をもう持っていたら自動生成に落ちる** — 枠の指定を優先する。
  */
 function drawSig(rng,rarity,pos){
-  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean)
+    .concat(pendingSigs()));
   const pool=signatureCards().filter(c=>c.rarity===rarity&&!mine.has(c.sig)
     &&(!pos||c.pos===pos));
   if(pool.length)return pool[Math.floor(rng()*pool.length)];
@@ -1234,7 +1254,8 @@ function memReward(m,win,seed){
   // **戦利品は秘書の受信箱へ届ける**(→docs/03 §3.55)。その場で手に入れると
   // 「いつ増えたのか」が残らない。選手も采配も、届くものは同じ道を通す
   if(win&&rng()<T.card*k){
-    const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+    const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean)
+    .concat(pendingSigs()));
     const pool=m.xi.concat(m.bench).filter(sid=>!mine.has(sid)).map(signatureById).filter(Boolean);
     if(pool.length){
       const c=makeSignature(pool[Math.floor(rng()*pool.length)]);
@@ -1567,7 +1588,8 @@ function tradePending(){
  * 実名の未所持を先に当て、尽きたら自動生成で埋める。
  */
 function tradeCands(rng,at){
-  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean));
+  const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean)
+    .concat(pendingSigs()));
   const pool=signatureCards().filter(c=>(c.rarity==="WC"||c.rarity==="LEG")&&!mine.has(c.sig));
   const out=[];
   for(let i=0;i<TUNING.trade.pick;i++){
