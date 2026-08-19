@@ -1555,7 +1555,10 @@ function revealCards(cards,label){
   at(80,  ()=>$("rvPack").classList.add("shake"));
   at(760, ()=>{ $("rvPack").classList.add("tear"); box.classList.add("open"); });
   at(1080,()=>{ $("rvCard").classList.add("out"); $("rvBurst").classList.add("go"); });
-  at(1700,()=>{ box.classList.add("lit"); showRvCap(c); });
+  // **最後まで流れ切ったら、飛ばす役を降ろす**。ここで残していると、
+  // 演出が終わった後の1回目のタップが「スキップ」に吸われ、カードを押しても
+  // 詳細が開かない(2回押さないと開かない)
+  at(1700,()=>{ box.classList.add("lit"); showRvCap(c); _rvDone=null; });
   _rvDone=()=>{                                      // 飛ばしたときの落としどころ
     _rvT.forEach(clearTimeout); _rvT=[];
     $("rvPack").className="rv-pack tear";
