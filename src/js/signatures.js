@@ -459,6 +459,137 @@ const SIGNATURES=[
     atk:19, def:4, pow:16, tec:14, spd:16, sta:13,               // 82
     skills:["獲物を待つ","オフザボール","決定力","詰めの速さ"],
   },
+  // --- ロンドン・ガナーズ 2003-04(2026-08-19) ---
+  // **無敗の面々**。守備が土台で、前は速さと技で刺す並びにしてある。
+  // 合計は LEGENDS の帯(82〜90)に収める(→docs/03 §3.13)
+  {
+    n:54, id:"lehmann", art:"le_gk04_lehmann", rarity:"LEG",
+    name:"J. レーマン", short:"レーマン",
+    club:"ロンドン・ガナーズ", nation:"ger",
+    pos:"GK", subs:["GK"], age:34,
+    atk:3, def:20, pow:16, tec:13, spd:15, sta:15,               // 82
+    skills:["猛る門番","PKストップ","飛び出し判断","守備の統率"],
+  },
+  {
+    n:55, id:"lauren", art:"le_rsb03_lauren", rarity:"LEG",
+    name:"ローレン", short:"ローレン",
+    club:"ロンドン・ガナーズ", nation:"cmr", nat:"カメルーン",
+    pos:"DF", subs:["RSB","CMF"], age:27,
+    atk:8, def:17, pow:15, tec:14, spd:15, sta:15,               // 84
+    skills:["上がる右","対人守備","オーバーラップ","運動量"],
+  },
+  {
+    n:56, id:"kolotoure", art:"le_cb06_kolo_toure", rarity:"LEG",
+    name:"K. トゥーレ", short:"トゥーレ",
+    club:"ロンドン・ガナーズ", nation:"civ", nat:"コートジボワール",
+    pos:"DF", subs:["CB","RSB"], age:23,
+    atk:6, def:18, pow:16, tec:12, spd:17, sta:15,               // 84
+    skills:["駆ける壁","カバーリング","スピード","タックル"],
+  },
+  {
+    n:57, id:"solcampbell", art:"le_cb05_sol_campbell", rarity:"LEG",
+    name:"S. キャンベル", short:"キャンベル",
+    club:"ロンドン・ガナーズ", nation:"eng",
+    pos:"DF", subs:["CB"], age:29,
+    atk:7, def:20, pow:18, tec:12, spd:14, sta:14,               // 85
+    skills:["動じぬ柱","空中戦","対人守備","シュートブロック"],
+  },
+  {
+    n:58, id:"keown", art:"le_cb_martin_keown", rarity:"LEG",
+    name:"M. キーオン", short:"キーオン",
+    club:"ロンドン・ガナーズ", nation:"eng",
+    pos:"DF", subs:["CB"], age:37,
+    atk:6, def:19, pow:17, tec:12, spd:13, sta:15,               // 82
+    skills:["執念の寄せ","対人守備","厳しい寄せ","鉄人"],
+  },
+  {
+    n:59, id:"ashleycole", art:"le_lsb05_ashley_cole", rarity:"LEG",
+    name:"A. コール", short:"A. コール",
+    club:"ロンドン・ガナーズ", nation:"eng",
+    pos:"DF", subs:["LSB"], age:23,
+    atk:9, def:18, pow:14, tec:14, spd:16, sta:15,               // 86
+    skills:["往復する左","対人守備","オーバーラップ","正確なクロス"],
+  },
+  {
+    n:60, id:"clichy", art:"le_lsb04_gael_clichy", rarity:"LEG",
+    name:"G. クリシー", short:"クリシー",
+    club:"ロンドン・ガナーズ", nation:"fra",
+    pos:"DF", subs:["LSB"], age:18,
+    atk:7, def:16, pow:13, tec:13, spd:18, sta:15,               // 82
+    skills:["若い快足","スピード","カバーリング","初速"],
+  },
+  {
+    n:61, id:"vieira", art:"le_cmf07_vieira", rarity:"LEG",
+    name:"P. ヴィエラ", short:"ヴィエラ",
+    club:"ロンドン・ガナーズ", nation:"fra",
+    pos:"MF", subs:["DMF","CMF"], age:27,
+    atk:12, def:17, pow:18, tec:14, spd:14, sta:15,              // 90
+    skills:["背骨","ボール奪取","キャプテンシー","推進力"],
+  },
+  {
+    n:62, id:"gilberto", art:"le_cmf08_gilberto_silva", rarity:"LEG",
+    name:"G. シウバ", short:"G. シウバ",
+    club:"ロンドン・ガナーズ", nation:"bra",
+    pos:"MF", subs:["DMF"], age:27,
+    atk:8, def:17, pow:16, tec:13, spd:13, sta:16,               // 83
+    skills:["見えない箒","カバーリング","セカンドボール","クリーンな守備"],
+  },
+  {
+    n:63, id:"edu", art:"le_cmf09_edu", rarity:"LEG",
+    name:"エドゥ", short:"エドゥ",
+    club:"ロンドン・ガナーズ", nation:"bra",
+    pos:"MF", subs:["CMF"], age:25,
+    atk:10, def:14, pow:15, tec:15, spd:13, sta:15,              // 82
+    skills:["静かな配球","パスの精度","視野の広さ","展開力"],
+  },
+  {
+    n:64, id:"fabregas", art:"le_cmf06_cesc_fabregas", rarity:"LEG",
+    name:"C. ファブレガス", short:"ファブレガス",
+    club:"ロンドン・ガナーズ", nation:"esp",
+    pos:"MF", subs:["CMF","OMF"], age:17,
+    atk:12, def:12, pow:13, tec:18, spd:13, sta:14,              // 82
+    skills:["早熟の設計図","スルーパス","視野の広さ","パスの精度"],
+  },
+  {
+    n:65, id:"pires", art:"le_lmf02_pires", rarity:"LEG",
+    name:"R. ピレス", short:"ピレス",
+    club:"ロンドン・ガナーズ", nation:"fra",
+    pos:"MF", subs:["LMF","OMF"], age:30,
+    atk:15, def:11, pow:13, tec:18, spd:14, sta:13,              // 84
+    skills:["忍ぶ左","カットイン","冷静なフィニッシュ","キープ力"],
+  },
+  {
+    n:66, id:"ljungberg", art:"le_rmf02_ljungberg", rarity:"LEG",
+    name:"F. リュンベリ", short:"リュンベリ",
+    club:"ロンドン・ガナーズ", nation:"swe", nat:"スウェーデン",
+    pos:"MF", subs:["RMF","OMF"], age:27,
+    atk:14, def:12, pow:14, tec:15, spd:16, sta:15,              // 86
+    skills:["二列目の影","オフザボール","詰めの速さ","運動量"],
+  },
+  {
+    n:67, id:"bergkamp", art:"le_st04_bergkamp", rarity:"LEG",
+    name:"D. ベルカンプ", short:"ベルカンプ",
+    club:"ロンドン・ガナーズ", nation:"ned",
+    pos:"FW", subs:["CF","OMF"], age:34,
+    atk:17, def:8, pow:14, tec:20, spd:11, sta:12,               // 82
+    skills:["氷の一触","スルーパス","ポストプレー","冷静なフィニッシュ"],
+  },
+  {
+    n:68, id:"henry", art:"le_cf03_thierry_henry", rarity:"LEG",
+    name:"T. アンリ", short:"アンリ",
+    club:"ロンドン・ガナーズ", nation:"fra",
+    pos:"FW", subs:["CF","LWG"], age:26,
+    atk:19, def:6, pow:16, tec:18, spd:19, sta:12,               // 90
+    skills:["内へ切れ込む","決定力","ドリブル突破","初速"],
+  },
+  {
+    n:69, id:"reyes", art:"le_st03_reyes", rarity:"LEG",
+    name:"J. レイエス", short:"レイエス",
+    club:"ロンドン・ガナーズ", nation:"esp",
+    pos:"FW", subs:["LWG","ST"], age:20,
+    atk:15, def:8, pow:13, tec:16, spd:18, sta:12,               // 82
+    skills:["切り返しの妙","ドリブル","切れ込みの鋭さ","カットイン"],
+  },
 ];
 const signatureById=id=>SIGNATURES.find(s=>s.id===id);
 

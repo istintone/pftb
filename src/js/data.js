@@ -364,6 +364,48 @@ const SKILL_FX={
     fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"onTarget", k:1.12 }] },
   "獲物を待つ":     { sig:"crespo", move:"背中で外す",
     fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"start", k:1.20 }] },
+  // --- ロンドン・ガナーズの面々(2026-08-19) ---
+  // **札の組み合わせは既にある形から採る**(→docs/03 §3.41)。
+  // 層とグループごとの w/s は careertest が価値の帯で見張っているので、
+  // 新しい数字を作らず、既に置かれている型を選び直す。個性は2枚目の k で出す
+  "猛る門番":       { sig:"lehmann",
+    fx:[{ at:"gk", k:1.10 },{ at:"pkGk", k:1.22 }] },
+  // **共通スキルの形をそのまま借りない。** 固有スキルだけが価値の帯で見張られるので、
+  // 共通スキル用の (w,s) を持ってくると必ず帯から外れる(s が無ければ NaN になる)。
+  // **既に固有スキルで使われている (層,グループ,w,s) の組から選ぶ**こと。
+  // いま使える組: counter/all s1.05 ／ counter/press w1.6 s1.1 ／ counter/tec s1.14 ／
+  //   finish/close w1.7 s1.13 ／ finish/far w2 s1.07 ／ origin/cross s1.13 ／
+  //   origin/passTec w1.85 s1.08 ／ origin/carry w1.55 s1.17(fresh)
+  "上がる右":       { sig:"lauren",
+    fx:[{ at:"counter", grp:"tec", s:1.14 },{ at:"stam", k:0.85 }] },
+  "駆ける壁":       { sig:"kolotoure", move:"追いつく",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"cover", k:1.18 }] },
+  "動じぬ柱":       { sig:"solcampbell",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"aerial", k:1.22 }] },
+  "執念の寄せ":     { sig:"keown", move:"離さない",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"tough", k:1.12 }] },
+  "往復する左":     { sig:"ashleycole", move:"外を駆け上がる",
+    fx:[{ at:"origin", grp:"cross", s:1.13 },{ at:"stam", k:0.82 }] },
+  "若い快足":       { sig:"clichy",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"start", k:1.18 }] },
+  "背骨":           { sig:"vieira", move:"跳ね返す",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"mid", k:1.10 }] },
+  "見えない箒":     { sig:"gilberto",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"cover", k:1.20 }] },
+  "静かな配球":     { sig:"edu",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"vision", k:1.18 }] },
+  "早熟の設計図":   { sig:"fabregas", move:"最初の一本",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"spDeliver", k:1.15 }] },
+  "忍ぶ左":         { sig:"pires", move:"内へ滑り込む",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"recv", k:1.25 }] },
+  "二列目の影":     { sig:"ljungberg", move:"背後を取る",
+    fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"start", k:1.20 }] },
+  "氷の一触":       { sig:"bergkamp", move:"止めて外す",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"recv", k:1.28 }] },
+  "内へ切れ込む":   { sig:"henry", move:"左から差す",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"onTarget", k:1.14 }] },
+  "切り返しの妙":   { sig:"reyes", move:"内を突く",
+    fx:[{ at:"origin", grp:"carry", w:1.55, s:1.17, when:"fresh" },{ at:"start", k:1.15 }] },
 };
 /**
  * 固有スキルの発動条件(→docs/03 §3.41)。**文脈が分からなければ発動しない**
