@@ -754,12 +754,14 @@ const ORIGINS={
   CB: [{id:"cbCarry", label:"持ち上がり",     stat:"spd", risk:0.62, gain:0.28, kind:"carry", lane:"same"},
        {id:"cbVert",  label:"縦パス",         stat:"tec", risk:0.58, gain:0.38, kind:"pass",  lane:"same"},
        {id:"cbFeed",  label:"ロングフィード", stat:"pow", risk:0.38, gain:0.60, to:0.76, kind:"pass",  lane:"any"}],
-  LSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.66, gain:0.48, kind:"carry", lane:"out"},
+  // **一発で深くへ届く札(`to`)を pow が独占しない**(→docs/03 §3.64)。
+  // 「早いクロス」は速さの手なので spd が筋。空いた carry を pow が受ける
+  LSB:[{id:"sbOver",  label:"オーバーラップ", stat:"pow", risk:0.66, gain:0.48, kind:"carry", lane:"out"},
        {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.42, kind:"carry", lane:"in"},
-       {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55, to:0.88, kind:"pass",  lane:"box"}],
-  RSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.66, gain:0.48, kind:"carry", lane:"out"},
+       {id:"sbEarly", label:"早いクロス",     stat:"spd", risk:0.44, gain:0.55, to:0.88, kind:"pass",  lane:"box"}],
+  RSB:[{id:"sbOver",  label:"オーバーラップ", stat:"pow", risk:0.66, gain:0.48, kind:"carry", lane:"out"},
        {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.42, kind:"carry", lane:"in"},
-       {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55, to:0.88, kind:"pass",  lane:"box"}],
+       {id:"sbEarly", label:"早いクロス",     stat:"spd", risk:0.44, gain:0.55, to:0.88, kind:"pass",  lane:"box"}],
   DMF:[{id:"dmSpray", label:"散らし",         stat:"spd", risk:0.78, gain:0.15, kind:"pass",  lane:"any"},
        {id:"dmDrive", label:"持ち出し",       stat:"pow", risk:0.68, gain:0.35, kind:"carry", lane:"same"},
        {id:"dmSwitch",label:"サイドチェンジ", stat:"tec", risk:0.52, gain:0.40, kind:"pass",  lane:"switch"}],
@@ -771,6 +773,8 @@ const ORIGINS={
        // **pow にする**(→docs/03 §3.37)。3枚が tec/spd/atk だと、OMF だけ pow の出番が無く
        // パワー型の選手が置き所を失う。ミドルは威力の手なので pow が素直
        {id:"omMid",   label:"ミドルシュート",   stat:"pow", risk:0.44, gain:0.62, kind:"shot",  lane:"same"}],
+  // **LMF / RMF は戻した**(→§3.64)。SB・WG・LMF/RMF の3組すべてを spd に寄せると
+  // 今度は spd が最上位になった(実測 spd +0.668 / pow +0.477)。2組で釣り合う
   LMF:[{id:"wmUp",    label:"サイドの駆け上がり", stat:"spd", risk:0.62, gain:0.46, kind:"carry", lane:"out"},
        {id:"wmIn",    label:"絞り込み",       stat:"tec", risk:0.70, gain:0.46, kind:"carry", lane:"in"},
        {id:"wmCross", label:"クロス",         stat:"pow", risk:0.46, gain:0.55, to:0.90, kind:"pass",  lane:"box"}],
@@ -796,12 +800,14 @@ const ORIGINS={
   ST: [{id:"stBehind",label:"背後への抜け出し", stat:"spd", risk:0.44, gain:0.60, kind:"carry", lane:"same"},
        {id:"stHold",  label:"収めて預ける",   stat:"tec", risk:0.74, gain:0.14, kind:"pass",  lane:"same"},
        {id:"stStrike",label:"ダイレクトシュート",   stat:"pow", risk:0.40, gain:0.66, kind:"shot",  lane:"same"}],
-  LWG:[{id:"wgLine",  label:"縦の突破",       stat:"spd", risk:0.52, gain:0.50, kind:"carry", lane:"out"},
+  // SB と同じ組み替え(→§3.64)。**早いクロスは速さの手**なので spd、
+  // 空いた carry を pow が受ける(縦を力で破るウイング)
+  LWG:[{id:"wgLine",  label:"縦の突破",       stat:"pow", risk:0.52, gain:0.50, kind:"carry", lane:"out"},
        {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46, kind:"carry", lane:"in"},
-       {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.55, gain:0.54, to:0.90, kind:"pass",  lane:"box"}],
-  RWG:[{id:"wgLine",  label:"縦の突破",       stat:"spd", risk:0.52, gain:0.50, kind:"carry", lane:"out"},
+       {id:"wgCross", label:"早いクロス",     stat:"spd", risk:0.55, gain:0.54, to:0.90, kind:"pass",  lane:"box"}],
+  RWG:[{id:"wgLine",  label:"縦の突破",       stat:"pow", risk:0.52, gain:0.50, kind:"carry", lane:"out"},
        {id:"wgCut",   label:"カットイン",     stat:"tec", risk:0.56, gain:0.46, kind:"carry", lane:"in"},
-       {id:"wgCross", label:"早いクロス",     stat:"pow", risk:0.55, gain:0.54, to:0.90, kind:"pass",  lane:"box"}],
+       {id:"wgCross", label:"早いクロス",     stat:"spd", risk:0.55, gain:0.54, to:0.90, kind:"pass",  lane:"box"}],
 };
 
 // --- 守備のチャンネル(サブポジごとに3種 → docs/07 §7.12) ---

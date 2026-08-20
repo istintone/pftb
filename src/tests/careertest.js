@@ -1166,6 +1166,35 @@ function runSeason() {
         deep[i][0] + "回目のこぼれは前より大きく減る: " + deep[i][1] + " < " + deep[i - 1][1]);
     assert.ok(Math.max(...deep.map(d => d[0])) <= E.TUNING.shot.reboundMax,
       "安全網の上限を超えない");
+    // --- 能力の割当が偏っていない(→docs/03 §3.64) ---
+    // **能力の価値はフラット**であるべきで、尖りは監督の判断から生まれるべき。
+    // 起点の札は「一発で深くへ届く(`to`)」ほど価値が高いので、
+    // **そこを1つの能力が独占していないこと**を見る
+    {
+      const kindOf = {}, toOf = {};
+      for (const k of Object.keys(E.ORIGINS)) for (const ch of E.ORIGINS[k]) {
+        kindOf[ch.stat] = kindOf[ch.stat] || { pass: 0, carry: 0, shot: 0 };
+        kindOf[ch.stat][ch.kind]++;
+        if (ch.to != null) toOf[ch.stat] = (toOf[ch.stat] || 0) + 1;
+      }
+      for (const st of ["pow", "tec", "spd"]) {
+        const k = kindOf[st];
+        // **kind に癒着させない**。pass だけ・carry だけ、にしない
+        assert.ok(k.pass >= 3 && k.carry >= 3,
+          st + " が kind に偏っている: pass " + k.pass + " / carry " + k.carry);
+      }
+      // **深くへ届く札を独占させない**。実測で pow 8 / tec 2 / spd 0 のとき
+      // pow が spd の 1.6倍の価値になっていた
+      const tos = ["pow", "tec", "spd"].map(st => toOf[st] || 0);
+      assert.ok(Math.min(...tos) >= 2,
+        "深くへ届く札(to)を持たない能力がある: " + tos.join(" / "));
+      assert.ok(Math.max(...tos) <= Math.min(...tos) * 2.5,
+        "深くへ届く札が偏っている: " + tos.join(" / "));
+      console.log("能力の割当OK kind pass/carry " + ["pow", "tec", "spd"]
+        .map(st => st + " " + kindOf[st].pass + "/" + kindOf[st].carry).join(" ／ ")
+        + " ／ to " + tos.join("/"));
+    }
+
     // --- 相互カバー(→docs/03 §3.63)。**厚く構えた形ほど消耗が緩い** ---
     {
       const F = E.TUNING.fatigue;
