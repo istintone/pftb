@@ -42,6 +42,11 @@ function defaultState(){
       // 師弟の持ち越し(→docs/03 §3.39)。任期が明けるときに作られ、
       // **次の就任で1度だけ**使われて消える。{ cards, train, bond, gold }
       legacy:null,
+      // 残留の持ち越し(→docs/03 §3.58)。任期が明けるときに撮られ、
+      // **同じクラブを選び直したときだけ**使われて消える。
+      // 師弟の持ち越しが「どこへ行っても連れていける少数」なのに対して、
+      // こちらは「このクラブに居続けるなら全部」
+      stay:null,
       history:[],                   // キャリアの軌跡 [{season,clubId,rank,result}]
     },
     club:null,                      // 就任するまで null(→startTenure で作る)

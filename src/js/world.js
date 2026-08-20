@@ -408,40 +408,76 @@ function applyPromotion(myRank){
  * 次の任期へ移る(→docs/03 §3.2.3)。**player は持ち越す**(名声・実績・カード)。
  * 師弟を結んだ選手はここで持ち越しに畳まれ、次の就任で戻ってくる(→§3.39)。
  */
+/**
+ * **残留したときに持ち越すもの**(→docs/03 §3.58)。
+ *
+ * 任期が明けると career は畳まれ、クラブも作り直される。**同じクラブを選び直した
+ * ときだけ**、その全部を戻す。師弟の持ち越し(makeLegacy)が「どのクラブへ行っても
+ * 連れていける少数」なのに対して、こちらは「**このクラブに居続けるなら全部**」。
+ *
+ * 畳む前に撮る必要があるので、`newTenure` の中で作る。
+ */
+function makeStay(){
+  if(!S.club||!S.career)return null;
+  const cp=o=>JSON.parse(JSON.stringify(o||{}));
+  return {
+    clubId:S.club.id,
+    // --- クラブ側の積み上げ ---
+    coins:S.club.coins, exp:S.club.exp,
+    fac:cp(S.club.fac), build:S.club.build?cp(S.club.build):null,
+    loan:cp(S.club.loan||[]),
+    // --- 部(昇降格の結果)。**ここを戻さないと、昇格が任期で消える** ---
+    div:S.world.div, divs:(S.world.divs||[]).map(a=>a.slice()),
+    // --- 監督と選手のあいだに積んだもの ---
+    train:cp(S.career.train), bond:cp(S.career.bond), gold:cp(S.career.bondGold),
+    trust:cp(S.career.trust), mentor:(S.career.mentor||[]).slice(),
+    // --- 組んでいた形 ---
+    form:S.form, squad:(S.squad||[]).slice(),
+  };
+}
 function newTenure(){
   S.player.legacy=makeLegacy();
+  S.player.stay=makeStay();          // 残留を選んだときだけ使う(→§3.58)
   S.career=defaultState().career;
   return true;
 }
+/** いま残留が選べるか。**直前まで指揮していたクラブ**の id(無ければ null)。 */
+const stayClub=()=>(S.player&&S.player.stay&&S.player.stay.clubId)||null;
 
 /** 新しい任期を開始する(就任)。S.club / S.world をこのクラブ用に組み直す。 */
 function startTenure(clubId){
   const seed=S.world.seed;
   const club=clubById(clubId);
+  // **同じクラブを選び直したか**(→docs/03 §3.58)。ここで決めて、以下の組み立てを分ける
+  const stay=(S.player&&S.player.stay&&S.player.stay.clubId===clubId)?S.player.stay:null;
   // **任期をまたぐと季が進む**(→docs/03 §3.2.3)。前の任期は必ず季の終わり(judgeSeason)で
   // 締めているので、新しいクラブでは次の季から始まる。ここで進めていなかったので、
   // **移籍しても経歴の S が前のクラブと同じ番号のまま**になっていた。
   // 初就任(記録がまだ無い)のときだけ、いまの季のまま始める
   if((S.player&&S.player.history||[]).length)S.world.season++;
-  S.world.divs=makeDivs(club.league);
-  S.world.div=club.div;                                      // **入口はそのクラブの持ち場**
+  // **残留なら部も組み分けもそのまま**(→§3.58)。作り直すと昇格が任期で消える
+  S.world.divs=stay?stay.divs.map(a=>a.slice()):makeDivs(club.league);
+  S.world.div=stay?stay.div:club.div;                        // **入口はそのクラブの持ち場**
   const league=divClubs();
   const rng=mulberry32((seed^hashStr(clubId+":"+S.world.season))>>>0);
   S.club={
     id:clubId,
-    coins:Math.round(3000*leagueById(clubById(clubId).league).money),
+    // **残留ならコイン・施設・熟練度・所属選手はそのまま**(→§3.58)
+    coins:stay?stay.coins:Math.round(3000*leagueById(clubById(clubId).league).money),
     // 施設(→docs/03 §3.5)。**前任者の遺産**なので、国の格が高いほど整っている
-    fac:facStart(clubById(clubId)),
-    build:null,                                              // 建設中の1件 {id,to,left}
+    fac:stay?{ ...stay.fac }:facStart(clubById(clubId)),
+    build:stay?stay.build:null,                              // 建設中の1件 {id,to,left}
     built:null,                                              // 完成の知らせ(1節だけ)
-    exp:0,                                                   // チーム熟練度(→§3.7)
+    exp:stay?stay.exp:0,                                     // チーム熟練度(→§3.7)
+    // **オーナーの評価と期待は必ず引き直す**。残留でも契約は結び直しなので、
+    // 前の任期の貯金で最初から安泰、にはしない
     eval:TUNING.eval.start,                                  // オーナーの評価(→§3.9)
     evLog:{},                                                // 今季なにで評価が動いたか
     fameSeason:0,                                            // 今季ぶんの名声(総括で見せる)
-    loan:clubRoster(seed,clubId),                            // 任期中だけ借りる所属選手
+    loan:stay?stay.loan:clubRoster(seed,clubId),             // 任期中だけ借りる所属選手
     expect:0,
     // スポンサー(→docs/03 §3.40)。**クラブ側の資産**なので任期が明ければ消える。
-    // { id, tier, aid, node0, until, goal:{kind,cup,n}, hit, paid }
+    // 残留でも結び直す(期限のある契約なので、跨がせると期限の意味が消える)
     sponsor:null,
   };
   S.world.table=emptyTable(league);
@@ -453,9 +489,24 @@ function startTenure(clubId){
   // もちろん DECK でいつでも変えられる。
   // **師弟の持ち越しはここで戻す**(→§3.39)。編成を組む前に入れないと、
   // 連れてきた選手が控えにも並ばない
-  applyLegacy();
-  S.form=bestFormFor(availableCards());
-  S.squad=autoSquad();
+  if(stay){
+    // **積んだものを丸ごと戻す**(→§3.58)。師弟の持ち越しは使わない —
+    // 貸与だった師弟は写しを作って連れていく仕組みなので、
+    // 所属選手がそのまま残る残留で重ねると**同じ選手が2人**になる
+    S.player.legacy=null;
+    S.career.train=stay.train; S.career.bond=stay.bond; S.career.bondGold=stay.gold;
+    S.career.trust=stay.trust; S.career.mentor=stay.mentor.slice();
+    // 組んでいた形もそのまま。**居なくなった選手だけ落とす**
+    S.form=stay.form||bestFormFor(availableCards());
+    S.squad=stay.squad.map(id=>(id!=null&&cardById(id))?id:null);
+    if(S.squad.filter(x=>x!=null).length<TUNING.squad.starters)S.squad=autoSquad();
+  }else{
+    // **師弟の持ち越しはここで戻す**(→§3.39)
+    applyLegacy();
+    S.form=bestFormFor(availableCards());
+    S.squad=autoSquad();
+  }
+  S.player.stay=null;                                        // 使い切る(→§3.58)
   S.club.expect=expectedRank(seed,clubId,squadPower(squadCards().slice(0,TUNING.squad.starters)));
   // **開幕イベントはまだ**。オーナーが目標を告げるまで、HOME はそこへ誘導する(→§3.9)
   S.career.opened=false;

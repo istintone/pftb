@@ -34,7 +34,9 @@ const E=setup({tmpName:"_tmp_train.js"});
   console.log("訓練の定義OK",E.TRAININGS.map(t=>t.label+"("+t.stat.toUpperCase()+")").join(" / "));
 
   // ---------- 覚醒(→docs/03 §3.30) ----------
-  E.startTenure("sam-8");
+  // **別のクラブへ移る**。同じクラブを選び直すと覚醒も連携も引き継がれる(→§3.58)ので、
+  // ここで見たい「何も無いところから積む」にならない
+  E.startTenure("sam-2");
   const S2=E.getS(), pid=S2.squad.find(Boolean);
   assert.strictEqual(E.trainReady(pid),null,"経験点が無ければ覚醒しない");
   E.trainAdd(pid,"atk",G.need-1);

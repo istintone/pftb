@@ -2767,3 +2767,13 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .rv-nm{ display:block; font:600 20px/1.4 var(--f-head); color:var(--text) }
 .rv-sub{ display:block; font-size:11px; color:var(--text-dim) }
 .rv-hint{ margin-top:10px; font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--text-mute) }
+
+/* 残留の行(→docs/03 §3.58)。**一覧の中で1行だけ性質が違う**ので、
+   格の数字ではなく「引き継げる」ことを見出しの高さで示す */
+.offer.stay{ border-color:var(--accent); background:oklch(0.24 0.05 85 / .22) }
+.offer.stay .of-r.ok{ color:var(--accent) }
+.of-stay{
+  margin-left:8px; padding:2px 7px; border-radius:5px; font-style:normal;
+  font:600 10px/1 var(--f-head); letter-spacing:1px;
+  background:var(--accent); color:var(--surface);
+}

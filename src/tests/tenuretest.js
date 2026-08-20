@@ -940,6 +940,70 @@ function runSeason(hand) {
       + " 候補は先に確定 ／ 出す選手は消え、来る選手は受信箱");
   }
 
+  // ---------- 残留(→docs/03 §3.58) ----------
+  // **同じクラブを選び直したときだけ、積んだものを全部引き継ぐ**
+  {
+    const build = async (club) => {
+      await E.newGame();
+      const S = E.getS(); S.coach = "検証"; S.world.seed = 20260821;
+      E.startTenure(club);
+      S.club.coins = 99000; S.club.exp = 7777;
+      S.club.fac = { training: 4, medical: 3, stadium: 2, scouting: 1, youth: 5 };
+      const ids = S.squad.filter(x => x != null).slice(0, 4);
+      E.trainAdd(ids[0], "atk", 20); E.trainAwake(ids[0], "atk");
+      E.bondAdd(ids[0], ids[1], 40); E.bondAwake(ids[0], ids[1]);
+      E.trustAdd(ids[2], 50); S.career.mentor = [ids[2]];
+      return S;
+    };
+    const size = S => ({
+      coins: S.club.coins, exp: S.club.exp, fac: JSON.stringify(S.club.fac),
+      div: S.world.div, train: Object.keys(S.career.train).length,
+      bond: Object.keys(S.career.bond).length, gold: Object.keys(S.career.bondGold).length,
+      mentor: (S.career.mentor || []).length,
+    });
+
+    // --- 残留 ---
+    let S = await build("eng-20");
+    const was = size(S);
+    E.newTenure();
+    assert.strictEqual(E.stayClub(), "eng-20", "残留できる相手が控えられている");
+    E.startTenure("eng-20");
+    const now = size(S);
+    for (const k of Object.keys(was))
+      assert.deepStrictEqual(now[k], was[k], "残留したのに " + k + " が引き継がれない");
+    assert.strictEqual(S.player.stay, null, "控えは使い切る");
+    assert.strictEqual(S.player.legacy, null, "残留では師弟の持ち越しを使わない");
+    // **オーナーの評価と期待は引き直す**(前の任期の貯金で最初から安泰にしない)
+    assert.strictEqual(S.club.eval, E.TUNING.eval.start, "評価は引き直す");
+    assert.strictEqual(S.club.sponsor, null, "スポンサーは結び直す");
+    assert.strictEqual(S.career.node, 1, "節は1から");
+
+    // **貸与の師弟が二重にならない**(移籍は写しを作って連れていく経路なので)
+    S = await build("eng-20");
+    const lid = S.club.loan[0].id, lname = E.cardById(lid).name;
+    E.trustAdd(lid, 120); S.career.mentor = [lid];
+    const loan0 = S.club.loan.length;
+    E.newTenure(); E.startTenure("eng-20");
+    const names = S.club.loan.concat(S.player.coll).map(c => c.name);
+    assert.strictEqual(names.filter(n => n === lname).length, 1,
+      "残留で師弟が二重になっている: " + lname);
+    assert.strictEqual(S.club.loan.length, loan0, "所属選手の数が変わっている");
+
+    // --- 移籍 ---
+    S = await build("eng-20");
+    const was2 = size(S);
+    E.newTenure(); E.startTenure("eng-21");
+    const now2 = size(S);
+    assert.notStrictEqual(now2.coins, was2.coins, "移籍でコインが引き継がれている");
+    assert.strictEqual(now2.exp, 0, "移籍で熟練度が引き継がれている");
+    assert.strictEqual(now2.train, 0, "移籍で覚醒が引き継がれている");
+    assert.strictEqual(now2.bond, 0, "移籍で連携が引き継がれている");
+    assert.strictEqual(now2.gold, 0, "移籍で黄金線が引き継がれている");
+    assert.notStrictEqual(now2.fac, was2.fac, "移籍で施設が引き継がれている");
+    console.log("残留OK コイン・熟練度・施設・部・覚醒・連携・師弟を引き継ぐ ／"
+      + " 評価と契約は引き直す ／ 師弟は二重にならない ／ 移籍では引き継がない");
+  }
+
   // ---------- ユース(→docs/03 §3.57) ----------
   // **タダで手に入る代わりに、置いていく。** 任期に1人だけ、中ほどに上がってくる
   {

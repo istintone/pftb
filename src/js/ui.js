@@ -4466,7 +4466,12 @@ function renderCareerEnd(){
 let _pickedClub=null;
 function renderOffers(){
   const fame=S.player.fame;
-  const list=offersFor(fame).sort((a,b)=>b.grade-a.grade||a.rank-b.rank).slice(0,12);
+  // **残留は必ず先頭に出す**(→docs/03 §3.58)。格で並べて12件で切ると、
+  // 下位クラブに居るときに「残る」という選択肢そのものが画面から消える
+  const stay=stayClub();
+  const all=offersFor(fame).sort((a,b)=>b.grade-a.grade||a.rank-b.rank);
+  const list=all.filter(c=>c.id!==stay).slice(0,stay?11:12);
+  if(stay&&clubById(stay))list.unshift(clubById(stay));
   $("offerHead").textContent="OFFERS · 名声 "+fmtNum(fame);
   // **初めての就任か、次の行き先か**で言うことを変える(→docs/06 §6.47)。
   // 一枚目は「これから監督人生が始まる」、二枚目からは「次はどこへ」
@@ -4481,7 +4486,9 @@ function renderOffers(){
         ? "無名の監督に声をかけたクラブがあります。"
           +"どこから始めるかで、これからの道のりが変わります。"
         : "名声 "+fmtNum(fame)+" に届いたクラブから声がかかりました。"
-          +"格が高いほど、オーナーの期待も高くなります。")
+          +"格が高いほど、オーナーの期待も高くなります。"
+          // **残留の意味をここで言い切る**(→§3.58)。一覧の行だけでは伝わらない
+          +(stay?"　同じクラブに残れば、いま積み上げたものをすべて引き継げます。":""))
     +'</div>'
     +'<div class="of-meta">'+esc(lgs.slice(0,3).join(" ／ "))
       +(lgs.length>3?" ほか":"")
@@ -4489,13 +4496,22 @@ function renderOffers(){
     +'<div class="of-go">&gt; 向かうクラブを選んで、契約を結びましょう</div>';
   $("offerList").innerHTML=list.map(c=>{
     const lg=leagueById(c.league);
-    return '<div class="offer" data-club="'+c.id+'">'
-      +'<div class="of-l"><b>'+esc(c.name)+'</b>'
-      +'<div class="lg">'+lg.name+' '+divName(c.div)+' ／ 部内'+c.rank+'位相当 ／ 格★'+c.grade+'</div></div>'
+    const isStay=c.id===stay;
+    return '<div class="offer'+(isStay?" stay":"")+'" data-club="'+c.id+'">'
+      +'<div class="of-l"><b>'+esc(c.name)+(isStay?'<i class="of-stay">残留</i>':"")+'</b>'
+      // **残留のときは部を「いまの部」で出す**。CLUBS の持ち場ではなく、
+      // 昇降格の結果がそのまま続く(→§3.58)
+      +'<div class="lg">'+lg.name+' '
+        +divName(isStay?S.world.div:c.div)
+        +(isStay?' ／ 覚醒・連携・コイン・熟練度・施設をすべて引き継ぐ'
+                :' ／ 部内'+c.rank+'位相当 ／ 格★'+c.grade)+'</div></div>'
+      // **残留に名声は要らない**(→§3.58)。すでにそこに居るので、
+      // 必要名声を出すと「足りないと残れない」と読めてしまう
+      +(isStay?'<div class="of-r ok">継続</div>'
       // **必要名声は要るときだけ出す**。0 が裸で並ぶと、何の数字か読めない
-      +(requiredFame(c)>0
-        ? '<div class="of-r"><i>必要名声</i><b class="num">'+fmtNum(requiredFame(c))+'</b></div>'
-        : '<div class="of-r ok">いつでも</div>')
+        :requiredFame(c)>0
+          ? '<div class="of-r"><i>必要名声</i><b class="num">'+fmtNum(requiredFame(c))+'</b></div>'
+          : '<div class="of-r ok">いつでも</div>')
     +'</div>';
   }).join("");
   $("offerList").querySelectorAll("[data-club]").forEach(el=>{
