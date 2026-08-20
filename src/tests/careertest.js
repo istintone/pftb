@@ -1312,6 +1312,44 @@ function runSeason() {
         "> CB", back.off.toFixed(2), "> GK", gk.off.toFixed(2));
     }
 
+    // ①''' **受けに行く動き**(→docs/03 §3.66)。近くの味方が tec/spd で顔を出して
+    // ボール保持者を助ける。助ける側のスタミナが乗るので**元気なうちにしか出ない**。
+    // wear(→§3.65)が pow を終盤に残すのと対になり、
+    // **序盤は技と速さ、終盤は力**という時間軸の住み分けを作る。
+    {
+      const O = E.TUNING.offb;
+      assert.ok(O.wear > 1, "助ける側のスタミナが乗る(1 より大きい): " + O.wear);
+      const M = E.createMatch(H, A, 11);
+      const T = M.home, at = sub => T.players.find(p => p.sub === sub);
+      const ball = at("CMF");
+      const set = (k, v) => { for (const p of T.players)
+        p.c = { ...p.c, up: { ...(p.c.up || {}), [k]: v } }; };
+      const fresh = () => { for (const p of T.players) p.stam = 1; };
+      const tired = () => { for (const p of T.players) p.stam = 0.5; };
+
+      // 平均的な選手なら**加点も減点も無い**(得点が前半に偏らないための要)
+      set("tec", 0); set("spd", 0);
+      fresh(); const flat = E.offBallHelp(T, ball, ball.y0 / 100, ball.x);
+      tired(); const flatT = E.offBallHelp(T, ball, ball.y0 / 100, ball.x);
+      assert.ok(Math.abs(flat) < 0.35 && Math.abs(flatT) < Math.abs(flat) + 0.01,
+        "平均的な布陣は疲れても加点が動かない: 満 " + flat.toFixed(3)
+        + " / 疲 " + flatT.toFixed(3));
+
+      // 技と速さが高いほど加点が増える
+      set("tec", 6); set("spd", 6);
+      fresh(); const hi = E.offBallHelp(T, ball, ball.y0 / 100, ball.x);
+      assert.ok(hi > flat + 0.25, "技と速さが高いほど顔を出せる: " + flat.toFixed(3)
+        + " → " + hi.toFixed(3));
+
+      // **その加点は疲れると消える**。ここが pow との時間軸の住み分け
+      tired(); const hiT = E.offBallHelp(T, ball, ball.y0 / 100, ball.x);
+      assert.ok(hiT < hi * 0.55, "疲れると顔を出せなくなる: 満 " + hi.toFixed(3)
+        + " → 疲 " + hiT.toFixed(3));
+      console.log("受けに行く動きOK 平均的な布陣", flat.toFixed(2),
+        "／ 技速+6 満タン", hi.toFixed(2), "→ 消耗5割", hiT.toFixed(2),
+        "（力は wear", E.TUNING.wear.pow, "で終盤も残る）");
+    }
+
     // ①'' **疲れると足と技から落ちて、力は残る**(→§3.65)。
     // 一律に掛けると比の判定で相殺され、sta が仕事を失う(実測 +0.06 → +0.15)
     {

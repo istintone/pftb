@@ -884,11 +884,43 @@ function pickCounterCh(rng,p,min){
  *   守備側 … def を主軸に、**自分が選んだ守備チャンネルの能力**を副次で足す。
  *            思い切った手ほど強い(k)が、そのぶん反則になりやすい(foul)。
  */
-function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX,bk,min){
-  const M=TUNING.matchup;
+/**
+ * **受けに行く動き**(→docs/03 §3.66)。ボールの近くにいる味方が
+ * 顔を出してボール保持者を助ける量。**tec と spd だけで決まる**。
+ *
+ * 助ける側の**スタミナが乗る**のが肝。wear(→§3.65)で pow は終盤まで残るので、
+ * 何もしないと「疲れたら力が強い」だけの試合になる。こちらを元気なうち限定に
+ * すると、**序盤は技と速さ、終盤は力**という時間軸の住み分けが生まれる。
+ *
+ * **平均からの差にスタミナを掛ける**(戻り値は 0 が基準)。素の量に掛けると、
+ * 疲れるほど全チームの加点が一様に減って**得点が前半に偏る**(実測 52:48 → 56:44)。
+ * 差だけに掛ければ、平均的な選手は疲れても 0 のままで、
+ * **技と速さの差だけが「走れるうち」に出る**。
+ */
+function offBallHelp(T,atk,h,x){
+  const O=TUNING.offb;
+  let n=0,w=0;
+  for(const q of T.players){
+    if(q===atk||q.role==="GK")continue;
+    const dh=(heightOf(q)-h)/O.h, dx=((q.x-x)/100)/O.x;
+    const near=Math.exp(-(dh*dh+dx*dx));
+    if(near<0.02)continue;                                  // 遠すぎる味方は数えない
+    // 覚醒の裏パラは乗せる(eff と揃える)が、fit や采配は乗せない。
+    // 「そこに居て走れるか」だけの話なので、枠の適性は関係しない
+    const up=q.c.up||{};
+    const qual=((q.c.tec+(up.tec||0))*O.tecW
+      +(q.c.spd+(up.spd||0))*(1-O.tecW))/O.ref;
+    w+=near; n+=near*(qual-1)*Math.pow(q.stam==null?1:q.stam,O.wear);
+  }
+  return w?n/w:0;                                           // 近くの味方の加重平均
+}
+function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX,bk,min,T){
+  const M=TUNING.matchup, O=TUNING.offb;
+  // **近くの味方が受けに動くぶんの加点**(→docs/03 §3.66)
+  const help=T?1+clamp(offBallHelp(T,atk,atkH,atkX),-O.max,O.max)*O.k:1;
   // **連携はパス系にだけ効く**(→docs/03 §3.31)。渡す相手が決まっている手だから
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
-    *ch.risk*TUNING.atk.originK*skS(atk,"origin",ch,min)*(bk||1)*rr(rng);
+    *ch.risk*TUNING.atk.originK*skS(atk,"origin",ch,min)*(bk||1)*help*rr(rng);
   // **一発(long)はGKの飛び出しで摘まれる**。マーカーではなくGKが持つスキル
   const gkStop=ch.to!=null?skK(pickGK(D),"longStop"):1;
   // **軸には相手のマークが厳しい**(→docs/03 §3.44)。目立てば消される、の表現
@@ -1247,7 +1279,7 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
     // 連携が判定に乗らない。撃つかどうかの判断だけは、収めたあとに回す(→§7.9)
     const tg=ballTarget(rng,h,x,ch);
     const recv=ch.kind==="pass"?receiverAt(rng,T,tg,carrier,min):null;
-    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x,bondK(carrier,recv),min):true;
+    const ok=marker?resolveChannel(rng,carrier,marker,ch,dch,D,h,x,bondK(carrier,recv),min,T):true;
     carryRun=ch.kind==="carry"?carryRun+1:0;
     push({ side:T.side, type:step?"link":"origin", step,
       by:carrier.c.id, sub:carrier.sub, ch:ch.id, kind:ch.kind,
