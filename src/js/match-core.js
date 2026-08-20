@@ -1256,9 +1256,13 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
  * ゴールキックは「攻撃が1つ増える」ことではなく「次の攻撃を誰がどこから始めるか」。
  */
 function gkFeed(M,rng,D,from){
+  // **GKの能力は掛けない。** 掛けようとして測ったが、効かないと分かっている
+  // (→docs/03 §3.61)。ゴールキックが起点になるのは1試合 33 回中 4.6 回で、
+  // その中の数%を動かしても結果に出ない(札の効きで +0.003 = 誤差)
   if(rng()<TUNING.shot.feed)M.restart=D.side;
   return M.events.slice(from);
 }
+
 /**
  * 決定機阻止(→docs/07 §7.19)。**カバーの1人が身体を投げ出す**。
  *
