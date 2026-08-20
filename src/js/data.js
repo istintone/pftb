@@ -1947,8 +1947,12 @@ const TUNING={
   //   staReduce sta20 のとき消耗が何割減るか
   //   lineFree/linePenalty  守備ラインの綻び(平均消耗が不感帯を超えた分だけ守備が落ちる)
   //   capMul … キャプテンの消耗の倍率。**長くピッチに居られる**(→docs/03 §3.20)
+  // 消耗(→docs/07 §7.10)。**相互カバー**(→docs/03 §3.63)がここに乗る。
+  //   sup*   … 周りに味方が居るほど消耗が緩い。厚く構えた形ほど終盤に強くなる
+  //            supH/supX は「近い」とみなす広がり、supK は効き、supMax は上限
   fatigue:{ perMin:0.0040, perAct:0.0260, staReduce:0.45, minStam:0.30,
-            lineFree:0.20, linePenalty:0.85, capMul:0.72 },
+            lineFree:0.20, linePenalty:0.85, capMul:0.72,
+            supH:0.16, supX:0.24, supK:0.30, supMax:0.30 },
   // 枠適性(→docs/03 §3.14)。card-eleven を踏襲した3段。
   //   sub  サブポジションが一致 = 本来の力を出せる
   //   main サブは違うがメイン(大分類)が一致 = とりあえず使えるが本来の力は出ない

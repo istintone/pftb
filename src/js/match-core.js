@@ -129,6 +129,27 @@ function eff(p,k){
  * よく動いて活躍した選手ほど早く落ちる。sta が高いほど落ちが緩やか。
  * **これが交代の意味になる**: 終盤に消耗した選手を、万全の控えと入れ替える。
  */
+/**
+ * 相互カバー(→docs/03 §3.63)。**周りに味方が居るほど消耗が緩い**。
+ *
+ * 陣形の密度をそのまま消耗に効かせる。厚く構えた形は終盤に強くなり、
+ * 前に人を割いた形は末脚が落ちる。**枠の位置は試合中変わらない**ので、
+ * 組んだ時点で1度だけ数えればよい。
+ *
+ * 局所の被り(`coverOf`)では陣形の差が 4〜6% しか出ず、後ろに人を置いても
+ * 失点が減らなかった(→docs/05 D)。密度をこちらで数えると 0.54〜0.74 と
+ * **6倍以上の開き**になる。
+ */
+function supportOf(players,p){
+  const F=TUNING.fatigue;
+  let n=0;
+  for(const q of players){
+    if(q===p||q.role==="GK")continue;
+    const dh=(heightOf(q)-heightOf(p))/F.supH, dx=((q.x-p.x)/100)/F.supX;
+    n+=Math.exp(-(dh*dh+dx*dx));
+  }
+  return n;
+}
 function staminaOf(p,min){
   const F=TUNING.fatigue;
   const played=Math.max(0,min-(p.enter||0));
@@ -139,7 +160,9 @@ function staminaOf(p,min){
   // **軸は消耗が早い**(→docs/03 §3.44)。軸を外しても、張っていた時間ぶんは残る
   // (掛け算にすると、外した瞬間に体力が戻ってしまう)
   const kp=(p.kpMin||0)*F.perMin*(TUNING.kp.stam-1);
-  const drain=((played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul+kp)*cap*skK(p,"stam");
+  // **助け合っているぶんだけ軽い**(→§3.63)。支えの無い枠ほど削られる
+  const sup=1-clamp((p.sup||0)*F.supK,0,F.supMax);
+  const drain=((played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul+kp)*cap*sup*skK(p,"stam");
   return clamp(1-drain,F.minStam,1);
 }
 /**
@@ -976,6 +999,8 @@ function createMatch(home,away,seed,opts){
     mom:kickoffMom(H,A),                                     // 勢い(-1..+1、+がホーム)
     ko:!!(opts&&opts.ko),                                    // ノックアウト(→§3.33)
   };
+  // **相互カバーは組んだ時点で1度だけ数える**(→§3.63)。枠は試合中動かない
+  for(const T of [H,A])for(const p of T.players)p.sup=supportOf(T.players,p);
   M.events.push({ min:0, half:1, at:false, side:null, type:"kickoff",
     home:H.name, away:A.name, ticks:M.clock.length, mom:Math.round(M.mom*100)/100 });
   return M;

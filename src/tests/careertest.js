@@ -1161,6 +1161,37 @@ function runSeason() {
         deep[i][0] + "回目のこぼれは前より大きく減る: " + deep[i][1] + " < " + deep[i - 1][1]);
     assert.ok(Math.max(...deep.map(d => d[0])) <= E.TUNING.shot.reboundMax,
       "安全網の上限を超えない");
+    // --- 相互カバー(→docs/03 §3.63)。**厚く構えた形ほど消耗が緩い** ---
+    {
+      const F = E.TUNING.fatigue;
+      assert.ok(F.supK > 0, "相互カバーが効いている");
+      const S0 = E.getS();
+      const mk = f => { S0.form = f; S0.squad = E.autoSquad();
+        return E.matchSide(S0.club.id); };
+      const supOf = f => {
+        const m = E.createMatch(mk(f), mk("4-4-2"), 1);
+        const ps = m.home.players.filter(q => q.role !== "GK");
+        return ps.reduce((a, q) => a + (q.sup || 0), 0) / ps.length;
+      };
+      const back5 = supOf("5-3-2"), front3 = supOf("ゼロトップ");
+      assert.ok(back5 > front3,
+        "厚く構えた形のほうが支えが薄い: 5-3-2 " + back5.toFixed(3)
+        + " / ゼロトップ " + front3.toFixed(3));
+      // **支えが厚いほど消耗が緩い**
+      const drain = sup => {
+        const p = { c:{ sta:10 }, stat:{ inv:20 }, enter:0, sup, fit:1, stam:1 };
+        return 1 - E.staminaOf(p, 90);
+      };
+      assert.ok(drain(back5) < drain(front3),
+        "支えが厚いのに消耗が緩くならない: " + drain(back5).toFixed(4)
+        + " / " + drain(front3).toFixed(4));
+      // **上限がある**(いくら密集しても消耗が消えはしない)
+      assert.ok(drain(99) > 0, "密集で消耗が0になっている");
+      console.log("相互カバーOK 支え 5-3-2 " + back5.toFixed(2) + " > ゼロトップ "
+        + front3.toFixed(2) + " ／ 消耗 " + (drain(front3) * 100).toFixed(1) + "% → "
+        + (drain(back5) * 100).toFixed(1) + "%");
+    }
+
     // --- GKの飛び出し(→docs/03 §3.62)。**GKの死に能力に仕事がある** ---
     {
       const SH = E.TUNING.shot;
