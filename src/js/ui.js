@@ -2780,6 +2780,29 @@ function clubColor(clubId){
   const p=clubHueOf(clubId);
   return p?p.hex:"oklch("+CLUB_L+" "+CLUB_C+" "+clubHue(clubId)+")";
 }
+/**
+ * 試合で使う色(→docs/06 §6.47)。**同じ色どうしが当たったらアウェイ側が着替える**。
+ *
+ * 色をサッカーで実際に使う13色へ寄せた(→docs/03 §3.54d)ので、
+ * **別のクラブが同じ色を持つことが普通に起きる**。144クラブを13色で塗れば当然で、
+ * そのままだと足元の影が同じ色になり、どちらのチームか見分けが付かない。
+ * 現実と同じで、**替えるのはアウェイ側**。まずアウェイカラーへ、
+ * それも同じなら暗く落とす。
+ */
+function kitPair(hId,aId){
+  const hue=id=>{ const c=clubById(id); return c?embDesign(c.id,c.name):null; };
+  const dh=hue(hId), da=hue(aId);
+  const h=clubColor(hId);
+  if(!dh||!da||dh.home!==da.home)return { H:h, A:clubColor(aId) };
+  const alt=da.away!==dh.home?embHueById(da.away):null;
+  return { H:h, A:alt?alt.hex:embShade(h,0.55) };
+}
+/** いまの試合の色。**片方だけ着替えさせない**ので、必ずこの対で取る。 */
+function mKit(side){
+  if(!_M||!_M.fixture)return clubColor("");
+  const p=kitPair(_M.fixture.h,_M.fixture.a);
+  return side==="H"?p.H:p.A;
+}
 /** その色の上に載せる字の色。**地の明るさで決める**(白の上に白を置かない)。 */
 function clubInk(clubId){
   const p=clubHueOf(clubId);
@@ -3085,7 +3108,7 @@ function mDrawSquads(){
   const html=[];
   for(const T of [_M.home,_M.away]){
     const side0=T.side==="H"?_M.fixture.h:_M.fixture.a;
-    const col=clubColor(side0);
+    const col=mKit(T.side);            // 同じ色どうしなら着替える(→§6.47)
     T.players.forEach((p,i)=>{
       const [x,y]=slotXY(p,T.side,true);   // 開始はキックオフ隊形
       // **点ではなく全身を出す**(→docs/06 §6.17)。絵にはクラブカラーが無いので、
@@ -3120,7 +3143,7 @@ function mTacBars(){
     const t=T&&T.tactic?tacticById(T.tactic):null;
     el.classList.toggle("on",!!t);
     if(!t)continue;
-    el.style.setProperty("--kit",clubColor(side0(T)));
+    el.style.setProperty("--kit",mKit(T.side));
     el.innerHTML='<i>'+t.icon+'</i><span>'+esc(t.label)+'</span>';
   }
 }
@@ -3587,7 +3610,7 @@ function cutCoachFig(side,cls){
  */
 function cutTacBand(side,tacId,pos){
   const t=tacId?tacticById(tacId):null; if(!t)return "";
-  const kit=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
+  const kit=mKit(side);
   const ink=clubInk(side==="H"?_M.fixture.h:_M.fixture.a);
   const from=pos==="top"?"L":"R";
   return '<div class="cut tac '+pos+'" style="--kit:'+kit+';--kit-ink:'+ink+'">'
@@ -3620,7 +3643,7 @@ function cutTactic(e){
 function cutKick(){
   const f=(T,side,cls)=>{
     const cap=T.captain;
-    const kit=clubColor(side==="H"?_M.fixture.h:_M.fixture.a);
+    const kit=mKit(side);
     return '<div class="cut-fig '+cls+'">'
       +(cap?cutAvatar(cap,side):'<div class="cut-av" style="--kit:'+kit+'"></div>')
       +'<b>'+esc(T.name)+'</b>'

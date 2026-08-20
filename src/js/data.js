@@ -1288,6 +1288,16 @@ const TACTICS=[
     fx:[{ at:"stam", k:1.05 }],
     line:"美しく崩せ！",
   },
+  {
+    // ヴェンゲルの渾名から。**技巧のミランに対して、こちらは速さ**で裏返す
+    id:"professeur", label:"ル・プロフェスール", icon:"⚡",
+    form:["4-4-2"], exp:0, mem:true, club:"ロンドン・ガナーズ",
+    desc:"速さで裏返す。ロンドン・ガナーズの選手だけが走り切れる、背後の薄い形",
+    ordM:{ spd:1.10, pow:0.96 },
+    // 前がかりになるぶん、**止める場面では弱くなる**
+    fx:[{ at:"counter", grp:"all", s:0.98 }],
+    line:"一気に裏返せ！",
+  },
 ];
 const tacticById=id=>TACTICS.find(t=>t.id===id);
 
@@ -1317,6 +1327,25 @@ const MEMORABILIA=[
     kp:"kaka",
     order:"attack",
     tactic:"meraviglioso",
+  },
+  {
+    id:"ars2004",
+    hash:"INVINCIBLES-2004",
+    name:"2003-04 無敗優勝 アーセナル",
+    sub:"負けなかった38節",
+    note:"一度も負けずにリーグを駆け抜けた、赤と白の完成形。",
+    club:"ロンドン・ガナーズ",
+    coach:"A. ヴェンゲル",
+    coachType:"keyman",  // 軸(アンリ)の居る側へ振る(→§3.56)
+    form:"4-4-2",
+    // 枠の並びは FORMATIONS["4-4-2"] と同じ順に置く
+    //   GK / LSB / CB / CB / RSB / LMF / CMF / CMF / RMF / ST / CF
+    xi:["lehmann","ashleycole","solcampbell","kolotoure","lauren",
+        "pires","vieira","gilberto","ljungberg","bergkamp","henry"],
+    bench:["keown","clichy","edu","fabregas","reyes"],
+    kp:"henry",
+    order:"attack",
+    tactic:"professeur",
   },
 ];
 const memById=id=>MEMORABILIA.find(m=>m.id===id);

@@ -530,7 +530,7 @@ const SIGNATURES=[
     n:62, id:"gilberto", art:"le_cmf08_gilberto_silva", rarity:"LEG",
     name:"G. シウバ", short:"G. シウバ",
     club:"ロンドン・ガナーズ", nation:"bra",
-    pos:"MF", subs:["DMF"], age:27,
+    pos:"MF", subs:["DMF","CMF"], age:27,
     atk:8, def:17, pow:16, tec:13, spd:13, sta:16,               // 83
     skills:["見えない箒","カバーリング","セカンドボール","クリーンな守備"],
   },
@@ -570,7 +570,7 @@ const SIGNATURES=[
     n:67, id:"bergkamp", art:"le_st04_bergkamp", rarity:"LEG",
     name:"D. ベルカンプ", short:"ベルカンプ",
     club:"ロンドン・ガナーズ", nation:"ned",
-    pos:"FW", subs:["CF","OMF"], age:34,
+    pos:"FW", subs:["ST","CF","OMF"], age:34,
     atk:17, def:8, pow:14, tec:20, spd:11, sta:12,               // 82
     skills:["氷の一触","スルーパス","ポストプレー","冷静なフィニッシュ"],
   },

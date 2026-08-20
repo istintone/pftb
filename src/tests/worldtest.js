@@ -431,5 +431,27 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
       + "件 ／ 顔はすべて別 ／ 盤面の色も同じ");
   }
 
+  // ---------- 試合の色(→docs/06 §6.47) ----------
+  // **144クラブを13色で塗る**ので、同じ色どうしが当たるのは普通に起きる。
+  // そのままだと足元の影が同じ色になり、どちらのチームか見分けが付かない
+  {
+    let same = 0, swap = 0, pairs = 0, ex = null;
+    for (const a of E.CLUBS) for (const b of E.CLUBS) {
+      if (a.id === b.id) continue;
+      pairs++;
+      const p = E.kitPair(a.id, b.id);
+      if (p.H === p.A) { same++; if (!ex) ex = a.name + " vs " + b.name; }
+      if (p.A !== E.clubColor(b.id)) swap++;
+    }
+    assert.strictEqual(same, 0, "同じ色のまま当たる組がある: " + ex);
+    assert.ok(swap > 0, "着替えが一度も起きていない(判定が効いていない)");
+    // **替えるのはアウェイ側**。ホームは自分の色のまま
+    const [a0, b0] = E.CLUBS;
+    assert.strictEqual(E.kitPair(a0.id, b0.id).H, E.clubColor(a0.id),
+      "ホーム側の色が変わっている");
+    console.log("試合の色OK " + pairs + "組すべて別の色 ／ 着替え " + swap
+      + "組 ／ 替えるのはアウェイ側");
+  }
+
   process.exit(0);
 })().catch(e => { console.error("FAIL:", e); process.exit(1); });

@@ -2800,7 +2800,16 @@ const STEPS = [
           if(memHas(got.id))throw new Error('受け取る前から開いている');
           mailTake(ml.id);
           if(!memHas(got.id))throw new Error('受け取っても開かない');
-          // **全部そろっていれば何も起きない**(空の連絡を出さない)
+          // **未所持が残っていれば、次に獲ったときは別のものが届く**
+          if(MEMORABILIA.length>1){
+            const got2=memAward('world');
+            if(!got2)throw new Error('未所持が残っているのに届かない');
+            if(got2.id===got.id)throw new Error('同じものが二度届く: '+got2.id);
+            mailTake(mailList()[0].id);
+          }
+          // **全部そろっていれば何も起きない**(空の連絡を出さない)。
+          // ここは「持っている数」ではなく**全部持っている状態**で見る
+          S.player.mem=MEMORABILIA.map(m=>m.id);
           const n0=mailList().length;
           if(memAward('world')!==null)throw new Error('全部持っていても届く');
           if(mailList().length!==n0)throw new Error('空の連絡が増える');
