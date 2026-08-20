@@ -364,6 +364,10 @@ const SKILL_FX={
     fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"onTarget", k:1.12 }] },
   "獲物を待つ":     { sig:"crespo", move:"背中で外す",
     fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"start", k:1.20 }] },
+  // --- ユース限定(→docs/03 §3.57) ---
+  // **数の効果を持たない札**。連携の扱いそのものを変えるので、
+  // skillsOf は何も拾わない(grp も k も無い)。効き方は matchSide が見る
+  "クラブユース":   { youth:true },
   // --- ロンドン・ガナーズの面々(2026-08-19) ---
   // **札の組み合わせは既にある形から採る**(→docs/03 §3.41)。
   // 層とグループごとの w/s は careertest が価値の帯で見張っているので、
@@ -909,6 +913,8 @@ const FACILITIES=[
   { id:"medical",  label:"医療施設",   note:"ケガをしにくく、治りが早い" },
   { id:"stadium",  label:"スタジアム", note:"観客収入が増える" },
   { id:"scouting", label:"スカウト網", note:"パックで良い段が出やすい" },
+  // **1段でも建っていれば機能する**(→docs/03 §3.57)。段が上がるほど上がってくる段が良くなる
+  { id:"youth",    label:"ユース組織", note:"任期の中ほどに下部組織から新人が上がる" },
 ];
 const facById=id=>FACILITIES.find(f=>f.id===id);
 
@@ -1953,6 +1959,11 @@ const TUNING={
   //   train/medHurt/medHeal/scout … 効果の1段あたりの量
   fac:{ cost:[8000,15000,26000,42000,65000], nodes:[4,6,8,10,12], maxLv:5,
         startTier:0.5, train:0.12, medHurt:0.12, medHeal:0.5, scout:0.10 },
+  // ユース(→docs/03 §3.57)。**任期に1人、タダで、ただし置いていく**。
+  //   nodes … 上がってくる節の候補。任期ごとにどちらか一方
+  //   rar   … ユース組織の段(1..5)ごとの段。**最大 WORLD CLASS**
+  //   star  … 上がってきた時点の★。もう伸びない代わりに、最初から仕上がっている
+  youth:{ nodes:[40,80], rar:["REG","REG","SPE","SPE","WC"], star:5 },
   // 観客収入(→docs/03 §3.5)。**節ごとの安定収入**で、スタジアムと成績で伸びる。
   //   base … 1節あたりの素の額。リーグの money と部で倍率が掛かる
   //   perLv … スタジアム1段あたりの上乗せ / form … 勝率0〜1で掛かる幅

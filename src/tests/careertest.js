@@ -664,6 +664,14 @@ function runSeason() {
     // 表の形が守られていること。**w と s は必ずセット**(引けるだけでは強くならない)。
     // 固有スキル(→docs/03 §3.41)は1枚で複数の効果を持つので、**成分ごとに**見る
     for (const [name, fx] of Object.entries(E.SKILL_FX)) {
+      // **数の効果を持たない札**(→docs/03 §3.57)。連携の扱いそのものを変えるので
+      // 掛かり先が無い。代わりに**数を1つも持っていないこと**を確かめる
+      // (ここを素通しにすると、倍率を隠し持った札が検査を抜けてしまう)
+      if (fx.youth) {
+        assert.ok(!fx.at && !fx.fx && !fx.grp && fx.k == null && fx.w == null && fx.s == null,
+          name + " は数の効果を持たない札。掛かり先も倍率も持たない");
+        continue;
+      }
       for (const e of (fx.fx || [fx])) {
         assert.ok(e.at, name + " に掛かり先がある");
         if (e.grp) {

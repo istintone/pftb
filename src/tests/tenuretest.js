@@ -940,6 +940,83 @@ function runSeason(hand) {
       + " 候補は先に確定 ／ 出す選手は消え、来る選手は受信箱");
   }
 
+  // ---------- ユース(→docs/03 §3.57) ----------
+  // **タダで手に入る代わりに、置いていく。** 任期に1人だけ、中ほどに上がってくる
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; S.world.seed = 20260820;
+    E.startTenure("sam-8");
+    const Y = E.TUNING.youth;
+
+    // **ユース組織が無ければ来ない**
+    S.club.fac.youth = 0; S.career.youth = null; S.career.node = 90;
+    assert.strictEqual(E.youthPending(), null, "組織が無いうちは上がってこない");
+
+    // **1段でも建っていれば機能する**。上がる節は候補のどちらか
+    S.club.fac.youth = 1;
+    const at = E.youthNode();
+    assert.ok(Y.nodes.includes(at), "上がる節が候補の中: " + at);
+    S.career.node = Y.nodes[0] - 1;
+    assert.strictEqual(E.youthPending(), null, "最初の候補より前には来ない");
+
+    // **段が上がるほど良い段が来る。最大 WORLD CLASS**
+    const rars = [1, 2, 3, 4, 5].map(lv => E.youthRarity(lv));
+    assert.strictEqual(rars[rars.length - 1], "WC", "最大は WORLD CLASS: " + rars.join("/"));
+    const rank = k => E.RAR_KEYS.indexOf(k);
+    for (let i = 1; i < rars.length; i++)
+      assert.ok(rank(rars[i]) >= rank(rars[i - 1]), "段が下がらない: " + rars.join("/"));
+
+    // **上がってきたら★は上限、札にクラブユースとスーパーサブを持つ**
+    S.club.fac.youth = 5; S.career.youth = null; S.career.node = 90;
+    // **貸与は空にしない**。クラブの所属を消すと編成が組めなくなる
+    S.player.mail = [];
+    const coll0 = S.player.coll.length, loan0 = S.club.loan.length;
+    const got = E.youthAward();
+    assert.ok(got, "条件がそろえば上がってくる");
+    const c = got.card;
+    assert.strictEqual(c.rarity, "WC", "5段は WORLD CLASS");
+    const star = c.up ? Object.values(c.up).reduce((a, b) => a + b, 0) : 0;
+    assert.strictEqual(star, Y.star, "★は上限で上がってくる: " + star);
+    assert.ok(c.skills.includes("クラブユース"), "クラブユースを持つ");
+    assert.ok(c.skills.includes("スーパーサブ"), "スーパーサブを持つ");
+    assert.ok(c.skills.length >= 3, "見分けの付く札が1枚は残る: " + c.skills.join("/"));
+    // **伸びは枠に効く能力へ寄る**(GKのatkのような使い道の無い能力に流れない)
+    const W = E.STAT_W[c.pos];
+    const upKeys = E.STAT_KEYS.filter(k => c.up && c.up[k]);
+    const lowest = E.STAT_KEYS[W.indexOf(Math.min(...W))];
+    assert.ok(!upKeys.includes(lowest) || (c.up[lowest] || 0) <= 1,
+      c.pos + " の伸びが一番効かない能力(" + lowest + ")に寄っている: " + JSON.stringify(c.up));
+
+    // **受け取るとクラブの預かりに入る**(手札ではない)
+    const m = E.mailList()[0];
+    assert.ok(E.mailDef(m).gift.youth, "連絡にユースが添えられている");
+    E.mailTake(m.id);
+    assert.strictEqual(S.player.coll.length, coll0, "手札は増えない");
+    assert.strictEqual(S.club.loan.length, loan0 + 1, "クラブの預かりに入る");
+    const y = S.club.loan[S.club.loan.length - 1];
+    assert.ok(E.isYouth(y), "ユースとして見分けが付く");
+
+    // **二度は来ない**
+    assert.strictEqual(E.youthPending(), null, "任期に1人だけ");
+
+    // **編成に入れると全員と黄金線**。matchSide は枠順で見る(→squadCards)ので、
+    // 穴の空いた編成は渡せない。先に11人を埋めてから1枠だけ差し替える
+    S.squad = E.autoSquad();                 // **id の配列**を返す(カードではない)
+    if (!S.squad.includes(y.id)) S.squad[1] = y.id;
+    const side = E.matchSide(S.club.id);
+    const me = side.cards.find(x => x.id === y.id);
+    const others = side.cards.filter(x => x && x.id !== y.id);
+    assert.strictEqual(Object.keys(me.gold || {}).length, others.length,
+      "ユースから見て全員が黄金線");
+    assert.ok(others.every(x => x.gold && x.gold[y.id]), "相手から見ても黄金線");
+
+    // **任期が明ければクラブに残る**
+    E.startTenure("sam-2");
+    assert.ok(!(S.club.loan || []).some(x => E.isYouth(x)), "連れていけない");
+    console.log("ユースOK 組織1段で機能 ／ 段で段位が上がり最大WC ／ ★上限で加入 ／"
+      + " 全員と黄金線 ／ クラブの預かりなので置いていく");
+  }
+
   // ---------- 引換券(→docs/03 §3.40a) ----------
   // **スポンサーの報酬はここへ集約**。選手をその場で渡さず、券で持たせる。
   {

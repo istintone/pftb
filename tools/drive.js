@@ -3745,8 +3745,10 @@ const STEPS = [
       for(const p of Object.keys(SKILLS))for(const n of skillPool(p))(pos[n]=pos[n]||[]).push(p);
       const all=Object.keys(pos);
       const noFx=all.filter(n=>!SKILL_FX[n]);
-      // **固有スキルは引けなくて正しい**(→docs/03 §3.41)。持ち主だけが持つ
-      const noPool=Object.keys(SKILL_FX).filter(n=>!pos[n]&&!SKILL_FX[n].sig);
+      // **固有スキルは引けなくて正しい**(→docs/03 §3.41)。持ち主だけが持つ。
+      // **ユース限定の札も同じ**(→§3.57)。生成の抽選には混ぜず、上がってきた者だけが持つ
+      const noPool=Object.keys(SKILL_FX)
+        .filter(n=>!pos[n]&&!SKILL_FX[n].sig&&!SKILL_FX[n].youth);
       if(noFx.length)throw new Error('効果が無いスキル: '+noFx.join(','));
       if(noPool.length)throw new Error('誰も引けないスキル: '+noPool.join(','));
       // グループは必ず SK_GRP にあること

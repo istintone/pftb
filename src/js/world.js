@@ -507,7 +507,9 @@ function matchSide(clubId){
         const up=trainUps(c.id), bond={}, gold={};
         for(const o of ids)if(o!==c.id){
           const v=bondOf(c.id,o); if(v)bond[o]=v;
-          if(bondIsGold(c.id,o))gold[o]=1;              // 黄金線(→§3.31)
+          // **ユースは積み上げに関わらず全員と黄金線**(→§3.57)。
+          // 下部組織で一緒に育った、という筋書きなので、片方がユースなら成立する
+          if(bondIsGold(c.id,o)||isYouth(c)||isYouth(cardById(o)))gold[o]=1;
         }
         const has=Object.keys(bond).length, hasG=Object.keys(gold).length;
         return { ...c, cond:condOf(c.id), ...(up?{ up }:{}),
@@ -1128,6 +1130,11 @@ function mailTake(id,pos){
     g.card={ ...g.card, id:nextCardId() };
     S.player.coll.push(g.card);
   }
+  // **ユースはクラブの預かり**(→docs/03 §3.57)。手札ではなく貸与の側へ入れる
+  if(g.youth&&S.club){
+    g.youth={ ...g.youth, id:nextCardId() };
+    (S.club.loan||(S.club.loan=[])).push(g.youth);
+  }
   return g;
 }
 // --- 見たもの・やったこと(→docs/03 §3.43) ---
@@ -1553,6 +1560,80 @@ function learnRoll(tacticId,res,seed,cup){
   return tacticId;
 }
 
+// ---------- ユース(→docs/03 §3.57) ----------
+// **タダで手に入る代わりに、置いていく。** ユース組織が1段でも建っていれば、
+// 任期の中ほどに下部組織から1人だけ上がってくる。
+//
+//   ・上がってくるのは **40節 か 80節 のどちらか**(任期ごとに決まる)
+//   ・段は**ユース組織の段**で決まる(最大 WORLD CLASS)
+//   ・**★は上限で上がってくる**。伸びしろは無いが、最初から仕上がっている
+//   ・**クラブの所属**(S.club.loan)なので、任期が明ければクラブに残る
+//
+// 「今を取る(即戦力)か、先を取る(施設)か」(→§3.5)に、**先を取ると人が来る**
+// という筋道を足すもの。コインでは買えない強さを、時間で買う経路になる。
+
+/** その任期のユースが上がってくる節。**候補のどちらか一方**。 */
+function youthNode(){
+  if(!S.club)return null;
+  const rng=mulberry32((S.world.seed^hashStr("ynode:"+S.club.id+":"+S.world.season))>>>0);
+  const N=TUNING.youth.nodes;
+  return N[Math.floor(rng()*N.length)];
+}
+/**
+ * いま上がってくるか。**任期に1人だけ**。
+ * 選ばれた節を過ぎていれば来るので、**その節までに建て終わらなくても拾える**
+ * (間に合わなかった瞬間に権利が消えると、建てる判断が博打になる)。
+ */
+function youthPending(){
+  const C=S.career;
+  if(!S.club||!C||C.over||C.youth)return null;
+  const lv=facLv("youth");
+  if(lv<1)return null;
+  const at=youthNode();
+  return (at!=null&&C.node>=at)?at:null;
+}
+/** その段のユースの段位。ユース組織の段(1..5)で決まる。 */
+const youthRarity=lv=>TUNING.youth.rar[clamp(lv,1,TUNING.youth.rar.length)-1];
+/**
+ * ユースを1人作る。**★は上限**で、伸びは枠に寄せつつ散らす(→cards.js youthUps)。
+ * 札は**クラブユースとスーパーサブを必ず持つ**(→§3.57)。
+ */
+function youthMake(rng,lv){
+  const pos=rpick(rng,POS);
+  const c=makeCard(rng,pos,{ rarity:youthRarity(lv) });
+  const Y=TUNING.youth;
+  c.up=youthUps(rng,c,pos,Y.star);
+  c.youth=true;                                   // 見分けの印(画面と連携の判定が見る)
+  // **限定の札を先頭に置き、枠を1つ広げる**。2枚を占めるだけだと、
+  // REGULAR のユースが全員まったく同じ札になってしまう
+  const keep=(c.skills||[]).filter(x=>x!=="クラブユース"&&x!=="スーパーサブ");
+  const n=RARITY[c.rarity].skills+1;
+  c.skills=["クラブユース","スーパーサブ"].concat(keep).slice(0,Math.max(3,n));
+  return c;
+}
+/**
+ * ユースが上がってきた(→§3.57)。**秘書の受信箱へ届ける**(→§3.40a)。
+ * 受け取ると `S.club.loan` に入る。手札(S.player.coll)には入らない。
+ */
+function youthAward(){
+  const at=youthPending(); if(at==null)return null;
+  const C=S.career, lv=facLv("youth");
+  C.youth=at;                                     // 二度は来ない
+  const rng=mulberry32((S.world.seed^hashStr("youth:"+S.club.id+":"+S.world.season))>>>0);
+  const c=youthMake(rng,lv);
+  const key="youth:"+S.world.season+":"+at;
+  mailPush(key,{
+    from:"sec", title:"ユースから1人、トップに上がります",
+    text:"監督、下部組織から"+shortName(c)+"を上げます。"
+      +"クラブの預かりなので"+RARITY[c.rarity].label+"でも移籍金は要りません。"
+      +"ただ、監督が去るときは連れていけません。",
+    gift:{ youth:c, label:RARITY[c.rarity].label+" "+shortName(c)+"（ユース）" },
+  });
+  return { at, lv, card:c, key };
+}
+/** その選手がユース上がりか。**連携の扱いが変わる**(→§3.57)。 */
+const isYouth=c=>!!c&&((c.skills||[]).includes("クラブユース")||c.youth===true);
+
 // ---------- トレード(→docs/03 §3.49) ----------
 // **任期の折り返し(45節)と終盤(90節)に1度ずつ**、他クラブから話が来る。
 // 出せるのは **WORLD CLASS 以上の実名選手で、いま編成に入っていない人**だけ。
@@ -1808,7 +1889,10 @@ function bondMatch(){
 function bondPairs(ids){
   const out=[];
   for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){
-    const v=bondSum(ids[i],ids[j]), g=bondIsGold(ids[i],ids[j]);
+    const v=bondSum(ids[i],ids[j]);
+    // 盤面の線も試合と同じ扱いにする(→§3.57)。片方がユースなら黄金線
+    const g=bondIsGold(ids[i],ids[j])
+      ||isYouth(cardById(ids[i]))||isYouth(cardById(ids[j]));
     if(v>TUNING.bond.t1||g)out.push({ a:i, b:j, sum:v, tier:bondTier(v,g) });
   }
   return out;
@@ -2485,6 +2569,7 @@ function playCupDay(done){
 function advanceNode(){
   sponTick();                                             // 契約の満了(→§3.40)
   mailTick();                                             // 秘書からの連絡(→§3.42)
+  youthAward();                                           // ユースが上がる(→§3.57)
   const C=S.career, c=C.cup;
   // 敗退したあとも大会は進む。**その節の回戦を裏で確定させる**(表を見に行けば分かる)
   if(c&&!c.done){

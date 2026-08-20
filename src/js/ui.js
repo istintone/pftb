@@ -554,6 +554,7 @@ function renderMail(){
       :g.mem?g.label                                  // メモラビリア(→§3.55)
       :g.tactic?g.label                               // 采配(→§3.50)
       :g.card?(g.label||shortName(g.card))            // トレードの選手(→§3.49)
+      :g.youth?(g.label||shortName(g.youth))          // ユース(→§3.57)
       :g.coin?fmtNum(g.coin)+" コイン":null;
     // **案内は行き先まで連れていく**(→docs/03 §3.43)。読んで終わりにさせない
     const go=d.go&&SCREENS[d.go]?d.go:null;
@@ -589,6 +590,10 @@ function renderMail(){
       if(g.card){                                    // トレードの選手(→§3.49)
         toast(RARITY[g.card.rarity].label+" "+shortName(g.card)+" が加入しました");
         openCard(g.card);
+      }else if(g.youth){
+        // **ユースはクラブの預かり**(→docs/03 §3.57)。連れていけないことを添える
+        toast(RARITY[g.youth.rarity].label+" "+shortName(g.youth)+" がトップに上がりました");
+        openCard(g.youth);
       }else if(g.spon&&g.got&&g.got.ticket){
         // **スポンサーの報酬は引換券**(→docs/03 §3.40a)。SCOUT で好きなときに引く
         toast(ticketById(g.got.ticket).name+" を受け取りました");

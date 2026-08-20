@@ -226,6 +226,28 @@ function starUps(st,n){
   }
   return Object.keys(up).length?up:null;
 }
+/**
+ * ユースの伸び(→docs/03 §3.57)。**枠に効く能力へ寄せつつ、少し散らす**。
+ *
+ * `starUps` は決め打ちで一番高い能力へ積むので、同じ枠のユースがみな同じ形になる。
+ * ここは `STAT_W` を重みにして引くので、**枠に有利ではあるが同じ顔にはならない**。
+ */
+function youthUps(rng,st,pos,n){
+  const W=STAT_W[pos]||[];
+  const up={};
+  for(let got=0,guard=0;got<n&&guard<200;guard++){
+    const ks=STAT_KEYS.map((k,i)=>[k,i]).filter(([k])=>st[k]+(up[k]||0)<STAT_MAX);
+    if(!ks.length)break;
+    // **重みを立てる**(3乗)。段が上がると主能力は上限に張り付いて選べなくなるので、
+    // 平らに引くと GK の atk のような**使い道の無い能力へ伸びが流れる**。
+    // 底上げは薄く残すだけにして、枠外はまれに出る程度にとどめる
+    const w=ks.map(([,i])=>Math.pow(0.05+(W[i]||0),3));
+    let r=rng()*w.reduce((a,b)=>a+b,0), pick=ks[0][0];
+    for(let j=0;j<ks.length;j++){ r-=w[j]; if(r<=0){ pick=ks[j][0]; break; } }
+    up[pick]=(up[pick]||0)+1; got++;
+  }
+  return Object.keys(up).length?up:null;
+}
 function makeCard(rng,pos,opts={}){
   const rarity=opts.rarity||rollRarity(rng);
   const [lo,hi]=RARITY[rarity].ovr;
