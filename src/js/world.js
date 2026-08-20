@@ -429,8 +429,10 @@ function makeStay(){
     // --- 部(昇降格の結果)。**ここを戻さないと、昇格が任期で消える** ---
     div:S.world.div, divs:(S.world.divs||[]).map(a=>a.slice()),
     // --- 監督と選手のあいだに積んだもの ---
+    // **信頼と師弟は持ち越さない**(→§3.58)。覚醒や連携が「チームに積んだもの」
+    // なのに対して、師弟は**この任期で誰と組むか**という選び直しの余地。
+    // 残留でも切れるからこそ、いまの顔ぶれから結び直すきっかけが毎期生まれる
     train:cp(S.career.train), bond:cp(S.career.bond), gold:cp(S.career.bondGold),
-    trust:cp(S.career.trust), mentor:(S.career.mentor||[]).slice(),
     // --- 組んでいた形 ---
     form:S.form, squad:(S.squad||[]).slice(),
   };
@@ -495,7 +497,7 @@ function startTenure(clubId){
     // 所属選手がそのまま残る残留で重ねると**同じ選手が2人**になる
     S.player.legacy=null;
     S.career.train=stay.train; S.career.bond=stay.bond; S.career.bondGold=stay.gold;
-    S.career.trust=stay.trust; S.career.mentor=stay.mentor.slice();
+    // 信頼と師弟は戻さない(→上)。career の既定(空)のまま始める
     // 組んでいた形もそのまま。**居なくなった選手だけ落とす**
     S.form=stay.form||bestFormFor(availableCards());
     S.squad=stay.squad.map(id=>(id!=null&&cardById(id))?id:null);

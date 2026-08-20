@@ -959,7 +959,6 @@ function runSeason(hand) {
       coins: S.club.coins, exp: S.club.exp, fac: JSON.stringify(S.club.fac),
       div: S.world.div, train: Object.keys(S.career.train).length,
       bond: Object.keys(S.career.bond).length, gold: Object.keys(S.career.bondGold).length,
-      mentor: (S.career.mentor || []).length,
     });
 
     // --- 残留 ---
@@ -977,6 +976,9 @@ function runSeason(hand) {
     assert.strictEqual(S.club.eval, E.TUNING.eval.start, "評価は引き直す");
     assert.strictEqual(S.club.sponsor, null, "スポンサーは結び直す");
     assert.strictEqual(S.career.node, 1, "節は1から");
+    // **信頼と師弟は残留でも切れる**(→§3.58)。いまの顔ぶれから結び直させる
+    assert.deepStrictEqual(S.career.trust, {}, "残留で信頼が引き継がれている");
+    assert.deepStrictEqual(S.career.mentor, [], "残留で師弟が引き継がれている");
 
     // **貸与の師弟が二重にならない**(移籍は写しを作って連れていく経路なので)
     S = await build("eng-20");
@@ -1000,8 +1002,8 @@ function runSeason(hand) {
     assert.strictEqual(now2.bond, 0, "移籍で連携が引き継がれている");
     assert.strictEqual(now2.gold, 0, "移籍で黄金線が引き継がれている");
     assert.notStrictEqual(now2.fac, was2.fac, "移籍で施設が引き継がれている");
-    console.log("残留OK コイン・熟練度・施設・部・覚醒・連携・師弟を引き継ぐ ／"
-      + " 評価と契約は引き直す ／ 師弟は二重にならない ／ 移籍では引き継がない");
+    console.log("残留OK コイン・熟練度・施設・部・覚醒・連携を引き継ぐ ／"
+      + " 評価と契約は引き直す ／ 信頼と師弟は切れる ／ 移籍では引き継がない");
   }
 
   // ---------- ユース(→docs/03 §3.57) ----------
