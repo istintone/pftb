@@ -430,7 +430,17 @@ function onTarget(rng,atk,gk,h,fin){
   if(fin&&fin.fixAcc!=null)return rng()<fin.fixAcc;          // PK/ヘディングは位置が決まっている
   if(fin&&fin.tecAcc)                                        // 直接FKは距離より技術
     return rng()<S.fkAccBase*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
-  const acc=(fin?fin.acc||1:1)*skK(atk,"onTarget")/skK(gk,"offTarget");
+  // **飛び出して角度を消す**(→docs/03 §3.62)。GKの死に能力に仕事を与える。
+  // 二段に分ける — **間に合うか(spd)** と **詰め切れるか(atk)** は別の話で、
+  // 掛け算1本にすると「速いだけのGK」と「立ちはだかるGK」が同じ絵になる。
+  //   ① 出られたか … spd と距離で判定。**近いほど間に合う**
+  //   ② 消せた角度 … atk。出られたときだけ効く
+  // GKの atk / spd はどちらも枠の重みが軽い(→cards.js STAT_W)ので、
+  // ここが無いと**使い道の無い能力**として2つ残ってしまう
+  const q=k=>clamp(eff(gk,k)/S.rushRef,0,1);
+  const out=rng()<S.rushRate*q("spd")*nearOf(h);
+  const rush=out?1-S.rushK*q("atk"):1;
+  const acc=(fin?fin.acc||1:1)*skK(atk,"onTarget")/skK(gk,"offTarget")*rush;
   // **枠に飛ぶかは「その撃ち方の能力」**(→docs/07 §7.13)。tec 固定にすると、
   // どの札を撃っても技術だけが効いてしまい、tec に尖った選手が無条件で有利になる
   const st=(fin&&fin.stat)||"tec";

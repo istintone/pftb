@@ -1161,6 +1161,39 @@ function runSeason() {
         deep[i][0] + "回目のこぼれは前より大きく減る: " + deep[i][1] + " < " + deep[i - 1][1]);
     assert.ok(Math.max(...deep.map(d => d[0])) <= E.TUNING.shot.reboundMax,
       "安全網の上限を超えない");
+    // --- GKの飛び出し(→docs/03 §3.62)。**GKの死に能力に仕事がある** ---
+    {
+      const SH = E.TUNING.shot;
+      assert.ok(SH.rushK > 0 && SH.rushRate > 0, "飛び出しが効いている");
+      // **近いほど効く**。遠いシュートに出ていっても角度は消えない
+      const acc = (h, gk) => {
+        let on = 0, n = 4000;
+        // **能力は p.c 側に持つ**(eff が p.c[k] を見る)
+        const shooter = { c:{ id:1, atk:14, tec:14, pow:12, spd:12 }, sk:null, fit:1, stam:1 };
+        const rng = E.mulberry32(12345);
+        for (let i = 0; i < n; i++) if (E.onTarget(rng, shooter, gk, h, null)) on++;
+        return on / n;
+      };
+      const mk = (atk, spd) => ({ c:{ id:2, atk, spd, def:16, pow:14, tec:12 },
+        sk:null, fit:1, stam:1 });
+      const weak = mk(2, 4), strong = mk(14, 14);
+      const nearW = acc(0.95, weak), nearS = acc(0.95, strong);
+      const farW = acc(0.35, weak), farS = acc(0.35, strong);
+      assert.ok(nearS < nearW, "至近距離では飛び出すGKのほうが枠を外させる: "
+        + nearS.toFixed(3) + " < " + nearW.toFixed(3));
+      // **近いほうが効きが大きい**(遠くまで同じだけ効くと「出ていく」絵と合わない)
+      const dNear = nearW - nearS, dFar = farW - farS;
+      assert.ok(dNear > dFar, "近距離の効きが遠距離以下: 近 "
+        + dNear.toFixed(3) + " / 遠 " + dFar.toFixed(3));
+      // **atk と spd の両方が要る**。片方だけでは効きが半端になる
+      const onlyAtk = acc(0.95, mk(14, 4)), onlySpd = acc(0.95, mk(2, 14));
+      assert.ok(onlyAtk > nearS && onlySpd > nearS,
+        "片方だけのGKが両方持ちと同じだけ効いている");
+      console.log("GKの飛び出しOK 至近の枠内率 " + (nearW * 100).toFixed(1) + "% → "
+        + (nearS * 100).toFixed(1) + "%（遠距離は " + (farW * 100).toFixed(1) + "% → "
+        + (farS * 100).toFixed(1) + "%）／ atk と spd の両方が要る");
+    }
+
     console.log("シュートの枝分かれOK",
       ["block", "miss", "save", "goal"].map(k => k + " " + (pct(k) * 100).toFixed(0) + "%").join(" / "),
       "/ こぼれ球", (reb / 500).toFixed(1) + "回", "拾えた", (rebOk / reb * 100).toFixed(0) + "%",
