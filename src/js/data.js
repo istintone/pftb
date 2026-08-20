@@ -739,6 +739,14 @@ const DEFAULT_FORM="4-4-2";
 // carry と shot だけだった頃は、**前線に入った球がそこから味方に渡らなかった**
 // (CFは1試合に9.14回受けてパス0本)。スキル「ポストプレー」が捌く先を持たない、
 // という食い違いも起きていた。
+// **能力と kind を癒着させない**(→docs/03 §3.64)。
+// 起点の札は carry が減点・pass が加点され(→docs/07 §7.9)、連携も pass にしか
+// 掛からない(→§3.60)。そこで **pow がほぼ pass 専用・spd がほぼ carry 専用**だと、
+// 「パスが有利」がそのまま「pow が有利」に化ける(実測で発動が pow 45% / spd 25%)。
+// 各枠の3枚は別々の能力(careertest が見張る)のまま、**kind の側を混ぜてある**。
+//
+// **CB は触らない。** CB に pow の carry を持たせると、pow の高い CB が運びを選びすぎて
+// 「前へ行くほど止められやすい」(careertest)が崩れた。混ぜるのは中盤(DMF/CMF)だけでよい。
 const ORIGINS={
   GK: [{id:"gkLong",  label:"ロングキック",   stat:"pow", risk:0.40, gain:0.55, to:0.60, kind:"pass",  lane:"any"},
        {id:"gkQuick", label:"速攻のスロー",   stat:"spd", risk:0.66, gain:0.30, kind:"pass",  lane:"out"},
@@ -752,12 +760,12 @@ const ORIGINS={
   RSB:[{id:"sbOver",  label:"オーバーラップ", stat:"spd", risk:0.66, gain:0.48, kind:"carry", lane:"out"},
        {id:"sbInner", label:"インナーラップ", stat:"tec", risk:0.64, gain:0.42, kind:"carry", lane:"in"},
        {id:"sbEarly", label:"早いクロス",     stat:"pow", risk:0.44, gain:0.55, to:0.88, kind:"pass",  lane:"box"}],
-  DMF:[{id:"dmSpray", label:"散らし",         stat:"tec", risk:0.78, gain:0.15, kind:"pass",  lane:"any"},
-       {id:"dmDrive", label:"持ち出し",       stat:"spd", risk:0.68, gain:0.35, kind:"carry", lane:"same"},
-       {id:"dmSwitch",label:"サイドチェンジ", stat:"pow", risk:0.52, gain:0.40, kind:"pass",  lane:"switch"}],
+  DMF:[{id:"dmSpray", label:"散らし",         stat:"spd", risk:0.78, gain:0.15, kind:"pass",  lane:"any"},
+       {id:"dmDrive", label:"持ち出し",       stat:"pow", risk:0.68, gain:0.35, kind:"carry", lane:"same"},
+       {id:"dmSwitch",label:"サイドチェンジ", stat:"tec", risk:0.52, gain:0.40, kind:"pass",  lane:"switch"}],
   CMF:[{id:"cmThru",  label:"スルーパス",     stat:"tec", risk:0.50, gain:0.55, to:0.82, kind:"pass",  lane:"same"},
-       {id:"cmCarry", label:"持ち出し",       stat:"spd", risk:0.62, gain:0.35, kind:"carry", lane:"same"},
-       {id:"cmOpen",  label:"展開",           stat:"pow", risk:0.72, gain:0.22, kind:"pass",  lane:"out"}],
+       {id:"cmCarry", label:"持ち出し",       stat:"pow", risk:0.62, gain:0.35, kind:"carry", lane:"same"},
+       {id:"cmOpen",  label:"展開",           stat:"spd", risk:0.72, gain:0.22, kind:"pass",  lane:"out"}],
   OMF:[{id:"omLast",  label:"ラストパス",     stat:"tec", risk:0.48, gain:0.58, to:0.90, kind:"pass",  lane:"box"},
        {id:"omTurn",  label:"反転ドリブル",   stat:"spd", risk:0.52, gain:0.50, kind:"carry", lane:"in"},
        // **pow にする**(→docs/03 §3.37)。3枚が tec/spd/atk だと、OMF だけ pow の出番が無く
@@ -2027,7 +2035,8 @@ const TUNING={
   // 時計。3分刻みで、ハーフごとにアディショナルタイムが付く。
   match:{ tickMin:3, halfTicks:15, atMax:[2,3] },   // 45分=15ティック / AT 前半0〜2・後半0〜3
   // 支配率(中盤の押し合い)。攻撃権はこの比で抽選する。
-  mid:{ tec:0.45, spd:0.30, sta:0.25, mf:1.00, other:0.32 },
+  // 中盤の押し合い(→docs/07 §7.5)。**sta の数少ない出番**なので厚めに持つ(→§3.64)
+  mid:{ tec:0.36, spd:0.30, sta:0.34, mf:1.00, other:0.32 },
   // 判定の閾値: 攻撃側スコア > 守備側スコア × 閾値 で成功(card-eleven から踏襲)
   // 特別采配の効きの倍率(→docs/03 §3.50)。**s と k の「1からの隔たり」を伸ばす**。
   // w(札の選ばれやすさ = 采配の性格)と ordM には掛けない。
@@ -2203,6 +2212,9 @@ const TUNING={
   //           covBase を超えた**支援の人数**だけが効く(マーカー本人は勘定に入れない)
   matchup:{ sigmaH:0.22, sigmaX:0.30, atkW:0.25, defW:0.60, markSpd:0.55, markDef:1.20,
             covQ0:0.30, covQ:0.80,
+            // ブロックの守備側(→§3.64)。**pow だけに任せない** — 身体を入れるのは
+            // 力(pow)と反応(spd)の両方。pow 単独だと pow が守備の第2能力になる
+            blkDef:0.60, blkPow:0.20, blkSpd:0.20,
             covH:0.26, covX:0.34, covBase:1.00, covK:0.085 },
   // --- 連鎖(→docs/07 §7.9) ---
   //   maxLinks  1回の攻撃でつなげる上限(これを超えたら撃つ)

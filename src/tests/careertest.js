@@ -992,9 +992,13 @@ function runSeason() {
       const roster = E.clubRoster(4242, id);
       return { cards: E.bestXI(roster, "4-4-2"), form: "4-4-2", name: id };
     };
-    const H = side("ger-4"), A = side("ger-4");
+    // **1クラブで測らない**(→docs/03 §3.63)。DF と MF の差は名簿によっては
+    // 0.1pt まで縮むので、1つの名簿で見ると順序が名簿の相性で入れ替わる
+    const CLUBS = ["ger-4", "sam-8", "eng-10", "esp-14", "ita-6", "fra-12"];
     const by = {}, vs = {};
-    for (let i = 1; i <= 400; i++) {
+    for (const club of CLUBS) {
+    const H = side(club), A = side(club);
+    for (let i = 1; i <= 70; i++) {
       const M = E.finishMatch(E.createMatch(H, A, i));
       for (const e of M.events) {
         if (e.type !== "origin") continue;
@@ -1009,6 +1013,7 @@ function runSeason() {
         by[p.role].n++; if (e.ok) by[p.role].ok++;
         vs[p.role + ">" + df.role] = (vs[p.role + ">" + df.role] || 0) + 1;
       }
+    }
     }
     // 座標のミラーで DF起点↔相手FW / MF起点↔相手MF / FW起点↔相手DF になる
     const top = r => Object.entries(vs).filter(([k]) => k.startsWith(r + ">"))

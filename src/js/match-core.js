@@ -405,7 +405,9 @@ function resolveBlock(rng,atk,df,D,fin,h,x){
   // ブロックを外すのも**その撃ち方の能力**。枠内率と同じ理由で tec 固定にしない
   const aSc=(eff(atk,(fin&&fin.stat)||"tec")*0.5+eff(atk,"atk")*0.5)*rr(rng);
   // 人数を割いていればコースも消える(→§7.14)
-  const dSc=(eff(df,"def")*0.6+eff(df,"pow")*0.4)*lineMul(D)*coverOf(D,h,x)
+  const MU=TUNING.matchup;
+  const dSc=(eff(df,"def")*MU.blkDef+eff(df,"pow")*MU.blkPow+eff(df,"spd")*MU.blkSpd)
+    *lineMul(D)*coverOf(D,h,x)
     *skK(df,"block")*rr(rng);
   // blk が大きい手ほど当たらない(コースを狙う / GKと一対一 など)
   return dSc>aSc*TUNING.th.block*(fin&&fin.blk||1);
