@@ -242,6 +242,27 @@ const E=setup({tmpName:"_tmp_train.js"});
       S4.career.bondGold={};
     }
 
+    // --- 連携の掛かり先は3つ。**印だけの黄金線は増えた掛かり先を見ない** ---
+    // (→docs/03 §3.60)。ここが崩れると、監督の打ち手ではなく**CPUの強豪だけ**が
+    // 強くなり、リーグの得点が膨らむ(実測で 4.05 → 5.07 点まで動いた)
+    {
+      assert.ok(B.seekK > 0, "受け手の選び方に効く");
+      assert.ok(B.cqK > 0, "決定機の質に効く");
+      const mk = (bond, gold) => ({ c: { id: 1, bond: bond ? { 2: bond } : null,
+        gold: gold ? { 2: 1 } : null } });
+      const other = { c: { id: 2 } };
+      // 積み上げは段に応じて上がる
+      assert.strictEqual(E.bondBuilt(mk(B.t1 / 2 + 1, false), other), B.k1, "段1が乗る");
+      assert.strictEqual(E.bondBuilt(mk(B.t3 / 2 + 1, false), other), B.k3, "段3が乗る");
+      // **印だけ(CPUの強豪・上がりたてのユース)は 1 のまま**
+      assert.strictEqual(E.bondBuilt(mk(false, true), other), 1,
+        "印だけの黄金線が増えた掛かり先を見ている");
+      // 競り合いの倍率(bondK)のほうは、印だけでも最上段が乗る
+      assert.strictEqual(E.bondK(mk(false, true), other), B.k4, "競り合いには印が効く");
+      console.log("連携の掛かり先OK 競り合い ／ 受け手の選び方 ×" + B.seekK
+        + " ／ 決定機の質 ×" + B.cqK + " ／ 印だけの黄金線は後ろ2つを見ない");
+    }
+
     // --- しきい値の段 ---
     assert.strictEqual(E.bondTier(B.t1),0,"しきい値ちょうどではまだ上がらない");
     assert.strictEqual(E.bondTier(B.t1+1),1,"t1 を超えて1段");

@@ -411,10 +411,13 @@ function pickFinish(rng,p,h,min){
  *
  * 基準(mid)で倍率1。**平均的なアシストなら何も起きない**ように置いてある。
  */
-function chanceOf(assist,ach){
+function chanceOf(assist,ach,shooter){
   const C=TUNING.chance;
   if(!assist||!ach)return 1;
-  return clamp(1+(eff(assist,ach.stat)/STAT_MAX-C.mid)*C.k,C.lo,C.hi);
+  const q=clamp(1+(eff(assist,ach.stat)/STAT_MAX-C.mid)*C.k,C.lo,C.hi);
+  // **渡した側と撃つ側の呼吸**(→docs/03 §3.60)。連携の3つ目の掛かり先。
+  // 好機の質そのものを上げるので、**同じシュートでも入り方が変わる**
+  return q*(1+(bondBuilt(assist,shooter)-1)*TUNING.bond.cqK);
 }
 /** 攻撃側のシュートスコア。**atk が幹、チャンネルの能力が枝**(起点と同じ形)。 */
 function finishScore(atk,fin){
@@ -719,6 +722,22 @@ function pickOriginCh(rng,p,lastCh,stray,min){
  * 連携がパスに掛ける倍率(→docs/03 §3.31)。**2人の合計**で段が上がる。
  * 連携の値はカードの写しに載せて渡す(エンジンはセーブを見ない)。
  */
+/**
+ * **積み上げた連携だけ**が見る倍率(→docs/03 §3.60)。黄金線の印は見ない。
+ *
+ * 黄金線は「印」なので、**強豪クラブには丸ごと無償で配られている**(→§3.53)。
+ * 新しく増やした掛かり先(受け手の選び方・決定機の質)をそこにも効かせると、
+ * 監督の打ち手ではなく**CPUの強豪だけが強くなり**、リーグの得点が膨らむ
+ * (実測: 強豪同士の1試合が 4.05 → 5.07 点、格差戦の大差が 38.6% → 51.0%)。
+ *
+ * 積み上げは監督が交流を選んで積んだものなので、ここを見れば**打ち手だけに返る**。
+ * 自分で黄金線まで育てた組は積み上げも t3 を越えているので、最上段がちゃんと乗る。
+ */
+function bondBuilt(a,b){
+  if(!a||!b||!a.c.bond)return 1;
+  const B=TUNING.bond, sum=(a.c.bond[b.c.id]||0)*2;
+  return sum>B.t3?B.k3:sum>B.t2?B.k2:sum>B.t1?B.k1:1;
+}
 function bondK(a,b){
   if(!a||!b)return 1;
   const B=TUNING.bond;
@@ -887,7 +906,11 @@ function receiverAt(rng,T,tg,self,min){
     const dh=(heightOf(q)-tg.h)/C.sigmaH;
     const dx=((q.x-tg.x)/100)/C.sigmaX;
     const seek=1+eff(q,"atk")/STAT_MAX*C.recvAtk*skK(self,"vision")*clamp(tg.h,0,1);
-    return Math.exp(-(dh*dh+dx*dx))*seek*skK(q,"recv")*freshK(q,min)*laneW(T,q); // 預けられやすさ
+    // **分かり合った相手を探しに行く**(→docs/03 §3.60)。
+    // 競り合いの倍率だけだと頭打ちになるので、**そもそも誰に預けるか**にも効かせる。
+    // ここは「行き先」ではなく「誰が受けるか」なので、位置の重みは崩れない
+    const bw=1+(bondBuilt(self,q)-1)*TUNING.bond.seekK;
+    return Math.exp(-(dh*dh+dx*dx))*seek*bw*skK(q,"recv")*freshK(q,min)*laneW(T,q);
   });
 }
 /**
@@ -1311,7 +1334,7 @@ function shoot(M,rng,push,T,D,shooter,assist,tg,from,depth,att,sp,min,ach){
   gk.stat.inv++;
 
   // ③ GK
-  if(resolveShot(rng,shooter,gk,tg.h,fin,false,min,chanceOf(assist,ach))){
+  if(resolveShot(rng,shooter,gk,tg.h,fin,false,min,chanceOf(assist,ach,shooter))){
     T.score++; shooter.stat.goals++;
     if(assist)assist.stat.assists++;
     addMom(M,T.side,F.goal);
