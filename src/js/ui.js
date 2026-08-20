@@ -1149,9 +1149,12 @@ function openCard(x,opts){
  * 1回目で値段と確認、2回目で確定。理由があって売れないカードは、その理由を出す
  * (押せるのに何も起きない、を作らない)。
  */
-let _sellArm=null;
+let _sellArm=null, _buyArm=null;
 function renderSell(c){
   const box=$("cmSell"); if(!box)return;
+  // **貸与の買い取り**(→docs/03 §3.59)。師弟の約束を結んだ選手だけ、
+  // ここが「売る」ではなく「買い取る」になる
+  if(isLoaned(c)){ renderBuy(c,box); return; }
   const why=sellWhy(c);
   if(why){ box.innerHTML='<span class="cm-sell-no">'+esc(why)+'</span>'; return; }
   const price=sellPrice(c);
@@ -1169,7 +1172,35 @@ function renderSell(c){
     toast(r.name+" を "+fmtNum(r.coin)+" コインで売却しました");
   };
 }
-const closeCard=()=>{ _sellArm=null; $("cardModal").classList.remove("on"); };
+/**
+ * 貸与の買い取り(→docs/03 §3.59)。**師弟の約束が鍵**。
+ * 結んでいなければ、何が足りないのかをそのまま出す(押せるのに何も起きない、を作らない)。
+ */
+function renderBuy(c,box){
+  const why=buyWhy(c);
+  const price=buyPrice(c);
+  if(why&&why!=="コインが足りません"){
+    box.innerHTML='<span class="cm-sell-no">'+esc(why)+'</span>';
+    return;
+  }
+  const armed=_buyArm===c.id;
+  const poor=!!why;
+  box.innerHTML='<span class="cm-sell-v">買い取り <b>'+fmtNum(price)+'</b> コイン'
+      +'<i class="cm-buy-n">自分のカードになり、師弟の枠が空きます</i></span>'
+    +'<button class="btn cm-sell-b'+(armed?" arm":"")+'" id="cmBuyGo"'
+      +(poor?' disabled':'')+'>'
+    +(poor?"コインが足りません":armed?"本当に買い取る":"買い取る")+'</button>';
+  if(poor)return;
+  $("cmBuyGo").onclick=async()=>{
+    if(!armed){ _buyArm=c.id; renderBuy(c,box); return; }
+    const r=buyCard(c.id);
+    _buyArm=null;
+    if(!r){ toast("買い取れませんでした"); renderBuy(c,box); return; }
+    await save(); closeCard(); headUI(); renderCards();
+    toast(shortName(r.card)+" を "+fmtNum(r.price)+" コインで買い取りました");
+  };
+}
+const closeCard=()=>{ _sellArm=null; _buyArm=null; $("cardModal").classList.remove("on"); };
 /** PROFILE の紹介文。カードの属性から組み立てる(専用のテキストは持たない)。 */
 function bioOf(c){
   const n=nationById(c.nation), best=STAT_KEYS.reduce((a,k)=>c[k]>c[a]?k:a,STAT_KEYS[0]);

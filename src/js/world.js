@@ -203,6 +203,16 @@ function clubRoster(seed,clubId){
   return star>=TUNING.star.goldAt?goldWeb(roster):roster;
 }
 
+/**
+ * 自分のクラブの名簿(→§3.59)。**既に買い取った選手は抜く**。
+ * クラブの名簿はIDから決定的に生え直すので、抜かないと戻ってきたときに
+ * 「買った本人」と「同じ顔の別人」が並ぶ。
+ */
+function myRoster(seed,clubId){
+  const bought=new Set((S.player.coll||[]).map(c=>c.from).filter(x=>x!=null));
+  return clubRoster(seed,clubId).filter(c=>!bought.has(c.id));
+}
+
 /** クラブの総合力(順位表の初期並びやCPU同士の試合に使う)。 */
 function clubPower(seed,clubId){
   const r=clubRoster(seed,clubId);
@@ -476,7 +486,8 @@ function startTenure(clubId){
     eval:TUNING.eval.start,                                  // オーナーの評価(→§3.9)
     evLog:{},                                                // 今季なにで評価が動いたか
     fameSeason:0,                                            // 今季ぶんの名声(総括で見せる)
-    loan:stay?stay.loan:clubRoster(seed,clubId),             // 任期中だけ借りる所属選手
+    // 任期中だけ借りる所属選手。**買い取った選手は名簿から抜く**(→§3.59)
+    loan:stay?stay.loan:myRoster(seed,clubId),
     expect:0,
     // スポンサー(→docs/03 §3.40)。**クラブ側の資産**なので任期が明ければ消える。
     // 残留でも結び直す(期限のある契約なので、跨がせると期限の意味が消える)
@@ -680,6 +691,64 @@ function sellPrice(card){
   return Math.round((V.base[card.rarity]||V.base.STD)
     +Math.max(0,card.ovr-V.from)*V.perOvr);
 }
+// ---------- 貸与の買い取り(→docs/03 §3.59) ----------
+// **師弟の約束を結んだ貸与選手だけ**、コインで自分のカードにできる。
+//
+// 師弟は任期が明ければ切れる(→§3.58)ので、**約束のままでは毎期結び直し**になる。
+// 買い取れば、その選手だけは恒久的に自分のものになり、**師弟の枠(3つ)も空く**。
+// 「連れて出るために買う」判断で、残留が強いいまの釣り合いにも効く。
+
+/** 買い取りの値段。**売値より高い**(売って買い直せる、を作らない)。 */
+const buyPrice=card=>card?Math.round(sellPrice(card)*TUNING.buy.k):0;
+/** 買い取れない理由(買えるなら null)。 */
+function buyWhy(card){
+  if(!card)return "選手が居ません";
+  if(!S.club)return "就任していません";
+  if(!isLoaned(card))return "クラブからの貸与だけが買い取れます";
+  if(!isMentor(card.id))return "師弟の約束を結んだ選手だけです";
+  if(S.club.coins<buyPrice(card))return "コインが足りません";
+  return null;
+}
+/**
+ * 買い取る。**IDを付け替える**(→§3.49a と同じ理由)。
+ * 貸与のIDはクラブから決まっていて、同じクラブへ戻れば同じIDでもう一度生えるので、
+ * そのまま手札へ移すと**同じIDのカードが2枚**になる。
+ * 付け替えるぶん、**積み上げ(訓練・連携・軸・編成)も新しいIDへ移す**。
+ */
+function buyCard(id){
+  const c=cardById(id);
+  if(buyWhy(c))return null;
+  const price=buyPrice(c);
+  S.club.coins-=price;
+  // **元のIDを控える**。クラブの名簿は決定的に生え直すので、後で戻ってきたときに
+  // 「買った本人」と「生え直した同じ人」が並ばないよう、名簿側から抜くのに使う
+  const nc={ ...c, id:nextCardId(), from:id };
+  // **貸与に付いていた黄金線の写しは捨てる**。相手はもう仲間とは限らないし、
+  // 本物の黄金線は career 側(bondGold)が持っている(→§3.31)
+  delete nc.gold;
+  S.club.loan=(S.club.loan||[]).filter(x=>x.id!==id);
+  S.player.coll.push(nc);
+  const T=S.career.train||{};
+  if(T[id]){ T[nc.id]=T[id]; delete T[id]; }
+  for(const src of [S.career.bond,S.career.bondGold]){
+    if(!src)continue;
+    for(const k of Object.keys(src)){
+      const [a,b]=k.split(":").map(Number);
+      if(a!==id&&b!==id)continue;
+      src[bondKey(a===id?nc.id:a,b===id?nc.id:b)]=src[k];
+      delete src[k];
+    }
+  }
+  if(S.career.trust&&S.career.trust[id]!=null){
+    S.career.trust[nc.id]=S.career.trust[id]; delete S.career.trust[id];
+  }
+  S.squad=(S.squad||[]).map(x=>x===id?nc.id:x);
+  if(S.career.kp===id)S.career.kp=nc.id;
+  // **師弟の枠を空ける**。買った以上、約束で縛っておく必要がない
+  S.career.mentor=(S.career.mentor||[]).filter(x=>x!==id);
+  return { card:nc, price };
+}
+
 /**
  * 売れない理由(売れるなら null)。**理由を返す**ので、画面はそのまま出せばよい。
  * 「押せるのに何も起きない」を作らないための形。

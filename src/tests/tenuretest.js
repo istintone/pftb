@@ -940,6 +940,66 @@ function runSeason(hand) {
       + " 候補は先に確定 ／ 出す選手は消え、来る選手は受信箱");
   }
 
+  // ---------- 貸与の買い取り(→docs/03 §3.59) ----------
+  // **師弟の約束が鍵**。買えば恒久的に自分のものになり、師弟の枠も空く
+  {
+    await E.newGame();
+    const S = E.getS(); S.coach = "検証"; S.world.seed = 20260822;
+    E.startTenure("eng-20");
+    const c = S.club.loan[3], id = c.id, nm = c.name;
+
+    // **師弟でなければ買えない**
+    assert.ok(E.isLoaned(c), "貸与の選手である");
+    assert.strictEqual(E.buyWhy(c), "師弟の約束を結んだ選手だけです", "師弟が鍵");
+    S.career.mentor = [id];
+    // **値段は売値より高い**(売って買い直せる、を作らない)
+    assert.ok(E.buyPrice(c) > E.sellPrice(c), "買値が売値以下: " + E.buyPrice(c));
+    S.club.coins = 0;
+    assert.strictEqual(E.buyWhy(c), "コインが足りません", "コインが要る");
+    S.club.coins = 999999;
+    assert.strictEqual(E.buyWhy(c), null, "師弟＋コインで買える");
+
+    // 積み上げを作ってから買う
+    E.trainAdd(id, "atk", 20); E.trainAwake(id, "atk");
+    const mate = S.squad.find(x => x != null && x !== id);
+    E.bondAdd(id, mate, 40); E.bondAwake(id, mate);
+    E.trustAdd(id, 60);
+    S.career.kp = id;
+    const loan0 = S.club.loan.length, coll0 = S.player.coll.length;
+    const coin0 = S.club.coins, price = E.buyPrice(c);
+
+    const r = E.buyCard(id);
+    assert.ok(r, "買える");
+    const n = r.card.id;
+    assert.notStrictEqual(n, id, "**IDを付け替える**(同じクラブへ戻ると同じIDが生え直すため)");
+    assert.strictEqual(S.club.coins, coin0 - price, "コインが引かれる");
+    assert.strictEqual(S.club.loan.length, loan0 - 1, "貸与から抜ける");
+    assert.strictEqual(S.player.coll.length, coll0 + 1, "手札に入る");
+    assert.strictEqual(E.cardById(id), null, "古いIDは残らない");
+    // **積み上げが新しいIDへ移る**(切れると買った意味が薄れる)
+    assert.strictEqual(E.trainStar(n), 1, "★が移る");
+    assert.strictEqual(E.bondOf(n, mate), 40, "連携が移る");
+    assert.strictEqual(E.bondIsGold(n, mate), true, "黄金線が移る");
+    assert.ok(S.squad.includes(n), "編成の枠も差し替わる");
+    assert.strictEqual(S.career.kp, n, "軸も差し替わる");
+    assert.ok(!r.card.gold, "貸与に付いていた黄金線の写しは捨てる");
+    // **師弟の枠が空く**
+    assert.ok(!S.career.mentor.includes(n) && !S.career.mentor.includes(id),
+      "師弟の枠が空く");
+
+    // **同じクラブへ戻っても二重にならない**
+    E.newTenure(); E.startTenure("eng-21");
+    E.newTenure(); E.startTenure("eng-20");
+    const all = S.player.coll.concat(S.club.loan);
+    assert.strictEqual(all.filter(x => x.name === nm).length, 1,
+      "戻ったら同じ顔が2人居る: " + nm);
+    const ids = all.map(x => x.id);
+    assert.strictEqual(ids.length, new Set(ids).size, "IDが重複している");
+    assert.ok(E.autoSquad().filter(x => x != null).length >= 16, "編成が組める");
+    console.log("買い取りOK 師弟が鍵 ／ 売値の" + E.TUNING.buy.k + "倍 ／"
+      + " IDを付け替えて積み上げごと移す ／ 師弟の枠が空く ／ 戻っても二重にならない");
+  }
+
   // ---------- 残留(→docs/03 §3.58) ----------
   // **同じクラブを選び直したときだけ、積んだものを全部引き継ぐ**
   {

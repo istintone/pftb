@@ -2777,3 +2777,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   font:600 10px/1 var(--f-head); letter-spacing:1px;
   background:var(--accent); color:var(--surface);
 }
+
+/* 買い取りの但し書き(→docs/03 §3.59)。値段の下に小さく添える */
+.cm-buy-n{ display:block; margin-top:3px; font-style:normal;
+  font-size:10px; color:var(--text-mute) }
