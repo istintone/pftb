@@ -247,7 +247,7 @@ const E=setup({tmpName:"_tmp_ord.js"});
     assert.strictEqual(E.learnRoll("direct", "win", 1, false), null, "知っている采配は引かない");
     let got = 0, n = 0;
     for (let i = 1; i <= 400; i++) {
-      S.player.tactics = ["direct"]; S.player.mail = []; S.career.node = i;
+      S.player.tactics = ["direct"]; S.player.mail = []; S.player.mailSent = {}; S.career.node = i;
       n++; if (E.learnRoll("highpress", "win", i, false)) got++;
     }
     const rate = got / n;
@@ -257,14 +257,14 @@ const E=setup({tmpName:"_tmp_ord.js"});
     // **負けても少しは覚える**(勝ったときより低い)
     let lo = 0;
     for (let i = 1; i <= 400; i++) {
-      S.player.tactics = ["direct"]; S.player.mail = []; S.career.node = i;
+      S.player.tactics = ["direct"]; S.player.mail = []; S.player.mailSent = {}; S.career.node = i;
       if (E.learnRoll("highpress", "lose", i, false)) lo++;
     }
     assert.ok(lo < got, "負けたときのほうが覚えにくい: " + lo + " < " + got);
 
     // **連絡が届き、受け取って初めて覚える**(→docs/03 §3.50)。
     // 選手も采配も、届くものは秘書の受信箱を通す
-    S.player.tactics = ["direct"]; S.player.mail = []; S.career.node = 1;
+    S.player.tactics = ["direct"]; S.player.mail = []; S.player.mailSent = {}; S.career.node = 1;
     for (let i = 1; i <= 200; i++) { S.career.node = i;
       if (E.learnRoll("highpress", "win", i, false)) break; }
     assert.ok(!E.tacticsKnown().includes("highpress"), "受け取る前は覚えていない");

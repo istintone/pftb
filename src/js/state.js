@@ -2,7 +2,7 @@
 // セーブ状態 S は「JSONで丸ごと保存できる素のオブジェクト」に保つ(関数やDOM参照を入れない)。
 // スキーマを変えたら SAVE_VER を上げ、migrate() に旧版からの補完を書く。
 const SAVE_KEY="pftb-save";
-const SAVE_VER=30;
+const SAVE_VER=31;
 
 // 新規データ。
 // **所有の境界を構造で表す**(→docs/03-game-design.md §3.2)。
@@ -27,6 +27,10 @@ function defaultState(){
       // 秘書からの連絡(→docs/03 §3.42)。**溜まっていく**。クラブチャットとは別物
       // [{ id, at, read, got }] … at=届いた節 / got=受け取り済み
       mail:[],
+      // **一度でも配った連絡の控え**(→docs/03 §3.42)。{ "<連絡id>": 1 }
+      // 一覧は上限30通で古いものが押し出されるので、控えを別に持たないと
+      // 押し出された連絡が新着として戻ってくる
+      mailSent:{},
       // 見たもの・やったこと(→docs/03 §3.43)。チュートリアルの進み具合はこれで決まる。
       // **キャリアで1つ**。任期をまたいでも消えない(二度目の就任で案内は出ない)
       seen:{},
@@ -340,6 +344,14 @@ function migrate(){
   if(S.v<26){
     if(S.club&&S.club.sponsor===undefined)S.club.sponsor=null;
     if(S.career&&S.career.streak==null)S.career.streak=0;
+  }
+  // v30 → v31: 配った連絡の控えを別に持つようにした(→docs/03 §3.42)。
+  // 既存のセーブは**いま一覧に居るぶんを配信済みとして起こす**。
+  // 押し出されて消えたものは控えに残らないので、条件が生きていれば
+  // もう一度だけ届き、以後は二度と戻らない(自然に収まる)。
+  if(S.v<31&&S.player){
+    const sent=S.player.mailSent||(S.player.mailSent={});
+    for(const m of S.player.mail||[]) if(m&&m.id) sent[m.id]=1;
   }
   if(S.v<24&&S.player&&S.player.trophies)
     for(const t of S.player.trophies){ if(!t.kind)t.kind="cup"; if(!t.n)t.n=1;

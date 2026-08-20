@@ -1519,6 +1519,8 @@ const MAILS=[
   //   go  … 「行ってみる」で飛ぶ画面。**次にどこを触るか**を1つに絞る
   // 進み具合は S.player.seen(→docs/03 §3.43)。**キャリアで一度きり**なので、
   // 二度目の就任では届かない。
+  // 連鎖の条件は **mailWasSent(配った控え)を見る**。mailHas(いま一覧に居るか)だと、
+  // 受信箱が上限(30通)を超えて古い案内が押し出された瞬間に連鎖が切れる。
   {
     id:"tut1", from:"sec", tut:1, title:"ようこそ、監督",
     text:"監督、就任おめでとうございます。秘書として、これからお手伝いさせていただきます。"
@@ -1530,32 +1532,32 @@ const MAILS=[
     text:"ごあいさつ、おつかれさまでした。次は選手たちです。"
         +"CARDS にクラブから預かった選手が並んでいます。"
         +"誰がいるのか、まずは顔ぶれを見ておきましょう。",
-    when:S=>mailHas("tut1")&&!!S.career.opened,
+    when:S=>mailWasSent("tut1")&&!!S.career.opened,
   },
   {
     id:"tut3", from:"sec", tut:3, title:"はじめての編成", go:"deck",
     text:"選手は見ていただけましたか。では DECK で先発11人と役割を決めましょう。"
         +"枠に合った選手ほど力を出せます。迷ったら、いまのままでも構いませんよ。",
-    when:S=>mailHas("tut2")&&seenHas("cards"),
+    when:S=>mailWasSent("tut2")&&seenHas("cards"),
   },
   {
     id:"tut4", from:"sec", tut:4, title:"はじめての試合", go:"season",
     text:"編成ができましたね。いよいよ試合です。SCHEDULE から次の一戦へ向かってください。"
         +"試合の前には、私から相手の話をさせていただきます。",
-    when:S=>mailHas("tut3")&&seenHas("deck"),
+    when:S=>mailWasSent("tut3")&&seenHas("deck"),
   },
   {
     id:"tut5", from:"sec", tut:5, title:"はじめての補強", go:"gacha",
     text:"初戦おつかれさまでした。勝っても負けても、チームは強くしていきましょう。"
         +"SCOUT でコインを使えば、新しい選手が来てくれます。",
-    when:S=>mailHas("tut4")&&(S.career.log||[]).length>0,
+    when:S=>mailWasSent("tut4")&&(S.career.log||[]).length>0,
   },
   {
     id:"tut6", from:"sec", tut:6, title:"それでは監督",
     text:"ひととおりご案内しました。ここからは監督のクラブです。"
         +"オーナーの目標、カップ戦、スポンサー……やることは尽きませんが、"
         +"私はいつでもここにいます。クラブの躍進を、おねがいします。",
-    when:S=>mailHas("tut5")&&seenHas("scoutDone"),
+    when:S=>mailWasSent("tut5")&&seenHas("scoutDone"),
   },
   {
     id:"leTest", from:"sec", title:"LEGENDS の引換券",

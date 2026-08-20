@@ -347,8 +347,29 @@ function runSeason(hand) {
     E.mailTick();
     assert.strictEqual(S9.player.mail.length, n1, "次の任期でもう一度は届かない");
     assert.ok(E.seenHas("cards"), "見たことは任期をまたいでも残る");
+    // --- **受信箱から押し出されても戻ってこない**(→docs/03 §3.42) ---
+    // 一覧は上限(30通)で古いものから消える。以前は「いま一覧に居るか」だけで
+    // 重複を見ていたので、押し出された案内が新着として何度も戻ってきた。
+    {
+      const tuts = E.MAILS.filter(m => m.tut).map(m => m.id);
+      // 案内を全部押し出す(上限まで別の連絡で埋める)
+      for (let i = 0; i < E.TUNING.mail.keep + 5; i++)
+        E.mailPush("dummy" + i, { title: "詰め物", text: "-" });
+      const left = S9.player.mail.filter(x => tuts.includes(x.id));
+      assert.strictEqual(left.length, 0, "案内は受信箱から押し出された");
+      // ここで配り直しても、案内は一通も戻らない
+      const before = S9.player.mail.length;
+      E.mailTick(); E.mailTick();
+      const back = S9.player.mail.filter(x => tuts.includes(x.id));
+      assert.strictEqual(back.length, 0,
+        "押し出された案内は新着として戻ってこない: " + back.map(x => x.id).join(","));
+      assert.strictEqual(S9.player.mail.length, before, "他の連絡も増えない");
+      // 連鎖の条件も控えを見るので、途中で切れない
+      assert.ok(E.mailWasSent("tut1") && E.mailWasSent(tuts[tuts.length - 1]),
+        "配った控えは残る");
+    }
     console.log("チュートリアルOK " + E.TUT_ALL + "通 ／ 就任→あいさつ→CARDS→DECK→試合→スカウト"
-      + " ／ 1通ずつ順に ／ キャリアで一度きり");
+      + " ／ 1通ずつ順に ／ キャリアで一度きり ／ 押し出されても戻らない");
   }
 
   // ---------- 秘書からの連絡と引換券(→docs/03 §3.42) ----------
@@ -358,8 +379,10 @@ function runSeason(hand) {
     // **就任した時点でチュートリアルの1通目が届く**(→§3.43)。
     // ここで見たいのは配布物のほうなので、案内は済んだことにしておく
     assert.strictEqual(E.mailUnread(), 1, "就任で届くのは案内の1通目だけ");
-    for (const d of E.MAILS) if (d.tut && !E.mailHas(d.id))
+    for (const d of E.MAILS) if (d.tut && !E.mailWasSent(d.id)) {
+      E.mailSent()[d.id] = 1;                               // 配った控えも立てる
       S8.player.mail.push({ id: d.id, at: 0, read: true, got: true });
+    }
     S8.player.mail.forEach(x => { x.read = true; });        // 届いていた1通目も読んだ扱い
     const base = S8.player.mail.length;
 
@@ -488,7 +511,7 @@ function runSeason(hand) {
     // --- 報酬は**受信箱で受け取る**(→docs/03 §3.40) ---
     {
       const S6 = E.getS();
-      S6.player.mail = [];
+      S6.player.mail = []; S6.player.mailSent = {};
       S6.club.sponsor = { id: E.SPONSORS[0].id, tier: 1, aid: "atk",
         goal: { kind: "league" }, node0: 1, until: 90, hit: false, paid: false };
       const before = S6.player.mail.length;
@@ -506,7 +529,7 @@ function runSeason(hand) {
       assert.strictEqual(E.mailTake(m.id), null, "二度は受け取れない");
 
       // **報酬は引換券**(→docs/03 §3.40a)。受け取りで枠は訊かない
-      S6.player.mail = [];
+      S6.player.mail = []; S6.player.mailSent = {};
       S6.club.sponsor = { id: E.SPONSORS.find(x => x.tier === 2).id, tier: 2, aid: "atk",
         goal: { kind: "league" }, node0: 2, until: 90, hit: false, paid: false };
       E.sponHit("league");
@@ -527,13 +550,13 @@ function runSeason(hand) {
     // --- 溜まった連絡は上限で落ちる(→docs/03 §3.42) ---
     {
       const S7 = E.getS();
-      S7.player.mail = [];
+      S7.player.mail = []; S7.player.mailSent = {};
       const max = E.TUNING.mail.keep;
       for (let i = 0; i < max + 12; i++) E.mailPush("t" + i, { title: "t", text: "t" });
       assert.strictEqual(S7.player.mail.length, max, "上限 " + max + " 通に収まる");
       assert.strictEqual(S7.player.mail[0].id, "t12", "古いものから落ちる");
       // **受け取っていない贈り物は残る**
-      S7.player.mail = [];
+      S7.player.mail = []; S7.player.mailSent = {};
       E.mailPush("gift", { title: "g", text: "g", gift: { coin: 100 } });
       for (let i = 0; i < max + 5; i++) E.mailPush("u" + i, { title: "u", text: "u" });
       assert.ok(S7.player.mail.some(x => x.id === "gift"), "受け取り待ちは消えない");
@@ -1095,7 +1118,7 @@ function runSeason(hand) {
     // **上がってきたら★は上限、札にクラブユースとスーパーサブを持つ**
     S.club.fac.youth = 5; S.career.youth = null; S.career.node = 90;
     // **貸与は空にしない**。クラブの所属を消すと編成が組めなくなる
-    S.player.mail = [];
+    S.player.mail = []; S.player.mailSent = {};
     const coll0 = S.player.coll.length, loan0 = S.club.loan.length;
     const got = E.youthAward();
     assert.ok(got, "条件がそろえば上がってくる");

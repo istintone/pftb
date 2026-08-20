@@ -1175,13 +1175,26 @@ const mailUnread=()=>mailAll().filter(m=>!m.read).length;
  */
 const mailList=()=>mailAll().slice().reverse();
 const mailLatest=()=>mailList()[0]||null;
+/**
+ * **一度でも配った連絡の控え**(→docs/03 §3.42)。一覧とは別に持つ。
+ *
+ * 以前は「いま一覧に居るか」(`mailHas`)だけで重複を見ていたが、
+ * `mailTrim` が上限(30通)で古いものを押し出すと控えごと消えるので、
+ * **配信条件が成立したままの連絡が新着として何度も戻ってきた**
+ * (チュートリアルの案内は `seen` を見る条件なので、押し出されるたびに再来した)。
+ * 一覧は「いま見えているもの」、こちらは「もう配ったもの」と役割を分ける。
+ */
+const mailSent=()=>S.player.mailSent||(S.player.mailSent={});
+const mailWasSent=id=>!!mailSent()[id];
+
 /** 届く条件を見て、まだ届いていない連絡を入れる。**同じ連絡は一度きり**。 */
 function mailTick(){
   if(!S.club)return 0;
   let n=0;
   for(const m of MAILS){
-    if(mailHas(m.id))continue;
+    if(mailWasSent(m.id))continue;             // 押し出されても二度は配らない
     if(m.when&&!m.when(S))continue;
+    mailSent()[m.id]=1;
     mailAll().push({ id:m.id, at:S.career.node, season:S.world.season,
       read:false, got:false });
     n++;
@@ -1194,7 +1207,8 @@ const mailRead=id=>{ const m=mailAll().find(x=>x.id===id); if(m)m.read=true; ret
  * **連絡そのものに持たせて**足す。id は呼び出し側が重複しない形で作る。
  */
 function mailPush(id,dyn){
-  if(!id||mailHas(id))return null;
+  if(!id||mailWasSent(id))return null;         // 押し出されても二度は配らない(→mailSent)
+  mailSent()[id]=1;
   mailAll().push({ id, at:S.career.node, season:S.world.season,
     read:false, got:false, dyn });
   mailTrim();
