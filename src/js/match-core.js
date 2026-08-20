@@ -114,10 +114,14 @@ const ironK=p=>1+(condMul(p.c.cond)-1)*skK(p,"iron");
  * **覚醒の裏パラだけは素の能力に足す**(→docs/03 §3.30)。カードの表示は変えず、
  * 試合のときだけ効く。上限20を超えることがあるが、いまは許容している。
  * **コンディション**(→§3.32)は全能力に一様に掛かる(その日の出来なので偏らせない)。
+ * **スタミナは能力ごとに効き方が違う**(→§3.65)。TUNING.wear の指数で、
+ * 足(spd)と技(tec)から先に落ち、力(pow)は最後まで残る。
  */
 function eff(p,k){
   const up=(p.c.up&&p.c.up[k])||0;
-  return (p.c[k]+up)*p.fit*p.stam*(p.condK||1)*((p.ordM&&p.ordM[k])||1)*kpK(p);
+  const w=TUNING.wear[k];
+  const st=p.stam>=1?1:w===1?p.stam:w?Math.pow(p.stam,w):1;
+  return (p.c[k]+up)*p.fit*st*(p.condK||1)*((p.ordM&&p.ordM[k])||1)*kpK(p);
 }
 
 // ---------- スタミナ ----------
@@ -162,7 +166,8 @@ function staminaOf(p,min){
   const kp=(p.kpMin||0)*F.perMin*(TUNING.kp.stam-1);
   // **助け合っているぶんだけ軽い**(→§3.63)。支えの無い枠ほど削られる
   const sup=1-clamp((p.sup||0)*F.supK,0,F.supMax);
-  const drain=((played*F.perMin+(p.stat.inv||0)*F.perAct)*staMul+kp)*cap*sup*skK(p,"stam");
+  const drain=((played*F.perMin*(p.off||1)+(p.stat.inv||0)*F.perAct)*staMul+kp)
+    *cap*sup*skK(p,"stam");
   return clamp(1-drain,F.minStam,1);
 }
 /**
@@ -224,6 +229,20 @@ function lineup(cards,form){
   return { xi, bench };
 }
 
+/**
+ * その枠の**オフザボールの走行量**(→docs/03 §3.65)。
+ * 消耗が全員一律だと、90分ずっと往復するサイドハーフと、
+ * 自陣の帯から出ない CB が同じだけ削れてしまい、sta を
+ * 「誰をどこに置くか」で効かせられない。位置から素直に出す。
+ * 采配で動かす前の y0 で測るので、指示では変わらない(指示消耗は別途却下済み)。
+ */
+function offBall(p){
+  const F=TUNING.fatigue;
+  const mid=clamp(1-Math.abs(p.y0-52)/35,0,1);   // 中盤の帯 = 往復が長い
+  const wide=clamp(Math.abs(p.x-50)/40,0,1);     // 外 = 上下動が長い
+  return F.offBase+F.offMid*mid+F.offWide*wide;
+}
+
 /** チームを組む。試合中に変わる値(得点・スタッツ)もここに持たせる。 */
 /**
  * キャプテン(→docs/03 §3.20)。**指名があればそれを最優先**、無ければ
@@ -239,6 +258,7 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic,coach){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
     p.y0=p.y; p.ordM=null;                      // y0 = 采配で動かす前の縦位置
+    p.off=offBall(p);                           // オフザボールの走行量(→docs/03 §3.65)
     p.condK=ironK(p);                           // その日の出来(→docs/03 §3.32)
     p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
       pass:0, passOk:0, duelW:0, duelL:0 }; });

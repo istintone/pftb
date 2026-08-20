@@ -1294,6 +1294,36 @@ function runSeason() {
         all.push(p.stam); byInv.push([p.stat.inv, p.stam]);
       }
     }
+    // ①' **立つ位置で走る量が違う**(→docs/03 §3.65)。
+    // 往復する中盤・外の枠ほど削れ、自陣の帯から出ない CB と中央 FW は残る。
+    // 一律だと「誰をどこに置くか」で sta を効かせられない
+    {
+      const M = E.finishMatch(E.createMatch(H, A, 7));
+      const at = sub => M.home.players.find(p => p.sub === sub);
+      const wide = at("LMF") || at("LWG"), mid = at("CMF") || at("DMF");
+      const back = at("CB"), gk = at("GK");
+      assert.ok(wide.off > back.off && mid.off > back.off,
+        "中盤と外は CB より走る: 外 " + wide.off.toFixed(2)
+        + " / 中 " + mid.off.toFixed(2) + " / CB " + back.off.toFixed(2));
+      assert.ok(gk.off < back.off, "GK が最も走らない");
+      assert.ok(wide.off / gk.off > 1.8 && wide.off / gk.off < 2.8,
+        "走行量の開きは 2 倍前後: " + (wide.off / gk.off).toFixed(2));
+      console.log("オフザボールOK 外", wide.off.toFixed(2), "> 中", mid.off.toFixed(2),
+        "> CB", back.off.toFixed(2), "> GK", gk.off.toFixed(2));
+    }
+
+    // ①'' **疲れると足と技から落ちて、力は残る**(→§3.65)。
+    // 一律に掛けると比の判定で相殺され、sta が仕事を失う(実測 +0.06 → +0.15)
+    {
+      const W = E.TUNING.wear;
+      assert.ok(W.spd > W.tec && W.tec > W.atk && W.atk > W.def && W.def > W.pow,
+        "落ち方は spd > tec > atk > def > pow");
+      const dec = k => Math.pow(0.5, W[k]);
+      assert.ok(dec("spd") < dec("pow") * 0.75,
+        "半分まで消耗したとき、足の落ち幅は力より明確に大きい: spd "
+        + dec("spd").toFixed(2) + " / pow " + dec("pow").toFixed(2));
+    }
+
     all.sort((a, b) => a - b);
     assert.ok(all[0] <= 0.40, "最も消耗した選手は4割以下まで落ちる: "
       + (all[0] * 100).toFixed(0) + "%");
