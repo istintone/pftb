@@ -360,6 +360,24 @@ function renderHomeTrophy(){
 // **端末枠の外側**を着せ替える。盤面(#app)の中は触らないので、
 // どの背景を選んでも画面の読みやすさは変わらない。
 // **既定はピッチ**。背景を選んだことが無いセーブもここに落ちる
+/**
+ * UI の色(→docs/06 §6.60)。**地の明るさを丸ごと入れ替える**。
+ * 色はトークン(`:root` の変数)に集めてあるので、body に印を付けて
+ * そこだけ差し替えれば全画面が追従する。
+ *
+ * **カードと盤面は替えない**。段の色(白/黒/ホロ/虹/黒金)とピッチの緑は
+ * それ自体が意味を持つ意匠で、地の色に合わせて動くものではない。
+ */
+const UI_DEFAULT="dark";
+const UIS=[
+  { id:"dark",  name:"ナイト",   note:"既定。暗い地に金を1色" },
+  { id:"sepia", name:"セピア",   note:"陽に焼けた紙の地。明るい面で読む" },
+];
+function applyUi(){
+  const id=(S&&S.player&&S.player.ui)||UI_DEFAULT;
+  document.body.classList.remove("ui-dark","ui-sepia");
+  document.body.classList.add("ui-"+(UIS.some(x=>x.id===id)?id:UI_DEFAULT));
+}
 const BG_DEFAULT="pitch";
 const BGS=[
   { id:"pitch", name:"ピッチ",     note:"既定。芝の縞とラインを敷く" },
@@ -408,6 +426,14 @@ function applyBg(){
   else{ const w=$("bgWall"); if(w)w.remove(); }
 }
 function renderCfg(){
+  // UI の色(→docs/06 §6.60)
+  const ui=(S.player&&S.player.ui)||UI_DEFAULT;
+  $("cfgUi").innerHTML=UIS.map(b=>'<button class="cfg-o'+(b.id===ui?" on":"")+'"'
+    +' data-ui="'+b.id+'"><i class="cfg-sw sw-ui-'+b.id+'"></i>'
+    +'<b>'+esc(b.name)+'</b><span>'+esc(b.note)+'</span></button>').join("");
+  $("cfgUi").querySelectorAll("[data-ui]").forEach(el=>{
+    el.onclick=()=>{ S.player.ui=el.dataset.ui; applyUi(); renderCfg(); save(); };
+  });
   const cur=(S.player&&S.player.bg)||BG_DEFAULT;
   $("cfgBg").innerHTML=BGS.map(b=>'<button class="cfg-o'+(b.id===cur?" on":"")+'"'
     +' data-bg="'+b.id+'"><i class="cfg-sw sw-'+b.id+'"></i>'

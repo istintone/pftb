@@ -34,7 +34,7 @@ function setupTitle(exists){
     show("offer");                       // 名声0 → 下位クラブだけが声をかけてくる
   };
   const resume=async()=>{
-    await loadGame(); headUI(); applyBg();
+    await loadGame(); headUI(); applyBg(); applyUi();
     // **QRで配った合言葉**(→docs/03 §3.55)。URL に付いていればここで開く
     const got=memFromUrl();
     if(got){ await save(); toast("「"+got.name+"」が開きました"); }
@@ -55,7 +55,7 @@ function setupTitle(exists){
 
 (async()=>{
   try{
-    headUI(); applyBg();
+    headUI(); applyBg(); applyUi();
     setupTitle(await hasSave());
     window.__boot&&window.__boot("2/2: 起動完了!",true);
   }catch(e){

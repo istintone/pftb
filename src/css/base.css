@@ -84,6 +84,37 @@ body{
 }
 
 /* =========================================================================
+   セピア(→docs/06 §6.60)。**地の明るさを丸ごと入れ替える**。
+   トークンだけを差し替えるので、これを書いた時点で全画面が追従する。
+
+   色相は 85(金)寄りに倒す。青灰のまま明度だけ上げると「白い画面」になって
+   しまい、セピア——陽に焼けた紙——にならない。
+   **金のアクセントは暗くする**。明るい地に明るい金を置くと字が読めない。
+   ========================================================================= */
+body.ui-sepia{
+  --bg:        oklch(0.86 0.020 85);   /* 最背面 */
+  --surface:   oklch(0.945 0.016 85);  /* アプリ面 */
+  --panel:     oklch(0.915 0.020 85);  /* カード・パネル */
+  --panel-2:   oklch(0.875 0.026 85);  /* パネル内の一段上 */
+  --line:      oklch(0.775 0.030 80);  /* 罫線・枠 */
+  --line-2:    oklch(0.815 0.026 80);  /* 弱い罫線 */
+
+  --accent:     oklch(0.55 0.13 68);   /* 見出し・強調(明るい地では焦茶寄りの金) */
+  --accent-hi:  oklch(0.46 0.14 55);
+  --accent-dim: oklch(0.68 0.08 78);
+
+  --text:      oklch(0.26 0.035 60);
+  --text-2:    oklch(0.36 0.030 62);
+  --text-dim:  oklch(0.50 0.025 70);
+  --text-mute: oklch(0.63 0.020 75);
+
+  --win:     oklch(0.80 0.075 150);
+  --special: oklch(0.78 0.055 300);
+}
+/* 端末枠の影は**紙に落ちる影**に。暗い地のままだと明るい面から浮く */
+body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
+
+/* =========================================================================
    ヘッダー — 左:戻る/クラブ 中央:画面名 右:コイン
    ========================================================================= */
 #appHead{
@@ -140,6 +171,11 @@ body{
 }
 .pill .dot{ width:13px; height:13px; border-radius:50%; background:var(--accent) }
 .pill .dot.tk{ background:var(--special) }
+/* 設定の見本(→docs/06 §6.60)。**その配色の縮図**にする */
+.sw-ui-dark{ background:linear-gradient(135deg,
+  oklch(0.15 0.02 255) 0 55%, oklch(0.78 0.14 85) 55% 100%) }
+.sw-ui-sepia{ background:linear-gradient(135deg,
+  oklch(0.945 0.016 85) 0 55%, oklch(0.55 0.13 68) 55% 100%) }
 
 /* =========================================================================
    本文領域と画面切替
@@ -2856,3 +2892,41 @@ body.bg-wall #app{ position:relative; z-index:1 }
 /* 買い取りの但し書き(→docs/03 §3.59)。値段の下に小さく添える */
 .cm-buy-n{ display:block; margin-top:3px; font-style:normal;
   font-size:10px; color:var(--text-mute) }
+
+/* =========================================================================
+   セピアの手当て(→docs/06 §6.60)
+   トークンで届かないところだけを名指しで直す。**塗り面だけ**が対象で、
+   カードの段・ピッチの緑・カットインには触らない(意匠そのものなので)。
+   ========================================================================= */
+/* 枠の上下(ヘッダーとタブバー)。地と地続きに見せる */
+body.ui-sepia #appHead{
+  background:linear-gradient(180deg, var(--surface), var(--panel));
+}
+body.ui-sepia #tabs{ background:var(--panel) }
+body.ui-sepia #tabs button.on{ color:var(--accent-hi) }
+/* 試合タイル。**紙に刷った告知**の見立てにする */
+body.ui-sepia .nx{
+  background:linear-gradient(135deg, var(--panel-2), var(--panel));
+  border-color:var(--accent-dim);
+}
+body.ui-sepia .nx-md{ color:var(--accent) }
+body.ui-sepia .nx-hype{ color:var(--text) }
+body.ui-sepia .nx-vs b{ color:var(--text) }
+body.ui-sepia .nx-vs span{ color:var(--accent) }
+body.ui-sepia .nx-sub,body.ui-sepia .nx-go{ color:var(--accent-hi) }
+/* 覆いは**紙を白く飛ばす**方向に(暗い覆いだと絵だけ沈む) */
+body.ui-sepia .nx-st{ opacity:.5 }
+/* 右端の柱 */
+body.ui-sepia #helpTab,body.ui-sepia .side-tab{
+  background:linear-gradient(270deg, var(--panel-2), var(--panel));
+  color:var(--accent-hi);
+}
+body.ui-sepia #helpTab:active,body.ui-sepia .side-tab:active{ background:var(--line-2) }
+/* 端末の淵(→§6.59)は**黒のまま**。板の縁は明るい地でも黒い */
+/* 明るい地では**白い字が消える**。地に載る字だけトークンへ寄せる */
+body.ui-sepia .nx-tag{ background:oklch(0.86 0.055 82); color:var(--accent-hi) }
+body.ui-sepia .bn-name{ color:var(--text-2) }
+body.ui-sepia .bn-pos{ color:var(--text-dim) }
+body.ui-sepia .mgr-name{ color:var(--text) }
+/* 絵の上に載る字(OVR・選手名)は**白のまま**。下が絵なので地の色に関係ない */
+

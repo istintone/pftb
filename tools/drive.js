@@ -2222,6 +2222,57 @@ const STEPS = [
     })()`));
     await ctx.shot("04c-home-news");        // 一覧を開いたところ
     await ctx.js("closeNews()");
+    // **セピア**(→docs/06 §6.60)。地の明るさを入れ替えて主要画面を撮る
+    await ctx.js("S.player.ui='sepia'; applyUi();");
+    for (const [t, n] of [["home","30a-sepia-home"],["cards","30b-sepia-cards"],
+                          ["deck","30c-sepia-deck"],["season","30d-sepia-season"],
+                          ["clubhouse","30e-sepia-club"]]) {
+      await ctx.js(`document.querySelector('#tabs button[data-s="${t}"]').click()`);
+      await ctx.wait(250);
+      await ctx.shot(n);
+    }
+    await ctx.js("show('manager')"); await ctx.wait(250);
+    await ctx.shot("30f-sepia-manager");
+    // **明るい地で消える字を機械で探す**(→docs/06 §6.60)。
+    // 地とほぼ同じ明るさの字は、目で全画面を見比べるまで気づけない
+    ctx.log("  セピアの読みやすさ:", await ctx.js(`(()=>{
+      // "rgb(r, g, b)" / "rgba(r, g, b, a)" を数に開く(正規表現は使わない)
+      const lum=c=>{
+        if(!c||c.indexOf('rgb')!==0)return null;
+        const n=c.slice(c.indexOf('(')+1,c.lastIndexOf(')')).split(',').map(x=>parseFloat(x));
+        if(n.length<3)return null;
+        if(n.length>3&&n[3]<0.5)return null;          // 透けている面は地とみなさない
+        return (0.2126*n[0]+0.7152*n[1]+0.0722*n[2])/255;
+      };
+      const bad=[];
+      for(const t of ['home','cards','deck','season','clubhouse']){
+        document.querySelector('#tabs button[data-s="'+t+'"]').click();
+        const scr=document.querySelector('.screen.on');
+        for(const el of scr.querySelectorAll('*')){
+          const txt=[...el.childNodes].filter(n=>n.nodeType===3)
+            .map(n=>n.textContent.trim()).join('');
+          if(!txt)continue;
+          const cs=getComputedStyle(el);
+          if(cs.visibility==='hidden'||cs.display==='none')continue;
+          if(cs.textShadow&&cs.textShadow!=='none')continue;   // 絵の上の字は下地が絵
+          const r=el.getBoundingClientRect(); if(!r.width||!r.height)continue;
+          const fg=lum(cs.color); if(fg==null)continue;
+          let p=el,bg=null;
+          while(p&&p!==document.body){ const v=lum(getComputedStyle(p).backgroundColor);
+            if(v!=null){ bg=v; break; } p=p.parentElement; }
+          if(bg==null)continue;
+          if(Math.abs(fg-bg)<0.16)
+            bad.push(t+' 「'+txt.slice(0,14)+'」 差'+Math.abs(fg-bg).toFixed(2));
+        }
+      }
+      const uniq=[...new Set(bad)];
+      if(uniq.length)throw new Error('地と見分けが付かない字が '+uniq.length+'件: '
+        +uniq.slice(0,8).join(' ／ '));
+      return '主要5画面に、地と紛れる字は無い';
+    })()`));
+    await ctx.js("show('manager'); openCfg();"); await ctx.wait(250);
+    await ctx.shot("30g-sepia-settings");
+    await ctx.js("closeCfg(); S.player.ui='dark'; applyUi(); show('home');");
     // **フッターの並び**(→docs/06 §6.49)。よく触るものほど左に置く
     ctx.log("  フッターの並び:", await ctx.js(`(()=>{
       const got=[...document.querySelectorAll('#tabs button')].map(b=>b.dataset.s);
