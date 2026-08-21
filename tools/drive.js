@@ -93,6 +93,35 @@ const STEPS = [
       if(r.width<=0||r.bottom>innerHeight)throw new Error('画面の外にある');
       return t;
     })()`));
+    // **起動の帯が消えるのを待つ**。3秒で自分から消えるので、それまでに撮ると
+    // タイトルの1枚目に毎回デバッグの帯が写り込む(画面の上端が見えない)
+    for (let i = 0; i < 40; i++) {
+      const on = await ctx.js(
+        "getComputedStyle(document.getElementById('bootStat')||document.body).display");
+      if (on === "none") break;
+      await ctx.wait(150);
+    }
+    // **端末の淵**(→docs/06 §6.59)。タイトルだけに出す演出
+    ctx.log("  端末の淵:", await ctx.js(`(()=>{
+      const n=document.querySelector('.t-notch'), hm=document.querySelector('.t-home');
+      if(!n||!hm)throw new Error('ノッチか指示バーが無い');
+      const r=n.getBoundingClientRect(), r2=hm.getBoundingClientRect();
+      if(getComputedStyle(n).display==='none')throw new Error('ノッチが出ていない');
+      if(Math.round(r.top)!==0)throw new Error('ノッチが上端に無い: '+Math.round(r.top));
+      // **真ん中に来る**。ずれると汚れに見える
+      const mid=Math.abs((r.left+r.right)/2-innerWidth/2);
+      if(mid>1.5)throw new Error('ノッチが中央でない: '+mid.toFixed(1)+'px ずれ');
+      if(Math.abs((r2.left+r2.right)/2-innerWidth/2)>1.5)
+        throw new Error('指示バーが中央でない');
+      // **触りは通す**。押せる場所に見えてはいけない
+      for(const el of [n,hm])
+        if(getComputedStyle(el).pointerEvents!=='none')
+          throw new Error('淵が触りを食っている');
+      // **タイトル以外には出さない**(実機のノッチと二重にならないように)
+      if(!n.closest('#scr-title'))throw new Error('タイトルの外に居る');
+      return 'ノッチ '+Math.round(r.width)+'x'+Math.round(r.height)
+        +' 上端中央 ／ 指示バー '+Math.round(r2.width)+'px ／ どちらも触りは通す';
+    })()`));
     await ctx.shot("01-title");
   }],
   ["就任先の選択(名声0で届く範囲)", async ctx => {
