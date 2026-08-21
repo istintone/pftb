@@ -4097,10 +4097,20 @@ const STEPS = [
       const go=document.querySelector('#seasonCal .cal.judge.go[data-go]');
       if(!go)throw new Error('全日程を終えても行き先の行が出ない');
       if(go.dataset.go!=='home')throw new Error('行き先が HOME でない: '+go.dataset.go);
+      // **戻り先はこの行**(→docs/06 §6.52)。試合から日程に戻ったとき、
+      // ここが画面に入っていないと日程の先頭 — 何十節も前 — に置き去りになる
+      if(!go.classList.contains('cal-here'))throw new Error('全日程終了の行に的が無い');
+      if(go.id==='calCur')throw new Error('現在節と id を共有している（押すとチャットへ飛ぶ）');
+      const body=document.getElementById('appBody');
+      body.scrollTop=0; scrollToCurrent();
+      const y=go.getBoundingClientRect().top;
+      if(!(y>0&&y<innerHeight))throw new Error('戻っても画面に入らない: top='+Math.round(y));
       const txt=go.textContent.replace(/\s+/g,' ').trim();
-      go.click();
-      return txt;
+      window.__goRow=go;
+      return txt+' ／ 戻り先も合う';
     })()`));
+    await ctx.shot("11f-season-over");
+    await ctx.js("window.__goRow.click()");
     await ctx.wait(300);
     ctx.log("  押した先:", await ctx.js(`(()=>{
       const sc=(document.querySelector('.screen.on')||{}).id;

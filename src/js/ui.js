@@ -1832,7 +1832,12 @@ function renderTenureCalendar(){
     if(lastSeason!==W.season||lastClub!==S.club.id)rows.push(seasonDivider(W.season,S.club.id));
     // **節目は行き先まで連れていく**(→docs/06 §6.42)。ここで止まると
     // 「HOMEへ行け」と書いてあるだけで、自分でタブを押しに行くことになる
-    if(seasonOver())rows.push('<div class="cal judge go" data-go="home" role="button" tabindex="0">'
+    // **この行が「いまの場所」**(→docs/06 §6.52)。目印(`cal-here`)を付けておかないと
+    // 試合から戻ったときに scrollToCurrent が的を見失い、日程の先頭に飛ぶ。
+    // **id は共有しない** — `calCur` には現在節のクリック(チャットを開く)が
+    // 結び付いているので、判定行に付けると HOME ではなくチャットへ飛ぶ
+    if(seasonOver())rows.push('<div class="cal judge go cal-here"'
+      +' data-go="home" role="button" tabindex="0">'
       +'<span class="cal-n">◆</span>'
       +'<span class="cal-b"><b>全日程を終了しました</b>'
       +'<span class="lg">オーナーの査定を受けて今季を終えます</span></span>'
@@ -2008,7 +2013,7 @@ function currentRow(){
   // **相手が決まったら、見出しを相手で上書きする**(→docs/06 §6.42)。
   // 以前は下に相手の行を足していたが、タイルが2段になるうえ、済んだ節の行と
   // 形が変わってしまう。決まった後は**済んだ節と同じ並び**にするのが正しい
-  return '<div class="cal cur'+(foe?" set":"")+'" id="calCur" role="button" tabindex="0">'
+  return '<div class="cal cur cal-here'+(foe?" set":"")+'" id="calCur" role="button" tabindex="0">'
     +'<div class="cal-cur-h"><span class="cal-n num">'+C.node+'</span>'
     +(foe?'<span class="cal-c">'+foe.emb+'</span>':"")
     +'<span class="cal-b">'
@@ -2658,10 +2663,22 @@ function chatBottom(){
 }
 SCREENS.chat.after=chatBottom;
 
-/** 現在節が画面に入るまでスクロールする(96節あるので必須)。 */
+/**
+ * 現在節が画面に入るまでスクロールする(96節あるので必須 →docs/06 §6.52)。
+ *
+ * **的が無い場面がある**。任期が明けたあと(`C.over`)は「いまの節」の行そのものが
+ * 並ばない。そのときは**最後に消化した節**まで送る。ここで諦めると日程の先頭
+ * — 何十節も前 — に置き去りになる。
+ */
 function scrollToCurrent(){
-  const el=$("calCur"); if(!el)return;
-  try{ el.scrollIntoView({block:"center"}); }catch(e){}
+  const box=$("seasonCal"); if(!box)return;
+  let el=box.querySelector(".cal-here");
+  if(!el){
+    const done=[...box.children].filter(e=>
+      !e.classList.contains("fut")&&!e.classList.contains("none"));
+    el=done[done.length-1];
+  }
+  if(el)try{ el.scrollIntoView({block:"center"}); }catch(e){}
 }
 
 /**

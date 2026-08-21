@@ -2596,3 +2596,37 @@ for(const id of ['clubHistory','clubTrophies','memList','clubMgrFace'])
 > 看板に添えていたほうを落とした。看板そのものが社名を描いているので、
 > 字で重ねる意味がない。
 
+### 6.52 日程は必ず「いまの場所」に戻る(2026-08-21 修正)
+
+> リーグ全日程終了する試合からスケジュールに戻ると「全日程を終了しました」の
+> 場所に戻ってこれず、スケジュールのTOPに遷移してしまう (監督)
+
+任期は96節あるので、日程に戻るたび `scrollToCurrent()` が現在節まで送っている。
+その的は現在節タイルの `id="calCur"` だった。
+
+**全日程を終えた節には、その行が並ばない。** 代わりに出るのは
+「全日程を終了しました」の判定行で、こちらには id が無い。
+`scrollToCurrent()` は的を見つけられずそのまま戻り、**先頭に置き去り**になっていた。
+
+#### 的は id ではなく目印(`cal-here`)で持つ
+
+最初は判定行にも `id="calCur"` を付けた。**これは間違いだった** —
+`wireCurrentRow()` が `#calCur` にチャットを開くクリックを結び付けているので、
+判定行を押すと HOME ではなく**チャットへ飛ぶ**ようになった。
+
+「戻り先の目印」と「押したら何が起きるか」は別の役目なので、分けて持つ。
+
+    現在節タイル … class="cal cur cal-here" id="calCur"   ← 押すとチャット
+    判定行       … class="cal judge go cal-here" data-go  ← 押すと HOME
+
+#### 的そのものが無い場面もある
+
+任期が明けたあと(`C.over`)は「いまの節」の行が一切並ばない。
+そのときは**最後に消化した節**まで送る。ここで諦めると、やはり先頭に置き去りになる。
+
+```js
+let el=box.querySelector(".cal-here");
+if(!el){ const done=[...box.children].filter(e=>
+  !e.classList.contains("fut")&&!e.classList.contains("none")); el=done[done.length-1]; }
+```
+
