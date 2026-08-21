@@ -2897,30 +2897,25 @@ function renderStandings(){
  * 契約の話はクラブの話なので、監督の画面ではなくここに置く。
  */
 function renderClubStatus(){
-  if(!S.club){ $("clubStatus").innerHTML=""; return; }
-  const W=S.world, club=clubById(S.club.id), lg=leagueById(club.league);
-  const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
+  if(!S.club){ $("clubStatus").innerHTML=""; $("clubSpon").innerHTML=""; return; }
+  // **紋章に出しているものは繰り返さない**(→docs/06 §6.51)。
+  // クラブ名・いまの舞台・現在順位はエンブレムの脇にある
   $("clubStatus").innerHTML=
-    kv("クラブ",esc(club.name)+"（格★"+club.grade+"）")
-    +kv("いまの舞台",lg.name+" "+divName(W.div))
-    +kv("オーナーの目標",S.club.expect+"位")
-    +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
-    +kv("オーナーの評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
+    kv("クラブの資金",fmtNum(S.club.coins)+" コイン")
     +kv("チーム熟練度",fmtNum(S.club.exp))
-    // **コインはここ**(→docs/06 §6.50)。ヘッダーから外したので、財布の在り処を作る
-    +kv("クラブの資金",fmtNum(S.club.coins)+" コイン")
-    // スポンサー(→docs/03 §3.40)。契約の話なのでここに置く
-    +(()=>{ const sp=sponsor();
-      if(!sp)return kv("スポンサー",sponPending()?"相談が来ています":"—");
-      // **看板のある会社は絵で出す**(→docs/06 §6.32)。契約の話をしている場所なので、
-      // 相手の顔が見えるほうが「どこと組んでいるか」が残る。絵の無い会社は社名のまま
-      const ad=sponAd("ad-ct");
-      return (ad?'<div class="ct-spon">'+ad+'<b>'+esc(sponsorById(sp.id).name)+'</b></div>':"")
-        +kv("スポンサー",esc(sponsorById(sp.id).name)+"（第"+sp.until+"節まで）")
-        +kv("課題",esc(sponGoalText(sp))+(sp.hit?"　達成":""))
-        +kv("報酬",esc(sponPrizeText(sp)))
-        +kv("支援",esc(sponAidById(sp.aid).label));
-    })();
+    +kv("オーナーの評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
+    +kv("オーナーの目標",S.club.expect+"位");
+  // スポンサー(→docs/03 §3.40)。**別タイル**にする(→§6.51)
+  const sp=sponsor();
+  $("clubSpon").innerHTML=!sp
+    ? kv("スポンサー",sponPending()?"相談が来ています":"—")
+    // **看板のある会社は絵で出す**(→docs/06 §6.32)。相手の顔が見えるほうが
+    // 「どこと組んでいるか」が残る。**社名は下の行にあるので看板には添えない**
+    : (sponAd("ad-ct")?'<div class="ct-spon">'+sponAd("ad-ct")+'</div>':"")
+      +kv("スポンサー",esc(sponsorById(sp.id).name)+"（第"+sp.until+"節まで）")
+      +kv("課題",esc(sponGoalText(sp))+(sp.hit?"　達成":""))
+      +kv("報酬",esc(sponPrizeText(sp)))
+      +kv("支援",esc(sponAidById(sp.aid).label));
 }
 
 /**
@@ -4758,11 +4753,13 @@ function renderClubCrest(){
   const id=S.club.id, nm=clubName(id);
   el.innerHTML=embSvg(id,nm,84,{tag:"cl"});
   $("clubCrestName").textContent=nm;
-  const n=embStars(id);
-  $("clubCrestStar").textContent=n
-    ? "★".repeat(n)+"　ワールドクラブチャンピオン "+n+"回"
-    : "ワールドクラブチャンピオンカップを獲ると★が付きます（最大"
-      +TUNING.emblem.maxStar+"）";
+  // **★の説明は書かない**(→docs/06 §6.51)。獲れば★が出るので説明が要らないうえ、
+  // 空けたぶんに**いまの舞台と順位**を置けば、CLUB の段を1つ減らせる
+  const n=embStars(id), W=S.world;
+  const lg=leagueById(clubById(id).league);
+  const r=W&&W.table?rankOf(W.table,id):null;
+  $("clubCrestStar").innerHTML=(n?'<i class="cr-star">'+"★".repeat(n)+'</i>　':"")
+    +esc(lg.name+" "+divName(W.div))+(r?'　<b class="num">'+r+"位</b>":"");
 }
 /**
  * メモラビリア(→docs/03 §3.55)。**開いたものだけ並ぶ**。

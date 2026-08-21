@@ -2006,8 +2006,9 @@ body{
 .ct-spon{ margin:2px 0 10px }
 .ct-spon .ad{ border-radius:8px; overflow:hidden; border:1px solid var(--line) }
 .ct-spon .ad img{ display:block; width:100%; height:auto }
-.ct-spon b{ display:block; margin-top:6px; font:600 12px/1.3 var(--f-head);
-  letter-spacing:.5px; color:var(--accent-hi) }
+/* **社名は看板に添えない**(→§6.51)。すぐ下の行に社名が出るので二度になる */
+/* 紋章の脇の★(→§6.51)。舞台と順位と同じ行に置くので、字だけ金にする */
+.cr-star{ font-style:normal; color:var(--accent) }
 /* 背景(→docs/06 §6.45)。**端末枠の外側だけ**を着せ替える。
    盤面(#app)の中は触らないので、どれを選んでも読みやすさは変わらない */
 body.bg-pitch{

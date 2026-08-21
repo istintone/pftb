@@ -2684,9 +2684,31 @@ const STEPS = [
       if (tab === "clubhouse") {
         // **CLUB はいま預かっているクラブの話だけ**(→docs/06 §6.50)
         ctx.log("  クラブの現況:", await ctx.js(`(()=>{
+          // **紋章に出ているものは繰り返さない**(→docs/06 §6.51)
           const st=document.getElementById('clubStatus').textContent;
-          for(const w of ['クラブ','いまの舞台','オーナーの目標','現在順位','クラブの資金'])
+          for(const w of ['クラブの資金','チーム熟練度','オーナーの評価','オーナーの目標'])
             if(st.indexOf(w)<0)throw new Error('現況に '+w+' が無い');
+          for(const w of ['いまの舞台','現在順位'])
+            if(st.indexOf(w)>=0)throw new Error('現況に '+w+' が残っている（紋章側にある）');
+          // 紋章の脇に**クラブ名・舞台・順位**がまとまっている
+          const cs=document.getElementById('clubCrestStar').textContent;
+          if(cs.indexOf('位')<0)throw new Error('紋章の脇に順位が出ない: '+cs);
+          if(cs.indexOf('獲ると')>=0)throw new Error('★の説明文が残っている');
+          if(document.getElementById('clubCrestName').textContent!==clubName(S.club.id))
+            throw new Error('紋章の脇にクラブ名が出ない');
+          // **紋章が最上段**。CLUB の現況より前に来る
+          const scr2=document.getElementById('scr-clubhouse');
+          const ord=[...scr2.querySelectorAll('.card')].map(e=>e.className);
+          if(ord[0].indexOf('crest-card')<0)throw new Error('紋章が最上段でない');
+          // スポンサーは**別タイル**で、社名は1度だけ
+          const sp0=sponsor();
+          if(sp0){
+            const sb=document.getElementById('clubSpon');
+            if(!sb.textContent.trim())throw new Error('スポンサーのタイルが空');
+            const nm=sponsorById(sp0.id).name;
+            const hit=sb.textContent.split(nm).length-1;
+            if(hit!==1)throw new Error('社名が'+hit+'回出ている');
+          }
           // **監督の話は混ざらない**。ここに経歴やトロフィーの棚があってはいけない
           const scr=document.getElementById('scr-clubhouse');
           for(const id of ['clubHistory','clubTrophies','memList','clubMgrFace'])
@@ -3906,11 +3928,11 @@ const STEPS = [
       // **クラブの現況は CLUB にある**。スポンサーの看板もそちらへ移った
       show('clubhouse');
       const sp=sponsor();
-      const logo=document.querySelector('#clubStatus .ct-spon img');
+      const logo=document.querySelector('#clubSpon .ct-spon img');
       const A=(window.ASSETS&&window.ASSETS.banner)||{};
       if(sp&&A[sp.id]&&!logo)throw new Error('看板のある会社なのにロゴが出ない: '+sp.id);
       const n=document.querySelectorAll('#clubStatus .kv').length;
-      if(n<7)throw new Error('現況の項目が足りない: '+n);
+      if(n!==4)throw new Error('現況は4項目のはず: '+n);
       document.querySelector('#tabs button[data-s="season"]').click();
       return on.join(' → ')+' ／ 現況は CLUB に '+n+'項目'
         +' ／ ロゴ '+(logo?'あり':(sp?'（この会社は絵が無い）':'契約なし'));
