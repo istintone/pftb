@@ -382,6 +382,7 @@ const BG_DEFAULT="pitch";
 const BGS=[
   { id:"pitch", name:"ピッチ",     note:"既定。芝の縞とラインを敷く" },
   { id:"black", name:"ブラック",   note:"盤面に集中する" },
+  { id:"white", name:"ホワイト",   note:"紙の上に置いたように見せる" },
   { id:"wall",  name:"ロゴウォール", note:"会見の背景のように斜めに並べる" },
 ];
 /**
@@ -420,7 +421,7 @@ function buildWall(){
 /** いま選んでいる背景を body に着せる。**セーブに持つ**ので次に開いても残る。 */
 function applyBg(){
   const id=(S&&S.player&&S.player.bg)||BG_DEFAULT;
-  document.body.classList.remove("bg-black","bg-pitch","bg-wall");
+  document.body.classList.remove("bg-black","bg-white","bg-pitch","bg-wall");
   document.body.classList.add("bg-"+id);
   if(id==="wall")buildWall();
   else{ const w=$("bgWall"); if(w)w.remove(); }

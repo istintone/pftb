@@ -2117,6 +2117,11 @@ body.bg-pitch{
   background-position:center center, 0 0;
   background-repeat:no-repeat, repeat;
 }
+/* **黒と白はテーマから独立させる**(→docs/06 §6.61)。
+   以前「ブラック」は `--bg` をそのまま使っていたので、セピアにすると白くなった。
+   地の明るさ(ナイト/セピア)と、外周の色は**別の好み**なので、別々に選ばせる */
+body.bg-black{ background-color:oklch(0.10 0.01 255) }
+body.bg-white{ background-color:oklch(0.94 0.008 90) }
 body.bg-wall{ background-color:oklch(0.97 0.005 95) }
 /* ロゴウォール(→docs/06 §6.45)。**本物の要素**で敷くので、
    タイトルと同じフォント(Oswald)がそのまま効く。データURIのSVGでは届かない。
@@ -2154,6 +2159,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cfg-sw{ flex:0 0 auto; width:34px; height:24px; border-radius:5px;
   border:1px solid var(--line) }
 .sw-black{ background:oklch(0.10 0.01 255) }
+.sw-white{ background:oklch(0.94 0.008 90) }
 .sw-pitch{ background:
   repeating-linear-gradient(90deg, oklch(0.32 0.075 150) 0 6px, oklch(0.28 0.065 150) 6px 12px) }
 .sw-wall{ background:linear-gradient(135deg,#761AFF 0 20%,#F8FF26 20% 40%,
@@ -3029,6 +3035,66 @@ body.ui-sepia .ev-w.up b{ color:oklch(0.424 0.045 70) }
 body.ui-sepia .ev-w.dn b{ color:oklch(0.486 0.045 70) }
 body.ui-sepia .of-r.ok{ color:oklch(0.486 0.045 70) }
 body.ui-sepia .rv-pn{ color:oklch(0.343 0.045 88) }
+
+
+/* =========================================================================
+   セピア: 派生ルールの再発行(→docs/06 §6.61)
+   **上の一括置き換えは、後から来るはずの派生を潰してしまう**。
+   `body.ui-sepia .fc-bar i` は `.fc-bar i.on` と同じ詳細度だが後に書かれるので、
+   建った段の金色が消えて**全部が空きマスに見えた**。
+   基底を上書きしたセレクタの派生(.on / :active / 子要素)を、
+   元の順序のまま前置きして出し直す。値はそのまま(var(--accent) などは触らない)。
+   ========================================================================= */
+body.ui-sepia .pill .dot{ background:var(--accent) }
+body.ui-sepia .pill .dot.tk{ background:var(--special) }
+body.ui-sepia #tabs button{ background:none; color:var(--text-dim) }
+body.ui-sepia #tabs button.on{ color:var(--accent) }
+body.ui-sepia .skill.on{ color:var(--accent-hi); background:oklch(0.834 0.048 85) }
+body.ui-sepia .rs-tr i:first-child{ background:var(--accent) }
+body.ui-sepia .rs-tr i:last-child{ background:oklch(0.40 0.02 255) }
+body.ui-sepia .rs-p > .v.dim{ color:var(--text-dim) }
+body.ui-sepia .mfeed div{ color:oklch(0.384 0.016 90) }
+body.ui-sepia .mfeed .goal{ color:var(--accent-hi) }
+body.ui-sepia .mfeed .info{ color:var(--text-dim) }
+body.ui-sepia #subTab:active{ background:oklch(0.799 0.076 82) }
+body.ui-sepia .fit-chip .pk-ovr{ color:#fff }
+body.ui-sepia .sb-bar i{ background:oklch(0.72 0.16 150) }
+body.ui-sepia .sb-bar.mid i{ background:var(--accent) }
+body.ui-sepia .sb-bar.low i{ background:var(--fit-bad) }
+body.ui-sepia .trophy b{ color:var(--accent-hi) }
+body.ui-sepia .trophy span{ color:var(--text-dim) }
+body.ui-sepia .trophy.off{ background:var(--panel-2) }
+body.ui-sepia .trophy.off b{ color:var(--text-2) }
+body.ui-sepia .trophy.off .tr-aw.sig{ color:oklch(0.424 0.045 88) }
+body.ui-sepia .skill.sig{ color:var(--accent-hi); background:linear-gradient(135deg, oklch(0.811 0.057 85), oklch(0.846 0.038 80)) }
+body.ui-sepia .sc-row.tk .sc-n{ color:var(--accent-hi) }
+body.ui-sepia .fc-bar i.on{ background:var(--accent) }
+body.ui-sepia .fc-bar i.wip{ background:oklch(0.55 0.10 85) }
+body.ui-sepia .comp-card.live b{ color:var(--accent-hi) }
+body.ui-sepia .comp-card.live .cc-r{ color:var(--accent) }
+body.ui-sepia .cup-res .eyebrow{ color:var(--text-mute) }
+body.ui-sepia .cup-res b{ color:var(--text) }
+body.ui-sepia .cup-res.win{ background:oklch(0.834 0.067 85 / .40) }
+body.ui-sepia .cup-res.win .eyebrow, body.ui-sepia .cup-res.win b{ color:var(--accent) }
+body.ui-sepia #scr-chat .ch-row.hd .ch-b::before{ background:var(--ch-card) }
+body.ui-sepia #scr-chat .ch-row.me.hd .ch-b::before{ background:var(--ch-me) }
+body.ui-sepia .bd-move.up .eyebrow, body.ui-sepia .bd-move.up b{ color:var(--accent) }
+body.ui-sepia .bd-move.down .eyebrow, body.ui-sepia .bd-move.down b{ color:oklch(0.486 0.045 70) }
+body.ui-sepia .nx.own{ background:linear-gradient(160deg,
+  oklch(0.857 0.038 85 / .55), var(--panel)) }
+body.ui-sepia .nx.own .nx-md{ color:var(--accent) }
+body.ui-sepia .ev-bar i{ background:linear-gradient(90deg,
+  oklch(0.55 0.10 255), var(--accent)) }
+body.ui-sepia .ev-bar u{ background:oklch(0.95 0.02 90) }
+body.ui-sepia .cal.judge b{ color:var(--text-2) }
+body.ui-sepia .cal.judge.go{ background:linear-gradient(90deg, oklch(0.834 0.048 85), oklch(0.857 0.019 82)) }
+body.ui-sepia .cal.judge.go b{ color:var(--accent-hi) }
+body.ui-sepia .cal.judge.go .cal-r{ color:var(--accent) }
+body.ui-sepia .cal.judge.go:active{ background:oklch(0.811 0.057 85) }
+body.ui-sepia .cal.cur .cal-r{ color:var(--accent) }
+body.ui-sepia .rv-pack i::before, body.ui-sepia .rv-pack i::after{ background:linear-gradient(180deg,oklch(0.86 0.14 88),oklch(0.58 0.11 80)) }
+body.ui-sepia .rv-pn.secret{ color:oklch(0.66 0.24 26) }
+body.ui-sepia .offer.stay .of-r.ok{ color:var(--accent) }
 
 /* =========================================================================
    セピアの手当て(→docs/06 §6.60)

@@ -2327,8 +2327,31 @@ const STEPS = [
     await ctx.js(`(()=>{ document.getElementById('formModal').classList.remove('on');
       show('season'); openSide('comp'); })()`);
     await ctx.wait(250); await ctx.shot("30p-sepia-entry");
-    await ctx.js("closeSide(); show('manager'); openCfg();"); await ctx.wait(250);
+    // 施設の段(→docs/06 §6.61)。**建った段・建設中・空きが見分けられるか**
+    await ctx.js(`(()=>{ closeSide(); S.club.coins=999999;
+      S.club.fac.training=2; S.club.build={ id:'medical', to:1, left:3 };
+      show('clubhouse'); renderFac();
+      document.getElementById('clubFac').scrollIntoView({block:'center'}); })()`);
+    await ctx.wait(250); await ctx.shot("30s-sepia-fac");
+    await ctx.js("show('manager'); openCfg();"); await ctx.wait(250);
     await ctx.shot("30g-sepia-settings");
+    // **黒と白はテーマから独立している**(→docs/06 §6.61)
+    ctx.log("  背景の選択:", await ctx.js(`(()=>{
+      const ids=BGS.map(b=>b.id);
+      for(const w of ['black','white'])
+        if(!ids.includes(w))throw new Error(w+' が選べない');
+      const seen={};
+      for(const id of ids){ S.player.bg=id; applyBg();
+        seen[id]=getComputedStyle(document.body).backgroundColor; }
+      // **地の明るさを替えても、黒と白は同じ色のまま**
+      S.player.ui='dark'; applyUi();
+      for(const id of ['black','white']){ S.player.bg=id; applyBg();
+        if(getComputedStyle(document.body).backgroundColor!==seen[id])
+          throw new Error(id+' が地の明るさで変わってしまう'); }
+      if(seen.black===seen.white)throw new Error('黒と白が同じ色');
+      S.player.ui='sepia'; applyUi(); S.player.bg='pitch'; applyBg();
+      return ids.length+'種（'+ids.join('/')+'）／ 黒と白はテーマで変わらない';
+    })()`));
     await ctx.js("closeCfg(); S.player.ui='dark'; applyUi(); show('home');");
     // **フッターの並び**(→docs/06 §6.49)。よく触るものほど左に置く
     ctx.log("  フッターの並び:", await ctx.js(`(()=>{
