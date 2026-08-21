@@ -433,7 +433,7 @@ function makeStay(){
   return {
     clubId:S.club.id,
     // --- クラブ側の積み上げ ---
-    coins:S.club.coins, exp:S.club.exp,
+    coins:S.club.coins, exp:S.club.exp, won:cp(S.club.won||[]),
     fac:cp(S.club.fac), build:S.club.build?cp(S.club.build):null,
     loan:cp(S.club.loan||[]),
     // --- 部(昇降格の結果)。**ここを戻さないと、昇格が任期で消える** ---
@@ -481,6 +481,8 @@ function startTenure(clubId){
     build:stay?stay.build:null,                              // 建設中の1件 {id,to,left}
     built:null,                                              // 完成の知らせ(1節だけ)
     exp:stay?stay.exp:0,                                     // チーム熟練度(→§3.7)
+    // このクラブで獲ったもの(→docs/03 §3.9a)。**残留なら続き、移籍で畳まれる**
+    won:stay?(stay.won||[]).slice():[],
     // **オーナーの評価と期待は必ず引き直す**。残留でも契約は結び直しなので、
     // 前の任期の貯金で最初から安泰、にはしない
     eval:TUNING.eval.start,                                  // オーナーの評価(→§3.9)
@@ -2296,6 +2298,9 @@ const trophyCount=()=>(S.player.trophies||[]).length;
  */
 function trophyAdd(id,name,kind){
   const list=S.player.trophies||(S.player.trophies=[]);
+  // **クラブ側にも積む**(→docs/03 §3.9a)。監督の棚は通算だが、こちらは
+  // 「この在任で獲ったもの」。任期が明ければクラブごと畳まれる(残留なら続く)
+  if(S.club)(S.club.won||(S.club.won=[])).push({ id, name, kind, season:S.world.season });
   const t=list.find(x=>x.id===id);
   if(t){
     t.n=(t.n||1)+1; t.last=S.world.season;

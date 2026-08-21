@@ -152,7 +152,9 @@ const STEPS = [
     await ctx.wait(700);
     ctx.log("画面:", await ctx.screen(),
       "/ ヘッダー:", await ctx.js("document.getElementById('hdClubName').textContent"),
-      "/ コイン:", await ctx.js("document.getElementById('hdCoin').textContent"));
+      // **ヘッダーの右は監督の顔**(→docs/06 §6.50)。コインは CLUB へ移した
+      "/ 監督の顔:", await ctx.js(
+        "document.getElementById('hdMgr').querySelector('img')?'あり':'なし'"));
     await ctx.shot("04-home");
     // **就任したらまずオーナーが目標を告げる**(→docs/03 §3.9)。HOME から向かう
     ctx.log("  開幕イベント:", await ctx.js(`(()=>{
@@ -2249,10 +2251,13 @@ const STEPS = [
   ["秘書の連絡 → LEの引換券 → スカウト", async ctx => {
     // **HOME の秘書のひとことが受信箱の最新を映す**(→docs/03 §3.42)
     ctx.log("  未読の知らせ:", await ctx.js(`(()=>{
-      S.player.mail=[]; S.player.tickets={};
+      // **控えも一緒に空にする**(→docs/03 §3.42)。一覧だけ空にしても
+      // 「もう配った」記録が残るので、条件が立っても二度は届かない
+      S.player.mail=[]; S.player.mailSent={}; S.player.tickets={};
       // **チュートリアルは済ませた扱いにする**(→docs/03 §3.43)。
       // ここで見たいのは配布物のほうなので、案内が混ざると数が合わなくなる
-      for(const d of MAILS)if(d.tut)S.player.mail.push({ id:d.id, at:0, read:true, got:true });
+      for(const d of MAILS)if(d.tut){ mailSent()[d.id]=1;
+        S.player.mail.push({ id:d.id, at:0, read:true, got:true }); }
       const base=S.player.mail.length;
       // **きっかけが立つまで届かない**(→docs/03 §3.42)。テストの連絡は初勝利
       const keep=S.career.log.slice();
@@ -2677,6 +2682,36 @@ const STEPS = [
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
       if (tab === "clubhouse") {
+        // **CLUB はいま預かっているクラブの話だけ**(→docs/06 §6.50)
+        ctx.log("  クラブの現況:", await ctx.js(`(()=>{
+          const st=document.getElementById('clubStatus').textContent;
+          for(const w of ['クラブ','いまの舞台','オーナーの目標','現在順位','クラブの資金'])
+            if(st.indexOf(w)<0)throw new Error('現況に '+w+' が無い');
+          // **監督の話は混ざらない**。ここに経歴やトロフィーの棚があってはいけない
+          const scr=document.getElementById('scr-clubhouse');
+          for(const id of ['clubHistory','clubTrophies','memList','clubMgrFace'])
+            if(scr.querySelector('#'+id))throw new Error('CLUB に監督の '+id+' が残っている');
+          // **このクラブに来てからの記録だけ**(→docs/03 §3.9a)
+          const keep=S.player.history.slice(), kw=(S.club.won||[]).slice();
+          S.player.history=[{season:1,clubId:'eng-1',div:1,result:'優勝',rank:1},
+                            {season:2,clubId:S.club.id,div:2,result:'昇格',rank:2},
+                            {season:3,clubId:S.club.id,div:1,result:'残留',rank:9}];
+          S.club.won=[{id:'x',name:'テスト杯',kind:'cup',season:3}];
+          renderClubRecord();
+          const rec=document.getElementById('clubRecord').textContent;
+          if(rec.indexOf('S1')>=0)throw new Error('よそのクラブの季が混ざる');
+          if(rec.indexOf('S2')<0||rec.indexOf('S3')<0)throw new Error('在任の季が出ない');
+          if(rec.indexOf('テスト杯')<0)throw new Error('このクラブでの戴冠が出ない');
+          if(clubSpell().length!==2)throw new Error('在任の抜き方が違う: '+clubSpell().length);
+          S.player.history=keep; S.club.won=kw; renderClubRecord();
+          return '現況・エンブレム・施設・このクラブの戦績 ／ 監督の話は混ざらない';
+        })()`));
+        await ctx.shot("12b-club-status");
+        await ctx.js(`document.getElementById('clubRecord')
+          .scrollIntoView({block:'center'})`);
+        await ctx.wait(200);
+        await ctx.shot("12b2-club-record");
+        await ctx.js("document.getElementById('appBody').scrollTop=0");
         // 経歴(→docs/03 §3.2.3)。**着地した部**と**直近だけ**
         ctx.log("  経歴:", await ctx.js(`(()=>{
           // 着地した部の書き方
@@ -2692,7 +2727,7 @@ const STEPS = [
           const keep=S.player.history.slice();
           for(let i=0;i<30;i++)
             S.player.history.push({season:900+i,clubId:S.club.id,div:2,result:'残留',rank:5});
-          renderClubhouse();
+          show('manager'); renderManager();
           const rows=document.querySelectorAll('#clubHistory .kv').length;
           const more=document.querySelector('#clubHistory .ch-more');
           if(rows!==TUNING.career.show)
@@ -2701,12 +2736,13 @@ const STEPS = [
           // **新しいものが上**
           const top=document.querySelector('#clubHistory .kv span').textContent;
           if(top.indexOf('S929')<0)throw new Error('新しい順に並んでいない: '+top);
-          S.player.history=keep; renderClubhouse();
+          S.player.history=keep; renderManager();
           const dv=document.querySelector('#clubHistory .ch-div');
           return '着地した部で書く / '+rows+'行に絞る（'+more.textContent+'）'
             +' / いまの表示: '+(dv?dv.textContent:'—');
         })()`));
-        await ctx.shot("12e-club-career");
+        await ctx.shot("12e-mgr-career");
+        await ctx.js("show('clubhouse')");        // 紋章と施設は CLUB
         // エンブレム(→docs/03 §3.54)。**絵を持たずに描く**ので、
         // クラブを足しても素材は要らない
         ctx.log("  エンブレム:", await ctx.js(`(()=>{
@@ -2761,6 +2797,7 @@ const STEPS = [
         await ctx.wait(300);
         await ctx.shot("12g-club-crest");
         // メモラビリア(→docs/03 §3.55)
+        await ctx.js("show('manager')");          // メモラビリアは MANAGER
         // **全部のメモラビリアを構造で見張る**(→docs/03 §3.55)。
         // 1つだけ手で確かめていると、足したときの綴り違いや枠のずれに気づけない
         ctx.log("  メモラビリアの整合:", await ctx.js(`(()=>{
@@ -2928,6 +2965,7 @@ const STEPS = [
         })()`);
         await ctx.wait(300);
         await ctx.shot("12j-memorabilia");
+        await ctx.js("show('clubhouse')");
         // 背景(→docs/06 §6.45)。**端末枠の外側だけ**が変わる
         ctx.log("  背景の設定:", await ctx.js(`(()=>{
           const btn=document.getElementById('clubCfg');
@@ -3043,7 +3081,7 @@ const STEPS = [
           trophyAdd('kings',cupById('kings').trophy,'cup');
           trophyAdd('kings',cupById('kings').trophy,'cup');       // 2度目は回数だけ増える
           trophyAdd(lgTrophyId('sam',3),'カンピオナート DIV3 制覇','league');
-          renderClubhouse();
+          show('manager'); renderManager();
           const tiles=[...document.querySelectorAll('#clubTrophies .trophy')];
           if(tiles.length!==defs.length)throw new Error('棚の枠が合わない: '+tiles.length);
           const on=tiles.filter(e=>!e.classList.contains('off'));
@@ -3858,38 +3896,30 @@ const STEPS = [
   ["サブ画面と戻る", async ctx => {
     await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
     await ctx.wait(200);
-    // 右端の柱(→docs/06 §6.16)。契約と日程はSEASONにいる間だけ生える
+    // 右端の柱(→docs/06 §6.16)。**契約の柱は畳んだ**(→§6.50)。
+    // クラブの現況は CLUB にあるので、SEASON に残るのは大会のエントリーだけ
     ctx.log("  右端の柱:", await ctx.js(`(()=>{
       const on=[...document.querySelectorAll('#sideTabs > div')]
         .filter(t=>!t.classList.contains('off')).map(t=>t.textContent);
-      if(on.join('/')!=='契約/Entry/HELP')throw new Error('柱の並びが違う: '+on.join('/'));
-      return on.join(' → ');
-    })()`));
-    await ctx.js("document.getElementById('contractTab').click()");
-    await ctx.wait(400);
-    ctx.log("  契約タブ:", await ctx.js(`(()=>{
-      if(!document.getElementById('sideDrawer').classList.contains('on'))
-        throw new Error('引き出しが開かない');
-      if(document.getElementById('seasonComps').hidden===false)
-        throw new Error('契約なのに大会が出ている');
-      if(document.getElementById('sideTitle').textContent!=='CONTRACT')
-        throw new Error('見出しが CONTRACT でない');
-      // **契約中ならスポンサーの看板を出す**(→docs/06 §6.42)。絵の無い会社は社名のまま
+      if(on.join('/')!=='Entry/HELP')throw new Error('柱の並びが違う: '+on.join('/'));
+      if(document.getElementById('contractTab'))throw new Error('契約の柱が残っている');
+      // **クラブの現況は CLUB にある**。スポンサーの看板もそちらへ移った
+      show('clubhouse');
       const sp=sponsor();
-      const logo=document.querySelector('#seasonBox .ct-spon img');
+      const logo=document.querySelector('#clubStatus .ct-spon img');
       const A=(window.ASSETS&&window.ASSETS.banner)||{};
       if(sp&&A[sp.id]&&!logo)throw new Error('看板のある会社なのにロゴが出ない: '+sp.id);
-      return document.getElementById('sideTitle').textContent
-        +' / '+document.querySelectorAll('#seasonBox .kv').length+'項目'
-        +' / ロゴ '+(logo?'あり':(sp?'（この会社は絵が無い）':'契約なし'));
+      const n=document.querySelectorAll('#clubStatus .kv').length;
+      if(n<7)throw new Error('現況の項目が足りない: '+n);
+      document.querySelector('#tabs button[data-s="season"]').click();
+      return on.join(' → ')+' ／ 現況は CLUB に '+n+'項目'
+        +' ／ ロゴ '+(logo?'あり':(sp?'（この会社は絵が無い）':'契約なし'));
     })()`));
-    await ctx.shot("12c-tab-contract");
+    await ctx.shot("12c-club-status");
     // 別のタブを押したら中身が入れ替わる(いったん閉じなくてよい)
     await ctx.js("document.getElementById('compTab').click()");
     await ctx.wait(400);
     ctx.log("  日程タブ:", await ctx.js(`(()=>{
-      if(document.getElementById('seasonBox').hidden===false)
-        throw new Error('大会なのに契約が出ている');
       const rows=[...document.querySelectorAll('#seasonComps [data-comp]')];
       // **参加条件は全部の行に出す**(→docs/03 §3.23)。何で開くのか分からない行を作らない
       const bad=rows.slice(1).find(e=>!e.querySelector('.lg').textContent.trim());

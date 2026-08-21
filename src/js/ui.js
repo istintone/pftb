@@ -26,10 +26,12 @@ const SCREENS={
   deck:      { title:"DECK",      tab:"deck",      chrome:"full", render:()=>renderDeck() },
   season:    { title:"SEASON",    tab:"season",    chrome:"full", render:()=>renderSeason() },
   clubhouse: { title:"CLUB",      tab:"clubhouse", chrome:"full", render:()=>renderClubhouse() },
+  // **監督はクラブと別の入れ物**(→docs/06 §6.50)。ヘッダーの顔から入る
+  manager:   { title:"MANAGER",   chrome:"back",   render:()=>renderManager() },
   schedule:  { title:"FIXTURES",  under:"season",  chrome:"back", render:()=>renderSchedule() },
   standings: { title:"STANDINGS", under:"season",  chrome:"back", render:()=>renderStandings() },
   foe:       { title:"OPPONENT",  under:"season",  chrome:"back", render:()=>renderFoe() },
-  gallery:   { title:"GALLERY",   under:"clubhouse", chrome:"back", render:()=>renderGallery() },
+  gallery:   { title:"GALLERY",   chrome:"back", render:()=>renderGallery() },
   gacha:     { title:"SCOUT",     under:"home",    chrome:"back", render:()=>renderScout() },
   market:    { title:"MARKET",    under:"home",    chrome:"back", render:()=>renderMarket() },
   // 受信箱は**チャットとして読む**(→docs/03 §3.43)。上が古く、下が最新。
@@ -68,7 +70,6 @@ function show(id,opts){
   $("helpTab").classList.toggle("off",helpFor(id)==null);
   // 契約と日程はSEASONの中身なので、SEASONにいる間だけ柱に生やす(→docs/06 §6.16)
   closeSide();
-  $("contractTab").classList.toggle("off",id!=="season");
   $("compTab").classList.toggle("off",id!=="season");
   // 交代タブは**試合中だけ**。他の画面に出しても押せることが無い
   $("subTab").classList.toggle("off",id!=="match");
@@ -113,9 +114,9 @@ function openSide(kind){
   _side=kind;
   // **大会は8つあり、出ていない大会も条件つきで並ぶ**(→docs/03 §3.23)ので
   // 「エントリー中の大会」では中身と合わない
-  $("sideTitle").textContent=kind==="contract"?"CONTRACT":"ENTRY";
-  $("seasonBox").hidden=kind!=="contract";
-  $("seasonComps").hidden=kind!=="comp";
+  // **契約の引き出しは畳んだ**(→docs/06 §6.50)。中身はクラブの話なので CLUB にある
+  $("sideTitle").textContent="ENTRY";
+  $("seasonComps").hidden=false;
   $("sideDrawer").classList.add("on");
   $("sideDrawer").setAttribute("aria-hidden","false");
 }
@@ -144,7 +145,9 @@ function headUI(){
   $("hdClubName").title=name;
   // **エンブレムは絵ではなくSVG**(→docs/03 §3.54)。クラブIDから毎回同じ顔になる
   $("hdEmblem").innerHTML=S.club?embSvg(S.club.id,name,30,{tag:"hd"}):"";
-  $("hdCoin").textContent=fmtNum(S.club?S.club.coins:0);
+  // **右は監督の入口**(→docs/06 §6.50)。コインはクラブの財布なので CLUB に置いた
+  // (使う場所 — SCOUT と HOME のタイル — では残高がその場に出ている)
+  $("hdMgr").innerHTML=S.club?'<img src="'+(managerArt()||"")+'" alt="">':"";
 }
 
 // ---------- 共通の小部品 ----------
@@ -1754,26 +1757,7 @@ function renderSeason(){
   const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
   $("seasonHead").textContent="SEASON "+W.season+" · 任期スケジュール";
   // 見出しは引き出しの上に出るので、中では繰り返さない
-  $("seasonBox").innerHTML=
-    kv("クラブ",esc(club.name)+"（格★"+club.grade+"）")
-    +kv("いまの舞台",lg.name+" "+divName(W.div))
-    +kv("オーナーの目標",S.club.expect+"位")
-    +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
-    +kv("オーナーの評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
-    +kv("チーム熟練度",fmtNum(S.club.exp))
-    // スポンサー(→docs/03 §3.40)。契約の話なのでここに置く
-    +(()=>{ const sp=sponsor();
-      if(!sp)return kv("スポンサー",sponPending()?"相談が来ています":"—");
-      // **看板のある会社は絵で出す**(→docs/06 §6.32)。契約の話をしている場所なので、
-      // 相手の顔が見えるほうが「どこと組んでいるか」が残る。絵の無い会社は社名のまま
-      const ad=sponAd("ad-ct");
-      return (ad?'<div class="ct-spon">'+ad+'<b>'+esc(sponsorById(sp.id).name)+'</b></div>':"")
-        +kv("スポンサー",esc(sponsorById(sp.id).name)+"（第"+sp.until+"節まで）")
-        +kv("課題",esc(sponGoalText(sp))+(sp.hit?"　達成":""))
-        +kv("報酬",esc(sponPrizeText(sp)))
-        +kv("支援",esc(sponAidById(sp.aid).label));
-    })();
-
+  // クラブの現況は CLUB へ移した(→docs/06 §6.50)
   renderTenureBar();
   renderTenureCalendar();
 
@@ -2907,13 +2891,90 @@ function renderStandings(){
 }
 
 // ---------- CLUB(クラブハウス) ----------
-function renderClubhouse(){
+
+/**
+ * クラブの現況(→docs/03 §3.9)。**SEASON の引き出しから移した**(→docs/06 §6.50)。
+ * 契約の話はクラブの話なので、監督の画面ではなくここに置く。
+ */
+function renderClubStatus(){
+  if(!S.club){ $("clubStatus").innerHTML=""; return; }
+  const W=S.world, club=clubById(S.club.id), lg=leagueById(club.league);
+  const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
+  $("clubStatus").innerHTML=
+    kv("クラブ",esc(club.name)+"（格★"+club.grade+"）")
+    +kv("いまの舞台",lg.name+" "+divName(W.div))
+    +kv("オーナーの目標",S.club.expect+"位")
+    +kv("現在順位",r+"位（"+t.w+"勝"+t.d+"分"+t.l+"敗）")
+    +kv("オーナーの評価",evalLabel(S.club.eval)+"（"+Math.round(S.club.eval)+"）")
+    +kv("チーム熟練度",fmtNum(S.club.exp))
+    // **コインはここ**(→docs/06 §6.50)。ヘッダーから外したので、財布の在り処を作る
+    +kv("クラブの資金",fmtNum(S.club.coins)+" コイン")
+    // スポンサー(→docs/03 §3.40)。契約の話なのでここに置く
+    +(()=>{ const sp=sponsor();
+      if(!sp)return kv("スポンサー",sponPending()?"相談が来ています":"—");
+      // **看板のある会社は絵で出す**(→docs/06 §6.32)。契約の話をしている場所なので、
+      // 相手の顔が見えるほうが「どこと組んでいるか」が残る。絵の無い会社は社名のまま
+      const ad=sponAd("ad-ct");
+      return (ad?'<div class="ct-spon">'+ad+'<b>'+esc(sponsorById(sp.id).name)+'</b></div>':"")
+        +kv("スポンサー",esc(sponsorById(sp.id).name)+"（第"+sp.until+"節まで）")
+        +kv("課題",esc(sponGoalText(sp))+(sp.hit?"　達成":""))
+        +kv("報酬",esc(sponPrizeText(sp)))
+        +kv("支援",esc(sponAidById(sp.aid).label));
+    })();
+}
+
+/**
+ * **このクラブに来てからの戦績**(→docs/03 §3.9a)。
+ *
+ * 監督の生涯成績(MANAGER の CAREER)とは別物で、**いまの在任だけ**を抜く。
+ * 経歴を末尾から遡り、クラブが変わったところで止める。残留(→§3.58)なら
+ * 同じクラブの行が続くのでそのまま繋がり、移籍すれば畳まれる。
+ * **戻ってきても前回ぶんは繋がらない**(間に別のクラブの行が挟まるため)。
+ */
+function clubSpell(){
+  const h=S.player.history||[], out=[];
+  for(let i=h.length-1;i>=0;i--){
+    if(h[i].clubId!==S.club.id)break;
+    out.unshift(h[i]);
+  }
+  return out;
+}
+function renderClubRecord(){
+  if(!S.club){ $("clubRecord").innerHTML=""; return; }
+  const W=S.world, t=W.table[S.club.id]||{ w:0,d:0,l:0,gf:0,ga:0 };
+  const past=clubSpell().filter(x=>x.result!=="在任");
+  // 今季ぶんはまだ経歴に載っていないので、順位表から足す
+  const rows=past.map(x=>{
+    const dv=careerDiv(x);
+    return '<div class="kv"><span>S'+x.season+'</span><b>'
+      +(dv?'<i class="ch-div'+(x.result==="昇格"?" up":x.result==="降格"?" dn":"")+'">'
+        +esc(dv)+'</i>':"")
+      +(x.rank?x.rank+"位 ":"")+esc(x.result)+'</b></div>';
+  }).reverse();
+  const cups=(S.club.won||[]);
+  $("clubRecord").innerHTML=
+    kv("在任",clubSpell().length+" 季目（第"+S.career.node+"節）")
+    +kv("今季の成績",t.w+"勝"+t.d+"分"+t.l+"敗　得失"+(t.gf-t.ga>=0?"+":"")+(t.gf-t.ga))
+    +(rows.length?'<div class="sect-t cr-t">過去の季</div>'+rows.join("")
+      :'<div class="lg cr-none">初めての季です</div>')
+    // **このクラブで獲ったものだけ**。監督の棚(→MANAGER)とは数え方が違う
+    +'<div class="sect-t cr-t">このクラブでの戴冠</div>'
+    +(cups.length?cups.map(x=>'<div class="kv"><span>S'+x.season+'</span><b>'
+        +'🏆 '+esc(x.name)+'</b></div>').reverse().join("")
+      :'<div class="lg cr-none">まだありません</div>');
+}
+
+/**
+ * MANAGER(→docs/06 §6.50)。**任期をまたいで残るもの**だけを置く。
+ * 顔と背景の設定、メモラビリア、生涯の経歴とトロフィー、カード見本。
+ */
+function renderManager(){
   $("clubMgrName").textContent=S.coach||"監督";
-  renderClubMgr(); renderClubCrest(); renderMem();
+  renderClubMgr(); renderMem();
   $("clubFame").textContent=fmtNum(S.player.fame);
   $("clubTickets").textContent=ticketTotal();
   // **直近だけ見せる**(→docs/03 §3.2.3)。長く続けるほど経歴は伸びるので、
-  // 全部並べると CLUB 画面がそれだけで埋まる。古い季は棚(実績)のほうに残る
+  // 全部並べると画面がそれだけで埋まる。古い季は棚(実績)のほうに残る
   const h=S.player.history, KEEP=TUNING.career.show;
   const recent=h.slice(-KEEP).reverse();
   $("clubHistory").innerHTML=h.length?recent.map(x=>{
@@ -2927,7 +2988,6 @@ function renderClubhouse(){
     }).join("")
     +(h.length>KEEP?'<div class="lg ch-more">ほか '+(h.length-KEEP)+' 季</div>':"")
     :'<div class="lg">まだ記録がありません</div>';
-  const F={ training:"練習場", medical:"医療施設", stadium:"スタジアム", scouting:"スカウト網" };
   // 実績トロフィー(→docs/03 §3.36)。**獲っていない分も並べる**。
   // 棚が目標の一覧そのものになり、次に何を狙うかがここで決まる
   const defs=trophyDefs();
@@ -2951,6 +3011,16 @@ function renderClubhouse(){
   $("clubTrophies").innerHTML=
     '<div class="tr-sum"><b>'+got+'</b> / '+defs.length+' 実績</div>'
     +grp("cup","カップ戦")+grp("league","リーグ");
+}
+
+/**
+ * CLUB(→docs/06 §6.50)。**いま預かっているクラブの話だけ**を置く。
+ * 現況・エンブレム・施設、そして**このクラブに来てからの戦績**(→§3.9a)。
+ */
+function renderClubhouse(){
+  renderClubCrest();
+  renderClubStatus();
+  renderClubRecord();
   renderFac();
 }
 /**
@@ -4797,8 +4867,6 @@ $("formModal").onclick=e=>{ if(e.target===$("formModal"))closeForm(); };
 $("helpTab").onclick=e=>{ e.stopPropagation(); helpOpen()?closeHelp():openHelp(); };
 $("helpClose").onclick=e=>{ e.stopPropagation(); closeHelp(); };
 // 同じタブをもう一度押したら閉じる。別のタブなら中身を入れ替えて開いたままにする
-$("contractTab").onclick=e=>{ e.stopPropagation(); closeHelp();
-  (sideOpen()&&_side==="contract")?closeSide():openSide("contract"); };
 $("compTab").onclick=e=>{ e.stopPropagation(); closeHelp();
   (sideOpen()&&_side==="comp")?closeSide():openSide("comp"); };
 $("sideClose").onclick=e=>{ e.stopPropagation(); closeSide(); };
@@ -4808,6 +4876,7 @@ document.addEventListener("click",e=>{
   if(helpOpen()&&!near("#helpDrawer")&&!near("#helpTab"))closeHelp();
   if(sideOpen()&&!near("#sideDrawer")&&!near("#sideTabs"))closeSide();
 });
+$("hdMgr").onclick=()=>show("manager",{push:1});
 $("btnGallery").onclick=()=>show("gallery",{push:1});
 $("tileScout").onclick=()=>{ _scoutGot=null; show("gacha",{push:1}); };
 $("tileDeck").onclick=()=>show("deck");
