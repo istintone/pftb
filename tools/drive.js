@@ -2529,16 +2529,16 @@ const STEPS = [
     })()`));
     // 新顔をカードとして開いて、絵と札が出ることを目で見る
     await ctx.js(`(()=>{
-      const add=['maradona','iniesta','nesta','cafu','davids','lampard','vandersar',
-                 'gvardiol','cubarsi','palmer','estevao','endrick','ferran',
-                 'tonali','mastantuono'];
+      const add=['valdes','danialves','pique','puyol','abidal','adriano',
+                 'busquets','xavi','mascherano','thiago','keita','iniesta',
+                 'messibar','villa','pedro','bojan'];
       S.player.coll=signatureCards().filter(c=>add.includes(c.sig));
       S.squad=[]; show('cards');
     })()`);
     await ctx.wait(400);
     await ctx.shot("25-sig-new");
     ctx.log("  カードを開く:", await ctx.js(`(()=>{
-      const c=S.player.coll.find(x=>x.sig==='maradona');
+      const c=S.player.coll.find(x=>x.sig==='messibar');
       openCard(c);
       const b=document.getElementById('cardModalBody');
       const sk=[...b.querySelectorAll('.skill')].map(e=>e.textContent.trim());

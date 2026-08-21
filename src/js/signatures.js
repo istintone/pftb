@@ -590,6 +590,130 @@ const SIGNATURES=[
     atk:15, def:8, pow:13, tec:16, spd:18, sta:12,               // 82
     skills:["切り返しの妙","ドリブル","切れ込みの鋭さ","カットイン"],
   },
+  // --- バルサローナ・ブラウグラナ 2009-11(2026-08-21) ---
+  // **保持して崩す面々**。イニエスタ(n:31)は既に居るので、その周りを埋める形になる。
+  // 中盤は tec を高く spd を低く、前は速さで裏を取る型に振り分けてある。
+  // 合計は LEGENDS の帯(82〜90)に収める(→docs/03 §3.13)
+  {
+    n:70, id:"valdes", art:"le_gk05_valdes", rarity:"LEG",
+    name:"V. バルデス", short:"バルデス",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"GK", subs:["GK"], age:28,
+    atk:5, def:19, pow:15, tec:16, spd:14, sta:13,               // 82
+    skills:["足元の門番","ビルドアップ","1対1の強さ","反射神経"],
+  },
+  {
+    n:71, id:"pique", art:"le_cb07_pique", rarity:"LEG",
+    name:"G. ピケ", short:"ピケ",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"DF", subs:["CB","DMF"], age:23,
+    atk:9, def:19, pow:17, tec:16, spd:13, sta:13,               // 87
+    skills:["最終ラインの設計","空中戦","ビルドアップ","対人守備"],
+  },
+  {
+    n:72, id:"puyol", art:"le_cb08_puyol", rarity:"LEG",
+    name:"C. プジョル", short:"プジョル",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"DF", subs:["CB","RSB"], age:32,
+    atk:7, def:20, pow:18, tec:12, spd:15, sta:16,               // 88
+    skills:["不屈の主将","対人守備","キャプテンシー","シュートブロック"],
+  },
+  {
+    n:73, id:"abidal", art:"le_lsb06_abidal", rarity:"LEG",
+    name:"E. アビダル", short:"アビダル",
+    club:"バルサローナ・ブラウグラナ", nation:"fra",
+    pos:"DF", subs:["LSB","CB"], age:30,
+    atk:8, def:18, pow:15, tec:13, spd:17, sta:15,               // 86
+    skills:["静かな盾","カバーリング","スピード","対人守備"],
+  },
+  {
+    n:74, id:"adriano", art:"le_lsb07_adriano", rarity:"LEG",
+    name:"アドリアーノ", short:"アドリアーノ",
+    club:"バルサローナ・ブラウグラナ", nation:"bra",
+    pos:"DF", subs:["LSB","RSB","LWG"], age:25,
+    atk:12, def:14, pow:14, tec:15, spd:17, sta:14,              // 86
+    skills:["両翼の走者","オーバーラップ","スピード","推進力"],
+  },
+  {
+    n:75, id:"danialves", art:"le_rsb04_dani_alves", rarity:"LEG",
+    name:"D. アウヴェス", short:"アウヴェス",
+    club:"バルサローナ・ブラウグラナ", nation:"bra",
+    pos:"DF", subs:["RSB","RMF"], age:27,
+    atk:13, def:16, pow:13, tec:16, spd:17, sta:15,              // 90
+    skills:["止まらない右","オーバーラップ","正確なクロス","運動量"],
+  },
+  {
+    n:76, id:"mascherano", art:"le_dmf05_mascherano", rarity:"LEG",
+    name:"J. マスチェラーノ", short:"マスチェラーノ",
+    club:"バルサローナ・ブラウグラナ", nation:"arg",
+    pos:"MF", subs:["DMF","CB"], age:26,
+    atk:7, def:19, pow:16, tec:14, spd:14, sta:16,               // 86
+    skills:["刈り取る","ボール奪取","対人守備","厳しい寄せ"],
+  },
+  {
+    n:77, id:"busquets", art:"le_dmf06_busquets", rarity:"LEG",
+    name:"S. ブスケツ", short:"ブスケツ",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"MF", subs:["DMF","CMF"], age:22,
+    atk:9, def:17, pow:14, tec:18, spd:11, sta:15,               // 84
+    skills:["間で消える","間合いの読み","捌き","カバーリング"],
+  },
+  {
+    n:78, id:"xavi", art:"le_cmf11_xavi", rarity:"LEG",
+    name:"シャビ", short:"シャビ",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"MF", subs:["CMF","DMF"], age:30,
+    atk:12, def:12, pow:11, tec:20, spd:12, sta:17,              // 84
+    skills:["回し続ける","パスの精度","視野の広さ","捌き"],
+  },
+  {
+    n:79, id:"thiago", art:"le_cmf10_thiago_alcantara", rarity:"LEG",
+    name:"T. アルカンタラ", short:"チアゴ",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"MF", subs:["CMF","OMF"], age:19,
+    atk:12, def:11, pow:12, tec:18, spd:15, sta:14,              // 82
+    skills:["継ぐ足元","キープ力","ドリブル","捌き"],
+  },
+  {
+    n:80, id:"keita", art:"le_cmf13_keita", rarity:"LEG",
+    name:"S. ケイタ", short:"ケイタ",
+    club:"バルサローナ・ブラウグラナ", nation:"mli", nat:"マリ",
+    pos:"MF", subs:["CMF","LMF"], age:30,
+    atk:13, def:13, pow:16, tec:12, spd:15, sta:15,              // 84
+    skills:["割って入る","推進力","運動量","セカンドボール"],
+  },
+  {
+    n:81, id:"messibar", art:"le_cf04_messi", rarity:"LEG",
+    name:"L. メッシ", short:"メッシ",
+    club:"バルサローナ・ブラウグラナ", nation:"arg",
+    pos:"FW", subs:["CF","RWG","OMF"], age:23,
+    atk:20, def:5, pow:12, tec:20, spd:19, sta:14,               // 90
+    skills:["無二の左","ドリブル突破","決定力","視野の広さ"],
+  },
+  {
+    n:82, id:"pedro", art:"le_lwg02_pedro", rarity:"LEG",
+    name:"ペドロ", short:"ペドロ",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"FW", subs:["LWG","RWG","CF"], age:23,
+    atk:15, def:9, pow:12, tec:15, spd:18, sta:15,               // 84
+    skills:["裏を取り続ける","オフザボール","詰めの速さ","初速"],
+  },
+  {
+    n:83, id:"bojan", art:"le_lwg03_bojan", rarity:"LEG",
+    name:"B. クルキッチ", short:"ボージャン",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"FW", subs:["LWG","ST"], age:20,
+    atk:16, def:8, pow:12, tec:17, spd:16, sta:13,               // 82
+    skills:["早すぎた芽","ゴール前の嗅覚","カットイン","冷静なフィニッシュ"],
+  },
+  {
+    n:84, id:"villa", art:"le_rwg02_david_villa", rarity:"LEG",
+    name:"D. ビジャ", short:"ビジャ",
+    club:"バルサローナ・ブラウグラナ", nation:"esp",
+    pos:"FW", subs:["LWG","CF"], age:28,
+    atk:18, def:7, pow:13, tec:17, spd:17, sta:13,               // 85
+    skills:["外から中へ","決定力","カットイン","オフザボール"],
+  },
 ];
 const signatureById=id=>SIGNATURES.find(s=>s.id===id);
 

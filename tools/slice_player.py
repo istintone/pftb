@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """選手イラストの3枚セットを切り出して、透過・正規化した素材にする。
 
-    python tools/slice_player.py <シート画像> <選手id> [--out <ディレクトリ>]
+    python tools/slice_player.py <シート画像> <選手id> [--out=<ディレクトリ>] [--inset=<px>]
 
 生成AIはキャンバスサイズを指定どおりに出してくれない(1260x500 と頼んでも 1648x640 が来る)。
 そこで**受け取った画像を3等分し、各セルを固定サイズへ揃える**ことで正規化する。
@@ -176,13 +176,24 @@ def main():
 
     sheet = Image.open(src).convert("RGBA")
     W, H = sheet.size
-    cw = W // len(CELLS)
-    print("入力: %s  %dx%d  → 1セル %dx%d" % (src.name, W, H, cw, H))
+    n = len(CELLS)
+    # **セルの境目は整数で割らない**。1648px を 3 で割ると 549.33 なので、
+    # W//n で切ると境目が少しずつずれ、**隣のコマの中身を拾う**
+    # (実測: Xavi の立ち絵の右端にコマの区切り線が全高で入り、
+    #  プジョルの立ち絵の右下に隣のプレイ絵のスパイクが写り込んだ)。
+    edges = [round(k * W / n) for k in range(n + 1)]
+    # さらに内側へ少しだけ寄せる。生成AIはコマの間に薄い区切り線を引くことがあり、
+    # 境目を正確に割ってもその線は残る。1セル 549px に対して 6px = 約1%なので
+    # 見た目は変わらない(出力は OUT_W×OUT_H へ正規化されるため位置もずれない)。
+    inset = int(next((a.split("=", 1)[1] for a in sys.argv
+                      if a.startswith("--inset=")), 6))
+    print("入力: %s  %dx%d  → 1セル 約%dx%d (内側へ %dpx)"
+          % (src.name, W, H, edges[1] - edges[0], H, inset))
 
     for i, name in enumerate(CELLS):
         if name not in KEEP:
             continue
-        cell = sheet.crop((i * cw, 0, (i + 1) * cw, H))
+        cell = sheet.crop((edges[i] + inset, 0, edges[i + 1] - inset, H))
         cell = keyout_white(cell)
         if "--keep-pockets" not in sys.argv:
             cell, gone = keyout_pockets(cell)
@@ -199,7 +210,7 @@ def main():
         out.save(path, "WEBP", quality=90, method=6)
         cx = (box[0] + box[2]) // 2
         print("  %-5s → %s  (%5.1f KB)  中身: 中心x=%d/%d 高さ=%d  囲まれた背景を除去 %dpx"
-              % (name, path.name, path.stat().st_size / 1024, cx, cw, box[3] - box[1], gone))
+              % (name, path.name, path.stat().st_size / 1024, cx, cell.width, box[3] - box[1], gone))
 
     print("\n※ 白い部分に穴が開いていないか、必ず拡大して確認すること"
           "(縁から連結した白だけを抜いているが、髪や肌の縁は要確認)")
