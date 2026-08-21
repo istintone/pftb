@@ -2072,6 +2072,12 @@ const STEPS = [
     // **セピアの試合画面**(→docs/06 §6.60)。スコアと実況の読みやすさを見る
     await ctx.js("S.player.ui='sepia'; applyUi();"); await ctx.wait(200);
     await ctx.shot("30k-sepia-match");
+    // 試合中の柱と引き出し(采配・KP・交代)。**選択中の表示**まで見る
+    await ctx.js("openTac&&openTac();"); await ctx.wait(250);
+    await ctx.shot("30q-sepia-tac");
+    await ctx.js(`(()=>{ closeTac&&closeTac(); openSub&&openSub(); })()`);
+    await ctx.wait(250); await ctx.shot("30r-sepia-sub");
+    await ctx.js("closeSub&&closeSub();");
     await ctx.js("S.player.ui='dark'; applyUi();");
     await ctx.js("document.getElementById('mDone').click()");
     await ctx.wait(400);
@@ -2273,6 +2279,16 @@ const STEPS = [
                    md:S.world.matchday };
       S.player.trophies=[{ id:'kings',name:'k',kind:'cup',n:1,season:1,last:1 }];
       show('manager'); renderManager(); look('実績の棚','#scr-manager');
+      // 監督から報告のあった面(→docs/06 §6.60 追補)。**その画面まで行って見る**。
+      // 状況によっては開けない画面があるので、開けたものだけ見る
+      for(const [w,id] of [['相手の下見','foe'],['移籍市場','market'],
+                           ['BRIEFING','chat'],['FIXTURES','schedule'],
+                           ['クラブ','clubhouse']]){
+        try{ show(id); look(w,'#scr-'+id); }catch(e){}
+      }
+      { const c0=S.player.coll[0];
+        if(c0){ openCard(c0); look('選手詳細','#cardModal');
+          document.getElementById('cardModal').classList.remove('on'); } }
       memUnlock(MEMORABILIA[0].hash); renderMem(); look('メモラビリア','#memList');
       S.club.coins=0; show('gacha'); look('コイン不足','#scr-gacha');
       S.world.matchday=S.world.fixtures.length+1;
@@ -2300,7 +2316,18 @@ const STEPS = [
     await ctx.wait(250); await ctx.shot("30i-sepia-season-over");
     await ctx.js("show('season'); openHelp();");
     await ctx.wait(250); await ctx.shot("30j-sepia-help");
-    await ctx.js("closeHelp(); show('manager'); openCfg();"); await ctx.wait(250);
+    // 報告のあった面を撮る
+    await ctx.js(`(()=>{ closeHelp(); const c=S.player.coll[0]; if(c)openCard(c); })()`);
+    await ctx.wait(250); await ctx.shot("30m-sepia-card");
+    await ctx.js(`(()=>{ closeCard&&closeCard(); document.getElementById('cardModal')
+      .classList.remove('on'); show('chat'); })()`);
+    await ctx.wait(250); await ctx.shot("30n-sepia-briefing");
+    await ctx.js("show('deck'); openForm();");
+    await ctx.wait(250); await ctx.shot("30o-sepia-form");
+    await ctx.js(`(()=>{ document.getElementById('formModal').classList.remove('on');
+      show('season'); openSide('comp'); })()`);
+    await ctx.wait(250); await ctx.shot("30p-sepia-entry");
+    await ctx.js("closeSide(); show('manager'); openCfg();"); await ctx.wait(250);
     await ctx.shot("30g-sepia-settings");
     await ctx.js("closeCfg(); S.player.ui='dark'; applyUi(); show('home');");
     // **フッターの並び**(→docs/06 §6.49)。よく触るものほど左に置く

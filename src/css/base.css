@@ -2893,6 +2893,143 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cm-buy-n{ display:block; margin-top:3px; font-style:normal;
   font-size:10px; color:var(--text-mute) }
 
+
+/* =========================================================================
+   セピア: 暗い面の一括置き換え(→docs/06 §6.60)
+   **手で1つずつ潰すと必ず漏れる**。CSS から「暗い面を持つ宣言」を機械で拾い、
+   宣言から遡ってセレクタを引き、明度を反転して当てたもの
+   (oklch の L を 0.985-L*0.58、色相は金寄りへ、彩度は 0.085 で頭打ち)。
+   意匠そのもの(タイトル・カード・ピッチの人・カットイン・設定の見本・
+   ユニフォームの色・エンブレム)は外してある。
+   **この下に手当てを置くこと** — 個別に調整したものが勝つ。
+   ========================================================================= */
+body.ui-sepia #appHead{ background:linear-gradient(180deg, var(--panel), oklch(0.892 0.019 82)) }
+    oklch(0.933 0.014 82 / .74) 0%, oklch(0.933 0.014 82 / .66) 38%,
+    oklch(0.933 0.014 82 / .42) 68%, oklch(0.933 0.014 82 / .14) 100%) }
+body.ui-sepia #scr-contract{ background:oklch(0.915 0.014 82) }
+body.ui-sepia .ct-btn{ background:oklch(0.857 0.028 82) }
+body.ui-sepia #tabs{ background:oklch(0.892 0.019 82) }
+body.ui-sepia .modal{ background:oklch(0.939 0.009 82 / .74) }
+body.ui-sepia .cm-sheet{ background:oklch(0.886 0.019 82) }
+body.ui-sepia .cm-x{ background:oklch(0.898 0.019 82 / .85) }
+body.ui-sepia .cm-facts > div{ background:oklch(0.863 0.019 82) }
+body.ui-sepia .skill{ background:oklch(0.846 0.028 82) }
+body.ui-sepia .skill.on{ background:oklch(0.834 0.048 85) }
+body.ui-sepia .rs-tr{ background:oklch(0.840 0.019 82) }
+body.ui-sepia .mfeed{ background:oklch(0.910 0.019 82) }
+body.ui-sepia #helpTab, body.ui-sepia .side-tab{ background:linear-gradient(270deg, oklch(0.846 0.038 85), oklch(0.875 0.019 82)) }
+body.ui-sepia #helpTab:active, body.ui-sepia .side-tab:active{ background:oklch(0.811 0.048 85) }
+body.ui-sepia #subTab{ background:linear-gradient(270deg, oklch(0.834 0.057 82), oklch(0.875 0.019 82)) }
+body.ui-sepia #subTab:active{ background:oklch(0.799 0.076 82) }
+body.ui-sepia #kpTab, body.ui-sepia #tacTab, body.ui-sepia #ordTab{ background:linear-gradient(90deg, oklch(0.788 0.085 85), oklch(0.869 0.028 82)) }
+body.ui-sepia .sb-r.kp-on{ background:oklch(0.834 0.048 85) }
+body.ui-sepia .tc-b.on{ background:oklch(0.811 0.057 85) }
+body.ui-sepia .hd-in{ background:linear-gradient(200deg, var(--panel-2), oklch(0.904 0.019 82)) }
+body.ui-sepia .fit-chip{ background:oklch(0.823 0.067 82) }
+body.ui-sepia .pick.on{ background:oklch(0.846 0.028 85) }
+body.ui-sepia .pick:active{ background:oklch(0.834 0.019 82) }
+body.ui-sepia .pk-at{ background:oklch(0.811 0.019 82) }
+body.ui-sepia .pick .sl-pos{ background:oklch(0.823 0.067 82) }
+body.ui-sepia .sb-r.on{ background:oklch(0.846 0.048 85) }
+body.ui-sepia .sb-bar{ background:oklch(0.823 0.019 82) }
+body.ui-sepia .cal.champ{ background:oklch(0.857 0.038 85); background:oklch(0.846 0.057 85 / .30) }
+body.ui-sepia .trophy{ background:oklch(0.857 0.038 85) }
+body.ui-sepia .crest-big::after{ background:oklch(0.869 0.019 82 / .82) }
+body.ui-sepia .mgr-face.pick::after{ background:oklch(0.869 0.019 82 / .82) }
+body.ui-sepia .pc-nosell{ background:oklch(0.869 0.019 82 / .96) }
+body.ui-sepia .pc-tick{ background:oklch(0.881 0.019 82 / .62) }
+body.ui-sepia .skill.sig{ background:linear-gradient(135deg, oklch(0.811 0.057 85), oklch(0.846 0.038 80)) }
+body.ui-sepia .sc-row.tk{ background:oklch(0.846 0.038 85) }
+body.ui-sepia .nx{ background:linear-gradient(135deg, oklch(0.857 0.028 82), oklch(0.886 0.019 82)) }
+body.ui-sepia .nx-tag{ background:oklch(0.811 0.057 85) }
+body.ui-sepia .sc-row.hi{ background:oklch(0.863 0.028 85) }
+body.ui-sepia .mk-row.wc{ background:oklch(0.863 0.028 85) }
+body.ui-sepia .mk-r.leg{ background:oklch(0.799 0.076 80) }
+body.ui-sepia .fc-bar i{ background:oklch(0.823 0.019 82) }
+body.ui-sepia .fc-go:active{ background:oklch(0.811 0.048 85) }
+body.ui-sepia .fc.on{ background:oklch(0.857 0.028 85 / .30) }
+body.ui-sepia .comp-card.live{ background:linear-gradient(90deg,
+    oklch(0.828 0.057 85), var(--panel) 62%) }
+body.ui-sepia .of-intro{ background:linear-gradient(135deg, oklch(0.846 0.048 85), oklch(0.886 0.019 82)) }
+body.ui-sepia .of-tag{ background:oklch(0.811 0.057 85) }
+body.ui-sepia .foe-ct{ background:oklch(0.823 0.048 85) }
+body.ui-sepia .mem{ background:linear-gradient(100deg, oklch(0.846 0.048 85), var(--panel) 62%) }
+body.ui-sepia .fxrow.next{ background:oklch(0.846 0.038 85 / .30) }
+body.ui-sepia .cal.cup.planned{ background:oklch(0.846 0.038 85 / .22) }
+body.ui-sepia .cup-res{ background:oklch(0.857 0.019 82) }
+body.ui-sepia .cup-res.win{ background:oklch(0.834 0.067 85 / .40) }
+body.ui-sepia .cal.foe:active, body.ui-sepia .br-row.foe:active{ background:oklch(0.834 0.028 82) }
+body.ui-sepia .tbl tr.foe:active td{ background:oklch(0.834 0.028 82) }
+body.ui-sepia #scr-chat{ background-image:repeating-linear-gradient(135deg,
+      oklch(1 0 0 / .014) 0 2px, transparent 2px 7px),
+    radial-gradient(120% 70% at 50% 0%, oklch(0.811 0.048 82 / .30), transparent 70%) }
+body.ui-sepia .ch-day{ background:oklch(0.857 0.028 82 / .85) }
+body.ui-sepia .ch-op:active{ background:oklch(0.834 0.048 85) }
+body.ui-sepia 0%, body.ui-sepia 100%{ background:oklch(0.846 0.038 82) }
+body.ui-sepia 50%{ background:oklch(0.811 0.067 82) }
+body.ui-sepia .ch-op.hot{ background:oklch(0.823 0.057 82) }
+body.ui-sepia .bd-move.up{ background:oklch(0.834 0.067 85 / .40) }
+body.ui-sepia .bd-move.down{ background:oklch(0.846 0.048 82 / .35) }
+body.ui-sepia .nx.own{ background:linear-gradient(160deg,
+  oklch(0.857 0.038 85 / .55), var(--panel)) }
+body.ui-sepia .ev-bar{ background:oklch(0.823 0.019 82) }
+body.ui-sepia .br-row.w{ background:oklch(0.846 0.028 82) }
+body.ui-sepia .br-pk{ background:oklch(0.892 0.019 82) }
+body.ui-sepia .cal.judge{ background:oklch(0.857 0.019 82) }
+body.ui-sepia .cal.judge.go{ background:linear-gradient(90deg, oklch(0.834 0.048 85), oklch(0.857 0.019 82)) }
+body.ui-sepia .cal.judge.go:active{ background:oklch(0.811 0.057 85) }
+body.ui-sepia .cal.cur{ background:oklch(0.846 0.038 85 / .30) }
+body.ui-sepia .cal.planned{ background:oklch(0.869 0.028 85 / .18) }
+body.ui-sepia .rv{ background:oklch(0.915 0.019 82 / .94) }
+body.ui-sepia .rv-pack i{ background:linear-gradient(150deg,oklch(0.799 0.048 82),oklch(0.869 0.028 82) 46%,
+    oklch(0.741 0.067 82) 52%,oklch(0.881 0.028 82)) }
+body.ui-sepia .offer.stay{ background:oklch(0.846 0.048 85 / .22) }
+
+/* =========================================================================
+   セピア: 明るい字の一括置き換え(→docs/06 §6.60)
+   背景と同じ理屈で、**直書きの明るい字**も機械で拾って濃くする。
+   明るい地では白い字がそのまま消えるが、面と違って「消えた」ことに気づきにくい。
+   元の明暗の順序は保つ(0.95→0.26 / 0.72→0.50)ので、強弱の付け方は変わらない。
+   絵の上に載る字(OVR・背番号・スコア)は外してある。
+   ========================================================================= */
+body.ui-sepia .pill{ color:oklch(0.302 0.016 90) }
+body.ui-sepia .ct-btn{ color:oklch(0.251 0.016 90) }
+body.ui-sepia .holo-rainbow .spark{ color:oklch(0.302 0.045 70) }
+body.ui-sepia .holo-gold .spark{ color:oklch(0.322 0.045 85) }
+body.ui-sepia .cm-name{ color:oklch(0.241 0.016 90) }
+body.ui-sepia .cm-facts b{ color:oklch(0.282 0.016 90) }
+body.ui-sepia .cm-bio{ color:oklch(0.455 0.016 90) }
+body.ui-sepia .skill{ color:oklch(0.353 0.016 90) }
+body.ui-sepia .rs-verdict{ color:oklch(0.241 0.016 90) }
+body.ui-sepia .rs-nm b{ color:oklch(0.282 0.016 90) }
+body.ui-sepia .rs-p > .v{ color:oklch(0.455 0.016 90) }
+body.ui-sepia .pt-tac{ color:oklch(0.240 0.016 90) }
+body.ui-sepia .mfeed div{ color:oklch(0.384 0.016 90) }
+body.ui-sepia #subTab{ color:oklch(0.343 0.045 70) }
+body.ui-sepia .mgr-name{ color:oklch(0.282 0.016 90) }
+body.ui-sepia .pso-m.ok{ color:oklch(0.486 0.045 70) }
+body.ui-sepia .cnd{ color:oklch(0.486 0.045 70) }
+body.ui-sepia .tr-aw.sig{ color:oklch(0.343 0.045 88) }
+body.ui-sepia .trophy.off .tr-aw.sig{ color:oklch(0.424 0.045 88) }
+body.ui-sepia .nx-md{ color:oklch(0.455 0.045 85) }
+body.ui-sepia .nx-spon b{ color:oklch(0.404 0.045 85) }
+body.ui-sepia .mk-r.leg{ color:oklch(0.241 0.045 88) }
+body.ui-sepia .mk-sig{ color:oklch(0.241 0.045 88) }
+body.ui-sepia .cap.auto .cap-nm{ color:oklch(0.506 0.032 70) }
+body.ui-sepia .kk.auto .cap-nm{ color:oklch(0.506 0.032 70) }
+body.ui-sepia .bn-name{ color:oklch(0.353 0.016 90) }
+body.ui-sepia .fc-wip{ color:oklch(0.404 0.045 85) }
+body.ui-sepia .ch-div.up{ color:oklch(0.343 0.045 70) }
+body.ui-sepia .fx-m b{ color:oklch(0.282 0.016 90) }
+body.ui-sepia .cal-b b{ color:oklch(0.282 0.016 90) }
+body.ui-sepia .cal-s.w{ color:oklch(0.486 0.045 70) }
+body.ui-sepia .news-x{ color:oklch(0.486 0.045 70) }
+body.ui-sepia .bd-move.down .eyebrow, body.ui-sepia .bd-move.down b{ color:oklch(0.486 0.045 70) }
+body.ui-sepia .ev-w.up b{ color:oklch(0.424 0.045 70) }
+body.ui-sepia .ev-w.dn b{ color:oklch(0.486 0.045 70) }
+body.ui-sepia .of-r.ok{ color:oklch(0.486 0.045 70) }
+body.ui-sepia .rv-pn{ color:oklch(0.343 0.045 88) }
+
 /* =========================================================================
    セピアの手当て(→docs/06 §6.60)
    トークンで届かないところだけを名指しで直す。**塗り面だけ**が対象で、
@@ -2992,4 +3129,7 @@ body.ui-sepia .slot.on,body.ui-sepia .fm.on,body.ui-sepia .fm-o.on{
 body.ui-sepia #toast{ background:var(--panel-2); border-color:var(--line); color:var(--text) }
 /* ---- 結果の判定(勝利/引き分け/敗戦)。**画面でいちばん大きい字** ---- */
 body.ui-sepia .rs-verdict{ color:var(--text) }
+/* ---- **暗いままが正しい覆い**(→docs/06 §6.60)。一括置き換えから外している ---- */
+/* .mcut  … カットイン中に盤面を沈める覆い。明るくすると芝が白茶ける */
+/* .t-scrim / .t-wall … タイトルの壁と覆い。ここは常に夜の見立て */
 
