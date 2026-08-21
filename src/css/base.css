@@ -93,7 +93,9 @@ body{
   border-bottom:1px solid var(--line-2);
 }
 #appHead.off{ display:none }
-.hd-l,.hd-r{ display:flex; align-items:center; gap:10px; min-width:64px }
+/* **左右を同じ幅に伸ばす**(→docs/06 §6.48)。space-between だと左右の中身の
+   幅の差がそのまま見出しのずれになる。flex:1 で割れば見出しは必ず真ん中に来る */
+.hd-l,.hd-r{ display:flex; align-items:center; gap:10px; flex:1 1 0; min-width:64px }
 .hd-r{ justify-content:flex-end }
 #hdTitle{
   font:600 15px/1 var(--f-head); letter-spacing:1px;
@@ -112,9 +114,10 @@ body{
   width:34px; height:34px; flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
 }
+/* クラブは**3文字の略号**(→docs/03 §3.54e)。正式名称は title 属性に持たせる */
 #hdClubName{
-  font:600 14px/1.2 var(--f-head); letter-spacing:.5px; color:var(--text);
-  max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font:600 14px/1.2 var(--f-head); letter-spacing:1px; color:var(--text);
+  white-space:nowrap;
 }
 .pill{
   display:flex; align-items:center; gap:4px;

@@ -20,7 +20,7 @@ const SCREENS={
   contract:  { chrome:"bare" },
   offer:     { title:"OFFERS",    chrome:"back",  render:()=>renderOffers() },
   board:     { title:"OWNER",     chrome:"back",  render:()=>renderBoard() },
-  chat:      { title:"CLUB",      under:"season", chrome:"back", render:()=>renderChat() },
+  chat:      { title:"BRIEFING", under:"season", chrome:"back", render:()=>renderChat() },
   home:      { title:"HOME",      tab:"home",      chrome:"full", render:()=>renderHome() },
   cards:     { title:"CARDS",     tab:"cards",     chrome:"full", render:()=>renderCards() },
   deck:      { title:"DECK",      tab:"deck",      chrome:"full", render:()=>renderDeck() },
@@ -34,7 +34,7 @@ const SCREENS={
   market:    { title:"MARKET",    under:"home",    chrome:"back", render:()=>renderMarket() },
   // 受信箱は**チャットとして読む**(→docs/03 §3.43)。上が古く、下が最新。
   // 開いたら一番下(=いま言われていること)まで送る
-  secretary: { title:"SECRETARY", under:"home",    chrome:"back", render:()=>renderMail(),
+  secretary: { title:"ANNOUNCE",  under:"home",    chrome:"back", render:()=>renderMail(),
                after:()=>{ $("appBody").scrollTop=$("appBody").scrollHeight; } },
   match:     { title:"MATCH",     chrome:"bare" },
   result:    { title:"RESULT",    chrome:"bare",   render:()=>renderResult() },
@@ -138,7 +138,10 @@ function toast(msg){
 // ヘッダーの共通表示(クラブ名・エンブレム・コイン)を現在のセーブ状態に同期する。
 function headUI(){
   const name=S.club?clubById(S.club.id).name:"—";
-  $("hdClubName").textContent=name;
+  // **正式名称は置かない**(→docs/06 §6.48)。長い名前が左を膨らませると、
+  // 画面の見出しが右へ押し出されて中央に来ない。3文字の略号なら幅が揃う
+  $("hdClubName").textContent=S.club?clubAbbr(name):"—";
+  $("hdClubName").title=name;
   // **エンブレムは絵ではなくSVG**(→docs/03 §3.54)。クラブIDから毎回同じ顔になる
   $("hdEmblem").innerHTML=S.club?embSvg(S.club.id,name,30,{tag:"hd"}):"";
   $("hdCoin").textContent=fmtNum(S.club?S.club.coins:0);

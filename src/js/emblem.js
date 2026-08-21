@@ -225,6 +225,59 @@ const EMB_ROMA={
 /** 1文字ぶんのラテン。引けない字(長音・小書きなど)は null。 */
 const embLetter=ch=>EMB_ROMA[ch]||null;
 /**
+ * 音節ぶんのローマ字(→docs/03 §3.54e)。EMB_ROMA は1文字＝1子音なので
+ * 「バルサローナ」が BRS になり読めない。**綴りとして読める略号**を出すには
+ * 音節ごとのローマ字が要る(ba+ru+sa → barusa → BAR)。
+ */
+const EMB_SYL={
+  ア:"a",イ:"i",ウ:"u",エ:"e",オ:"o",
+  カ:"ka",キ:"ki",ク:"ku",ケ:"ke",コ:"ko",ガ:"ga",ギ:"gi",グ:"gu",ゲ:"ge",ゴ:"go",
+  サ:"sa",シ:"shi",ス:"su",セ:"se",ソ:"so",ザ:"za",ジ:"ji",ズ:"zu",ゼ:"ze",ゾ:"zo",
+  タ:"ta",チ:"chi",ツ:"tsu",テ:"te",ト:"to",ダ:"da",ヂ:"ji",ヅ:"zu",デ:"de",ド:"do",
+  ナ:"na",ニ:"ni",ヌ:"nu",ネ:"ne",ノ:"no",
+  ハ:"ha",ヒ:"hi",フ:"fu",ヘ:"he",ホ:"ho",バ:"ba",ビ:"bi",ブ:"bu",ベ:"be",ボ:"bo",
+  パ:"pa",ピ:"pi",プ:"pu",ペ:"pe",ポ:"po",
+  マ:"ma",ミ:"mi",ム:"mu",メ:"me",モ:"mo",
+  ヤ:"ya",ユ:"yu",ヨ:"yo",
+  ラ:"ra",リ:"ri",ル:"ru",レ:"re",ロ:"ro",
+  ワ:"wa",ヲ:"o",ン:"n",ヴ:"v",
+};
+// 小書き。**直前の音節の母音を差し替える**(キ+ャ → kya)
+const EMB_SMALL={ ャ:"ya",ュ:"yu",ョ:"yo",ァ:"a",ィ:"i",ゥ:"u",ェ:"e",ォ:"o" };
+/** カタカナの語を綴りに開く。長音(ー)と促音(ッ)は落とす。 */
+function embRomaji(word){
+  let out="";
+  for(const ch of String(word||"")){
+    const sm=EMB_SMALL[ch];
+    if(sm){                                          // 拗音・外来音は前の音とくっつける
+      out=out.replace(/[aiueo]$/,"")+sm;
+      continue;
+    }
+    const sy=EMB_SYL[ch];
+    if(sy){ out+=sy; continue; }
+    if(/[A-Za-z]/.test(ch))out+=ch.toLowerCase();    // ラテン名がそのまま来た場合
+    // ー(長音)・ッ(促音)・その他は落とす
+  }
+  return out;
+}
+/**
+ * クラブの**3文字の略号**(→docs/03 §3.54e)。頭の語を綴りに開いて頭3文字を採る。
+ * 「バルサローナ・ブラウグラナ」→ BAR ／「マドリード・ブランコス」→ MAD。
+ *
+ * ヘッダーの左は紋章＋この略号だけにする。正式名称(最大120px)を置くと
+ * **画面の見出しが右へ押し出されて中央に来ない**(→docs/06)。
+ * 同じ都市のクラブは同じ略号になりうるが、ヘッダーに出るのは自分のクラブだけなので
+ * ここでは重ならないことより**読めること**を採る。
+ */
+function clubAbbr(name){
+  const head=String(name||"").split(/[・\s]+/).filter(Boolean)[0]||"";
+  const r=embRomaji(head).toUpperCase();
+  if(r.length>=3)return r.slice(0,3);
+  // 3文字に満たない短い語は、次の語から足す(「シティ・…」など)
+  const all=embRomaji(String(name||"").replace(/[・\s]+/g,"")).toUpperCase();
+  return (all.slice(0,3)||embMonogram(name)).padEnd(3,"C").slice(0,3);
+}
+/**
  * クラブ名のモノグラム。**「・」で区切られた語の頭**を1文字ずつ拾う。
  * 「マンチェスター・レッズ」→ MR。語が1つなら頭の2音から2文字取る。
  */
