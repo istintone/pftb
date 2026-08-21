@@ -2727,14 +2727,44 @@ const STEPS = [
         await ctx.wait(300);
         await ctx.shot("12g-club-crest");
         // メモラビリア(→docs/03 §3.55)
+        // **全部のメモラビリアを構造で見張る**(→docs/03 §3.55)。
+        // 1つだけ手で確かめていると、足したときの綴り違いや枠のずれに気づけない
+        ctx.log("  メモラビリアの整合:", await ctx.js(`(()=>{
+          const out=[];
+          for(const m of MEMORABILIA){
+            const slots=FORMATIONS[m.form];
+            if(!slots)throw new Error(m.id+' の陣形が無い: '+m.form);
+            if(m.xi.length!==11)throw new Error(m.id+' が11人でない: '+m.xi.length);
+            if(!tacticById(m.tactic))throw new Error(m.id+' の采配が無い: '+m.tactic);
+            const seen=new Set();
+            m.xi.concat(m.bench).forEach(sid=>{
+              if(seen.has(sid))throw new Error(m.id+' に '+sid+' が二重に居る');
+              seen.add(sid);
+              if(!SIGNATURES.some(d=>d.id===sid))throw new Error(m.id+' の '+sid+' が未定義');
+            });
+            // **枠と適性が合っているか**。合わないと記念の11人が本来の力を出せない
+            m.xi.forEach((sid,i)=>{
+              const d=SIGNATURES.find(x=>x.id===sid), slot=slots[i][0];
+              if(!d.subs.includes(slot))
+                throw new Error(m.id+': '+d.short+' は '+slot+' をこなせない');
+              if(d.club!==m.club)throw new Error(m.id+': '+d.short+' の所属が違う');
+            });
+            if(!m.xi.concat(m.bench).includes(m.kp))throw new Error(m.id+' の軸が居ない');
+            // 限定の采配は**そのクラブに紐づく**(→§3.50)
+            const t=tacticById(m.tactic);
+            if(t.mem&&t.club!==m.club)throw new Error(m.id+' の采配のクラブが違う');
+            out.push(m.name+'('+m.form+'/'+t.label+')');
+          }
+          return MEMORABILIA.length+'件 ／ '+out.join(' ／ ');
+        })()`));
         ctx.log("  メモラビリア:", await ctx.js(`(()=>{
           S.player.mem=[]; renderMem();
           if(document.querySelector('#memList [data-mem]'))throw new Error('開く前から並ぶ');
           if(memUnlock('NOPE'))throw new Error('でたらめな合言葉で開く');
           // **大文字小文字と前後の空白は無視**(QRから来た文字列がそのまま入るとは限らない)
-          const m=memUnlock('  rossoneri-2005 ');
+          const m=memUnlock('  blaugrana-2010 ');
           if(!m||m==='have')throw new Error('正しい合言葉で開かない');
-          if(memUnlock('ROSSONERI-2005')!=='have')throw new Error('二度目が弾かれない');
+          if(memUnlock('BLAUGRANA-2010')!=='have')throw new Error('二度目が弾かれない');
           renderMem();
           const rows=[...document.querySelectorAll('#memList [data-mem]')];
           if(rows.length!==1)throw new Error('一覧に出ない: '+rows.length);
@@ -2754,7 +2784,7 @@ const STEPS = [
           const M=createMatch(matchSide(S.club.id),memSide(m),7);
           const mil=M.away.players.filter(p=>p.c.club===m.club);
           if(!mil.length||!mil.every(p=>p.ordM&&p.ordM.tec>1))
-            throw new Error('ミランの選手に効いていない');
+            throw new Error('記念の11人に効いていない');
           const other=createMatch(
             { cards:bestXI(clubRoster(S.world.seed,'ger-4'),m.form), form:m.form,
               name:'x', tactic:m.tactic, order:'attack', med:1 },
@@ -2821,8 +2851,9 @@ const STEPS = [
           if(!byUrl)throw new Error('URL の合言葉で開かない');
           if(location.hash.indexOf('mem=')>=0)throw new Error('URL から消えない');
           // **見出しは下見へ、› で開戦**(→docs/03 §3.55)
-          memUnlock('ROSSONERI-2005'); renderMem();
-          const row=document.querySelector('#memList .mem');
+          memUnlock('BLAUGRANA-2010'); renderMem();
+          // **id で行を選ぶ**。複数開いていると先頭が目当てのものとは限らない
+          const row=document.querySelector('#memList [data-look="bar2010"]').closest('.mem');
           if(!row.querySelector('[data-look]'))throw new Error('見出しから下見に行けない');
           const go=row.querySelector('[data-mem]');
           if(go.textContent.trim()!=='›')throw new Error('開戦は記号だけにする: '+go.textContent);
@@ -2831,21 +2862,21 @@ const STEPS = [
             throw new Error('下見に行かない');
           // **リーグ戦と同じ画面**を使い回す
           const nm=document.getElementById('foeName').textContent;
-          if(nm!==memById('acm2005').name)throw new Error('下見の名前が違う: '+nm);
-          if(document.getElementById('foeCoach').textContent.indexOf('アンチェロッティ')<0)
+          if(nm!==memById('bar2010').name)throw new Error('下見の名前が違う: '+nm);
+          if(document.getElementById('foeCoach').textContent.indexOf('グアルディオラ')<0)
             throw new Error('監督が出ない');
           if(document.querySelectorAll('#foeSlots .slot').length!==11)
             throw new Error('11人が並ばない');
-          if(document.getElementById('foeNote').textContent.indexOf('メラヴィリオーゾ')<0)
+          if(document.getElementById('foeNote').textContent.indexOf('メ・ケ・ウン・クラブ')<0)
             throw new Error('敷いてくる采配が出ない');
           return '合言葉で開く／16人・★'+TUNING.mem.star+'・黄金線・軸あり／'
-            +'限定采配はミランにだけ効く／URLでも開く／世界の頂点で1つ届く／'
+            +'限定采配はその所属にだけ効く／URLでも開く／世界の頂点で1つ届く／'
             +'戦利品は受信箱で受け取る／'
             +'見出しから下見（'+nm+'）';
         })()`));
         await ctx.js(`(()=>{
           document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));
-          memUnlock('ROSSONERI-2005'); renderMem();
+          memUnlock('BLAUGRANA-2010'); renderMem();
           document.getElementById('appBody').scrollTop=0; return 1;
         })()`);
         await ctx.wait(300);

@@ -1358,6 +1358,20 @@ const TACTICS=[
     fx:[{ at:"counter", grp:"all", s:0.98 }],
     line:"一気に裏返せ！",
   },
+  {
+    // **記念の名前をそのまま采配に**。技巧のミラン・速さのガナーズに対して、
+    // こちらは**技と速さの両方を上げる代わりに、身体が小さい**。
+    // 汎用の「ティキ・タカ」とは別物にしてある(あちらは遠目を撃たなくなる形)
+    id:"mesqueunclub", label:"メ・ケ・ウン・クラブ", icon:"✦",
+    form:["4-3-3"], exp:0, mem:true, club:"バルサローナ・ブラウグラナ",
+    desc:"技と速さで回し続ける。バルサローナ・ブラウグラナの選手だけが噛み合う、小さな11人",
+    // **威力は他の記念采配と揃える**(技+8 速+4 力-4 ≒ メラヴィリオーゾの技+10 力-4)。
+    // 傾きを大きくしても勝敗はほとんど動かず(実測 1.73→1.57)、差は選手そのものだった
+    ordM:{ tec:1.08, spd:1.04, pow:0.96 },
+    // 小さいぶん、**競り合いでは分が悪い**
+    fx:[{ at:"aerial", k:0.90 }],
+    line:"回して崩せ！",
+  },
 ];
 const tacticById=id=>TACTICS.find(t=>t.id===id);
 
@@ -1406,6 +1420,25 @@ const MEMORABILIA=[
     kp:"henry",
     order:"attack",
     tactic:"invincibles",
+  },
+  {
+    id:"bar2010",
+    hash:"BLAUGRANA-2010",
+    name:"2010 CL ブラウグラナ",
+    sub:"回し続けた11人",
+    note:"下部組織から積み上げた、赤と青の完成形。",
+    club:"バルサローナ・ブラウグラナ",
+    coach:"P. グアルディオラ",
+    coachType:"smart",   // 形勢が悪いと手を変える(→§3.56)
+    form:"4-3-3",
+    // 枠の並びは FORMATIONS["4-3-3"] と同じ順に置く
+    //   GK / LSB / CB / CB / RSB / CMF / DMF / CMF / LWG / CF / RWG
+    xi:["valdes","abidal","pique","puyol","danialves",
+        "xavi","busquets","iniesta","villa","messibar","pedro"],
+    bench:["mascherano","adriano","keita","thiago","bojan"],
+    kp:"messibar",
+    order:"center",
+    tactic:"mesqueunclub",
   },
 ];
 const memById=id=>MEMORABILIA.find(m=>m.id===id);
