@@ -705,7 +705,7 @@ let _cardFilter="ALL";
 // 区切る。絞り込みを変えたら1ページ目へ戻す(前のページ番号が残ると空振りする)。
 const CARDS_PER_PAGE=12;
 let _cardPage=1;
-let _bulk=false;                    // まとめて売るモード(→docs/03 §3.54)
+let _bulk=false;                    // まとめて売るモード(→docs/03 §3.68)
 function renderCards(){
   const all=availableCards(), own=S.player.coll.length;
   $("cardsFilter").innerHTML=["ALL"].concat(POS).map(p=>
@@ -713,7 +713,7 @@ function renderCards(){
   $("cardsFilter").querySelectorAll("button").forEach(b=>{
     b.onclick=()=>{ _cardFilter=b.dataset.f; _cardPage=1; renderCards(); };
   });
-  // **まとめて売るモード**(→docs/03 §3.54)。入ると札のタップが「開く」から
+  // **まとめて売るモード**(→docs/03 §3.68)。入ると札のタップが「開く」から
   // 「選ぶ」に変わるので、いま何のモードなのかを必ず画面に出す
   $("cardsBulk").textContent=_bulk?"やめる":"まとめて売る";
   $("cardsBulk").classList.toggle("on",_bulk);
@@ -749,7 +749,7 @@ function wireCardTiles(root){
   });
 }
 
-// ---------- まとめて売る(→docs/03 §3.54) ----------
+// ---------- まとめて売る(→docs/03 §3.68) ----------
 // 1枚ずつ開いて売ると、整理のたびに「開く → 売る → 確認 → 閉じる」を
 // 人数ぶん繰り返すことになる。**選んでから一度だけ確認する**形にする。
 // 売れない札(編成・師弟・実在選手・貸与)は選べないようにし、理由をその場に出す。
@@ -1497,7 +1497,7 @@ const shortName=c=>c.sur||c.name.split(" ").slice(-1)[0];
 // ---------- SCOUT(→docs/03 §3.22) ----------
 // **コインで引くパック。** 稼ぎをいつ補強に回すかを監督に選ばせる。
 /**
- * 見本市(→docs/06 §6.46)。**まだ持っていない実在選手を並べ、少しずつ入れ替える**。
+ * 見本市(→docs/06 §6.56)。**まだ持っていない実在選手を並べ、少しずつ入れ替える**。
  * 何が入っているのか分からないままコインを積むのは、補強ではなく賭けになる。
  *
  * **並びの始まりは節から決まる**(開くたびに総入れ替えだと落ち着かない)が、
@@ -1555,7 +1555,7 @@ function fairTick(){
 function fairStop(){ if(_fairT){ clearInterval(_fairT); _fairT=null; } }
 
 /**
- * パックのタイルに敷く選手の絵(→§6.46)。**その段で出る絵**から1枚。
+ * パックのタイルに敷く選手の絵(→§6.56)。**その段で出る絵**から1枚。
  * 値段と説明だけの行が3つ並ぶと、どれも同じ重さに見えて選ぶ気にならない。
  * **パックIDから決まる**ので、開き直しても同じ顔が出る。
  */
@@ -1567,7 +1567,7 @@ function scoutArt(pk){
 }
 
 /**
- * 開封の演出(→docs/06 §6.46)。**紙のパックから出てくる**ように見せる。
+ * 開封の演出(→docs/06 §6.56)。**紙のパックから出てくる**ように見せる。
  *
  * 引いた瞬間に一覧が書き換わるだけだと、いちばん嬉しい所が一瞬で終わる。
  * ①袋が震える → ②裂ける → ③カードが裏から翻る → ④段の色で光る、の4拍。
@@ -1581,7 +1581,7 @@ function revealCards(cards,label){
   if(!box||!cards||!cards.length)return;
   _rvT.forEach(clearTimeout); _rvT=[];
   const c=cards[0];                                  // パックは1枚(→§3.22)
-  // **封の印**(→docs/06 §6.46)。実在選手の WC / LEGENDS を引いたときだけ
+  // **封の印**(→docs/06 §6.56)。実在選手の WC / LEGENDS を引いたときだけ
   // 「TOP SECRET!!!」になる。**開ける前に分かる**のが、この演出のいちばんの山
   const big=!!c.sig&&(c.rarity==="WC"||c.rarity==="LEG");
   const pn=$("rvPackName");
@@ -1614,7 +1614,7 @@ function revealCards(cards,label){
   };
 }
 /**
- * 出たカードを押したら詳細へ(→§6.46)。
+ * 出たカードを押したら詳細へ(→§6.56)。
  * **押した時点で演出を閉じる。** カードが残ったまま後ろに詳細が出ると、
  * 何も起きていないように見える(演出のほうが手前に立っているため)。
  * 詳細を閉じたら SCOUT に戻り、以後は CARDS で見る。
@@ -1653,7 +1653,7 @@ function renderScout(){
   }).join("");
   $("scoutList").innerHTML=tk+TUNING.scout.map((pk,i)=>{
     const can=S.club&&S.club.coins>=pk.cost;
-    // **行に選手の絵を敷く**(→§6.46)。行の右にはみ出させ、枠で切り落とす
+    // **行に選手の絵を敷く**(→§6.56)。行の右にはみ出させ、枠で切り落とす
     return '<div class="sc-row art'+(i?" hi":"")+'">'
       +scoutArt(pk)
       +'<div class="sc-b"><div class="sc-nm">'+esc(pk.name)
@@ -1706,7 +1706,7 @@ function buyScout(id){
 }
 
 /**
- * 移籍市場(→docs/03 §3.53)。**能力も値段も全部見えている**のが、
+ * 移籍市場(→docs/03 §3.67)。**能力も値段も全部見えている**のが、
  * スカウト(引く)との違いそのものなので、隠すものは何も無い。
  * 一覧は買値の高い順。高い選手が上にあるほうが「今日の目玉」が伝わる。
  */
@@ -1975,7 +1975,7 @@ function logRow(e){
             :"S"+e.season+" 第"+e.md+"節 ／ "+(e.home?"HOME":"AWAY");
   // **済んだ節に飾りは要らない**(→docs/06 §6.31)。ここで読みたいのはスコアなので、
   // トロフィーの絵も打ち手の絵文字も置かない。打ち手は title に残す
-  // **どこと戦ったのかをエンブレムで出す**(→docs/06 §6.42)。名前だけだと、
+  // **どこと戦ったのかをエンブレムで出す**(→docs/06 §6.55)。名前だけだと、
   // 過去の行を辿るときに毎回読まないと分からない。カップの相手はクラブIDを
   // 持たないので、枠の名前をたねにする(予定のタイルと同じ作り)
   const emb=cup?embSvg("cup:"+name,name,22,{ tag:"lg"+e.node })
@@ -2010,7 +2010,7 @@ function currentRow(){
   // 前は見出しが「この節の準備」で、行き先は右下に小さく置いていた。
   // タイルの用は1つしかないので、**押したら何が起きるか**を見出しに上げた(→docs/06 §6.31)
   //
-  // **相手が決まったら、見出しを相手で上書きする**(→docs/06 §6.42)。
+  // **相手が決まったら、見出しを相手で上書きする**(→docs/06 §6.55)。
   // 以前は下に相手の行を足していたが、タイルが2段になるうえ、済んだ節の行と
   // 形が変わってしまう。決まった後は**済んだ節と同じ並び**にするのが正しい
   return '<div class="cal cur cal-here'+(foe?" set":"")+'" id="calCur" role="button" tabindex="0">'
@@ -2026,7 +2026,7 @@ function currentRow(){
     +'<span class="cal-r">›</span></div>'
     // **いまの節はロッカーの絵で示す**(→docs/06 §6.31)。並んだ枠の中で1枚だけ絵が入る
     +'<div class="cur-st">'+stickerArt("locker")+'</div>'
-    // **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.41)。ロッカーを背に2人を並べる。
+    // **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.54)。ロッカーを背に2人を並べる。
     // 枠は付けず、足元はタイルの縁で切り落とす(立ち止まっている絵ではなく、
     // 「これから始まる」に見せたい)
     // **秘書が先、監督が右**。並び順はそのまま見た目の左右になる
@@ -2849,7 +2849,7 @@ function clubColor(clubId){
   return p?p.hex:"oklch("+CLUB_L+" "+CLUB_C+" "+clubHue(clubId)+")";
 }
 /**
- * 試合で使う色(→docs/06 §6.47)。**同じ色どうしが当たったらアウェイ側が着替える**。
+ * 試合で使う色(→docs/06 §6.57)。**同じ色どうしが当たったらアウェイ側が着替える**。
  *
  * 色をサッカーで実際に使う13色へ寄せた(→docs/03 §3.54d)ので、
  * **別のクラブが同じ色を持つことが普通に起きる**。144クラブを13色で塗れば当然で、
@@ -3257,7 +3257,7 @@ function mDrawSquads(){
   const html=[];
   for(const T of [_M.home,_M.away]){
     const side0=T.side==="H"?_M.fixture.h:_M.fixture.a;
-    const col=mKit(T.side);            // 同じ色どうしなら着替える(→§6.47)
+    const col=mKit(T.side);            // 同じ色どうしなら着替える(→§6.57)
     T.players.forEach((p,i)=>{
       const [x,y]=slotXY(p,T.side,true);   // 開始はキックオフ隊形
       // **点ではなく全身を出す**(→docs/06 §6.17)。絵にはクラブカラーが無いので、
@@ -4869,7 +4869,7 @@ $("memCode").onkeydown=e=>{ if(e.key==="Enter")memTry($("memCode").value); };
 $("cfgDone").onclick=closeCfg;
 $("cfgModal").onclick=e=>{ if(e.target===$("cfgModal"))closeCfg(); };
 $("tileMarket").onclick=()=>show("market",{push:1});
-// 開封は**1回目のタップで最後まで送り、2回目で閉じる**(→docs/06 §6.46)
+// 開封は**1回目のタップで最後まで送り、2回目で閉じる**(→docs/06 §6.56)
 $("scoutReveal").onclick=()=>{ if(_rvDone)_rvDone(); else closeReveal(); };
 $("tileTrophy").onclick=()=>show("clubhouse");
 $("crestDone").onclick=closeCrest;

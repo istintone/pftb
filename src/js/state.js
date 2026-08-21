@@ -83,7 +83,7 @@ function defaultState(){
       kp:null,
       // 済ませたトレードの節目(→docs/03 §3.49)。断った場合もここに入る
       tradeDone:[],
-      // 移籍市場で買い取った枠(→docs/03 §3.53)。{ "mk<節>-<枠>": 1 }。
+      // 移籍市場で買い取った枠(→docs/03 §3.67)。{ "mk<節>-<枠>": 1 }。
       // **節が変われば市場は総入れ替え**なので、鍵は節をまたいで意味を持たない
       market:{},
       // クラブチャット(→docs/03 §3.29)。**節ごとに畳む**ので、節が進めば消える。
@@ -339,7 +339,7 @@ function migrate(){
     for(const m of MAILS)if(m.tut&&!S.player.mail.some(x=>x.id===m.id))
       S.player.mail.push({ id:m.id, at:0, read:true, got:true });
   }
-  // v29 → v30: 移籍市場(→docs/03 §3.53)。**買った枠の覚え書きを足しただけ**
+  // v29 → v30: 移籍市場(→docs/03 §3.67)。**買った枠の覚え書きを足しただけ**
   if(S.v<30&&S.career&&!S.career.market)S.career.market={};
   if(S.v<26){
     if(S.club&&S.club.sponsor===undefined)S.club.sponsor=null;

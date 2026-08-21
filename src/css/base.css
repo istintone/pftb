@@ -1639,7 +1639,7 @@ body{
 .cm-sell-b.arm{ background:oklch(0.55 0.19 25); border-color:oklch(0.55 0.19 25); color:#fff }
 .cm-sell-w{ width:100%; font-size:10px; color:oklch(0.65 0.16 25) }
 .cm-sell-no{ font-size:11px; color:var(--text-mute) }
-/* まとめて売る(→docs/03 §3.54)。**モードに入ったことが分かる見た目**にする。
+/* まとめて売る(→docs/03 §3.68)。**モードに入ったことが分かる見た目**にする。
    札のタップの意味が「開く」から「選ぶ」に変わるので、曖昧にしてはいけない */
 .cd-bar{ display:flex; align-items:center; gap:10px; margin-bottom:4px }
 .cd-bar .lg{ flex:1; min-width:0 }
@@ -1848,7 +1848,7 @@ body{
 /* .btn は width:100% なので、行の中に置くときは**幅を明示して奪い返す** */
 .sc-buy{ flex:0 0 auto; width:auto; min-width:98px; padding:12px 14px }
 .sc-buy:disabled{ opacity:.45 }
-/* 移籍市場(→docs/03 §3.53)。スカウトの行と**同じ骨格**にする。
+/* 移籍市場(→docs/03 §3.67)。スカウトの行と**同じ骨格**にする。
    やることは同じ「コインで選手を得る」で、違うのは引くか選ぶかだけ。 */
 .mk-note{ display:block; margin-top:4px; font-size:11px; color:var(--text-dim) }
 .mk-row{
@@ -2209,7 +2209,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .tb-note{ margin-top:6px; font-size:10px; color:var(--text-dim) }
 .tb-note.warn{ color:var(--accent-hi) }
 
-/* **節の枠はどれも同じ高さ**(→docs/06 §6.40)。
+/* **節の枠はどれも同じ高さ**(→docs/06 §6.53)。
    済んだ節は「相手＋節・HOME/AWAY」の2行、予定と空枠は1行しかないため、
    放っておくと 28 / 39 / 42 / 60px が混ざって並びが不揃いに見える。
    **いちばん背の高い「済んだ節」を基準**にそろえる(2行ぶん + 上下の余白)。 */
@@ -2547,7 +2547,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cal.judge.go:active{ background:oklch(0.30 0.06 85) }
 
 /* 現在節は行ではなくカード(打ち手の選択を内蔵する) */
-/* 余白も他の節と同じにする(→§6.42)。相手が決まると中身が2行になるので、
+/* 余白も他の節と同じにする(→§6.55)。相手が決まると中身が2行になるので、
    ここだけ 12px にしていると 60px に収まらず、並びから浮く */
 .cal.cur{
   display:block; padding:9px 10px; margin:10px 0;
@@ -2563,16 +2563,16 @@ body.bg-wall #app{ position:relative; z-index:1 }
    どこが「いま」かが、数字を読まなくても分かる */
 .cal.cur{ position:relative; overflow:hidden }
 .cal-cur-h{ position:relative; z-index:1 }
-/* **2人ぶんの列を空ける**(→§6.41)。空けないと相手の名前が絵の裏へ回る */
+/* **2人ぶんの列を空ける**(→§6.54)。空けないと相手の名前が絵の裏へ回る */
 .cal-cur-h{ padding-right:96px }
 .cur-st{ position:absolute; right:-16px; top:50%; width:124px; z-index:0;
   transform:translateY(-50%) rotate(4deg); pointer-events:none }
 .cur-st .stk{ opacity:.40 }
-/* **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.41)。ロッカーを背に2人を並べる。
+/* **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.54)。ロッカーを背に2人を並べる。
    立ち絵は 420x500 の全身で、膝がだいたい高さの 78% にある。
    **枠は付けず、足元はタイルの縁で切り落とす** ので、タイルの高さから逆算して
    「膝上まで」が出るように図の高さを決めてある(104px の枠に 132px の図)。 */
-/* **タイルの高さは他の節と同じまま**(→§6.40)。2人のほうを小さくして収める。
+/* **タイルの高さは他の節と同じまま**(→§6.53)。2人のほうを小さくして収める。
    **切る高さは枠のほうで持つ**。タイル自身の overflow に任せると、
    相手が決まってタイルが伸びたときに足まで出てしまい、宙に浮いて見える。
    枠の下端をタイルの下端にぴったり付けると、**カメラの画角で切れている**ように見える
@@ -2586,8 +2586,8 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cur-crew img{ height:72px; width:auto; display:block; image-rendering:pixelated }
 /* 立ち絵は左右に透明の余白を持つ。**その分だけ重ねて**2人の間を詰める */
 .cur-crew .cc-m{ margin-left:-26px }
-/* 相手が決まっても**タイルは1段のまま**(→§6.42)。見出しを相手で上書きするので、
-   2段にする必要がない。他の節と同じ高さで並ぶ(→§6.40) */
+/* 相手が決まっても**タイルは1段のまま**(→§6.55)。見出しを相手で上書きするので、
+   2段にする必要がない。他の節と同じ高さで並ぶ(→§6.53) */
 /* 予定の行のトロフィー(→docs/06 §6.31)。**行の右に大きく置いて、枠で切り落とす**。
    アイコンの枠(22px)に収めると豆粒で何の絵か分からない。行の高さは変えずに、
    はみ出たぶんは overflow で切る(タイトルの壁と同じ「貼ってある」見せ方) */
@@ -2615,7 +2615,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .compbtn:disabled{ opacity:.35; cursor:default }
 /* 予定が確定している枠(カップの連戦など) */
 .cal.planned{ border-color:var(--accent-dim); background:oklch(0.20 0.03 85 / .18) }
-/* 空枠。**高さは詰めない**(→docs/06 §6.40)。96〜120枠あるので以前は
+/* 空枠。**高さは詰めない**(→docs/06 §6.53)。96〜120枠あるので以前は
    padding を削っていたが、そこだけ背が低いと並びが不揃いに見える。
    字だけ落として、枠の大きさは他の節と同じにする */
 .cal.none .cal-b b{ font-size:10px; color:var(--text-mute); font-weight:400 }
@@ -2666,7 +2666,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   *{ animation:none!important; transition:none!important }
 }
 
-/* ---------- SCOUT の見本市と開封(→docs/06 §6.46) ---------- */
+/* ---------- SCOUT の見本市と開封(→docs/06 §6.56) ---------- */
 /* 見本市。**横に流す**。縦に積むとパックの行が画面から押し出される */
 .sc-fair{ margin:10px 0 14px }
 .sc-fair-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px }
@@ -2678,7 +2678,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .sc-fair-c{ flex:0 0 96px; width:96px; cursor:pointer;
   transition:opacity .24s, transform .24s }
 .sc-fair-c .pcard{ width:96px }
-/* **1枚ずつ入れ替える**(→§6.46)。抜けるときは奥へ、入るときは手前から */
+/* **1枚ずつ入れ替える**(→§6.56)。抜けるときは奥へ、入るときは手前から */
 .sc-fair-c.out{ opacity:0; transform:translateY(-10px) scale(.90) }
 .sc-fair-c.in{ animation:fairIn .32s cubic-bezier(.2,.9,.3,1.2) }
 @keyframes fairIn{
@@ -2727,7 +2727,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .rv-pack i::after{ bottom:9px }
 .rv-p1{ left:0;  border-radius:12px 0 0 12px }
 .rv-p2{ right:0; border-radius:0 12px 12px 0 }
-/* 封の印(→§6.46)。**斜めの二重枠**で押した印に見せる。
+/* 封の印(→§6.56)。**斜めの二重枠**で押した印に見せる。
    小さい字を1行置くだけだと、袋が「ラベルの付いた箱」になってしまう */
 .rv-pn{
   position:relative; z-index:1;

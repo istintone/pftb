@@ -2208,7 +2208,7 @@ const STEPS = [
       const btn=document.querySelector('#scoutList [data-pack="focus"]');
       if(btn.disabled)throw new Error('コインが足りているのに押せない');
       btn.click();
-      // **出たカードは開封の演出の中に居る**(→docs/06 §6.46)。一覧の下には置かない
+      // **出たカードは開封の演出の中に居る**(→docs/06 §6.56)。一覧の下には置かない
       const got=document.querySelectorAll('#rvCard .pcard');
       const pk=TUNING.scout.find(p=>p.id==='focus');
       if(got.length!==pk.cards)throw new Error('出た枚数が違う: '+got.length);
@@ -2340,7 +2340,7 @@ const STEPS = [
     await ctx.wait(400);
     await ctx.shot("20d-scout-le");
 
-    // --- 見本市と開封の演出(→docs/06 §6.46) ---
+    // --- 見本市と開封の演出(→docs/06 §6.56) ---
     await ctx.js("closeReveal(); show('gacha'); S.club.coins=99999; renderScout()");
     await ctx.wait(300);
     ctx.log("  見本市:", await ctx.js(`(()=>{
@@ -2353,7 +2353,7 @@ const STEPS = [
       renderScoutFair();
       if(document.getElementById('scoutFair').innerHTML!==a)
         throw new Error('開き直すと顔ぶれが変わる');
-      // **時間で1枚ずつ入れ替わる**(→§6.46)
+      // **時間で1枚ずつ入れ替わる**(→§6.56)
       const before=[...document.querySelectorAll('#scoutFair .sc-fair-c')]
         .map(e=>e._card&&e._card.sig);
       fairTick();
@@ -2414,7 +2414,7 @@ const STEPS = [
   }],
 
   ["移籍市場(名指しで買う)", async ctx => {
-    // **入口は HOME のタイルだけ**(→docs/06 §6.46)。SCOUT からの導線は外した
+    // **入口は HOME のタイルだけ**(→docs/06 §6.56)。SCOUT からの導線は外した
     await ctx.js("show('home')");
     await ctx.wait(200);
     ctx.log("  HOMEからの入口:", await ctx.js(`(()=>{
@@ -2429,7 +2429,7 @@ const STEPS = [
       const l=marketList();
       if(l.length!==TUNING.market.slots)throw new Error('人数が違う: '+l.length);
       if(l.some(c=>c.rarity==='LEG'))throw new Error('LEGENDS が並んでいる');
-      // **開き直しても動かない**(→docs/03 §3.53)
+      // **開き直しても動かない**(→docs/03 §3.67)
       const a=marketList().map(c=>c.name).join(',');
       if(a!==l.map(c=>c.name).join(','))throw new Error('開くたびに顔ぶれが変わる');
       return l.map(c=>RARITY[c.rarity].abbr+(c.sig?'*':'')+' '+fmtNum(c.price)).join(' / ');
@@ -2455,7 +2455,7 @@ const STEPS = [
     await ctx.js("renderMarket()");
     await ctx.wait(300);
     await ctx.shot("23b-market-sold");
-    // **節が変われば総入れ替え**。逃したら消える(→docs/03 §3.53)
+    // **節が変われば総入れ替え**。逃したら消える(→docs/03 §3.67)
     ctx.log("  節が変わると:", await ctx.js(`(()=>{
       const was=marketList().map(c=>c.name).join(',');
       S.career.node++;
@@ -2465,7 +2465,7 @@ const STEPS = [
       S.career.node--;
       return '6人とも入れ替わる ／ 売り切れは持ち越さない';
     })()`));
-    // **実在選手はまれ**(→docs/03 §3.53)。桁が変わるので行ごと立てて見せる。
+    // **実在選手はまれ**(→docs/03 §3.67)。桁が変わるので行ごと立てて見せる。
     // たね4242では第19節に並ぶので、そこまで飛ばして撮る
     ctx.log("  実在選手が並ぶ節:", await ctx.js(`(()=>{
       const keep=S.career.node;
@@ -2625,7 +2625,7 @@ const STEPS = [
         +'（'+[...new Set(no.map(x=>x.querySelector('.pc-nosell').textContent))].join(',')+'）';
     })()`));
     await ctx.shot("24-bulk-sell");
-    // **編成に入っている選手は選べない**(→docs/03 §3.54)
+    // **編成に入っている選手は選べない**(→docs/03 §3.68)
     ctx.log("  編成中は選べない:", await ctx.js(`(()=>{
       const inSquad=(S.squad||[]).filter(Boolean);
       if(!inSquad.length)throw new Error('編成が空');

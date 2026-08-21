@@ -343,6 +343,30 @@ const E = setup({ tmpName: "_tmp_integration.js" });
   // 関数で書いた項目も文字列を返すこと(TUNING を参照する項目がある)
   for (const id of Object.keys(E.HELP))
     assert.strictEqual(typeof E.helpFor(id), "string", `"${id}" の説明が文字列で取れる`);
+  // **ヘルプの中身が画面と食い違っていないか**(→docs/04)。
+  // 網羅はしていても、画面名を変えたり導線を畳んだりすると本文だけが古くなる。
+  // 実際に「右端の契約で…」が、契約の柱を畳んだあとも残っていた
+  {
+    const titles = new Set(Object.values(E.SCREENS || {}).map(d => d.title).filter(Boolean));
+    // いまの画面名でないものを本文に書いていないか(過去の見出しが残っていないか)
+    const GONE = ["SECRETARY", "CONTRACT"];
+    for (const [id, v] of Object.entries(E.HELP)) {
+      const t = String(typeof v === "function" ? v() : v);
+      for (const w of GONE)
+        assert.ok(t.indexOf(w) < 0, id + " の説明に消えた画面名が残っている: " + w);
+      // 大文字の英字だけの語は画面名のつもりで書かれている。実在するものに限る
+      for (const m of t.replace(/<[^>]+>/g, "").matchAll(/[A-Z]{4,}/g)) {
+        const w = m[0];
+        if (["LEGENDS", "SPECIALS", "REGULAR", "STANDARD", "WORLD", "CLASS",
+             "NEWS", "PARTNER", "OFFICIAL", "TENURE", "RECORD", "CREST",
+             "FACILITIES", "MEMORABILIA", "CAREER", "TROPHIES", "ABILITY",
+             "SKILLS", "COMBINATION", "SETTINGS", "CLUBS", "HOME", "AWAY"].includes(w))
+          continue;
+        assert.ok(titles.has(w), id + " の説明にある " + w + " という画面は無い");
+      }
+    }
+    console.log("ヘルプの中身OK 画面名は実在するものだけ / 消えた導線への案内は無い");
+  }
   console.log("ヘルプOK", Object.keys(E.HELP).length, "画面に説明 / 説明なし",
     NOSTOP.length, "画面");
 
