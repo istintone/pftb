@@ -2750,10 +2750,15 @@ const STEPS = [
               if(d.club!==m.club)throw new Error(m.id+': '+d.short+' の所属が違う');
             });
             if(!m.xi.concat(m.bench).includes(m.kp))throw new Error(m.id+' の軸が居ない');
+            // **監督の顔も決め打ち**(→docs/03 §3.55)。素材が消えていたら気づけるように
+            if(!m.face)throw new Error(m.id+' に監督の顔が無い');
+            if(!ASSETS.manager[m.face])throw new Error(m.id+' の顔の素材が無い: '+m.face);
+            if(coachFace('mem:'+m.id,true)!==ASSETS.manager[m.face])
+              throw new Error(m.id+' の顔が指定どおりに出ない');
             // 限定の采配は**そのクラブに紐づく**(→§3.50)
             const t=tacticById(m.tactic);
             if(t.mem&&t.club!==m.club)throw new Error(m.id+' の采配のクラブが違う');
-            out.push(m.name+'('+m.form+'/'+t.label+')');
+            out.push(m.name+'('+m.form+'/'+t.label+'/'+m.face+')');
           }
           return MEMORABILIA.length+'件 ／ '+out.join(' ／ ');
         })()`));

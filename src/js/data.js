@@ -1391,6 +1391,7 @@ const MEMORABILIA=[
     note:"欧州の頂点まで届きかけた、赤と黒の完成形。",
     club:"ミラノ・ロッソネリ",
     coach:"C. アンチェロッティ",
+    face:"mg01c",        // **顔は決め打ち**(→§3.55)。誰が指揮しているかも記録の一部
     coachType:"canny",   // 勝っていれば押し切る(→§3.56)
     form:"4-4-2ダイヤ",
     // 枠の並びは FORMATIONS["4-4-2ダイヤ"] と同じ順に置く
@@ -1410,6 +1411,7 @@ const MEMORABILIA=[
     note:"一度も負けずにリーグを駆け抜けた、赤と白の完成形。",
     club:"ロンドン・ガナーズ",
     coach:"A. ヴェンゲル",
+    face:"mg01g",
     coachType:"keyman",  // 軸(アンリ)の居る側へ振る(→§3.56)
     form:"4-4-2",
     // 枠の並びは FORMATIONS["4-4-2"] と同じ順に置く
@@ -1429,6 +1431,7 @@ const MEMORABILIA=[
     note:"下部組織から積み上げた、赤と青の完成形。",
     club:"バルサローナ・ブラウグラナ",
     coach:"P. グアルディオラ",
+    face:"mg01a",
     coachType:"smart",   // 形勢が悪いと手を変える(→§3.56)
     form:"4-3-3",
     // 枠の並びは FORMATIONS["4-3-3"] と同じ順に置く

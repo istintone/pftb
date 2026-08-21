@@ -2533,6 +2533,12 @@ function coachFace(key,famous){
   const A=(window.ASSETS&&window.ASSETS.manager)||{};
   const keys=Object.keys(A).sort();
   if(!keys.length)return null;
+  // **メモラビリアの監督は顔まで決め打ち**(→docs/03 §3.55)。実在の一戦を指す
+  // 記録なので、ハッシュで毎回ちがう顔が当たると記録として成り立たない
+  if(String(key).indexOf("mem:")===0){
+    const m=memById(String(key).slice(4));
+    if(m&&m.face&&A[m.face])return A[m.face];
+  }
   const mob=keys.filter(k=>k.indexOf("mob")===0);
   const big=keys.filter(k=>k.indexOf("mob")!==0);
   const pool=(famous?big:mob).length?(famous?big:mob):keys;
