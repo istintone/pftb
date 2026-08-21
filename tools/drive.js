@@ -2069,8 +2069,23 @@ const STEPS = [
       await ctx.js("document.getElementById('mSc').textContent"),
       "/ 実況:", await ctx.js("document.querySelectorAll('#mFeed div').length"), "行");
     await ctx.shot("07c-match-end");
+    // **セピアの試合画面**(→docs/06 §6.60)。スコアと実況の読みやすさを見る
+    await ctx.js("S.player.ui='sepia'; applyUi();"); await ctx.wait(200);
+    await ctx.shot("30k-sepia-match");
+    await ctx.js("S.player.ui='dark'; applyUi();");
     await ctx.js("document.getElementById('mDone').click()");
     await ctx.wait(400);
+    // **セピアの結果画面**(→docs/06 §6.60)。選手名と採点の読みやすさを見る
+    await ctx.js("S.player.ui='sepia'; applyUi();"); await ctx.wait(200);
+    await ctx.shot("30l-sepia-result");
+    // **結果画面も走査する**(→docs/06 §6.60)。試合を終えないと現れない
+    ctx.log("  セピアの結果画面:", await ctx.js(`(()=>{
+      const c=window.__contrast(); c.scan('結果',document.getElementById('scr-result'));
+      const u=[...new Set(c.out)];
+      if(u.length)throw new Error(u.length+'件が地と紛れる ／ '+u.join(' ／ '));
+      return '選手名・採点・判定、どれも読める';
+    })()`));
+    await ctx.js("S.player.ui='dark'; applyUi();");
     // **行き先は下に貼り付く**(→docs/06 §6.41)。いちばん上まで戻しても、
     // いちばん下まで送っても、同じ位置に見えていること
     ctx.log("  行き先の固定:", await ctx.js(`(()=>{
@@ -2233,44 +2248,59 @@ const STEPS = [
     }
     await ctx.js("show('manager')"); await ctx.wait(250);
     await ctx.shot("30f-sepia-manager");
-    // **明るい地で消える字を機械で探す**(→docs/06 §6.60)。
-    // 地とほぼ同じ明るさの字は、目で全画面を見比べるまで気づけない
-    ctx.log("  セピアの読みやすさ:", await ctx.js(`(()=>{
-      // "rgb(r, g, b)" / "rgba(r, g, b, a)" を数に開く(正規表現は使わない)
-      const lum=c=>{
-        if(!c||c.indexOf('rgb')!==0)return null;
-        const n=c.slice(c.indexOf('(')+1,c.lastIndexOf(')')).split(',').map(x=>parseFloat(x));
-        if(n.length<3)return null;
-        if(n.length>3&&n[3]<0.5)return null;          // 透けている面は地とみなさない
-        return (0.2126*n[0]+0.7152*n[1]+0.0722*n[2])/255;
-      };
-      const bad=[];
+    // **明るい地で消える字と、暗いまま残った面を機械で探す**(→docs/06 §6.60)。
+    // 目で全画面を見比べても必ず取りこぼす。実際、最初の検査は主要5画面しか見ず、
+    // 勾配の面と影付きの字を除いていたので、試合中のスコアや引き出しを見逃した
+    ctx.log("  セピアの読みやすさ:", await ctx.js(`(async()=>{
+      const c=window.__contrast(); const seen=new Set();
+      const look=(w,sel)=>{ const el=document.querySelector(sel); if(el)c.scan(w,el); };
       for(const t of ['home','cards','deck','season','clubhouse']){
         document.querySelector('#tabs button[data-s="'+t+'"]').click();
-        const scr=document.querySelector('.screen.on');
-        for(const el of scr.querySelectorAll('*')){
-          const txt=[...el.childNodes].filter(n=>n.nodeType===3)
-            .map(n=>n.textContent.trim()).join('');
-          if(!txt)continue;
-          const cs=getComputedStyle(el);
-          if(cs.visibility==='hidden'||cs.display==='none')continue;
-          if(cs.textShadow&&cs.textShadow!=='none')continue;   // 絵の上の字は下地が絵
-          const r=el.getBoundingClientRect(); if(!r.width||!r.height)continue;
-          const fg=lum(cs.color); if(fg==null)continue;
-          let p=el,bg=null;
-          while(p&&p!==document.body){ const v=lum(getComputedStyle(p).backgroundColor);
-            if(v!=null){ bg=v; break; } p=p.parentElement; }
-          if(bg==null)continue;
-          if(Math.abs(fg-bg)<0.16)
-            bad.push(t+' 「'+txt.slice(0,14)+'」 差'+Math.abs(fg-bg).toFixed(2));
-        }
+        look(t,'.screen.on');
       }
-      const uniq=[...new Set(bad)];
-      if(uniq.length)throw new Error('地と見分けが付かない字が '+uniq.length+'件: '
-        +uniq.slice(0,8).join(' ／ '));
-      return '主要5画面に、地と紛れる字は無い';
+      for(const id of ['manager','gacha','market','schedule','standings','secretary']){
+        show(id); look(id,'#scr-'+id);
+      }
+      // 引き出しと設定(勾配の面)
+      show('manager'); openCfg(); look('設定','#cfgModal'); closeCfg();
+      show('season'); openSide('comp'); look('引き出し','#sideDrawer'); closeSide();
+      openHelp(); look('ヘルプ','#helpDrawer'); closeHelp();
+      // **状態が付いたときだけ現れる面**も見る(→docs/06 §6.60)。
+      // 取得済みの実績・完了した節・コイン不足・選択中の枠は、
+      // その状態を作らないと現れず、素の走査では素通りしてしまう
+      const keep={ tro:JSON.parse(JSON.stringify(S.player.trophies)),
+                   coins:S.club.coins, mem:S.player.mem.slice(),
+                   md:S.world.matchday };
+      S.player.trophies=[{ id:'kings',name:'k',kind:'cup',n:1,season:1,last:1 }];
+      show('manager'); renderManager(); look('実績の棚','#scr-manager');
+      memUnlock(MEMORABILIA[0].hash); renderMem(); look('メモラビリア','#memList');
+      S.club.coins=0; show('gacha'); look('コイン不足','#scr-gacha');
+      S.world.matchday=S.world.fixtures.length+1;
+      show('season'); renderSeason(); look('節の終了','#scr-season');
+      // 編成の選び直し(枠と陣形)
+      show('deck'); openForm(); look('陣形','#formModal');
+      document.getElementById('formModal').classList.remove('on');
+      const sl=document.querySelector('#deckSlots .slot');
+      if(sl){ sl.click(); look('枠の選び直し','#slotModal');
+        document.getElementById('slotModal').classList.remove('on'); }
+      window.__shot={ ok:1 };
+      S.player.trophies=keep.tro; S.club.coins=keep.coins;
+      S.player.mem=keep.mem; S.world.matchday=keep.md;
+      show('home');
+      const uniq=[...new Set(c.out)].filter(x=>!seen.has(x));
+      if(uniq.length)throw new Error(uniq.length+'件が地と紛れる ／ '+uniq.join(' ／ '));
+      return '主要画面・引き出し・設定に、地と紛れる字は無い';
     })()`));
-    await ctx.js("show('manager'); openCfg();"); await ctx.wait(250);
+    // 状態が付いた画も撮っておく(目でも確かめられるように)
+    await ctx.js(`(()=>{ S.player.trophies=[{id:'kings',name:'k',kind:'cup',n:1,season:1,last:1}];
+      memUnlock(MEMORABILIA[0].hash); show('manager'); renderManager(); })()`);
+    await ctx.wait(250); await ctx.shot("30h-sepia-trophy");
+    await ctx.js(`(()=>{ S.world.matchday=S.world.fixtures.length+1;
+      show('season'); renderSeason(); scrollToCurrent(); })()`);
+    await ctx.wait(250); await ctx.shot("30i-sepia-season-over");
+    await ctx.js("show('season'); openHelp();");
+    await ctx.wait(250); await ctx.shot("30j-sepia-help");
+    await ctx.js("closeHelp(); show('manager'); openCfg();"); await ctx.wait(250);
     await ctx.shot("30g-sepia-settings");
     await ctx.js("closeCfg(); S.player.ui='dark'; applyUi(); show('home');");
     // **フッターの並び**(→docs/06 §6.49)。よく触るものほど左に置く
@@ -4577,6 +4607,58 @@ const STEPS = [
       addEventListener("load",()=>{ hook(); pin(); });
     })()`,
   });
+
+  // **色の走査**(→docs/06 §6.60)。どの段からでも呼べるように先に入れておく。
+  // **登録だけでは足りない** — addScriptToEvaluateOnNewDocument は
+  // *これから作られる*文書にしか走らないので、いま開いている文書には
+  // その場で評価して入れる(この2つはセットで書くこと)
+  const SCAN_SRC = `window.__contrast=()=>{
+      const num=c=>{
+        if(!c||c.indexOf('rgb')!==0)return null;
+        const n=c.slice(c.indexOf('(')+1,c.lastIndexOf(')')).split(',').map(parseFloat);
+        if(n.length<3)return null;
+        if(n.length>3&&n[3]<0.35)return null;
+        return (0.2126*n[0]+0.7152*n[1]+0.0722*n[2])/255;
+      };
+      // **勾配も面として読む**。最初に出てくる色を代表にする
+      const grad=v=>{
+        if(!v||v==='none')return null;
+        const i=v.indexOf('rgb'); if(i<0)return null;
+        return num(v.slice(i));
+      };
+      const faceOf=el=>{
+        let p=el;
+        while(p&&p!==document.body){
+          const cs=getComputedStyle(p);
+          const v=num(cs.backgroundColor); if(v!=null)return v;
+          const g=grad(cs.backgroundImage); if(g!=null)return g;
+          p=p.parentElement;
+        }
+        return null;
+      };
+      const out=[];
+      const scan=(where,root)=>{
+        for(const el of root.querySelectorAll('*')){
+          const txt=[...el.childNodes].filter(n=>n.nodeType===3)
+            .map(n=>n.textContent.trim()).join('');
+          if(!txt)continue;
+          const cs=getComputedStyle(el);
+          if(cs.visibility==='hidden'||cs.display==='none'||+cs.opacity<0.25)continue;
+          const r=el.getBoundingClientRect(); if(r.width<4||r.height<4)continue;
+          const fg=num(cs.color); if(fg==null)continue;
+          const bg=faceOf(el); if(bg==null)continue;
+          // 影付きの字は下地が絵のことが多いので緩める(それでも同化は拾う)
+          const lim=(cs.textShadow&&cs.textShadow!=='none')?0.10:0.17;
+          if(Math.abs(fg-bg)<lim)
+            out.push(where+' '+(el.className||el.tagName)+' 「'+txt.slice(0,12)+'」 差'
+              +Math.abs(fg-bg).toFixed(2));
+        }
+      };
+      return { scan, out };
+    };`;
+  await send("Page.addScriptToEvaluateOnNewDocument", { source: SCAN_SRC });
+  await send("Runtime.evaluate", { expression: SCAN_SRC });
+
   // 既定は端末枠(874px)+余白が収まる 440x960(低いとタブバーが写らない)。
   // --mobile でスマホ実寸(390x844)に切り替える。
   await send("Emulation.setDeviceMetricsOverride", has("mobile")
