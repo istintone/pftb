@@ -2127,6 +2127,13 @@ const STEPS = [
     })()`));
   }],
   ["スカウト(コインでパックを引く)", async ctx => {
+    // **フッターの並び**(→docs/06 §6.49)。よく触るものほど左に置く
+    ctx.log("  フッターの並び:", await ctx.js(`(()=>{
+      const got=[...document.querySelectorAll('#tabs button')].map(b=>b.dataset.s);
+      const want=['home','season','deck','cards','clubhouse'];
+      if(got.join()!==want.join())throw new Error('並びが違う: '+got.join('/'));
+      return got.map(s=>SCREENS[s].title).join(' → ');
+    })()`));
     await ctx.js(`document.querySelector('#tabs button[data-s="home"]').click()`);
     await ctx.wait(250);
     ctx.log("HOMEのタイル:", await ctx.js(`(()=>{
