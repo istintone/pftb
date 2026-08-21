@@ -74,6 +74,9 @@ function rpc(ws) {
 //   ctx.screen()    現在表示中の画面ID
 //   ctx.log(...)    進捗表示
 // ---------------------------------------------------------------------------
+// 世界のたね。**固定しておく**ことで、走らせるたびに同じ世界を見る(→上の仕掛け)
+const SEED = 20260821;
+
 const STEPS = [
   ["タイトル", async ctx => {
     ctx.log("画面:", await ctx.screen(),
@@ -4419,6 +4422,33 @@ const STEPS = [
 
   await send("Page.enable");
   await send("Runtime.enable");
+
+  // **世界のたねを固定する**(→docs/05 のバックログ)。
+  // newGame() は Date.now から作るので、そのままだと**走らせるたびに別の世界**を見る。
+  // 名簿も試合結果も毎回変わるため、たまたまの並びでしか落ちない検査があると
+  // 「回帰なのか偶然なのか」が判別できない(実測: 同じ木で3回に1回だけ落ちた)。
+  //
+  // **リロードを跨いで効かせる**ため、評価ではなく「新規ドキュメントごとに走る仕掛け」で
+  // 入れる。newGame は関数宣言なのでグローバルの属性そのもので、差し替えれば
+  // ゲーム側の呼び出しもこちらを通る。
+  //
+  // **スカウトの抽選は触らない**。あちらは Date.now を使って意図的に再現不能にしてある
+  // (セーブを戻して引き直す余地を作らないため →ui.js)。ここで潰すと仕様が変わる。
+  await send("Page.addScriptToEvaluateOnNewDocument", {
+    source: `(()=>{ const SEED=${SEED};
+      const pin=()=>{ try{ if(typeof S!=="undefined"&&S&&S.world)S.world.seed=SEED; }catch(e){} };
+      const hook=()=>{
+        if(typeof newGame!=="function"||window.__seedPinned)return typeof newGame==="function";
+        const orig=newGame;
+        window.newGame=async function(){ const r=await orig.apply(this,arguments); pin(); return r; };
+        window.__seedPinned=SEED;
+        return true;
+      };
+      // 読み込みの途中で差し込まれるので、出そろうまで短く待つ
+      const t=setInterval(()=>{ if(hook())clearInterval(t); },10);
+      addEventListener("load",()=>{ hook(); pin(); });
+    })()`,
+  });
   // 既定は端末枠(874px)+余白が収まる 440x960(低いとタブバーが写らない)。
   // --mobile でスマホ実寸(390x844)に切り替える。
   await send("Emulation.setDeviceMetricsOverride", has("mobile")
