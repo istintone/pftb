@@ -2127,6 +2127,33 @@ const STEPS = [
     })()`));
   }],
   ["スカウト(コインでパックを引く)", async ctx => {
+    // **秘書の名前**(→docs/03 §3.43a)。クラブごとに決まり、画面をまたいで一致する
+    ctx.log("  秘書の名前:", await ctx.js(`(()=>{
+      const n=secretaryName();
+      if(!n.first||!n.last)throw new Error('名前が出ない');
+      // **リーグの国から採る**。よそのリーグの名簿から出ていたら気づけるように
+      const lg=clubById(S.club.id).league;
+      if(!SEC_NAMES[lg].first.includes(n.first))throw new Error(lg+' の名前ではない: '+n.first);
+      if(!SEC_NAMES[lg].last.includes(n.last))throw new Error(lg+' の姓ではない: '+n.last);
+      // **同じクラブならいつも同じ人**
+      if(secretaryName(S.club.id).full!==n.full)throw new Error('呼ぶたびに変わる');
+      // **クラブが変われば別の人**(144クラブで何通り出るか)
+      const all=new Set(CLUBS.map(c=>secretaryName(c.id).full));
+      if(all.size<100)throw new Error('顔ぶれが少なすぎる: '+all.size);
+      // **差し込みが残っていない**。{sec}/{secFull} が生のまま画面に出た事故がある
+      show('home');
+      const home=document.getElementById('homeSec').textContent;
+      show('secretary');
+      const mail=document.getElementById('mailLog').textContent;
+      for(const t of [home,mail])if(/\{\w+\}/.test(t))
+        throw new Error('差し込みが残っている: '+t.match(/\{\w+\}/)[0]);
+      if(document.getElementById('mailName').textContent!==n.full)
+        throw new Error('受信箱の見出しが名前になっていない');
+      if(document.getElementById('homeSecT').textContent.indexOf(n.first)<0)
+        throw new Error('HOME の見出しが名前になっていない');
+      show('home');
+      return n.full+'（'+lg+'）／ 144クラブで '+all.size+' 通り ／ 差し込みの残りなし';
+    })()`));
     // **フッターの並び**(→docs/06 §6.49)。よく触るものほど左に置く
     ctx.log("  フッターの並び:", await ctx.js(`(()=>{
       const got=[...document.querySelectorAll('#tabs button')].map(b=>b.dataset.s);

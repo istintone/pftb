@@ -472,9 +472,12 @@ function renderHome(){
   $("homeSec").innerHTML='<div class="sec-row sec-go'+(un?" unread":"")+'" id="homeSecGo">'
     +'<div class="sec-face">'+chatAvatar("sec")
       +(un?'<i class="sec-dot">'+un+'</i>':"")+'</div>'
-    +'<div class="bubble">'+esc(def?def.text:secretaryLine())
+    // **ひとことにも名前を差し込む**(→docs/03 §3.43a)。受信箱と同じ文面が出るので、
+    // ここで差し込みを忘れると {secFull} が生のまま画面に出る
+    +'<div class="bubble">'+esc(chatFill(def?def.text:secretaryLine(),secVars()))
       +(def?'<span class="sec-more">受信箱を開く ›</span>':"")+'</div>'
   +'</div>';
+  $("homeSecT").textContent="秘書 "+secretaryName().first;
   $("homeSecGo").onclick=()=>show("secretary",{push:1});
   // CLUB NEWS: クラブの今(一時的なコンディションの表示でもある)
   $("homeNews").innerHTML=clubNews().map(n=>'<div class="news">'+n+'</div>').join("");
@@ -546,6 +549,7 @@ function renderMail(){
   // (HOME のひとことだけは mailLatest() = 一番新しいものを映す)
   const list=mailList().slice().reverse();
   $("mailAv").innerHTML=chatAvatar("sec","ch-av-in");
+  $("mailName").textContent=secretaryName().full;      // **名前で呼ぶ**(→§3.43a)
   $("mailSub").textContent=list.length?list.length+"件の連絡":"連絡はありません";
   $("mailLog").innerHTML=list.length?list.map(m=>{
     const d=mailDef(m); if(!d)return "";
@@ -562,14 +566,15 @@ function renderMail(){
     // **案内は行き先まで連れていく**(→docs/03 §3.43)。読んで終わりにさせない
     const go=d.go&&SCREENS[d.go]?d.go:null;
     return '<div class="ch-row"><div class="ch-b ml-b">'
-      +'<span class="ch-nm">秘書　'+(d.tut?"はじめかた "+d.tut+"/"+TUT_ALL
+      +'<span class="ch-nm">'+esc(secretaryName().first)+'　'+(d.tut?"はじめかた "+d.tut+"/"+TUT_ALL
           // **季も添える**(→docs/03 §3.42)。節は任期の中で数え直すので、
           // 番号だけだと任期をまたいだ連絡が見分けられない
           :(m.season?"S"+m.season+" ":"")+"第"+m.at+"節")
         +(m.read?"":'　<i class="ml-new">NEW</i>')+'</span>'
       // **件名を出す**。溜まった連絡をあとから辿るとき、本文だけでは探せない
       +'<b class="ml-ti">'+esc(d.title)+'</b>'
-      +esc(d.text)
+      // **名前を差し込む**(→docs/03 §3.43a)。{sec}/{secFull} が秘書の名前になる
+      +esc(chatFill(d.text,secVars()))
       +(go?'<div class="ml-go"><button class="btn ml-jump" data-go="'+esc(go)+'">'
         +esc(SCREENS[go].title||go)+' をひらく ›</button></div>':"")
       +(gname?'<div class="ml-gift">'
@@ -2100,7 +2105,8 @@ function wireCurrentRow(){
 const CHAT_STAGES=["cup","foe","hand","who","who2","menu","result","event","ready"];
 const chatLine=(a,seed)=>a[Math.abs(hashStr(seed))%a.length];
 /** 台詞を1つ選んで差し込む。**配列でも文字列でも同じように書ける**。 */
-const chatText=(v,seed,vars)=>chatFill(Array.isArray(v)?chatLine(v,seed):v,vars||{});
+const chatText=(v,seed,vars)=>chatFill(Array.isArray(v)?chatLine(v,seed):v,
+  { ...secVars(), ...(vars||{}) });
 /**
  * 台詞の差し込み。**{x} をまとめて置き換える**(→docs/06 §6.23)。
  * 名前を1つずつ列挙していたときは、足した差し込みを書き忘れて
@@ -2495,6 +2501,22 @@ const shortOf=id=>{ const c=cardById(id); return c?shortName(c):"—"; };
  * 誰になるかはクラブIDから決まるので、同じクラブなら毎回同じ人が座っている。
  * **絵を足しても JS は触らない** — ASSETS の並びをそのまま候補にする。
  */
+/**
+ * 秘書の名前(→docs/03 §3.43a)。**クラブから決まる**ので、同じクラブならいつも同じ人。
+ * 呼び名(first)と、名乗るとき用のフルネーム(full)を返す。
+ */
+function secretaryName(clubId){
+  const id=clubId||(S.club&&S.club.id)||"";
+  const c=typeof clubById==="function"?clubById(id):null;
+  const p=SEC_NAMES[c&&c.league]||SEC_NAMES.eng;
+  const h=Math.abs(hashStr("secname:"+id));
+  const first=p.first[h%p.first.length];
+  const last=p.last[Math.floor(h/p.first.length)%p.last.length];
+  return { first, last, full:first+"・"+last };
+}
+/** 台詞と連絡に差し込む秘書の名前。**どこから呼んでも同じ形**にする。 */
+const secVars=()=>{ const n=secretaryName(); return { sec:n.first, secFull:n.full }; };
+
 function secretaryArt(clubId){
   const A=(window.ASSETS&&window.ASSETS.secretary)||{};
   const keys=Object.keys(A).sort();
@@ -2590,7 +2612,7 @@ function renderChat(){
       +(head?chatAvatar("mgr"):'<span class="ch-gap"></span>')+'</div>';
     // **選手はポジションも添える**(→docs/06 §6.24)。誰を育てるかの手掛かりになる
     const pc=m.w==="sec"?null:cardById(m.w);
-    const nm=m.w==="sec"?"秘書":esc(shortOf(m.w))
+    const nm=m.w==="sec"?esc(secretaryName().first):esc(shortOf(m.w))
       +(pc?' <i class="ch-pos">'+esc(primarySub(pc))+'</i>':"");
     return '<div class="ch-row'+(head?" hd":"")+'">'
       +(head?chatAvatar(m.w):'<span class="ch-gap"></span>')
