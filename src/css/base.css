@@ -414,6 +414,27 @@ body{
 .news{ padding:7px 0; font-size:11px; line-height:1.7; color:var(--text-2);
   border-bottom:1px solid oklch(0.24 0.02 255) }
 .news:last-child{ border-bottom:0 }
+/* CLUB NEWS の流し表示(→docs/06 §6.58)。**試合タイルの直下に1行**。
+   知らせが増えても高さが変わらないので、HOME の下半分を押し出さない */
+.news-tick{
+  display:flex; align-items:center; gap:9px; margin:8px 0 12px;
+  padding:8px 12px; border-radius:10px; cursor:pointer;
+  background:var(--panel); border:1px solid var(--line);
+  overflow:hidden;
+}
+.news-tick.off{ display:none }
+.news-tick:active{ background:var(--panel-2) }
+.nt-k{ flex:0 0 auto; font:10px/1 var(--f-mono); letter-spacing:1.5px;
+  color:var(--accent); opacity:.85 }
+/* **1行に収める**。溢れたら省略記号で切る(高さは絶対に増やさない) */
+.nt-b{ flex:1 1 auto; min-width:0; font-size:11px; line-height:1.5;
+  color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:opacity .2s ease, transform .2s ease }
+.nt-b.out{ opacity:0; transform:translateY(-4px) }
+.nt-b.in{ opacity:1; transform:translateY(0) }
+.nt-n{ flex:0 0 auto; font:10px/1 var(--f-mono); color:var(--text-dim);
+  border:1px solid var(--line); border-radius:9px; padding:3px 6px }
+.news-sheet{ max-height:70vh; overflow:auto }
 .next-vs{ display:flex; align-items:center; justify-content:space-between; gap:8px;
   font:600 13px/1.3 var(--f-head); letter-spacing:.5px }
 .next-vs .vs{ font:10px/1 var(--f-mono); color:var(--accent); letter-spacing:2px }
@@ -1814,12 +1835,14 @@ body{
 
 /* HOME の2枚タイル(→docs/06 §6.8)。試合の次に触る導線を並べる。 */
 .tiles{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px }
-.tile{ border-radius:12px; padding:14px; background:var(--panel);
+/* **4枚のタイルは一回り低く**(→docs/06 §6.58)。HOME は縦に長くなりがちなので、
+   絵の見える面積を保ったまま、余白と字の分だけ詰める */
+.tile{ border-radius:12px; padding:11px 12px; background:var(--panel);
   border:1px solid var(--line); cursor:pointer }
 .tile:active{ background:var(--panel-2) }
-.tile-i{ font-size:20px; margin-bottom:6px; color:var(--accent) }
+.tile-i{ font-size:17px; margin-bottom:3px; color:var(--accent) }
 .tile-t{ font:600 13px/1 var(--f-head); color:var(--text) }
-.tile-s{ font-size:11px; color:var(--text-dim); margin-top:3px }
+.tile-s{ font-size:11px; color:var(--text-dim); margin-top:2px }
 /* タイルとマッチタイルに貼るステッカー(→docs/06 §6.30)。
    **文字の下に潜らせて、枠から少しはみ出させる**。きれいに収めると
    絵が枠の中の飾りになってしまい、「貼ってある」感じが出ない。 */

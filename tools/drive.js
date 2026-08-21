@@ -653,7 +653,8 @@ const STEPS = [
     ctx.log("  スポンサーの相談:", await ctx.js(`(()=>{
       S.club.sponsor=null; S.player.fame=99999;
       show('home');
-      if(document.getElementById('homeNews').textContent.indexOf('スポンサー')<0)
+      // **流し表示は1行しか出ない**(→docs/06 §6.58)。中身はデータ側を読む
+      if(clubNews().join(' ').indexOf('スポンサー')<0)
         throw new Error('CLUB NEWS に相談が出ない');
       S.career.chat=null; S.career.hand=null; S.career.comp=null;
       show('chat');
@@ -878,13 +879,14 @@ const STEPS = [
     // CLUB NEWS(→docs/03 §3.40)。**達成したら残り節を数えない**
     ctx.log("  CLUB NEWS の書き方:", await ctx.js(`(()=>{
       show('home');
-      const t=document.getElementById('homeNews').textContent;
+      openNews();                     // 一覧はモーダル(→docs/06 §6.58)
       const nm=sponsorById(sponsor().id).name;
-      const line=[...document.querySelectorAll('#homeNews .news')]
+      const line=[...document.querySelectorAll('#newsList .news')]
         .map(e=>e.textContent).find(x=>x.indexOf(nm)>=0);
       if(!line)throw new Error('スポンサーの行が無い');
       if(line.indexOf('達成済み')<0)throw new Error('達成済みと書かれない: '+line);
       if(/残り\s*[0-9]+節/.test(line))throw new Error('達成後も残り節を数えている: '+line);
+      closeNews();
       return line;
     })()`));
     // **契約は残したまま**にする。外すと次の節でまたスポンサーの相談が先に出て、
@@ -1025,9 +1027,8 @@ const STEPS = [
       const id=S.squad[9];
       S.career.trust={}; S.career.mentor=[]; S.career.mentorSeen={};
       S.career.trust[id]=TUNING.trust.need;
-      const news=document.getElementById('homeNews');
       show('home');
-      if(news.textContent.indexOf('相談があるそうです')<0)
+      if(clubNews().join(' ').indexOf('相談があるそうです')<0)
         throw new Error('CLUB NEWS に予兆が出ない');
       S.career.chat=null; S.career.hand=null; S.career.comp=null;
       show('chat');
@@ -1071,7 +1072,7 @@ const STEPS = [
       if(condOf(id)!==0)throw new Error('ケガの段にならない');
       // CLUB NEWS に「治療中」が出る
       show('home');
-      const news=document.getElementById('homeNews').textContent;
+      const news=clubNews().join(' ').replace(/<[^>]+>/g,'');
       if(!news.includes('治療中'))throw new Error('CLUB NEWS に治療中が出ない');
       if(!news.includes(left+'節'))throw new Error('回復までの節数が出ない: '+news.slice(0,40));
       // 秘書が休息を促す
@@ -2159,6 +2160,39 @@ const STEPS = [
       show('home');
       return n.full+'（'+lg+'）／ 144クラブで '+all.size+' 通り ／ 差し込みの残りなし';
     })()`));
+    // **CLUB NEWS は1行で流す**(→docs/06 §6.58)。知らせが増えても高さが変わらない
+    ctx.log("  CLUB NEWS:", await ctx.js(`(()=>{
+      show('home');
+      const box=document.getElementById('homeNews');
+      if(!box)throw new Error('流し表示が無い');
+      // **試合タイルの直下**に居る(HOME の末尾ではない)
+      const pad=box.parentElement;
+      const kids=[...pad.children];
+      if(kids.indexOf(box)!==kids.indexOf(document.getElementById('homeNext'))+1)
+        throw new Error('試合タイルの直下に無い');
+      const all=clubNews();
+      if(!all.length)throw new Error('検査の前提: 知らせが1件も無い');
+      // **出ているのは1行だけ**。高さは知らせの数で変わらない
+      const lines=box.querySelectorAll('.nt-b');
+      if(lines.length!==1)throw new Error('1行でない: '+lines.length);
+      const h1=box.getBoundingClientRect().height;
+      if(h1>64)throw new Error('1行にしては高すぎる: '+Math.round(h1));
+      // **押すと全部並ぶ**
+      box.click();
+      if(!document.getElementById('newsModal').classList.contains('on'))
+        throw new Error('押しても一覧が開かない');
+      const rows=document.querySelectorAll('#newsList .news').length;
+      if(rows!==all.length)throw new Error('一覧の数が合わない: '+rows+' / '+all.length);
+      // **試合タイルから重複した行を外した**(→§6.58)。節は上の MATCHDAY と同じ
+      const nx=document.getElementById('nxTile');
+      if(nx&&nx.querySelector('.nx-sub'))throw new Error('重複した行が残っている');
+      const md=nx?nx.querySelector('.nx-md').textContent:'';
+      if(md&&!/HOME|AWAY|OWNER/.test(md))throw new Error('最上段に HOME/AWAY が無い: '+md);
+      return all.length+'件を1行ずつ ／ 高さ '+Math.round(h1)+'px ／ 押すと'+rows+'件並ぶ'
+        +' ／ 見出し「'+md+'」';
+    })()`));
+    await ctx.shot("04c-home-news");        // 一覧を開いたところ
+    await ctx.js("closeNews()");
     // **フッターの並び**(→docs/06 §6.49)。よく触るものほど左に置く
     ctx.log("  フッターの並び:", await ctx.js(`(()=>{
       const got=[...document.querySelectorAll('#tabs button')].map(b=>b.dataset.s);
@@ -3153,9 +3187,9 @@ const STEPS = [
         // 建設状況は HOME の CLUB NEWS に出る(→docs/03 §3.5)
         ctx.log("  施設の知らせ:", await ctx.js(`(()=>{
           const news=()=>{ show('home');
-            return document.getElementById('homeNews').textContent; };
+            return clubNews().join(' ').replace(/<[^>]+>/g,''); };
           if(news().indexOf('が完成')<0)throw new Error('完成の知らせが出ない');
-          const first=document.querySelector('#homeNews .news').textContent;
+          const first=clubNews()[0].replace(/<[^>]+>/g,'');
           if(first.indexOf('が完成')<0)throw new Error('完成が先頭に無い: '+first);
           facTick();
           if(news().indexOf('が完成')>=0)throw new Error('完成の知らせが残り続ける');

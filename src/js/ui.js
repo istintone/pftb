@@ -431,8 +431,11 @@ function renderHome(){
   $("tileDeckArt").innerHTML=stickerArt("board");
   renderHomeMarket();
   renderHomeTrophy();
-  const md="SEASON "+W.season+" · MATCHDAY "
-    +String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0");
+  // **節と HOME/AWAY は1行にまとめる**(→docs/06 §6.58)。以前は下にもう1行
+  // 「AWAY ／ 第2節」を置いていたが、節は上の MATCHDAY と同じことを言っていた
+  const md=f0=>"SEASON "+W.season+" · MATCHDAY "
+    +String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0")
+    +(f0?" · "+(f0.home?"HOME":"AWAY"):"");
 
   const f=myFixture();
   const ev=pendingOwner();
@@ -453,13 +456,12 @@ function renderHome(){
     // **ボタンは置かず、タイルごとタップ**して日程へ送る。
     const h=hypeOf(f);
     $("homeNext").innerHTML='<div class="nx" id="nxTile" role="button" tabindex="0">'
-      +'<div class="nx-md">'+md+'</div>'
+      +'<div class="nx-md">'+md(f)+'</div>'
       +'<div class="nx-tag">'+esc(h.tag)+'</div>'
       +'<div class="nx-hype">'+h.line.map(esc).join("<br>")+'</div>'
       // **VSを中心に左右を釣り合わせる**(→docs/06 §6.8)
       +'<div class="nx-vs"><b>'+esc(clubName(S.club.id))+'</b>'
         +'<span>VS</span><b>'+esc(clubName(f.opp))+'</b></div>'
-      +'<div class="nx-sub">'+(f.home?"HOME":"AWAY")+' ／ 第'+W.matchday+'節</div>'
       +'<div class="nx-st">'+matchSticker()+'</div>'
       // **スポンサーの名前を看板のように置く**(→docs/06 §6.25)。契約中だけ出る
       +sponBoard()
@@ -485,7 +487,7 @@ function renderHome(){
   $("homeSecT").textContent="秘書 "+secretaryName().first;
   $("homeSecGo").onclick=()=>show("secretary",{push:1});
   // CLUB NEWS: クラブの今(一時的なコンディションの表示でもある)
-  $("homeNews").innerHTML=clubNews().map(n=>'<div class="news">'+n+'</div>').join("");
+  renderNewsTick();
 }
 /**
  * ステッカーを1枚(→docs/06 §6.30)。**素材が無ければ何も出さない**ので、
@@ -651,6 +653,50 @@ function sponBoard(){
   return '<div class="nx-spon"><i>OFFICIAL PARTNER</i>'
     +(ad||'<b>'+esc(sponsorById(sp.id).name)+'</b>')+'</div>';
 }
+/**
+ * CLUB NEWS の流し表示(→docs/06 §6.58)。**1行ずつ入れ替える**。
+ *
+ * 以前は全部を積んだタイルを HOME の末尾に置いていたが、知らせが増えると
+ * **画面からはみ出して読めなかった**。1行なら試合タイルの直下に置けて、
+ * いちばん見る場所に居られる。全部読みたいときは押せば並ぶ。
+ */
+let _newsQ=[], _newsIx=0, _newsT=null;
+function renderNewsTick(){
+  const box=$("homeNews"); if(!box)return;
+  newsStop();
+  _newsQ=clubNews(); _newsIx=0;
+  if(!_newsQ.length){ box.classList.add("off"); box.innerHTML=""; return; }
+  box.classList.remove("off");
+  box.innerHTML='<span class="nt-k">NEWS</span><span class="nt-b" id="homeNewsLine">'
+    +_newsQ[0]+'</span>'
+    +(_newsQ.length>1?'<span class="nt-n">'+_newsQ.length+'</span>':"");
+  box.onclick=openNews;
+  // **1件しか無いなら回さない**。動く必要がない
+  if(_newsQ.length>1)_newsT=setInterval(newsTick,TUNING.news.ms);
+}
+function newsTick(){
+  const line=$("homeNewsLine"), scr=$("scr-home");
+  // **画面を離れたら自分で止まる**(→fairTick と同じ作り)
+  if(!line||!scr||!scr.classList.contains("on")||_newsQ.length<2){ newsStop(); return; }
+  _newsIx=(_newsIx+1)%_newsQ.length;
+  line.classList.add("out");
+  setTimeout(()=>{
+    line.innerHTML=_newsQ[_newsIx];
+    line.classList.remove("out"); line.classList.add("in");
+    setTimeout(()=>line.classList.remove("in"),260);
+  },200);
+}
+function newsStop(){ if(_newsT){ clearInterval(_newsT); _newsT=null; } }
+/** 押したら全部並べる(→§6.58)。流し読みで取りこぼしたぶんはここで拾う。 */
+function openNews(){
+  const list=clubNews();
+  $("newsList").innerHTML=list.length
+    ? list.map(n=>'<div class="news">'+n+'</div>').join("")
+    : '<div class="lg">いまはお知らせがありません</div>';
+  $("newsModal").classList.add("on");
+}
+const closeNews=()=>$("newsModal").classList.remove("on");
+
 function clubNews(){
   const r=rankOf(S.world.table,S.club.id), t=S.world.table[S.club.id];
   const lg=leagueById(clubById(S.club.id).league);
@@ -4870,6 +4916,8 @@ $("memGo").onclick=()=>memTry($("memCode").value);
 $("memCode").onkeydown=e=>{ if(e.key==="Enter")memTry($("memCode").value); };
 $("cfgDone").onclick=closeCfg;
 $("cfgModal").onclick=e=>{ if(e.target===$("cfgModal"))closeCfg(); };
+$("newsDone").onclick=closeNews;
+$("newsModal").onclick=e=>{ if(e.target===$("newsModal"))closeNews(); };
 $("tileMarket").onclick=()=>show("market",{push:1});
 // 開封は**1回目のタップで最後まで送り、2回目で閉じる**(→docs/06 §6.56)
 $("scoutReveal").onclick=()=>{ if(_rvDone)_rvDone(); else closeReveal(); };
