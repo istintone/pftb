@@ -1666,11 +1666,30 @@ const MAILS=[
     when:S=>mailWasSent("tut4")&&(S.career.log||[]).length>0,
   },
   {
-    id:"tut6", from:"sec", tut:6, title:"それでは監督",
+    // **市場は「名指しで買える唯一の場所」**(→§3.67)。パックと違って狙って獲れるので、
+    // 存在を知らないままだと補強の手が1つ減ったままになる
+    id:"tutMarket", from:"sec", tut:6, title:"はじめての移籍市場", go:"market",
+    text:"補強はうまくいきましたか。スカウトは運ですが、MARKET なら"
+        +"能力も値段も見たうえで、この選手と名指しで獲れます。"
+        +"並ぶ顔ぶれは節ごとに入れ替わるので、気になる選手は逃さないでくださいね。",
+    when:S=>mailWasSent("tut5")&&seenHas("scoutDone"),
+  },
+  {
+    // **采配は試合の中でしか敷けない**(→§3.50)。画面に入口が無いので、
+    // 案内が無いと「そういうものがある」ことに気づけない
+    id:"tutTactic", from:"sec", tut:7, title:"はじめての采配", go:"season",
+    text:"監督、試合中の右端に TAC という札があるのをご存じですか。"
+        +"あそこから采配を敷けます。チーム全体の戦い方が変わって、"
+        +"敷いた瞬間に監督のカットインも入りますよ。"
+        +"熟練度が足りないと選手が応えきれないので、まずは1つ試してみてください。",
+    when:S=>mailWasSent("tutMarket")&&seenHas("market"),
+  },
+  {
+    id:"tut6", from:"sec", tut:8, title:"それでは監督",
     text:"ひととおりご案内しました。ここからは監督のクラブです。"
         +"オーナーの目標、カップ戦、スポンサー……やることは尽きませんが、"
         +"私はいつでもここにいます。クラブの躍進を、おねがいします。",
-    when:S=>mailWasSent("tut5")&&seenHas("scoutDone"),
+    when:S=>mailWasSent("tutTactic")&&(S.career.log||[]).length>1,
   },
   {
     id:"leTest", from:"sec", title:"LEGENDS の引換券",

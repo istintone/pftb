@@ -4371,7 +4371,11 @@ const STEPS = [
       S.career.log.push({ node:1, res:'lose' }); show('home');
       if(tut()!==5)throw new Error('初戦で5通目が来ない');
       seeNow('scoutDone');
-      if(tut()!==TUT_ALL)throw new Error('補強で最後が来ない: '+tut());
+      if(tut()!==6)throw new Error('補強で6通目(移籍市場)が来ない: '+tut());
+      // **市場と采配も案内する**(→docs/03 §3.43)。どちらも入口が分かりにくい
+      show('market'); if(tut()!==7)throw new Error('市場で7通目(采配)が来ない: '+tut());
+      S.career.log.push({ node:2, res:'draw' }); show('home');
+      if(tut()!==TUT_ALL)throw new Error('2試合目で最後が来ない: '+tut());
       show('secretary');
       const rows=[...document.querySelectorAll('#mailLog .ml-ti')].map(e=>e.textContent);
       if(rows.length!==TUT_ALL)throw new Error('受信箱に全部残らない: '+rows.length);

@@ -332,7 +332,16 @@ function runSeason(hand) {
     E.show("home");
     assert.strictEqual(step(), 5, "初戦を終えれば5通目(勝ち負けは問わない)");
     E.seeNow("scoutDone");
-    assert.strictEqual(step(), E.TUT_ALL, "補強をやり切って最後の1通");
+    assert.strictEqual(step(), 6, "補強をやり切って6通目(移籍市場)");
+    // **市場と采配も案内する**(→docs/03 §3.43)。どちらも入口が分かりにくい
+    E.show("market");
+    assert.strictEqual(step(), 7, "市場を覗いて7通目(采配)");
+    E.show("home");
+    assert.strictEqual(step(), 7, "2試合目を終えるまで最後の1通は来ない");
+    // **勝ちにしない**。初勝利は別の連絡(引換券)を呼ぶので、最新が入れ替わる
+    C9.log.push({ node: 2, res: "draw" });
+    E.show("home");
+    assert.strictEqual(step(), E.TUT_ALL, "2試合目を終えて最後の1通");
 
     // **HOME のひとことは最新を映す**。同じ節に2通あっても、あとから届いたほうが上
     const last = E.mailById(E.mailLatest().id);
@@ -403,6 +412,36 @@ function runSeason(hand) {
     assert.ok(m, "最新の連絡が取れる");
     const def = E.mailById(m.id);
     assert.ok(def && def.gift && def.gift.ticket, "テストの連絡には引換券が付く");
+
+    // --- **メモラビリアはどの開き方でも招待が届く**(→docs/03 §3.55) ---
+    // 開き方は3通り(世界の頂点の褒賞 / 合言葉 / URL)。以前は褒賞のときしか
+    // 知らせが無く、合言葉で開いた人は**そこで戦えることを知らないまま**だった
+    {
+      const inv = () => E.mailList()
+        .filter(x => String(x.id).indexOf("memopen:") === 0).length;
+      const keep = { mem: S8.player.mem.slice(), mail: S8.player.mail.slice(),
+                     sent: { ...E.mailSent() } };
+      S8.player.mem = []; S8.player.mail = []; S8.player.mailSent = {};
+      // ① 合言葉(URL もこの道を通る)
+      const m1 = E.memUnlock(E.MEMORABILIA[0].hash);
+      assert.ok(m1 && m1 !== "have", "合言葉で開く");
+      assert.strictEqual(inv(), 1, "合言葉で開いても招待が届く");
+      const d = E.mailDef(E.mailList()[0]);
+      assert.ok(d.text.indexOf("メモラビリア") >= 0, "どこから挑むかが書いてある");
+      assert.strictEqual(d.go, "manager", "メモラビリアのある画面へ連れていく");
+      // **重ねて開いても増えない**
+      E.memUnlock(E.MEMORABILIA[0].hash); E.memUnlock(E.MEMORABILIA[0].hash);
+      assert.strictEqual(inv(), 1, "二度目は届かない");
+      // ② 世界の頂点の褒賞は**受け取ってから**届く(受け取るまでは開いていない)
+      S8.player.mem = []; S8.player.mail = []; S8.player.mailSent = {};
+      assert.ok(E.memAward("world"), "頂点で1つ届く");
+      assert.strictEqual(inv(), 0, "受け取る前に招待は出さない");
+      E.mailTake(E.mailList()[0].id);
+      assert.strictEqual(inv(), 1, "受け取って開いたら招待が届く");
+      S8.player.mem = keep.mem; S8.player.mail = keep.mail;
+      S8.player.mailSent = keep.sent;
+      console.log("メモラビリアの招待OK 合言葉/URL/褒賞のどれでも1通 ／ 重ねても増えない");
+    }
 
     // --- 受け取りは一度きり。券が増える ---
     assert.strictEqual(E.ticketCount(def.gift.ticket), 0, "受け取る前は0枚");

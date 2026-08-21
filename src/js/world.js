@@ -335,6 +335,18 @@ function facTick(){
   S.club.fac[b.id]=b.to;
   S.club.build=null;
   S.club.built={ id:b.id, lv:b.to };
+  // **完成は受信箱にも残す**(→docs/03 §3.42)。CLUB NEWS の知らせは1節で消えるので、
+  // その節にログインしていなければ**建った瞬間を見逃す**。数節がかりの投資なので、
+  // 「いつ何が建ったか」は辿れるようにしておく
+  {
+    const f=facById(b.id);
+    mailPush("fac:"+b.id+":"+b.to,{
+      from:"sec", title:f.label+" が完成しました",
+      text:"監督、"+f.label+"の工事が終わりました。Lv."+b.to+"になります。"
+        +"これで"+f.note+"ようになります。次に何を建てるかは CLUB から選べますよ。",
+      go:"clubhouse",
+    });
+  }
   return S.club.built;
 }
 // 施設の効き方(→docs/03 §3.5)。**掛かり先はそれぞれ1つだけ**にする。
@@ -1256,7 +1268,7 @@ function mailTake(id,pos){
   if(g.ticket)ticketAdd(g.ticket,1);
   if(g.coin)S.club.coins+=g.coin;
   // **メモラビリア**(→docs/03 §3.55)。受け取った時点で開く
-  if(g.mem&&!memHas(g.mem))memOwned().push(g.mem);
+  if(g.mem&&!memHas(g.mem)){ memOwned().push(g.mem); memInvite(memById(g.mem)); }
   // **采配**(→docs/03 §3.50)。受け取った時点で監督の引き出しに入る
   if(g.tactic)learnTactic(g.tactic);
   // **カードそのものを添えた連絡**(トレード →§3.49 / 実績 →§3.47)。
@@ -1334,6 +1346,24 @@ const memList=()=>MEMORABILIA.filter(m=>memHas(m.id));
  * (QRから来た文字列がそのまま入るとは限らない)。
  * 返り値は開いたメモラビリア。合わなければ null、既に持っていれば "have"。
  */
+/**
+ * メモラビリアが開いたときの招待状(→docs/03 §3.55)。
+ *
+ * **開き方は3通りある**(世界の頂点の褒賞 / 合言葉 / URL)のに、
+ * 知らせが届くのは褒賞のときだけだった。合言葉や URL で開いた人は
+ * **開いたことも、そこで戦えることも知らないまま**になる。
+ * 開いた瞬間に必ず通る道はここなので、ここで1通出す。
+ */
+function memInvite(m){
+  if(!m||!S.player)return null;
+  return mailPush("memopen:"+m.id,{
+    from:"sec", title:m.name+" から招待が届いています",
+    text:"監督、「"+m.name+"」から練習試合の申し入れがありました。"
+      +m.sub+"が相手です。節も日程も使いません、いつでも受けられます。"
+      +"MANAGER のメモラビリアから挑めますよ。……胸を借りるつもりで、どうぞ。",
+    go:"manager",
+  });
+}
 function memUnlock(code){
   const key=String(code||"").trim().toUpperCase();
   if(!key)return null;
@@ -1341,6 +1371,7 @@ function memUnlock(code){
   if(!m)return null;
   if(memHas(m.id))return "have";
   memOwned().push(m.id);
+  memInvite(m);                              // 合言葉と URL の経路(→memInvite)
   return m;
 }
 /**
