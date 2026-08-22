@@ -391,7 +391,7 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
   assert.strictEqual(E.offersFor(999999).length, E.CLUBS.length, "名声が十分なら全クラブが開く");
   console.log("名声の階段OK 名声0:", E.offersFor(0).length, "クラブ / 上限:", E.CLUBS.length);
 
-  // ---------- クラブの顔は名前から決まる(→docs/03 §3.54d) ----------
+  // ---------- クラブの顔は名前から決まる(→docs/10 §3.54d) ----------
   {
     let named = 0, crest = 0;
     const seen = new Set();
@@ -431,7 +431,7 @@ const E = setup({ tmpName: "_tmp_worldtest.js" });
       + "件 ／ 顔はすべて別 ／ 盤面の色も同じ");
   }
 
-  // ---------- 試合の色(→docs/06 §6.57) ----------
+  // ---------- 試合の色(→docs/11 §6.57) ----------
   // **144クラブを13色で塗る**ので、同じ色どうしが当たるのは普通に起きる。
   // そのままだと足元の影が同じ色になり、どちらのチームか見分けが付かない
   {

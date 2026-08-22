@@ -243,7 +243,7 @@ const E=setup({tmpName:"_tmp_train.js"});
     }
 
     // --- 連携の掛かり先は3つ。**印だけの黄金線は増えた掛かり先を見ない** ---
-    // (→docs/03 §3.60)。ここが崩れると、監督の打ち手ではなく**CPUの強豪だけ**が
+    // (→docs/10 §3.60)。ここが崩れると、監督の打ち手ではなく**CPUの強豪だけ**が
     // 強くなり、リーグの得点が膨らむ(実測で 4.05 → 5.07 点まで動いた)
     {
       assert.ok(B.seekK > 0, "受け手の選び方に効く");
@@ -503,7 +503,7 @@ const E=setup({tmpName:"_tmp_train.js"});
   assert.strictEqual(E.trainStar(pid),0,"★も任期で消える");
   assert.strictEqual(E.trainUps(pid),null,"裏パラも消える");
   console.log("任期リセットOK ★も裏パラも次の任期には持ち越さない");
-  // ---------- 節の出来事(→docs/03 §3.48) ----------
+  // ---------- 節の出来事(→docs/10 §3.48) ----------
   {
     await E.newGame();
     const S = E.getS(); S.coach = "検証"; S.world.seed = 20260814;

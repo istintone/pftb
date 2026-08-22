@@ -413,7 +413,7 @@ function runSeason(hand) {
     const def = E.mailById(m.id);
     assert.ok(def && def.gift && def.gift.ticket, "テストの連絡には引換券が付く");
 
-    // --- **メモラビリアはどの開き方でも招待が届く**(→docs/03 §3.55) ---
+    // --- **メモラビリアはどの開き方でも招待が届く**(→docs/10 §3.55) ---
     // 開き方は3通り(世界の頂点の褒賞 / 合言葉 / URL)。以前は褒賞のときしか
     // 知らせが無く、合言葉で開いた人は**そこで戦えることを知らないまま**だった
     {
@@ -567,7 +567,7 @@ function runSeason(hand) {
       assert.ok(E.sponsor().paid, "受け取ると清算済みになる");
       assert.strictEqual(E.mailTake(m.id), null, "二度は受け取れない");
 
-      // **報酬は引換券**(→docs/03 §3.40a)。受け取りで枠は訊かない
+      // **報酬は引換券**(→docs/10 §3.40a)。受け取りで枠は訊かない
       S6.player.mail = []; S6.player.mailSent = {};
       S6.club.sponsor = { id: E.SPONSORS.find(x => x.tier === 2).id, tier: 2, aid: "atk",
         goal: { kind: "league" }, node0: 2, until: 90, hit: false, paid: false };
@@ -613,7 +613,7 @@ function runSeason(hand) {
       const P = E.sponPrize(tier);
       S7.club.sponsor = { id: co.id, tier: tier, aid: "atk", goal: { kind: "league" },
         node0: 1 + tier, until: 90, hit: true, paid: false };
-      // **報酬は引換券**(→docs/03 §3.40a)。選手をその場で渡さない
+      // **報酬は引換券**(→docs/10 §3.40a)。選手をその場で渡さない
       const tk1 = E.ticketTotal(), coll1 = S7.player.coll.length;
       const r = E.sponPay();
       assert.ok(r, tier + "段の報酬が出る");
@@ -890,7 +890,7 @@ function runSeason(hand) {
   assert.strictEqual(E.pickHand("nope"), false, "存在しない打ち手は選べない");
   console.log("打ち手の定義OK", E.HANDS.map(h => h.icon + h.label).join(" / "));
 
-  // ---------- カードの売却(→docs/03 §3.46) ----------
+  // ---------- カードの売却(→docs/10 §3.46) ----------
   {
     await E.newGame();
     const S = E.getS(); S.coach = "検証"; E.startTenure("sam-8");
@@ -942,7 +942,7 @@ function runSeason(hand) {
       + " 訓練と連携も一緒に消える");
   }
 
-  // ---------- トレード(→docs/03 §3.49) ----------
+  // ---------- トレード(→docs/10 §3.49) ----------
   {
     await E.newGame();
     const S = E.getS(); S.coach = "検証"; S.world.seed = 20260814;
@@ -1002,7 +1002,7 @@ function runSeason(hand) {
       + " 候補は先に確定 ／ 出す選手は消え、来る選手は受信箱");
   }
 
-  // ---------- 貸与の買い取り(→docs/03 §3.59) ----------
+  // ---------- 貸与の買い取り(→docs/10 §3.59) ----------
   // **師弟の約束が鍵**。買えば恒久的に自分のものになり、師弟の枠も空く
   {
     await E.newGame();
@@ -1062,7 +1062,7 @@ function runSeason(hand) {
       + " IDを付け替えて積み上げごと移す ／ 師弟の枠が空く ／ 戻っても二重にならない");
   }
 
-  // ---------- 残留(→docs/03 §3.58) ----------
+  // ---------- 残留(→docs/10 §3.58) ----------
   // **同じクラブを選び直したときだけ、積んだものを全部引き継ぐ**
   {
     const build = async (club) => {
@@ -1128,7 +1128,7 @@ function runSeason(hand) {
       + " 評価と契約は引き直す ／ 信頼と師弟は切れる ／ 移籍では引き継がない");
   }
 
-  // ---------- ユース(→docs/03 §3.57) ----------
+  // ---------- ユース(→docs/10 §3.57) ----------
   // **タダで手に入る代わりに、置いていく。** 任期に1人だけ、中ほどに上がってくる
   {
     await E.newGame();
@@ -1205,7 +1205,7 @@ function runSeason(hand) {
       + " 全員と黄金線 ／ クラブの預かりなので置いていく");
   }
 
-  // ---------- 引換券(→docs/03 §3.40a) ----------
+  // ---------- 引換券(→docs/10 §3.40a) ----------
   // **スポンサーの報酬はここへ集約**。選手をその場で渡さず、券で持たせる。
   {
     await E.newGame();
@@ -1234,7 +1234,7 @@ function runSeason(hand) {
     console.log("引換券OK 段の報酬はすべて券 ／ 枠を選ぶ券は2種 ／ 段の指定は実在選手が先");
   }
 
-  // ---------- 実在選手の固定idと受信箱(→docs/03 §3.49) ----------
+  // ---------- 実在選手の固定idと受信箱(→docs/10 §3.49) ----------
   // **実在選手の型紙は 8000000+通し番号 の固定id**を持つ。同じ人が2つの経路で
   // 届くと id がぶつかり、受け取ったのに手元に居ない、が起きていた。
   {

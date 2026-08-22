@@ -166,7 +166,7 @@ function divOfClub(club){
 }
 const clubPlan=club=>rosterPlan(leagueById(club.league).tier,divOfClub(club),club.rank);
 /**
- * そのクラブの選手が持つ★の数(→docs/03 §3.53)。
+ * そのクラブの選手が持つ★の数(→docs/10 §3.53)。
  * **段の数値は域内に収めてあるので、強さの差はここで出す**。
  * 部を土台に、リーグの格と順位で上下する。DIV1 の強豪は上限の★5。
  */
@@ -199,7 +199,7 @@ function clubRoster(seed,clubId){
   const roster=makeRoster(rng,{ club:club.name, star, ovrBias:clubBias(club),
     rarPlan:clubPlan(club), nations:nationBox(leagueById(club.league)) });
   uid=saveUid;
-  // **十分に育ったクラブは連携も完成している**(→docs/03 §3.53)
+  // **十分に育ったクラブは連携も完成している**(→docs/10 §3.53)
   return star>=TUNING.star.goldAt?goldWeb(roster):roster;
 }
 
@@ -431,7 +431,7 @@ function applyPromotion(myRank){
  * 師弟を結んだ選手はここで持ち越しに畳まれ、次の就任で戻ってくる(→§3.39)。
  */
 /**
- * **残留したときに持ち越すもの**(→docs/03 §3.58)。
+ * **残留したときに持ち越すもの**(→docs/10 §3.58)。
  *
  * 任期が明けると career は畳まれ、クラブも作り直される。**同じクラブを選び直した
  * ときだけ**、その全部を戻す。師弟の持ち越し(makeLegacy)が「どのクラブへ行っても
@@ -472,7 +472,7 @@ const stayClub=()=>(S.player&&S.player.stay&&S.player.stay.clubId)||null;
 function startTenure(clubId){
   const seed=S.world.seed;
   const club=clubById(clubId);
-  // **同じクラブを選び直したか**(→docs/03 §3.58)。ここで決めて、以下の組み立てを分ける
+  // **同じクラブを選び直したか**(→docs/10 §3.58)。ここで決めて、以下の組み立てを分ける
   const stay=(S.player&&S.player.stay&&S.player.stay.clubId===clubId)?S.player.stay:null;
   // **任期をまたぐと季が進む**(→docs/03 §3.2.3)。前の任期は必ず季の終わり(judgeSeason)で
   // 締めているので、新しいクラブでは次の季から始まる。ここで進めていなかったので、
@@ -493,7 +493,7 @@ function startTenure(clubId){
     build:stay?stay.build:null,                              // 建設中の1件 {id,to,left}
     built:null,                                              // 完成の知らせ(1節だけ)
     exp:stay?stay.exp:0,                                     // チーム熟練度(→§3.7)
-    // このクラブで獲ったもの(→docs/03 §3.9a)。**残留なら続き、移籍で畳まれる**
+    // このクラブで獲ったもの(→docs/10 §3.9a)。**残留なら続き、移籍で畳まれる**
     won:stay?(stay.won||[]).slice():[],
     // **オーナーの評価と期待は必ず引き直す**。残留でも契約は結び直しなので、
     // 前の任期の貯金で最初から安泰、にはしない
@@ -606,8 +606,8 @@ function matchSide(clubId){
   // **相手も軸を持つ**(→docs/03 §3.44)。cpuSquad が決めた1人をそのまま使う
   const cards=base.map(c=>({ ...c, cond:condCpu(clubId,rng),
     ...(c.id===kp?{ kp:true }:{}) }));
-  // **上の部は采配を敷いてくる**(→docs/03 §3.51)。盗む相手になる
-  // **相手監督**(→docs/03 §3.56)。名前と同じ key から決まるので、下見と試合で食い違わない
+  // **上の部は采配を敷いてくる**(→docs/10 §3.51)。盗む相手になる
+  // **相手監督**(→docs/10 §3.56)。名前と同じ key から決まるので、下見と試合で食い違わない
   return { cards, form, name:club.name, kp, tactic:clubTactic(clubId),
            coach:coachType("club:"+clubId).id };
 }
@@ -697,7 +697,7 @@ function fillSlots(slots,pool,pick,used){
 /** 使える選手 = 手持ちカード(恒久) + クラブからの貸与(任期中だけ)。 */
 const availableCards=()=>S.player.coll.concat(S.club.loan);
 
-// --- カードの売却(→docs/03 §3.46) ---
+// --- カードの売却(→docs/10 §3.46) ---
 /** 売値。段が幹で、OVR が枝。 */
 function sellPrice(card){
   if(!card)return 0;
@@ -705,7 +705,7 @@ function sellPrice(card){
   return Math.round((V.base[card.rarity]||V.base.STD)
     +Math.max(0,card.ovr-V.from)*V.perOvr);
 }
-// ---------- 貸与の買い取り(→docs/03 §3.59) ----------
+// ---------- 貸与の買い取り(→docs/10 §3.59) ----------
 // **師弟の約束を結んだ貸与選手だけ**、コインで自分のカードにできる。
 //
 // 師弟は任期が明ければ切れる(→§3.58)ので、**約束のままでは毎期結び直し**になる。
@@ -772,14 +772,14 @@ function sellWhy(card){
   if(isLoaned(card))return "クラブからの貸与です。売ることはできません";
   if((S.squad||[]).includes(card.id))return "編成に入っています。外してから売ってください";
   if(isMentor(card.id))return "師弟の約束をした選手です。次の任期へ連れていきます";
-  // **実在選手は売らない**(→docs/03 §3.46)。手で作った26人は集めるものであって
+  // **実在選手は売らない**(→docs/10 §3.46)。手で作った26人は集めるものであって
   // 在庫ではない。入手経路がスポンサーの最上位だけで、売ると取り戻すのに
   // 任期の半分が要る。二段の確認でも「勢いで手放した」を防ぎきれない
   if(card.sig)return "実在選手は売れません。コレクションとして残ります";
   return null;
 }
 const canSell=card=>!sellWhy(card);
-/** 売る。**戻せない**ので、押す前の確認は画面側が持つ(→docs/06 §6.35)。 */
+/** 売る。**戻せない**ので、押す前の確認は画面側が持つ(→docs/11 §6.35)。 */
 function sellCard(id){
   const c=cardById(id);
   if(!c||sellWhy(c))return null;
@@ -795,7 +795,7 @@ function sellCard(id){
   return { coin, name:c.name };
 }
 
-// ---------- 移籍市場(→docs/03 §3.67) ----------
+// ---------- 移籍市場(→docs/10 §3.67) ----------
 // **名指しで買える唯一の経路**。ほかの経路(スカウト・引換券・実績・トレード)は
 // どれも抽選か、向こうから来るもので、「この枠にこの選手が要る」に応えられない。
 // 顔ぶれは節から決まるので、**節が変われば総入れ替え**(逃したら消える)。
@@ -880,7 +880,7 @@ function marketBuy(id){
 }
 
 /**
- * まとめて売る(→docs/03 §3.68)。**売れないものは黙って飛ばす**。
+ * まとめて売る(→docs/10 §3.68)。**売れないものは黙って飛ばす**。
  * 1枚ずつ sellCard に通すので、編成・師弟・実在選手・貸与の縛りは
  * 1枚売りとまったく同じ判断になる(ここに条件を書き足さない)。
  * 返り値の `sold` は実際に売れた枚数で、選んだ数と一致するとは限らない。
@@ -1160,7 +1160,7 @@ function trainAdd(id,k,n){
 // 配布物とチュートリアルの入口で、HOME の秘書のひとことがその最新を映す。
 const mailAll=()=>S.player.mail||(S.player.mail=[]);
 /**
- * **まだ受け取っていない連絡に入っている実在選手**(→docs/03 §3.49)。
+ * **まだ受け取っていない連絡に入っている実在選手**(→docs/10 §3.49)。
  * 「持っていない人からしか出さない」の判定は `S.player.coll` を見るが、
  * 連絡の中で待っているカードはそこに居ない。これを混ぜないと、同じ人が
  * 2つの経路から同時に届く。
@@ -1267,9 +1267,9 @@ function mailTake(id,pos){
   m.got=true; m.read=true;
   if(g.ticket)ticketAdd(g.ticket,1);
   if(g.coin)S.club.coins+=g.coin;
-  // **メモラビリア**(→docs/03 §3.55)。受け取った時点で開く
+  // **メモラビリア**(→docs/10 §3.55)。受け取った時点で開く
   if(g.mem&&!memHas(g.mem)){ memOwned().push(g.mem); memInvite(memById(g.mem)); }
-  // **采配**(→docs/03 §3.50)。受け取った時点で監督の引き出しに入る
+  // **采配**(→docs/10 §3.50)。受け取った時点で監督の引き出しに入る
   if(g.tactic)learnTactic(g.tactic);
   // **カードそのものを添えた連絡**(トレード →§3.49 / 実績 →§3.47)。
   // **手元に入れる瞬間に通し番号へ載せ替える**(市場と同じ始末 →marketBuy)。
@@ -1280,7 +1280,7 @@ function mailTake(id,pos){
     g.card={ ...g.card, id:nextCardId() };
     S.player.coll.push(g.card);
   }
-  // **ユースはクラブの預かり**(→docs/03 §3.57)。手札ではなく貸与の側へ入れる
+  // **ユースはクラブの預かり**(→docs/10 §3.57)。手札ではなく貸与の側へ入れる
   if(g.youth&&S.club){
     g.youth={ ...g.youth, id:nextCardId() };
     (S.club.loan||(S.club.loan=[])).push(g.youth);
@@ -1333,7 +1333,7 @@ function drawSig(rng,rarity,pos){
 }
 const drawLegend=rng=>drawSig(rng,"LEG");
 
-// ---------- メモラビリア(→docs/03 §3.55) ----------
+// ---------- メモラビリア(→docs/10 §3.55) ----------
 // **普段は戦えない編成**との一戦。合言葉(hash)を読ませると開き、以後いつでも戦える。
 // 節も日程も消費しない**エキシビション**なので、キャリアの進行には一切触らない。
 
@@ -1347,7 +1347,7 @@ const memList=()=>MEMORABILIA.filter(m=>memHas(m.id));
  * 返り値は開いたメモラビリア。合わなければ null、既に持っていれば "have"。
  */
 /**
- * メモラビリアが開いたときの招待状(→docs/03 §3.55)。
+ * メモラビリアが開いたときの招待状(→docs/10 §3.55)。
  *
  * **開き方は3通りある**(世界の頂点の褒賞 / 合言葉 / URL)のに、
  * 知らせが届くのは褒賞のときだけだった。合言葉や URL で開いた人は
@@ -1375,7 +1375,7 @@ function memUnlock(code){
   return m;
 }
 /**
- * 世界の頂点を獲ったときの贈り物(→docs/03 §3.55)。
+ * 世界の頂点を獲ったときの贈り物(→docs/10 §3.55)。
  * **まだ持っていないものから1つ**を秘書の受信箱へ届ける。
  * 全部そろっていれば何も起きない(空の連絡を出さない)。
  */
@@ -1396,7 +1396,7 @@ function memAward(tag){
   return m;
 }
 /**
- * 相手の11人+控え(→docs/03 §3.55)。**常に最強の状態**で組む。
+ * 相手の11人+控え(→docs/10 §3.55)。**常に最強の状態**で組む。
  * 枠の並びは陣形の並びと同じ順に置いてあるので、そのまま渡せば意図した配置になる。
  */
 function memSide(m){
@@ -1419,7 +1419,7 @@ function memSide(m){
            coach:m.coachType||"steady", med:1 };
 }
 /**
- * 一戦の後始末(→docs/03 §3.55)。**節は進めない**。
+ * 一戦の後始末(→docs/10 §3.55)。**節は進めない**。
  * 勝てば相手の選手を1人もらえることがあり、采配は**負けても盗める**(見て覚える)。
  */
 function memReward(m,win,seed){
@@ -1427,7 +1427,7 @@ function memReward(m,win,seed){
   const rng=mulberry32((S.world.seed^hashStr("mem:"+m.id+":"+(seed||0)))>>>0);
   const out={ card:null, tactic:null };
   const k=win?T.winK:1;
-  // **戦利品は秘書の受信箱へ届ける**(→docs/03 §3.55)。その場で手に入れると
+  // **戦利品は秘書の受信箱へ届ける**(→docs/10 §3.55)。その場で手に入れると
   // 「いつ増えたのか」が残らない。選手も采配も、届くものは同じ道を通す
   if(win&&rng()<T.card*k){
     const mine=new Set(S.player.coll.map(c=>c.sig).filter(Boolean)
@@ -1648,7 +1648,7 @@ function trustOver(n){
 /** いま相談してくる選手(→§3.39)。**1人だけ**。居なければ null。 */
 function mentorPending(){ return trustOver(TUNING.trust.need)[0]||null; }
 
-// ---------- 特別采配(→docs/03 §3.50) ----------
+// ---------- 特別采配(→docs/10 §3.50) ----------
 // **監督が覚えていて、かつクラブが理解していないと使えない。**
 //   覚える … player.tactics(キャリアに残る。移籍しても消えない)
 //   理解   … club.exp(**クラブに貯まる**ので、移籍したら0から)
@@ -1668,7 +1668,7 @@ function tacticWhy(id){
 }
 const tacticOk=id=>!!id&&!tacticWhy(id);
 /**
- * 采配の但し書き(→docs/03 §3.50)。
+ * 采配の但し書き(→docs/10 §3.50)。
  * **采配は監督が恒久的に覚えるもの**で、クラブを渡り歩いても消えない。
  * ただし**熟練度はクラブに帰属する**ので、移った先では 0 から。
  * 監督が戦い方を知っていても、選手がまだ応えられない、という関係になっている。
@@ -1688,7 +1688,7 @@ function learnTactic(id){
 }
 
 /**
- * そのクラブが敷いている采配(→docs/03 §3.51)。**1部と2部だけ**。
+ * そのクラブが敷いている采配(→docs/10 §3.51)。**1部と2部だけ**。
  *
  * 3部は素朴に戦う。上の部ほど賢い相手が並ぶので、**上へ行くほど盗める手が増える**。
  * どの采配かはクラブから決まる(下見でも試合でも同じ)。
@@ -1708,7 +1708,7 @@ function clubTactic(clubId){
   return pool[Math.floor(rng()*pool.length)].id;
 }
 /**
- * 采配を盗む(→docs/03 §3.51)。**その采配で来た相手とやり合った試合のあと**に引く。
+ * 采配を盗む(→docs/10 §3.51)。**その采配で来た相手とやり合った試合のあと**に引く。
  * 覚えていない采配だけが対象で、勝つほど当たりやすい。
  */
 function learnRoll(tacticId,res,seed,cup){
@@ -1718,7 +1718,7 @@ function learnRoll(tacticId,res,seed,cup){
   const rng=mulberry32((S.world.seed^hashStr("learn:"+tacticId+":"+S.career.node+":"+seed))>>>0);
   if(rng()>=p)return null;
   const t=tacticById(tacticId);
-  // **受け取ってから覚える**(→docs/03 §3.50)。選手も采配も、届くものは
+  // **受け取ってから覚える**(→docs/10 §3.50)。選手も采配も、届くものは
   // 秘書の受信箱を通す。ここで直接覚えさせると「いつ増えたのか」が残らない
   mailPush("learn:"+tacticId,{
     from:"sec", title:"「"+t.label+"」を習得しました",
@@ -1729,7 +1729,7 @@ function learnRoll(tacticId,res,seed,cup){
   return tacticId;
 }
 
-// ---------- ユース(→docs/03 §3.57) ----------
+// ---------- ユース(→docs/10 §3.57) ----------
 // **タダで手に入る代わりに、置いていく。** ユース組織が1段でも建っていれば、
 // 任期の中ほどに下部組織から1人だけ上がってくる。
 //
@@ -1803,7 +1803,7 @@ function youthAward(){
 /** その選手がユース上がりか。**連携の扱いが変わる**(→§3.57)。 */
 const isYouth=c=>!!c&&((c.skills||[]).includes("クラブユース")||c.youth===true);
 
-// ---------- トレード(→docs/03 §3.49) ----------
+// ---------- トレード(→docs/10 §3.49) ----------
 // **任期の折り返し(45節)と終盤(90節)に1度ずつ**、他クラブから話が来る。
 // 出せるのは **WORLD CLASS 以上の実名選手で、いま編成に入っていない人**だけ。
 // 「使っていない切り札を、要る駒に替える」という判断にするため。
@@ -1888,7 +1888,7 @@ function tradeDo(ix){
   return { at:t.at, done:true, out, card:c };
 }
 
-// ---------- 節の出来事(→docs/03 §3.48) ----------
+// ---------- 節の出来事(→docs/10 §3.48) ----------
 // **10試合に1回くらい、選手のほうから何かが起きる。** 96節が「打ち手 → 試合」の
 // 反復になっているので、たまに別の色を入れる。**同時には1つしか起きない**。
 //
@@ -2329,7 +2329,7 @@ const trophyCount=()=>(S.player.trophies||[]).length;
  */
 function trophyAdd(id,name,kind){
   const list=S.player.trophies||(S.player.trophies=[]);
-  // **クラブ側にも積む**(→docs/03 §3.9a)。監督の棚は通算だが、こちらは
+  // **クラブ側にも積む**(→docs/10 §3.9a)。監督の棚は通算だが、こちらは
   // 「この在任で獲ったもの」。任期が明ければクラブごと畳まれる(残留なら続く)
   if(S.club)(S.club.won||(S.club.won=[])).push({ id, name, kind, season:S.world.season });
   const t=list.find(x=>x.id===id);
@@ -2345,7 +2345,7 @@ function trophyAdd(id,name,kind){
   return { t:nt, first:true };
 }
 /**
- * その実績に付く報酬(→docs/03 §3.52)。**初優勝にだけシグネチャが付く**。
+ * その実績に付く報酬(→docs/10 §3.52)。**初優勝にだけシグネチャが付く**。
  * 一番価値のあるものを棚の目標そのものと結びつけて、実績を飾りで終わらせない。
  */
 function achPrize(id,kind,first){
@@ -2519,7 +2519,7 @@ function cupSide(cup,round,foe){
   const rng=mulberry32((W.seed^hashStr(cup.id+":"+W.season+":"+c.node0+":"+round+":"+foe))>>>0);
   const elite=foe===c.elite;
   const saveUid=uid; uid=7000000+Math.floor(rng()*900000);  // 手持ちカードとIDをぶつけない
-  // **大会の格と勝ち上がりは★で出す**(→docs/03 §3.53)。段の数値は域内のまま
+  // **大会の格と勝ち上がりは★で出す**(→docs/10 §3.53)。段の数値は域内のまま
   const star=clamp(Math.round(cup.bias*TUNING.star.cupK+round*TUNING.star.roundK
     +(elite?1:0)),0,TUNING.star.max);
   const roster0=makeRoster(rng,{ club:"", star, rarPlan:cupPlan(cup,elite,rng),
@@ -2527,7 +2527,7 @@ function cupSide(cup,round,foe){
   uid=saveUid;
   const roster=star>=TUNING.star.goldAt?goldWeb(roster0):roster0;
   const form=Object.keys(FORMATIONS)[Math.floor(rng()*Object.keys(FORMATIONS).length)];
-  // **格の高い大会ほど賢い相手が出る**(→docs/03 §3.51)。盗む相手になる
+  // **格の高い大会ほど賢い相手が出る**(→docs/10 §3.51)。盗む相手になる
   const smart=Math.round(cup.bias+round*1.5+(elite?3:0));
   const pool=TACTICS.filter(t=>t.exp<=smart*2200&&(!t.form||t.form.includes(form)));
   const tactic=pool.length?pool[Math.floor(rng()*pool.length)].id:null;
@@ -2576,7 +2576,7 @@ function closeCup(){
     if(last)last.champ=true;
     trophyAdd(cup.id,cup.trophy,"cup");
     sponHit("cup",cup.id);                                // スポンサーの課題(→§3.40)
-    // **世界の頂点を獲るとメモラビリアが1つ届く**(→docs/03 §3.55)。
+    // **世界の頂点を獲るとメモラビリアが1つ届く**(→docs/10 §3.55)。
     // 最高峰のクラブに勝てるチームだけが挑める、その先の遊びへの入口
     memAward(cup.id);
   }

@@ -35,7 +35,7 @@ function fxLine(name) {
 }
 
 // ---------- クラブごとにまとめる ----------
-// **同じクラブの札は一緒に見たい**。メモラビリア(→docs/03 §3.55)を組むときに
+// **同じクラブの札は一緒に見たい**。メモラビリア(→docs/10 §3.55)を組むときに
 // 「このクラブで11人そろうか」を数えるのがこの表のいちばんの用途
 const byClub = new Map();
 for (const d of E.SIGNATURES) {
@@ -69,13 +69,13 @@ for (const k of ["WC", "LEG"]) {
 }
 L.push("");
 L.push("**全" + E.SIGNATURES.length + "枚 / " + clubs.length + "クラブ。**");
-L.push("OVR は6能力の単純な合計です(→[03. §3.53](03-game-design.md))。");
+L.push("OVR は6能力の単純な合計です(→[10. §3.53](10-design-log.md))。");
 L.push("");
 L.push("---");
 L.push("");
 L.push("## 9.2 クラブ別の顔ぶれ");
 L.push("");
-L.push("**11人そろうクラブはメモラビリア(→[03. §3.55](03-game-design.md))が組めます。**");
+L.push("**11人そろうクラブはメモラビリア(→[10. §3.55](10-design-log.md))が組めます。**");
 L.push("");
 for (const [club, list] of clubs) {
   list.sort((a, b) => ovrOf(b) - ovrOf(a));

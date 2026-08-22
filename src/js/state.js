@@ -13,10 +13,10 @@ const SAVE_VER=31;
 function defaultState(){
   return {
     v:SAVE_VER,
-    // 選んでいる特別采配(→docs/03 §3.50)。指示(S.order)と同じ並び
+    // 選んでいる特別采配(→docs/10 §3.50)。指示(S.order)と同じ並び
     tactic:null,
     coach:"",                       // 監督名(就任契約書で記入)
-    // 監督の顔(→docs/03 §3.45)。就任契約書で選ぶ。src/assets/manager の名前が入る。
+    // 監督の顔(→docs/10 §3.45)。就任契約書で選ぶ。src/assets/manager の名前が入る。
     // 空なら監督名から決まる(古いセーブと、選ばずに進んだ場合の受け皿)
     face:"",
     form:DEFAULT_FORM,              // 使用フォーメーション
@@ -35,18 +35,18 @@ function defaultState(){
       // **キャリアで1つ**。任期をまたいでも消えない(二度目の就任で案内は出ない)
       seen:{},
       coll:[],                      // 集めた選手カード = プレイヤーの資産(→§3.2.2)
-      // 背景(→docs/06 §6.45)。端末枠の外側だけを着せ替える。**既定はピッチ**
+      // 背景(→docs/11 §6.45)。端末枠の外側だけを着せ替える。**既定はピッチ**
       bg:"pitch",
-      // 開けたメモラビリア(→docs/03 §3.55)。**キャリアをまたいで残る**
+      // 開けたメモラビリア(→docs/10 §3.55)。**キャリアをまたいで残る**
       mem:[],
-      // 習得した采配(→docs/03 §3.50)。**キャリアに残る**(移籍しても消えない)。
+      // 習得した采配(→docs/10 §3.50)。**キャリアに残る**(移籍しても消えない)。
       // ダイレクトプレーだけは最初から。監督なら誰でも知っている手なので
       tactics:["direct"],
       trophies:[],                  // 獲得トロフィー(→§3.9)
       // 師弟の持ち越し(→docs/03 §3.39)。任期が明けるときに作られ、
       // **次の就任で1度だけ**使われて消える。{ cards, train, bond, gold }
       legacy:null,
-      // 残留の持ち越し(→docs/03 §3.58)。任期が明けるときに撮られ、
+      // 残留の持ち越し(→docs/10 §3.58)。任期が明けるときに撮られ、
       // **同じクラブを選び直したときだけ**使われて消える。
       // 師弟の持ち越しが「どこへ行っても連れていける少数」なのに対して、
       // こちらは「このクラブに居続けるなら全部」
@@ -81,9 +81,9 @@ function defaultState(){
       // キープレイヤー(→docs/03 §3.44)。**その試合のあいだだけ**の指名。
       // 節が変われば消える(hand と同じ扱い)
       kp:null,
-      // 済ませたトレードの節目(→docs/03 §3.49)。断った場合もここに入る
+      // 済ませたトレードの節目(→docs/10 §3.49)。断った場合もここに入る
       tradeDone:[],
-      // 移籍市場で買い取った枠(→docs/03 §3.67)。{ "mk<節>-<枠>": 1 }。
+      // 移籍市場で買い取った枠(→docs/10 §3.67)。{ "mk<節>-<枠>": 1 }。
       // **節が変われば市場は総入れ替え**なので、鍵は節をまたいで意味を持たない
       market:{},
       // クラブチャット(→docs/03 §3.29)。**節ごとに畳む**ので、節が進めば消える。
@@ -280,7 +280,7 @@ function migrate(){
   }
   // v12 → v13: 采配を足した(→docs/03 §3.28)。未指定 = 指示なしと同じ。
   if(S.v<13&&S.order===undefined)S.order=null;
-  // v28 → v29: 特別采配(→docs/03 §3.50)。**監督が覚えたものはキャリアに残る**
+  // v28 → v29: 特別采配(→docs/10 §3.50)。**監督が覚えたものはキャリアに残る**
   if(S.v<29){
     if(!S.player.tactics||!S.player.tactics.length)S.player.tactics=["direct"];
     if(S.tactic===undefined)S.tactic=null;
@@ -339,7 +339,7 @@ function migrate(){
     for(const m of MAILS)if(m.tut&&!S.player.mail.some(x=>x.id===m.id))
       S.player.mail.push({ id:m.id, at:0, read:true, got:true });
   }
-  // v29 → v30: 移籍市場(→docs/03 §3.67)。**買った枠の覚え書きを足しただけ**
+  // v29 → v30: 移籍市場(→docs/10 §3.67)。**買った枠の覚え書きを足しただけ**
   if(S.v<30&&S.career&&!S.career.market)S.career.market={};
   if(S.v<26){
     if(S.club&&S.club.sponsor===undefined)S.club.sponsor=null;

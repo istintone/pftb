@@ -101,7 +101,7 @@ const STEPS = [
       if (on === "none") break;
       await ctx.wait(150);
     }
-    // **端末の淵**(→docs/06 §6.59)。タイトルだけに出す演出
+    // **端末の淵**(→docs/11 §6.59)。タイトルだけに出す演出
     ctx.log("  端末の淵:", await ctx.js(`(()=>{
       const n=document.querySelector('.t-notch'), hm=document.querySelector('.t-home');
       const bz=document.querySelector('.t-bezel');
@@ -109,7 +109,7 @@ const STEPS = [
       if(!bz)throw new Error('淵が無い');
       const r=n.getBoundingClientRect(), r2=hm.getBoundingClientRect();
       if(getComputedStyle(n).display==='none')throw new Error('ノッチが出ていない');
-      // **淵は1周する**(→docs/06 §6.59)。4辺そろって初めて板に見える
+      // **淵は1周する**(→docs/11 §6.59)。4辺そろって初めて板に見える
       const rb=bz.getBoundingClientRect(), sc=document.getElementById('scr-title')
         .getBoundingClientRect();
       for(const [k,v] of [['上',rb.top-sc.top],['下',sc.bottom-rb.bottom],
@@ -142,7 +142,7 @@ const STEPS = [
     await ctx.wait(700);
     ctx.log("画面:", await ctx.screen(),
       "/ オファー数:", await ctx.js("document.querySelectorAll('#offerList [data-club]').length"));
-    // 就任の導入(→docs/06 §6.47)。**何が起きていて、次に何をするのか**
+    // 就任の導入(→docs/11 §6.47)。**何が起きていて、次に何をするのか**
     ctx.log("  導入:", await ctx.js(`(()=>{
       const box=document.getElementById('offerIntro');
       if(!box)throw new Error('導入が無い');
@@ -171,7 +171,7 @@ const STEPS = [
     await ctx.js("(()=>{const i=document.getElementById('ctCoach');i.value='C. モレッティ';i.dispatchEvent(new Event('input'))})()");
     await ctx.wait(150);
     ctx.log("署名欄:", JSON.stringify(await ctx.js("document.getElementById('ctSignPreview').textContent")));
-    // 就任者の肖像(→docs/03 §3.45)。**選べること**と**チャットに出ること**
+    // 就任者の肖像(→docs/10 §3.45)。**選べること**と**チャットに出ること**
     ctx.log("就任者の肖像:", await ctx.js(`(()=>{
       const f=[...document.querySelectorAll('#ctFaces [data-face]')];
       if(f.length<2)throw new Error('顔が並ばない: '+f.length);
@@ -197,7 +197,7 @@ const STEPS = [
     await ctx.wait(700);
     ctx.log("画面:", await ctx.screen(),
       "/ ヘッダー:", await ctx.js("document.getElementById('hdClubName').textContent"),
-      // **ヘッダーの右は監督の顔**(→docs/06 §6.50)。コインは CLUB へ移した
+      // **ヘッダーの右は監督の顔**(→docs/11 §6.50)。コインは CLUB へ移した
       "/ 監督の顔:", await ctx.js(
         "document.getElementById('hdMgr').querySelector('img')?'あり':'なし'"));
     await ctx.shot("04-home");
@@ -365,7 +365,7 @@ const STEPS = [
         +document.querySelector('.cup-res b').textContent;
     })()`));
     await ctx.shot("07m-cup-plan");
-    // **相手の数値は段の域内**(→docs/03 §3.53)。強さの差は★で出しているので、
+    // **相手の数値は段の域内**(→docs/10 §3.53)。強さの差は★で出しているので、
     // ★が読めないと「なぜ強いのか」が画面から消える
     ctx.log("  受信箱の並び:", await ctx.js(`(()=>{
       const keep=S.player.mail.slice(), node=S.career.node, season=S.world.season;
@@ -403,7 +403,7 @@ const STEPS = [
       return '域外0/'+tot+'人 ／ 最大★'+star+' ／ 強豪★'+top+'(黄金線あり) 弱小★'+bottom
         +' ／ 表示 '+html;
     })()`));
-    // 相手監督(→docs/03 §3.56)。**できるのは指示と交代の2つだけ**
+    // 相手監督(→docs/10 §3.56)。**できるのは指示と交代の2つだけ**
     ctx.log("  相手監督:", await ctx.js(`(()=>{
       if(COACHES.length<5)throw new Error('性分が少なすぎる: '+COACHES.length);
       // **名前と同じ key から決まる**(下見と試合で食い違わない)
@@ -435,7 +435,7 @@ const STEPS = [
       // **気まぐれはよく動く**
       if(whim.o<3||whim.s<1)
         throw new Error('気まぐれ型が動かない: 指示'+whim.o+' 交代'+whim.s);
-      // 下見に性分と**顔**が出る(→docs/03 §3.56)
+      // 下見に性分と**顔**が出る(→docs/10 §3.56)
       openFoe({ kind:'club', clubId:myFixture().opp });
       const txt=document.getElementById('foeCoach').textContent;
       if(txt.indexOf('型')<0)throw new Error('下見に性分が出ない: '+txt);
@@ -607,7 +607,7 @@ const STEPS = [
       "/ 選択肢", await ctx.js("document.querySelectorAll('#chatAsk [data-pick]').length"));
     // 相手の見立て(→docs/03 §3.35)。**打ち手を聞かれる前**に、並び・注目選手・戦力差を言う
     ctx.log("  相手の見立て:", await ctx.js(`(()=>{
-      // **発言そのものだけを見る**(→docs/06 §6.36)。時刻や既読は画面の飾りで、
+      // **発言そのものだけを見る**(→docs/11 §6.36)。時刻や既読は画面の飾りで、
       // 秘書が読み上げているわけではない
       const rows=[...document.querySelectorAll('#chatLog .ch-b')].map(r=>r.textContent);
       const side=cpuSquad(myFixture().opp), b=foeBrief(side);
@@ -695,7 +695,7 @@ const STEPS = [
     ctx.log("  スポンサーの相談:", await ctx.js(`(()=>{
       S.club.sponsor=null; S.player.fame=99999;
       show('home');
-      // **流し表示は1行しか出ない**(→docs/06 §6.58)。中身はデータ側を読む
+      // **流し表示は1行しか出ない**(→docs/11 §6.58)。中身はデータ側を読む
       if(clubNews().join(' ').indexOf('スポンサー')<0)
         throw new Error('CLUB NEWS に相談が出ない');
       S.career.chat=null; S.career.hand=null; S.career.comp=null;
@@ -736,13 +736,13 @@ const STEPS = [
       return sponsorById(sp.id).name+' ／ '+sponGoalText(sp)+' ／ 支援 '+sponAidById(sp.aid).label;
     })()`));
     await ctx.shot("05l-chat-hand4");
-    // 看板(→docs/06 §6.25)。**契約中だけ**次戦タイルに出る
+    // 看板(→docs/11 §6.25)。**契約中だけ**次戦タイルに出る
     ctx.log("  スポンサーの看板:", await ctx.js(`(()=>{
       show('home');
       const t=document.getElementById('homeNext').textContent;
       const nm=sponsorById(sponsor().id).name;
       if(t.indexOf('OFFICIAL PARTNER')<0)throw new Error('次戦タイルに看板が出ない');
-      // **絵のある会社は看板の画像、無ければ社名**(→docs/06 §6.32)
+      // **絵のある会社は看板の画像、無ければ社名**(→docs/11 §6.32)
       const ad=document.querySelector('#homeNext .ad-nx img');
       if(!ad&&t.indexOf(nm)<0)throw new Error('社名が出ない');
       const keep=S.club.sponsor; S.club.sponsor=null; show('home');
@@ -777,11 +777,11 @@ const STEPS = [
         +' ／ 絵の無い会社: '+(noArt?noArt.name+'(社名に落ちる)':'無し(23社そろっている)')
         +'（契約が無ければ出ない）';
     })()`));
-    // **看板の絵が出ている状態**も1枚残す(→docs/06 §6.32)
+    // **看板の絵が出ている状態**も1枚残す(→docs/11 §6.32)
     await ctx.js("if(window.__adId){sponsor().id=window.__adId;show('home');}");
     await ctx.wait(200);
     await ctx.shot("03d-home-banner");
-    // HOME のタイル(→docs/06 §6.44)。**4枚**。市場と実績はそれぞれ行き先を持つ
+    // HOME のタイル(→docs/11 §6.44)。**4枚**。市場と実績はそれぞれ行き先を持つ
     ctx.log("  HOMEのタイル:", await ctx.js(`(()=>{
       const t=[...document.querySelectorAll('#scr-home .tiles .tile')];
       if(t.length!==4)throw new Error('タイルが4枚でない: '+t.length);
@@ -818,7 +818,7 @@ const STEPS = [
     })()`));
     await ctx.shot("03e-home-tiles");
     // **WCが並んだときの見え方**。市場の抽選まかせだと出ない回があるので、
-    // 4つの枠ぶんそれぞれ確かめる(→docs/06 §6.44)
+    // 4つの枠ぶんそれぞれ確かめる(→docs/11 §6.44)
     ctx.log("  市場にWCが居るとき:", await ctx.js(`(()=>{
       const orig=marketList;
       const out=[];
@@ -921,7 +921,7 @@ const STEPS = [
     // CLUB NEWS(→docs/03 §3.40)。**達成したら残り節を数えない**
     ctx.log("  CLUB NEWS の書き方:", await ctx.js(`(()=>{
       show('home');
-      openNews();                     // 一覧はモーダル(→docs/06 §6.58)
+      openNews();                     // 一覧はモーダル(→docs/11 §6.58)
       const nm=sponsorById(sponsor().id).name;
       const line=[...document.querySelectorAll('#newsList .news')]
         .map(e=>e.textContent).find(x=>x.indexOf(nm)>=0);
@@ -934,7 +934,7 @@ const STEPS = [
     // **契約は残したまま**にする。外すと次の節でまたスポンサーの相談が先に出て、
     // 師弟の相談まで進まない(1節に出るイベントは1つ)
     await ctx.js("S.player.fame=0; S.career.chat=null; S.career.hand=null; S.career.comp=null;");
-    // トレード(→docs/03 §3.49)。**出す → 何が欲しいか → 受信箱で受け取る**
+    // トレード(→docs/10 §3.49)。**出す → 何が欲しいか → 受信箱で受け取る**
     ctx.log("  トレード:", await ctx.js(`(()=>{
       window.__trSave={ node:S.career.node, done:(S.career.tradeDone||[]).slice() };
       // 出せる選手(編成外の実名WC以上)を用意して、節目まで送る
@@ -987,7 +987,7 @@ const STEPS = [
     })()`));
     await ctx.wait(300);
     await ctx.shot("05s-mail-trade");
-    // 節の出来事(→docs/03 §3.48)。**問いの3択**を通しで見る
+    // 節の出来事(→docs/10 §3.48)。**問いの3択**を通しで見る
     ctx.log("  節の出来事:", await ctx.js(`(()=>{
       // **あとの手順のために元の状態を控えておく**。節を送って当たりを探すので、
       // 戻さないと以降の検査(ケガと休息・師弟)が別の節を見ることになる
@@ -1048,7 +1048,7 @@ const STEPS = [
     await ctx.wait(250);
     await ctx.shot("05q-chat-luck-hit");
     // 師弟の相談(→docs/03 §3.39)。**打ち手のあと**に選手から話しかけてくる
-    // 秘書はクラブごと(→docs/06 §6.27)。**移れば替わる / 同じクラブなら同じ人**
+    // 秘書はクラブごと(→docs/11 §6.27)。**移れば替わる / 同じクラブなら同じ人**
     ctx.log("  秘書の顔:", await ctx.js(`(()=>{
       const A=(window.ASSETS&&window.ASSETS.secretary)||{};
       const n=Object.keys(A).length;
@@ -1344,7 +1344,7 @@ const STEPS = [
         +' (中央線は50%。どちらも越えていない)';
     })()`));
     await ctx.shot("07a-cutin-kickoff");
-    // ピッチ脇の看板(→docs/06 §6.32)。**絵のある会社に差し替えて**1枚残す
+    // ピッチ脇の看板(→docs/11 §6.32)。**絵のある会社に差し替えて**1枚残す
     ctx.log("      ピッチ脇の看板:", await ctx.js(`(()=>{
       const A=(window.ASSETS&&window.ASSETS.banner)||{};
       const w=SPONSORS.find(x=>A[x.id]); if(!w||!sponsor())return '契約が無い';
@@ -1377,12 +1377,12 @@ const STEPS = [
     })()`));
     await ctx.wait(250);
     await ctx.shot("07d-cutin-vs-1");   // 両者が入ってきたところ
-    // **発動した札が名前で出る**(→docs/06 §6.26)。固有スキルは金で光る
+    // **発動した札が名前で出る**(→docs/11 §6.26)。固有スキルは金で光る
     ctx.log("  発動した札:", await ctx.js(`(()=>{
       const H=_M.home,A=_M.away;
       const atk=H.players.find(p=>p.role==='FW'), df=A.players.find(p=>p.role==='DF');
       const dch=(COUNTERS[df.sub]||COUNTERS.CB)[0];
-      // **攻守どちらの札も、その選手の下に出す**(→docs/06 §6.40)。
+      // **攻守どちらの札も、その選手の下に出す**(→docs/11 §6.40)。
       // 中央にまとめていた頃はどちらの札か読めなかった
       cutVs({side:'H',label:'マエストロの一差し',ch:'cfRun',vs:df.c.id,
         dch:dch.id,dlabel:dch.label,
@@ -1390,7 +1390,7 @@ const STEPS = [
       // **中央には置かない**。札は必ずどちらかの選手の中にある
       if(document.querySelector('#mCut .cut-row > .cut-sk'))
         throw new Error('札が中央に残っている');
-      // **選手の絵に重ねる**(→docs/06 §6.46)。下に流すと帯が縦に伸び、
+      // **選手の絵に重ねる**(→docs/11 §6.46)。下に流すと帯が縦に伸び、
       // 端に寄せると枠に収まらず名前が切れる
       const sk=document.querySelector('#mCut .cut-fig .cut-sk');
       if(sk&&getComputedStyle(sk).position!=='absolute')
@@ -1444,7 +1444,7 @@ const STEPS = [
     })()`));
     await ctx.wait(250);
     await ctx.shot("07d2-cutin-skill");
-    // **どの帯でも金になること**(→docs/06 §6.34)。パスの帯を作り忘れていて、
+    // **どの帯でも金になること**(→docs/11 §6.34)。パスの帯を作り忘れていて、
     // ベッカムの札が出ても見た目が変わらなかった(実際に見落とした)
     ctx.log("  固有スキルの帯:", await ctx.js(`(()=>{
       const H=_M.home,A=_M.away;
@@ -1665,7 +1665,7 @@ const STEPS = [
       return 'スコアボード '+sc+' / 実況「'+line.trim().slice(-9)+'」(左=自分)';
     })()`));
     await ctx.shot("07b-match");
-    // 交代タブ(→docs/06 §6.21)。**開くと試合が止まる**
+    // 交代タブ(→docs/11 §6.21)。**開くと試合が止まる**
     // 采配(→docs/03 §3.28)。**交代の反対側**のタブ。開くと止まり、選ぶと閉じて再開する
     // 軸(→docs/03 §3.44)。**試合中に何度でも指名し直せる**
     await ctx.js("document.getElementById('kpTab').click()");
@@ -1673,7 +1673,7 @@ const STEPS = [
     ctx.log("  KPタブ:", await ctx.js(`(()=>{
       const rows=[...document.querySelectorAll('#kpBody [data-kp]')];
       if(rows.length!==11)throw new Error('ピッチの11人が並ばない: '+rows.length);
-      // **説明も相手の軸もここには置かない**(→docs/06 §6.37)。11人ぶんの高さが要る
+      // **説明も相手の軸もここには置かない**(→docs/11 §6.37)。11人ぶんの高さが要る
       if(document.getElementById('kpNote'))throw new Error('説明の欄が残っている');
       const sig=document.querySelectorAll('#kpBody .kp-sig').length;
       const none=document.querySelectorAll('#kpBody .kp-none').length;
@@ -1683,7 +1683,7 @@ const STEPS = [
       const last=rows[10].getBoundingClientRect(), lid=box.getBoundingClientRect();
       if(last.bottom>lid.bottom+1)
         throw new Error('11人目が見切れている: '+Math.round(last.bottom-lid.bottom)+'px はみ出し');
-      // **引き出しはピッチと同じ高さ**(→docs/06 §6.37)。割合で決め打ちにすると
+      // **引き出しはピッチと同じ高さ**(→docs/11 §6.37)。割合で決め打ちにすると
       // 端末が変わったときにずれるので、実物どうしを突き合わせる
       const dr=document.getElementById('kpDrawer').getBoundingClientRect();
       const pr=document.getElementById('mPitch').getBoundingClientRect();
@@ -1707,7 +1707,7 @@ const STEPS = [
       // **ピッチで光る**(→docs/03 §3.44)。両チームぶん出る
       const mine=document.querySelectorAll('#mSlots .mp.kp[data-side="'+T.side+'"]').length;
       if(mine!==1)throw new Error('自分の軸が光らない: '+mine);
-      // **相手の軸は交代で下がることがある**(→docs/03 §3.56 で監督が代えるようになった)。
+      // **相手の軸は交代で下がることがある**(→docs/10 §3.56 で監督が代えるようになった)。
       // 数を決め打ちせず、**盤面の実状と突き合わせる**
       const foeSide=T.side==='H'?'A':'H';
       const F=foeSide==='H'?_M.home:_M.away;
@@ -1761,11 +1761,11 @@ const STEPS = [
     await ctx.shot("07l-order");
     await ctx.js("document.getElementById('ordClose').click()");
     await ctx.wait(300);
-    // 特別采配(→docs/03 §3.50 / docs/06 §6.38)。**指示から分けた専用のタブ**
+    // 特別采配(→docs/10 §3.50 / docs/11 §6.38)。**指示から分けた専用のタブ**
     ctx.log("  采配タブ(TAC):", await ctx.js(`(()=>{
       const tab=document.getElementById('tacTab');
       if(!tab||tab.classList.contains('off'))throw new Error('TACタブが出ていない');
-      // **指示の上**に置く(→docs/06 §6.38)
+      // **指示の上**に置く(→docs/11 §6.38)
       const tr=tab.getBoundingClientRect();
       const or=document.getElementById('ordTab').getBoundingClientRect();
       const kr=document.getElementById('kpTab').getBoundingClientRect();
@@ -1786,7 +1786,7 @@ const STEPS = [
       learnTactic('highpress'); S.club.exp=99999; renderTac();
       const n1=document.querySelectorAll('#ordTac [data-tac]').length;
       if(n1<=n0)throw new Error('覚えても増えない: '+n0+' → '+n1);
-      // **3つのタブは同じ見た目**(→docs/06 §6.39)。別々に書いて崩れた経緯がある
+      // **3つのタブは同じ見た目**(→docs/11 §6.39)。別々に書いて崩れた経緯がある
       const cs=id=>{ const c=getComputedStyle(document.getElementById(id));
         return [c.borderTopRightRadius,c.borderBottomRightRadius,c.padding,
                 c.borderTopWidth,c.borderTopStyle].join('|'); };
@@ -1823,7 +1823,7 @@ const STEPS = [
     })()`));
     await ctx.wait(400);
     await ctx.shot("07r-order-tactic");
-    // 選ぶと閉じ、**その場で盤面に効く**(→docs/03 §3.50)
+    // 選ぶと閉じ、**その場で盤面に効く**(→docs/10 §3.50)
     ctx.log("  敷くと盤面に出る:", await ctx.js(`(()=>{
       const rows=[...document.querySelectorAll('#ordTac [data-tac]')];
       rows[0].click();
@@ -1834,7 +1834,7 @@ const STEPS = [
         throw new Error('タブが光らない');
       return tacticById(S.tactic).label+' を敷いた';
     })()`));
-    // **帯が出るまで待つ**(→docs/06 §6.43)。エンジンが掛けた時点ではなく、
+    // **帯が出るまで待つ**(→docs/11 §6.43)。エンジンが掛けた時点ではなく、
     // **そのイベントが再生された時点**で帯が出る。engine の状態を見ると1拍早い
     for(let i=0;i<50&&!(await ctx.js(
         "document.getElementById('mTacMine').classList.contains('on')"));i++)
@@ -1847,7 +1847,7 @@ const STEPS = [
       if(T.tactic!==S.tactic)throw new Error('盤面に掛かっていない: '+T.tactic);
       if(mine.textContent.indexOf(tacticById(S.tactic).label)<0)
         throw new Error('帯の名前が違う: '+mine.textContent);
-      // **対角に置く**(→docs/06 §6.38)。自分は左下・相手は右上
+      // **対角に置く**(→docs/11 §6.38)。自分は左下・相手は右上
       const pr=document.getElementById('mPitch').getBoundingClientRect();
       const mr=mine.getBoundingClientRect();
       if(mr.left>pr.left+pr.width*0.5)throw new Error('自分の帯が左に無い');
@@ -1895,7 +1895,7 @@ const STEPS = [
         throw new Error('帯が残っている');
       return '盤面からも外れた';
     })()`));
-    // **采配を敷き替えると監督が出る**(→docs/06 §6.46)
+    // **采配を敷き替えると監督が出る**(→docs/11 §6.46)
     ctx.log("  監督のカットイン:", await ctx.js(`(()=>{
       const mySide=mMine();
       cutTactic({ side:mySide, tactic:'direct' });
@@ -1907,7 +1907,7 @@ const STEPS = [
       const t=tacticById('direct');
       const word=document.querySelector('#mCut .tac-b span').textContent;
       if(t&&t.line&&word!==t.line)throw new Error('掛け声が違う: '+word);
-      // **キックオフには監督を出さない**(→docs/06 §6.46)。盛りだくさんにしない
+      // **キックオフには監督を出さない**(→docs/11 §6.46)。盛りだくさんにしない
       cutKick();
       if(document.querySelector('#mCut .cut-mgr'))
         throw new Error('キックオフに監督が出ている');
@@ -1950,7 +1950,7 @@ const STEPS = [
     await ctx.shot("07s2-cutin-tactic");
     await ctx.js("openOrd()");
     await ctx.wait(400);
-    // **同時に開けるのは1つだけ**(→docs/06 §6.39)
+    // **同時に開けるのは1つだけ**(→docs/11 §6.39)
     ctx.log("  引き出しは1つだけ:", await ctx.js(`(()=>{
       const ids=['kpDrawer','tacDrawer','ordDrawer','subDrawer'];
       const open=()=>ids.filter(i=>document.getElementById(i).classList.contains('on'));
@@ -2049,7 +2049,7 @@ const STEPS = [
       if(_mPaused!==false&&!_M.over)throw new Error('閉じても再生に戻らない');
       return '再生に戻った';
     })()`));
-    // **止めて再開しても、見せ残しを捨てない**(→docs/06 §6.43)。
+    // **止めて再開しても、見せ残しを捨てない**(→docs/11 §6.43)。
     // 捨てていた頃は、捨てた中にゴールがあると次のイベントで点が2つ増えて見えた
     ctx.log("  止めても取りこぼさない:", await ctx.js(`(()=>{
       const evs=stepMatch(_M);
@@ -2082,7 +2082,7 @@ const STEPS = [
       await ctx.js("document.getElementById('mSc').textContent"),
       "/ 実況:", await ctx.js("document.querySelectorAll('#mFeed div').length"), "行");
     await ctx.shot("07c-match-end");
-    // **セピアの試合画面**(→docs/06 §6.60)。スコアと実況の読みやすさを見る
+    // **セピアの試合画面**(→docs/11 §6.60)。スコアと実況の読みやすさを見る
     await ctx.js("S.player.ui='sepia'; applyUi();"); await ctx.wait(200);
     await ctx.shot("30k-sepia-match");
     // 試合中の柱と引き出し(采配・KP・交代)。**選択中の表示**まで見る
@@ -2094,10 +2094,10 @@ const STEPS = [
     await ctx.js("S.player.ui='dark'; applyUi();");
     await ctx.js("document.getElementById('mDone').click()");
     await ctx.wait(400);
-    // **セピアの結果画面**(→docs/06 §6.60)。選手名と採点の読みやすさを見る
+    // **セピアの結果画面**(→docs/11 §6.60)。選手名と採点の読みやすさを見る
     await ctx.js("S.player.ui='sepia'; applyUi();"); await ctx.wait(200);
     await ctx.shot("30l-sepia-result");
-    // **結果画面も走査する**(→docs/06 §6.60)。試合を終えないと現れない
+    // **結果画面も走査する**(→docs/11 §6.60)。試合を終えないと現れない
     ctx.log("  セピアの結果画面:", await ctx.js(`(()=>{
       const c=window.__contrast(); c.scan('結果',document.getElementById('scr-result'));
       const u=[...new Set(c.out)];
@@ -2105,7 +2105,7 @@ const STEPS = [
       return '選手名・採点・判定、どれも読める';
     })()`));
     await ctx.js("S.player.ui='dark'; applyUi();");
-    // **行き先は下に貼り付く**(→docs/06 §6.41)。いちばん上まで戻しても、
+    // **行き先は下に貼り付く**(→docs/11 §6.41)。いちばん上まで戻しても、
     // いちばん下まで送っても、同じ位置に見えていること
     ctx.log("  行き先の固定:", await ctx.js(`(()=>{
       const body=document.getElementById('appBody');
@@ -2139,7 +2139,7 @@ const STEPS = [
       await ctx.js("document.getElementById('rsVerdict').textContent"),
       await ctx.js("document.getElementById('rsScore').textContent"));
     await ctx.shot("08-result");
-    // 試合収益(→docs/03 §3.47)。**明細で出す / EXPは出さない**
+    // 試合収益(→docs/10 §3.47)。**明細で出す / EXPは出さない**
     ctx.log("    試合収益:", await ctx.js(`(()=>{
       const rows=[...document.querySelectorAll('#rsReward .rs-in')];
       if(rows.length<2)throw new Error('明細が出ない: '+rows.length);
@@ -2196,7 +2196,7 @@ const STEPS = [
     })()`));
   }],
   ["スカウト(コインでパックを引く)", async ctx => {
-    // **秘書の名前**(→docs/03 §3.43a)。クラブごとに決まり、画面をまたいで一致する
+    // **秘書の名前**(→docs/10 §3.43a)。クラブごとに決まり、画面をまたいで一致する
     ctx.log("  秘書の名前:", await ctx.js(`(()=>{
       const n=secretaryName();
       if(!n.first||!n.last)throw new Error('名前が出ない');
@@ -2223,7 +2223,7 @@ const STEPS = [
       show('home');
       return n.full+'（'+lg+'）／ 144クラブで '+all.size+' 通り ／ 差し込みの残りなし';
     })()`));
-    // **CLUB NEWS は1行で流す**(→docs/06 §6.58)。知らせが増えても高さが変わらない
+    // **CLUB NEWS は1行で流す**(→docs/11 §6.58)。知らせが増えても高さが変わらない
     ctx.log("  CLUB NEWS:", await ctx.js(`(()=>{
       show('home');
       const box=document.getElementById('homeNews');
@@ -2256,7 +2256,7 @@ const STEPS = [
     })()`));
     await ctx.shot("04c-home-news");        // 一覧を開いたところ
     await ctx.js("closeNews()");
-    // **セピア**(→docs/06 §6.60)。地の明るさを入れ替えて主要画面を撮る
+    // **セピア**(→docs/11 §6.60)。地の明るさを入れ替えて主要画面を撮る
     await ctx.js("S.player.ui='sepia'; applyUi();");
     for (const [t, n] of [["home","30a-sepia-home"],["cards","30b-sepia-cards"],
                           ["deck","30c-sepia-deck"],["season","30d-sepia-season"],
@@ -2267,7 +2267,7 @@ const STEPS = [
     }
     await ctx.js("show('manager')"); await ctx.wait(250);
     await ctx.shot("30f-sepia-manager");
-    // **明るい地で消える字と、暗いまま残った面を機械で探す**(→docs/06 §6.60)。
+    // **明るい地で消える字と、暗いまま残った面を機械で探す**(→docs/11 §6.60)。
     // 目で全画面を見比べても必ず取りこぼす。実際、最初の検査は主要5画面しか見ず、
     // 勾配の面と影付きの字を除いていたので、試合中のスコアや引き出しを見逃した
     ctx.log("  セピアの読みやすさ:", await ctx.js(`(async()=>{
@@ -2284,7 +2284,7 @@ const STEPS = [
       show('manager'); openCfg(); look('設定','#cfgModal'); closeCfg();
       show('season'); openSide('comp'); look('引き出し','#sideDrawer'); closeSide();
       openHelp(); look('ヘルプ','#helpDrawer'); closeHelp();
-      // **状態が付いたときだけ現れる面**も見る(→docs/06 §6.60)。
+      // **状態が付いたときだけ現れる面**も見る(→docs/11 §6.60)。
       // 取得済みの実績・完了した節・コイン不足・選択中の枠は、
       // その状態を作らないと現れず、素の走査では素通りしてしまう
       const keep={ tro:JSON.parse(JSON.stringify(S.player.trophies)),
@@ -2292,7 +2292,7 @@ const STEPS = [
                    md:S.world.matchday };
       S.player.trophies=[{ id:'kings',name:'k',kind:'cup',n:1,season:1,last:1 }];
       show('manager'); renderManager(); look('実績の棚','#scr-manager');
-      // 監督から報告のあった面(→docs/06 §6.60 追補)。**その画面まで行って見る**。
+      // 監督から報告のあった面(→docs/11 §6.60 追補)。**その画面まで行って見る**。
       // 状況によっては開けない画面があるので、開けたものだけ見る
       for(const [w,id] of [['相手の下見','foe'],['移籍市場','market'],
                            ['BRIEFING','chat'],['FIXTURES','schedule'],
@@ -2340,7 +2340,7 @@ const STEPS = [
     await ctx.js(`(()=>{ document.getElementById('formModal').classList.remove('on');
       show('season'); openSide('comp'); })()`);
     await ctx.wait(250); await ctx.shot("30p-sepia-entry");
-    // 施設の段(→docs/06 §6.61)。**建った段・建設中・空きが見分けられるか**
+    // 施設の段(→docs/11 §6.61)。**建った段・建設中・空きが見分けられるか**
     await ctx.js(`(()=>{ closeSide(); S.club.coins=999999;
       S.club.fac.training=2; S.club.build={ id:'medical', to:1, left:3 };
       show('clubhouse'); renderFac();
@@ -2348,7 +2348,7 @@ const STEPS = [
     await ctx.wait(250); await ctx.shot("30s-sepia-fac");
     await ctx.js("show('manager'); openCfg();"); await ctx.wait(250);
     await ctx.shot("30g-sepia-settings");
-    // **黒と白はテーマから独立している**(→docs/06 §6.61)
+    // **黒と白はテーマから独立している**(→docs/11 §6.61)
     ctx.log("  背景の選択:", await ctx.js(`(()=>{
       const ids=BGS.map(b=>b.id);
       for(const w of ['black','white'])
@@ -2366,7 +2366,7 @@ const STEPS = [
       return ids.length+'種（'+ids.join('/')+'）／ 黒と白はテーマで変わらない';
     })()`));
     await ctx.js("closeCfg(); S.player.ui='dark'; applyUi(); show('home');");
-    // **フッターの並び**(→docs/06 §6.49)。よく触るものほど左に置く
+    // **フッターの並び**(→docs/11 §6.49)。よく触るものほど左に置く
     ctx.log("  フッターの並び:", await ctx.js(`(()=>{
       const got=[...document.querySelectorAll('#tabs button')].map(b=>b.dataset.s);
       const want=['home','season','deck','cards','clubhouse'];
@@ -2381,7 +2381,7 @@ const STEPS = [
       return t.map(e=>e.querySelector('.tile-t').textContent+'('
         +e.querySelector('.tile-s').textContent+')').join(' / ');
     })()`));
-    // HOME のステッカー(→docs/06 §6.30)
+    // HOME のステッカー(→docs/11 §6.30)
     ctx.log("  ステッカー:", await ctx.js(`(()=>{
       const one=sel=>{ const e=document.querySelector(sel+' img');
         if(!e)throw new Error(sel+' に絵が無い'); return e.src.length; };
@@ -2415,7 +2415,7 @@ const STEPS = [
       const btn=document.querySelector('#scoutList [data-pack="focus"]');
       if(btn.disabled)throw new Error('コインが足りているのに押せない');
       btn.click();
-      // **出たカードは開封の演出の中に居る**(→docs/06 §6.56)。一覧の下には置かない
+      // **出たカードは開封の演出の中に居る**(→docs/11 §6.56)。一覧の下には置かない
       const got=document.querySelectorAll('#rvCard .pcard');
       const pk=TUNING.scout.find(p=>p.id==='focus');
       if(got.length!==pk.cards)throw new Error('出た枚数が違う: '+got.length);
@@ -2547,7 +2547,7 @@ const STEPS = [
     await ctx.wait(400);
     await ctx.shot("20d-scout-le");
 
-    // --- 見本市と開封の演出(→docs/06 §6.56) ---
+    // --- 見本市と開封の演出(→docs/11 §6.56) ---
     await ctx.js("closeReveal(); show('gacha'); S.club.coins=99999; renderScout()");
     await ctx.wait(300);
     ctx.log("  見本市:", await ctx.js(`(()=>{
@@ -2621,7 +2621,7 @@ const STEPS = [
   }],
 
   ["移籍市場(名指しで買う)", async ctx => {
-    // **入口は HOME のタイルだけ**(→docs/06 §6.56)。SCOUT からの導線は外した
+    // **入口は HOME のタイルだけ**(→docs/11 §6.56)。SCOUT からの導線は外した
     await ctx.js("show('home')");
     await ctx.wait(200);
     ctx.log("  HOMEからの入口:", await ctx.js(`(()=>{
@@ -2636,7 +2636,7 @@ const STEPS = [
       const l=marketList();
       if(l.length!==TUNING.market.slots)throw new Error('人数が違う: '+l.length);
       if(l.some(c=>c.rarity==='LEG'))throw new Error('LEGENDS が並んでいる');
-      // **開き直しても動かない**(→docs/03 §3.67)
+      // **開き直しても動かない**(→docs/10 §3.67)
       const a=marketList().map(c=>c.name).join(',');
       if(a!==l.map(c=>c.name).join(','))throw new Error('開くたびに顔ぶれが変わる');
       return l.map(c=>RARITY[c.rarity].abbr+(c.sig?'*':'')+' '+fmtNum(c.price)).join(' / ');
@@ -2662,7 +2662,7 @@ const STEPS = [
     await ctx.js("renderMarket()");
     await ctx.wait(300);
     await ctx.shot("23b-market-sold");
-    // **節が変われば総入れ替え**。逃したら消える(→docs/03 §3.67)
+    // **節が変われば総入れ替え**。逃したら消える(→docs/10 §3.67)
     ctx.log("  節が変わると:", await ctx.js(`(()=>{
       const was=marketList().map(c=>c.name).join(',');
       S.career.node++;
@@ -2672,7 +2672,7 @@ const STEPS = [
       S.career.node--;
       return '6人とも入れ替わる ／ 売り切れは持ち越さない';
     })()`));
-    // **実在選手はまれ**(→docs/03 §3.67)。桁が変わるので行ごと立てて見せる。
+    // **実在選手はまれ**(→docs/10 §3.67)。桁が変わるので行ごと立てて見せる。
     // たね4242では第19節に並ぶので、そこまで飛ばして撮る
     ctx.log("  実在選手が並ぶ節:", await ctx.js(`(()=>{
       const keep=S.career.node;
@@ -2693,7 +2693,7 @@ const STEPS = [
   }],
 
   ["実績の報酬(トロフィーとシグネチャ)", async ctx => {
-    // **初優勝にだけシグネチャが付く**(→docs/03 §3.52)。2度目からはコイン
+    // **初優勝にだけシグネチャが付く**(→docs/10 §3.52)。2度目からはコイン
     ctx.log("  棚に出る報酬:", await ctx.js(`(()=>{
       const d=trophyDefs();
       const sig=d.filter(x=>x.award&&x.award.rar), coin=d.filter(x=>x.award&&x.award.coin);
@@ -2832,7 +2832,7 @@ const STEPS = [
         +'（'+[...new Set(no.map(x=>x.querySelector('.pc-nosell').textContent))].join(',')+'）';
     })()`));
     await ctx.shot("24-bulk-sell");
-    // **編成に入っている選手は選べない**(→docs/03 §3.68)
+    // **編成に入っている選手は選べない**(→docs/10 §3.68)
     ctx.log("  編成中は選べない:", await ctx.js(`(()=>{
       const inSquad=(S.squad||[]).filter(Boolean);
       if(!inSquad.length)throw new Error('編成が空');
@@ -2892,7 +2892,7 @@ const STEPS = [
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
       if (tab === "cards") {
-        // **絞り込みと並べ替え**(→docs/06 §6.62)。軸ごとに1つずつ、重ねて効く
+        // **絞り込みと並べ替え**(→docs/11 §6.62)。軸ごとに1つずつ、重ねて効く
         ctx.log("  絞り込みと並べ替え:", await ctx.js(`(()=>{
           const pick=(box,id)=>document.querySelector('#'+box+' [data-f="'+id+'"]').click();
           const shown=()=>document.querySelectorAll('#cardsGrid [data-card]').length;
@@ -2920,7 +2920,7 @@ const STEPS = [
           if(shown()!==want(c=>c.pos==='GK'&&c.rarity==='REG'))
             throw new Error('軸を重ねると合わない: '+shown());
           pick('cardsFilter','ALL'); pick('cardsRar','ALL');
-          // **該当なしのときは全幅に張る**(→docs/06 §6.64)。
+          // **該当なしのときは全幅に張る**(→docs/11 §6.64)。
           // 1マスに収まるとカード1枚ぶんの幅に潰れ、段の高さも崩れる
           pick('cardsFilter','GK'); pick('cardsRar','LEG');
           const stub=document.querySelector('#cardsGrid .stub');
@@ -2955,9 +2955,9 @@ const STEPS = [
         await ctx.wait(200); await ctx.shot("09c-cards-filter");
       }
       if (tab === "clubhouse") {
-        // **CLUB はいま預かっているクラブの話だけ**(→docs/06 §6.50)
+        // **CLUB はいま預かっているクラブの話だけ**(→docs/11 §6.50)
         ctx.log("  クラブの現況:", await ctx.js(`(()=>{
-          // **紋章に出ているものは繰り返さない**(→docs/06 §6.51)
+          // **紋章に出ているものは繰り返さない**(→docs/11 §6.51)
           const st=document.getElementById('clubStatus').textContent;
           for(const w of ['クラブの資金','チーム熟練度','オーナーの評価','オーナーの目標'])
             if(st.indexOf(w)<0)throw new Error('現況に '+w+' が無い');
@@ -2974,7 +2974,7 @@ const STEPS = [
           const first=scr2.querySelector('.card');
           if(!first||!first.querySelector('.crest-big'))
             throw new Error('紋章が最上段でない');
-          // **見出しはタイルの内側にそろえる**(→docs/06 §6.63)
+          // **見出しはタイルの内側にそろえる**(→docs/11 §6.63)
           for(const sc of ['scr-clubhouse','scr-manager']){
             const e=document.getElementById(sc).querySelector('.eyebrow');
             if(e)throw new Error(sc+' にタイル外の見出しが残っている: '+e.textContent);
@@ -2995,7 +2995,7 @@ const STEPS = [
           const scr=document.getElementById('scr-clubhouse');
           for(const id of ['clubHistory','clubTrophies','memList','clubMgrFace'])
             if(scr.querySelector('#'+id))throw new Error('CLUB に監督の '+id+' が残っている');
-          // **このクラブに来てからの記録だけ**(→docs/03 §3.9a)
+          // **このクラブに来てからの記録だけ**(→docs/10 §3.9a)
           const keep=S.player.history.slice(), kw=(S.club.won||[]).slice();
           S.player.history=[{season:1,clubId:'eng-1',div:1,result:'優勝',rank:1},
                             {season:2,clubId:S.club.id,div:2,result:'昇格',rank:2},
@@ -3047,7 +3047,7 @@ const STEPS = [
         })()`));
         await ctx.shot("12e-mgr-career");
         await ctx.js("show('clubhouse')");        // 紋章と施設は CLUB
-        // エンブレム(→docs/03 §3.54)。**絵を持たずに描く**ので、
+        // エンブレム(→docs/10 §3.54)。**絵を持たずに描く**ので、
         // クラブを足しても素材は要らない
         ctx.log("  エンブレム:", await ctx.js(`(()=>{
           // 144クラブが全部ちがう顔になる。**顔を決める要素を全部入れて数える**
@@ -3081,7 +3081,7 @@ const STEPS = [
             +EMB_ORNS.length+EMB_LAYS.length+EMB_HUES.length*2;
           if(btns.length!==want)
             throw new Error('選べる数が合わない: '+btns.length+' / 期待 '+want);
-          // **色は盤面にも効く**(→docs/03 §3.54)。エンブレムだけ別色にしない
+          // **色は盤面にも効く**(→docs/10 §3.54)。エンブレムだけ別色にしない
           const c0=clubColor(S.club.id);
           btns.find(b=>b.dataset.k==='home'&&!b.classList.contains('on')).click();
           if(clubColor(S.club.id)===c0)throw new Error('ホームカラーが盤面に効かない');
@@ -3100,9 +3100,9 @@ const STEPS = [
         await ctx.js("document.getElementById('clubCrest').click()");
         await ctx.wait(300);
         await ctx.shot("12g-club-crest");
-        // メモラビリア(→docs/03 §3.55)
+        // メモラビリア(→docs/10 §3.55)
         await ctx.js("show('manager')");          // メモラビリアは MANAGER
-        // **全部のメモラビリアを構造で見張る**(→docs/03 §3.55)。
+        // **全部のメモラビリアを構造で見張る**(→docs/10 §3.55)。
         // 1つだけ手で確かめていると、足したときの綴り違いや枠のずれに気づけない
         ctx.log("  メモラビリアの整合:", await ctx.js(`(()=>{
           const out=[];
@@ -3125,7 +3125,7 @@ const STEPS = [
               if(d.club!==m.club)throw new Error(m.id+': '+d.short+' の所属が違う');
             });
             if(!m.xi.concat(m.bench).includes(m.kp))throw new Error(m.id+' の軸が居ない');
-            // **監督の顔も決め打ち**(→docs/03 §3.55)。素材が消えていたら気づけるように
+            // **監督の顔も決め打ち**(→docs/10 §3.55)。素材が消えていたら気づけるように
             if(!m.face)throw new Error(m.id+' に監督の顔が無い');
             if(!ASSETS.manager[m.face])throw new Error(m.id+' の顔の素材が無い: '+m.face);
             if(coachFace('mem:'+m.id,true)!==ASSETS.manager[m.face])
@@ -3171,7 +3171,7 @@ const STEPS = [
             matchSide(S.club.id), 7);
           if(other.home.players.some(p=>p.ordM&&p.ordM.tec>1))
             throw new Error('よその選手にも効いてしまう');
-          // **戦利品は受信箱で受け取る**(→docs/03 §3.55)。その場では配らない。
+          // **戦利品は受信箱で受け取る**(→docs/10 §3.55)。その場では配らない。
           // coll は編成が参照しているので、**必ず元に戻す**
           // (空にしたまま進めてシーズンが止まった)
           const bk={ mail:S.player.mail.slice(), coll:S.player.coll.slice(),
@@ -3201,7 +3201,7 @@ const STEPS = [
           if(!S.player.coll.length)throw new Error('受け取っても選手が増えない');
           if(tacticsKnown().length!==2)throw new Error('受け取っても采配を覚えない');
           S.player.mail=[]; S.player.coll=bk.coll.slice(); S.player.tactics=bk.tac.slice();
-          // **世界の頂点を獲ると1つ届く**(→docs/03 §3.55)
+          // **世界の頂点を獲ると1つ届く**(→docs/10 §3.55)
           S.player.mem=[]; S.player.mail=[];
           const got=memAward('world');
           if(!got)throw new Error('優勝しても届かない');
@@ -3230,7 +3230,7 @@ const STEPS = [
           const byUrl=memFromUrl();
           if(!byUrl)throw new Error('URL の合言葉で開かない');
           if(location.hash.indexOf('mem=')>=0)throw new Error('URL から消えない');
-          // **見出しは下見へ、› で開戦**(→docs/03 §3.55)
+          // **見出しは下見へ、› で開戦**(→docs/10 §3.55)
           memUnlock('BLAUGRANA-2010'); renderMem();
           // **id で行を選ぶ**。複数開いていると先頭が目当てのものとは限らない
           const row=document.querySelector('#memList [data-look="bar2010"]').closest('.mem');
@@ -3270,7 +3270,7 @@ const STEPS = [
         await ctx.wait(300);
         await ctx.shot("12j-memorabilia");
         await ctx.js("show('clubhouse')");
-        // 背景(→docs/06 §6.45)。**端末枠の外側だけ**が変わる
+        // 背景(→docs/11 §6.45)。**端末枠の外側だけ**が変わる
         ctx.log("  背景の設定:", await ctx.js(`(()=>{
           const btn=document.getElementById('clubCfg');
           if(!btn)throw new Error('設定ボタンが無い');
@@ -3338,7 +3338,7 @@ const STEPS = [
         await ctx.shot("12i-bg-pitch");
         await ctx.js("S.player.bg='black'; applyBg(); 1");
         await ctx.js("document.getElementById('crestDone').click()");
-        // 監督の顔(→docs/03 §3.45)。**CLUB からいつでも選び直せる**
+        // 監督の顔(→docs/10 §3.45)。**CLUB からいつでも選び直せる**
         ctx.log("  監督の顔:", await ctx.js(`(()=>{
           const keys=managerFaces();
           if(!keys.length)return '絵が無い環境';
@@ -3798,7 +3798,7 @@ const STEPS = [
         ctx.log("  レアリティ表示:", await ctx.js(
           "[...document.querySelectorAll('#cardsGrid .pcard')].map(e=>e.className.replace('pcard ','')).join(' | ')"));
         await ctx.shot("09c-rarities");
-        // ページ送りと売却(→docs/03 §3.46 / docs/06 §6.35)
+        // ページ送りと売却(→docs/10 §3.46 / docs/11 §6.35)
         ctx.log("  ページ送り:", await ctx.js(`(()=>{
           // **枚数を増やして**2ページ以上にする(少ないと出ない仕掛けなので)
           const r2=mulberry32(4242);
@@ -3849,7 +3849,7 @@ const STEPS = [
           openCard(S.club.loan[0].id);
           if(document.querySelector('#cmSell #cmSellGo'))throw new Error('貸与が売れてしまう');
           const why=document.querySelector('#cmSell .cm-sell-no').textContent;
-          // **実在選手も売れない**(→docs/03 §3.46)
+          // **実在選手も売れない**(→docs/10 §3.46)
           const sg=S.player.coll.find(x=>x.sig)||signatureCards()[0];
           S.player.coll.push(sg); openCard(sg.id);
           if(document.querySelector('#cmSell #cmSellGo'))throw new Error('実在選手が売れてしまう');
@@ -4234,7 +4234,7 @@ const STEPS = [
       if(over>2)throw new Error('Entryタブがスクロールしないと全部見えない: +'+over+'px');
       if(document.getElementById('sideTitle').textContent!=='ENTRY')
         throw new Error('見出しが ENTRY でない');
-      // **説明文は置かない**(→docs/06 §6.42)
+      // **説明文は置かない**(→docs/11 §6.42)
       if(document.querySelector('#seasonComps .side-note'))
         throw new Error('頭の説明文が残っている');
       // **エントリー中は光る**。リーグは常に戦っているので必ず光る
@@ -4366,7 +4366,7 @@ const STEPS = [
       await ctx.js("document.getElementById('btnResultOk').click()");
       await ctx.wait(120);
     }
-    // **全日程が終わったスケジュールから HOME へ連れていく**(→docs/06 §6.42)。
+    // **全日程が終わったスケジュールから HOME へ連れていく**(→docs/11 §6.42)。
     // ここに導線が無いと「HOMEで今季を終えられます」と書いてあるだけになり、
     // 自分でタブを押しに行くことになる
     await ctx.js(`document.querySelector('#tabs button[data-s="season"]').click()`);
@@ -4376,7 +4376,7 @@ const STEPS = [
       const go=document.querySelector('#seasonCal .cal.judge.go[data-go]');
       if(!go)throw new Error('全日程を終えても行き先の行が出ない');
       if(go.dataset.go!=='home')throw new Error('行き先が HOME でない: '+go.dataset.go);
-      // **戻り先はこの行**(→docs/06 §6.52)。試合から日程に戻ったとき、
+      // **戻り先はこの行**(→docs/11 §6.52)。試合から日程に戻ったとき、
       // ここが画面に入っていないと日程の先頭 — 何十節も前 — に置き去りになる
       if(!go.classList.contains('cal-here'))throw new Error('全日程終了の行に的が無い');
       if(go.id==='calCur')throw new Error('現在節と id を共有している（押すとチャットへ飛ぶ）');
@@ -4743,7 +4743,7 @@ const STEPS = [
     })()`,
   });
 
-  // **色の走査**(→docs/06 §6.60)。どの段からでも呼べるように先に入れておく。
+  // **色の走査**(→docs/11 §6.60)。どの段からでも呼べるように先に入れておく。
   // **登録だけでは足りない** — addScriptToEvaluateOnNewDocument は
   // *これから作られる*文書にしか走らないので、いま開いている文書には
   // その場で評価して入れる(この2つはセットで書くこと)

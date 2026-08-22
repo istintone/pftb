@@ -40,7 +40,7 @@ function coachName(key){
   return rpick(rng,GIVEN)+" "+rpick(rng,COACH_SUR);
 }
 /**
- * 監督の性分(→docs/03 §3.56)。**名前と同じ key から決まる**ので、
+ * 監督の性分(→docs/10 §3.56)。**名前と同じ key から決まる**ので、
  * 同じ相手はいつ当たっても同じ運びをする(下見と試合で食い違わない)。
  */
 function coachType(key){
@@ -208,7 +208,7 @@ function rollRarity(rng,minKey){
  *   opts   { rarity, club, nation, ovrBias }
  */
 /**
- * ★のぶんの上乗せ(→docs/03 §3.53)。**能力の上限(20)を超えない**ように配る。
+ * ★のぶんの上乗せ(→docs/10 §3.53)。**能力の上限(20)を超えない**ように配る。
  * 高いものから1点ずつ積むので、その選手の持ち味がそのまま伸びる
  * (プレイヤー側の訓練 →§3.30 と同じ考え方)。
  * 返り値は eff() がそのまま読む { atk:1, spd:2, ... } の形。
@@ -227,7 +227,7 @@ function starUps(st,n){
   return Object.keys(up).length?up:null;
 }
 /**
- * ユースの伸び(→docs/03 §3.57)。**枠に効く能力へ寄せつつ、少し散らす**。
+ * ユースの伸び(→docs/10 §3.57)。**枠に効く能力へ寄せつつ、少し散らす**。
  *
  * `starUps` は決め打ちで一番高い能力へ積むので、同じ枠のユースがみな同じ形になる。
  * ここは `STAT_W` を重みにして引くので、**枠に有利ではあるが同じ顔にはならない**。
@@ -251,7 +251,7 @@ function youthUps(rng,st,pos,n){
 function makeCard(rng,pos,opts={}){
   const rarity=opts.rarity||rollRarity(rng);
   const [lo,hi]=RARITY[rarity].ovr;
-  // **段の数値は域の中だけで決める**(→docs/03 §3.53)。
+  // **段の数値は域の中だけで決める**(→docs/10 §3.53)。
   // 以前は水増し(ovrBias)を足して域の外へ出していたので、**RG99 が WC85 より強く**なり、
   // 段のバッジが何も意味しなくなっていた(上位カップは全員が域外だった)。
   // **水増しをそのまま域内に押し込めても駄目**で、全員が上限に張り付いて
@@ -275,7 +275,7 @@ function makeCard(rng,pos,opts={}){
     const s=rpick(rng,from);
     if(!skills.includes(s))skills.push(s);
   }
-  // **強さの差は★で出す**(→docs/03 §3.53)。域を広げるのではなく、
+  // **強さの差は★で出す**(→docs/10 §3.53)。域を広げるのではなく、
   // プレイヤーが自分のカードにやっているのと同じ「育った」形で持たせる
   const up=starUps(st,opts.star||0);
   const subs=rollSubs(rng,pos,rarity);
@@ -399,7 +399,7 @@ function expandRarPlan(plan){
 }
 /**
  * 1チーム分(先発11+控え)を作る。**強さの水準は段の内訳(rarPlan)と★(star)で決まる**
- * (→docs/03 §3.53)。OVR の水増しはしない。
+ * (→docs/10 §3.53)。OVR の水増しはしない。
  *   opts.nations … 国籍の抽選箱(重み付きで展開済みのID配列 → world.js の nationBox)。
  *                  省略すると世界中から一様に引く。
  *   opts.rarPlan … 段の内訳(→docs/03 §3.25)。指定するとその内訳を配り切る。
@@ -438,12 +438,12 @@ function makeRoster(rng,opts={}){
 const rarLabel=c=>RARITY[c.rarity].label;
 
 /**
- * 札に焼き込まれた★のぶん(→docs/03 §3.53)。相手の選手はここに強さを持つ。
+ * 札に焼き込まれた★のぶん(→docs/10 §3.53)。相手の選手はここに強さを持つ。
  * 自分のカードは訓練の記録(→trainUps)に持つので、こちらは 0。
  */
 const upOf=c=>c&&c.up?STAT_KEYS.reduce((n,k)=>n+(c.up[k]||0),0):0;
 /**
- * **実効の総合力**(→docs/03 §3.53)。★を含む。
+ * **実効の総合力**(→docs/10 §3.53)。★を含む。
  * **強さを比べる場所は必ずこれを使う**。素の `c.ovr` で比べると、
  * 段の域内に収めたぶんだけ相手を弱く見積もる(勢いの初期値・期待順位・見立てが全部ずれる)。
  */

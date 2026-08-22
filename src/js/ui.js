@@ -26,7 +26,7 @@ const SCREENS={
   deck:      { title:"DECK",      tab:"deck",      chrome:"full", render:()=>renderDeck() },
   season:    { title:"SEASON",    tab:"season",    chrome:"full", render:()=>renderSeason() },
   clubhouse: { title:"CLUB",      tab:"clubhouse", chrome:"full", render:()=>renderClubhouse() },
-  // **監督はクラブと別の入れ物**(→docs/06 §6.50)。ヘッダーの顔から入る
+  // **監督はクラブと別の入れ物**(→docs/11 §6.50)。ヘッダーの顔から入る
   manager:   { title:"MANAGER",   chrome:"back",   render:()=>renderManager() },
   schedule:  { title:"FIXTURES",  under:"season",  chrome:"back", render:()=>renderSchedule() },
   standings: { title:"STANDINGS", under:"season",  chrome:"back", render:()=>renderStandings() },
@@ -75,7 +75,7 @@ function show(id,opts){
   $("subTab").classList.toggle("off",id!=="match");
   $("kpTab").classList.toggle("off",id!=="match");           // 軸(→docs/03 §3.44)
   $("ordTab").classList.toggle("off",id!=="match");
-  $("tacTab").classList.toggle("off",id!=="match");   // 采配(→docs/03 §3.50)
+  $("tacTab").classList.toggle("off",id!=="match");   // 采配(→docs/10 §3.50)
   if(id!=="match"){ closeSub(); closeOrd(); closeKp(); }
 
   if(def.render)def.render();
@@ -116,7 +116,7 @@ function openSide(kind){
   _side=kind;
   // **大会は8つあり、出ていない大会も条件つきで並ぶ**(→docs/03 §3.23)ので
   // 「エントリー中の大会」では中身と合わない
-  // **契約の引き出しは畳んだ**(→docs/06 §6.50)。中身はクラブの話なので CLUB にある
+  // **契約の引き出しは畳んだ**(→docs/11 §6.50)。中身はクラブの話なので CLUB にある
   $("sideTitle").textContent="ENTRY";
   $("seasonComps").hidden=false;
   $("sideDrawer").classList.add("on");
@@ -141,13 +141,13 @@ function toast(msg){
 // ヘッダーの共通表示(クラブ名・エンブレム・コイン)を現在のセーブ状態に同期する。
 function headUI(){
   const name=S.club?clubById(S.club.id).name:"—";
-  // **正式名称は置かない**(→docs/06 §6.48)。長い名前が左を膨らませると、
+  // **正式名称は置かない**(→docs/11 §6.48)。長い名前が左を膨らませると、
   // 画面の見出しが右へ押し出されて中央に来ない。3文字の略号なら幅が揃う
   $("hdClubName").textContent=S.club?clubAbbr(name):"—";
   $("hdClubName").title=name;
-  // **エンブレムは絵ではなくSVG**(→docs/03 §3.54)。クラブIDから毎回同じ顔になる
+  // **エンブレムは絵ではなくSVG**(→docs/10 §3.54)。クラブIDから毎回同じ顔になる
   $("hdEmblem").innerHTML=S.club?embSvg(S.club.id,name,30,{tag:"hd"}):"";
-  // **右は監督の入口**(→docs/06 §6.50)。コインはクラブの財布なので CLUB に置いた
+  // **右は監督の入口**(→docs/11 §6.50)。コインはクラブの財布なので CLUB に置いた
   // (使う場所 — SCOUT と HOME のタイル — では残高がその場に出ている)
   $("hdMgr").innerHTML=S.club?'<img src="'+(managerArt()||"")+'" alt="">':"";
 }
@@ -290,7 +290,7 @@ function noteOf(fx){
 const loanTag=c=>isLoaned(c)?'<i class="loan">(CLUBS)</i>':"";
 /**
  * 覚醒の★(→docs/03 §3.30)。名前の右に付く。任期が明ければ消える。
- * **相手の選手も★を持つ**(→docs/03 §3.53)。自分のカードは訓練の記録から、
+ * **相手の選手も★を持つ**(→docs/10 §3.53)。自分のカードは訓練の記録から、
  * 相手のカードは札に焼き込まれた `up` から数える。どちらも同じ見た目にする
  * (数字を域外へ出さずに強さの差を出しているので、★が読めないと理由が消える)。
  */
@@ -328,7 +328,7 @@ function cardBgStyle(c){
 const clubName=id=>clubById(id)?clubById(id).name:id;
 
 /**
- * 移籍市場のタイル(→docs/06 §6.44)。**WC以上が並んでいるかだけを言う**。
+ * 移籍市場のタイル(→docs/11 §6.44)。**WC以上が並んでいるかだけを言う**。
  * 誰が出ているかは市場を開けば分かるので、タイルは「今行く理由があるか」を返す。
  * 絵はいちばん強い WC の枠に合わせる(FW=shoot / MF=dribble / DF=striker / GK=gk)。
  */
@@ -341,12 +341,12 @@ function renderHomeMarket(){
   $("tileMarketSub").innerHTML=top
     ? '<b class="tl-hot">'+esc(RARITY[top.rarity].abbr)+' がエントリ中</b>'
     : list.length+" 人が登録中";
-  // **絵は枠で決まる**。該当が無ければ空(→docs/06 §6.30 の「無ければ出さない」)
+  // **絵は枠で決まる**。該当が無ければ空(→docs/11 §6.30 の「無ければ出さない」)
   $("tileMarketArt").innerHTML=top&&MARKET_STICKER[top.pos]
     ? stickerArt(MARKET_STICKER[top.pos]) : "";
 }
 /**
- * 実績のタイル(→docs/06 §6.44)。**獲った数と、次に狙うもの**。
+ * 実績のタイル(→docs/11 §6.44)。**獲った数と、次に狙うもの**。
  * 棚(→§3.36)は易しい順に並んでいるので、まだ獲っていない先頭がそのまま次の目標。
  */
 function renderHomeTrophy(){
@@ -356,12 +356,12 @@ function renderHomeTrophy(){
   $("tileTrophyArt").innerHTML=stickerArt("trophy");
 }
 
-// ---------- 背景(→docs/06 §6.45) ----------
+// ---------- 背景(→docs/11 §6.45) ----------
 // **端末枠の外側**を着せ替える。盤面(#app)の中は触らないので、
 // どの背景を選んでも画面の読みやすさは変わらない。
 // **既定はピッチ**。背景を選んだことが無いセーブもここに落ちる
 /**
- * UI の色(→docs/06 §6.60)。**地の明るさを丸ごと入れ替える**。
+ * UI の色(→docs/11 §6.60)。**地の明るさを丸ごと入れ替える**。
  * 色はトークン(`:root` の変数)に集めてあるので、body に印を付けて
  * そこだけ差し替えれば全画面が追従する。
  *
@@ -386,7 +386,7 @@ const BGS=[
   { id:"wall",  name:"ロゴウォール", note:"会見の背景のように斜めに並べる" },
 ];
 /**
- * ロゴウォール(→docs/06 §6.45)。**本物の要素で敷く**。
+ * ロゴウォール(→docs/11 §6.45)。**本物の要素で敷く**。
  *
  * data URI の SVG を背景画像にすると、**ページに埋め込んだフォントが使えない**
  * (データURIは別の文書として読まれるので @font-face が届かない)。
@@ -427,7 +427,7 @@ function applyBg(){
   else{ const w=$("bgWall"); if(w)w.remove(); }
 }
 function renderCfg(){
-  // UI の色(→docs/06 §6.60)
+  // UI の色(→docs/11 §6.60)
   const ui=(S.player&&S.player.ui)||UI_DEFAULT;
   $("cfgUi").innerHTML=UIS.map(b=>'<button class="cfg-o'+(b.id===ui?" on":"")+'"'
     +' data-ui="'+b.id+'"><i class="cfg-sw sw-ui-'+b.id+'"></i>'
@@ -453,12 +453,12 @@ function renderHome(){
   const start=squadCards().slice(0,TUNING.squad.starters);
   $("tileScoutSub").textContent=fmtNum(S.club?S.club.coins:0)+" コイン";
   $("tileDeckSub").textContent="総合力 "+myPower();
-  // タイルの余白にステッカーを貼る(→docs/06 §6.30)。**絵は固定**で、その行き先を表す
+  // タイルの余白にステッカーを貼る(→docs/11 §6.30)。**絵は固定**で、その行き先を表す
   $("tileScoutArt").innerHTML=stickerArt("scout");
   $("tileDeckArt").innerHTML=stickerArt("board");
   renderHomeMarket();
   renderHomeTrophy();
-  // **節と HOME/AWAY は1行にまとめる**(→docs/06 §6.58)。以前は下にもう1行
+  // **節と HOME/AWAY は1行にまとめる**(→docs/11 §6.58)。以前は下にもう1行
   // 「AWAY ／ 第2節」を置いていたが、節は上の MATCHDAY と同じことを言っていた
   const md=f0=>"SEASON "+W.season+" · MATCHDAY "
     +String(Math.min(W.matchday,W.fixtures.length)).padStart(2,"0")
@@ -490,7 +490,7 @@ function renderHome(){
       +'<div class="nx-vs"><b>'+esc(clubName(S.club.id))+'</b>'
         +'<span>VS</span><b>'+esc(clubName(f.opp))+'</b></div>'
       +'<div class="nx-st">'+matchSticker()+'</div>'
-      // **スポンサーの名前を看板のように置く**(→docs/06 §6.25)。契約中だけ出る
+      // **スポンサーの名前を看板のように置く**(→docs/11 §6.25)。契約中だけ出る
       +sponBoard()
       // **ボタンは置かない**。タイルごとリンクなので、行き先を右下に一言添えるだけ
       +'<div class="nx-go">&gt; See Schedule</div>'
@@ -501,12 +501,12 @@ function renderHome(){
   // どちらでもタップで受信箱へ行けるようにして、入口を1つにする
   const mm=mailLatest(), un=mailUnread();
   const def=mm?mailDef(mm):null;
-  // **顔もここに出す**(→docs/06 §6.27)。丸はチャットと同じ部品を使う。
+  // **顔もここに出す**(→docs/11 §6.27)。丸はチャットと同じ部品を使う。
   // 未読の印は**丸の肩に付ける**(通知の印はアイコンに付くもの)
   $("homeSec").innerHTML='<div class="sec-row sec-go'+(un?" unread":"")+'" id="homeSecGo">'
     +'<div class="sec-face">'+chatAvatar("sec")
       +(un?'<i class="sec-dot">'+un+'</i>':"")+'</div>'
-    // **ひとことにも名前を差し込む**(→docs/03 §3.43a)。受信箱と同じ文面が出るので、
+    // **ひとことにも名前を差し込む**(→docs/10 §3.43a)。受信箱と同じ文面が出るので、
     // ここで差し込みを忘れると {secFull} が生のまま画面に出る
     +'<div class="bubble">'+esc(chatFill(def?def.text:secretaryLine(),secVars()))
       +(def?'<span class="sec-more">受信箱を開く ›</span>':"")+'</div>'
@@ -517,14 +517,14 @@ function renderHome(){
   renderNewsTick();
 }
 /**
- * ステッカーを1枚(→docs/06 §6.30)。**素材が無ければ何も出さない**ので、
+ * ステッカーを1枚(→docs/11 §6.30)。**素材が無ければ何も出さない**ので、
  * 絵を消しても画面が崩れない。キーは書き出しのファイル名(→tools/slice_sticker.py)。
  */
 function stickerArt(key){
   const A=(window.ASSETS&&window.ASSETS.sticker)||{};
   return A[key]?'<img class="stk" src="'+A[key]+'" alt="">':"";
 }
-/** 予定の行に貼るトロフィー(→docs/06 §6.31)。**出られる大会にだけ**付ける。
+/** 予定の行に貼るトロフィー(→docs/11 §6.31)。**出られる大会にだけ**付ける。
  *  **行の右に大きく置いて、枠で切り落とす**。アイコンの枠(22px)に収めると豆粒になり、
  *  何の絵かも分からない。絵が無ければ左のアイコン枠の絵文字に落ちる。 */
 const cupMark=()=>{
@@ -607,13 +607,13 @@ function renderMail(){
         +(m.read?"":'　<i class="ml-new">NEW</i>')+'</span>'
       // **件名を出す**。溜まった連絡をあとから辿るとき、本文だけでは探せない
       +'<b class="ml-ti">'+esc(d.title)+'</b>'
-      // **名前を差し込む**(→docs/03 §3.43a)。{sec}/{secFull} が秘書の名前になる
+      // **名前を差し込む**(→docs/10 §3.43a)。{sec}/{secFull} が秘書の名前になる
       +esc(chatFill(d.text,secVars()))
       +(go?'<div class="ml-go"><button class="btn ml-jump" data-go="'+esc(go)+'">'
         +esc(SCREENS[go].title||go)+' をひらく ›</button></div>':"")
       +(gname?'<div class="ml-gift">'
         +'<b>'+esc(gname)+'</b>'
-        // **枠を選ぶのは受け取りではなく、券を引くとき**(→docs/03 §3.40a)。
+        // **枠を選ぶのは受け取りではなく、券を引くとき**(→docs/10 §3.40a)。
         // ここで決めさせると、券のまま持っておく意味がなくなる
         +(m.got?'<span class="ml-done">受け取り済み</span>'
           :'<button class="btn ml-take" data-mail="'+esc(m.id)+'">受け取る</button>')
@@ -633,11 +633,11 @@ function renderMail(){
         toast(RARITY[g.card.rarity].label+" "+shortName(g.card)+" が加入しました");
         openCard(g.card);
       }else if(g.youth){
-        // **ユースはクラブの預かり**(→docs/03 §3.57)。連れていけないことを添える
+        // **ユースはクラブの預かり**(→docs/10 §3.57)。連れていけないことを添える
         toast(RARITY[g.youth.rarity].label+" "+shortName(g.youth)+" がトップに上がりました");
         openCard(g.youth);
       }else if(g.spon&&g.got&&g.got.ticket){
-        // **スポンサーの報酬は引換券**(→docs/03 §3.40a)。SCOUT で好きなときに引く
+        // **スポンサーの報酬は引換券**(→docs/10 §3.40a)。SCOUT で好きなときに引く
         toast(ticketById(g.got.ticket).name+" を受け取りました");
       }else if(g.spon){
         toast(fmtNum(g.got.coin||g.coin||0)+" コインを受け取りました");
@@ -660,10 +660,10 @@ function renderMail(){
   save();
 }
 /**
- * 次戦タイルの下に出すスポンサーの看板(→docs/06 §6.25)。
+ * 次戦タイルの下に出すスポンサーの看板(→docs/11 §6.25)。
  * **契約中だけ**。ピッチ脇の広告板と同じで、居るときにだけ静かに映り込む。
  */
-/** 契約中のスポンサーの看板の絵(→docs/06 §6.32)。**無ければ空**。
+/** 契約中のスポンサーの看板の絵(→docs/11 §6.32)。**無ければ空**。
  *  絵はスポンサーの id で引く(src/assets/banner/<id>.webp)。
  *  23社ぶんを一度に描けるわけではないので、**ある会社だけ絵になる**作りにしてある。 */
 function sponAd(cls){
@@ -681,7 +681,7 @@ function sponBoard(){
     +(ad||'<b>'+esc(sponsorById(sp.id).name)+'</b>')+'</div>';
 }
 /**
- * CLUB NEWS の流し表示(→docs/06 §6.58)。**1行ずつ入れ替える**。
+ * CLUB NEWS の流し表示(→docs/11 §6.58)。**1行ずつ入れ替える**。
  *
  * 以前は全部を積んだタイルを HOME の末尾に置いていたが、知らせが増えると
  * **画面からはみ出して読めなかった**。1行なら試合タイルの直下に置けて、
@@ -776,20 +776,20 @@ const evalLabel=v=>v>=TUNING.eval.extendNeed?"良好":v>=45?"普通":v>=20?"不�
 
 // ---------- CARDS(コレクション) ----------
 let _cardFilter="ALL";
-// 絞り込みと並べ替え(→docs/06 §6.62)。**軸ごとに1つずつ**持つ
+// 絞り込みと並べ替え(→docs/11 §6.62)。**軸ごとに1つずつ**持つ
 let _cardRar="ALL";       // 段(STD/REG/SPE/WC/LEG)
 let _cardWhere="ALL";     // deck=編成に入っている / bench=入っていない
                           // mine=自分のカード / loan=クラブからの貸与
 let _cardSort="ovr";      // ovr=総合力順 / rar=段順
-// 1ページに出す枚数(→docs/06 §6.35)。**全部並べると数百枚のスクロールになる**ので
+// 1ページに出す枚数(→docs/11 §6.35)。**全部並べると数百枚のスクロールになる**ので
 // 区切る。絞り込みを変えたら1ページ目へ戻す(前のページ番号が残ると空振りする)。
-// **4列×4段**(→docs/06 §6.64)。スタメン11人+控え5人がちょうど1ページ
+// **4列×4段**(→docs/11 §6.64)。スタメン11人+控え5人がちょうど1ページ
 const CARDS_PER_PAGE=16;
 let _cardPage=1;
-let _bulk=false;                    // まとめて売るモード(→docs/03 §3.68)
+let _bulk=false;                    // まとめて売るモード(→docs/10 §3.68)
 function renderCards(){
   const all=availableCards(), own=S.player.coll.length;
-  // **軸ごとに1列**(→docs/06 §6.62)。押すと1ページ目に戻す(絞ったのに
+  // **軸ごとに1列**(→docs/11 §6.62)。押すと1ページ目に戻す(絞ったのに
   // 3ページ目のままだと「何も無い」と読めてしまう)
   const chips=(box,items,cur,set)=>{
     $(box).innerHTML=items.map(([id,label,cls])=>
@@ -809,7 +809,7 @@ function renderCards(){
   chips("cardsWhere",[["ALL","全員"],["deck","編成"],["bench","編成外"],
       ["mine","自分"],["loan","貸与"]],
     _cardWhere,v=>{ _cardWhere=v; });
-  // **まとめて売るモード**(→docs/03 §3.68)。入ると札のタップが「開く」から
+  // **まとめて売るモード**(→docs/10 §3.68)。入ると札のタップが「開く」から
   // 「選ぶ」に変わるので、いま何のモードなのかを必ず画面に出す
   $("cardsBulk").textContent=_bulk?"やめる":"まとめて売る";
   $("cardsBulk").classList.toggle("on",_bulk);
@@ -836,7 +836,7 @@ function renderCards(){
   const page=list.slice(from,from+CARDS_PER_PAGE);
   $("cardsCount").innerHTML="所持カード "+list.length+" / "+all.length
     +"　<span class=\"loan\">(CLUBS)</span> クラブからの貸与 "+(all.length-own)+" 枚";
-  // 並べ替え(→docs/06 §6.62)。**2つしかないので押して入れ替える**
+  // 並べ替え(→docs/11 §6.62)。**2つしかないので押して入れ替える**
   $("cardsSort").textContent=_cardSort==="ovr"?"総合力順":"段順";
   $("cardsSort").onclick=()=>{ _cardSort=_cardSort==="ovr"?"rar":"ovr";
     _cardPage=1; renderCards(); };
@@ -864,7 +864,7 @@ function wireCardTiles(root){
   });
 }
 
-// ---------- まとめて売る(→docs/03 §3.68) ----------
+// ---------- まとめて売る(→docs/10 §3.68) ----------
 // 1枚ずつ開いて売ると、整理のたびに「開く → 売る → 確認 → 閉じる」を
 // 人数ぶん繰り返すことになる。**選んでから一度だけ確認する**形にする。
 // 売れない札(編成・師弟・実在選手・貸与)は選べないようにし、理由をその場に出す。
@@ -902,7 +902,7 @@ function wireBulkTiles(root){
   });
 }
 /**
- * 足元の帯。**選んだ数と合計額を常に見せる**(→docs/06 §6.35)。
+ * 足元の帯。**選んだ数と合計額を常に見せる**(→docs/11 §6.35)。
  * 売却は戻せないので、1枚売りと同じ二段確認にする。
  */
 function renderSellBar(list){
@@ -991,7 +991,7 @@ function squadSlotLabel(ix){
  * (→docs/06 §6.15)。100% = 素のまま / 75% = 黄 / 50% = 赤。
  */
 // **覚醒ぶんを載せた値**を使う(→docs/03 §3.30)。相手のカードには記録が無いので素のまま
-// **★を含めた実効値**(→docs/03 §3.53)。liveOvr は自分の訓練ぶん、upOf は相手の★ぶん
+// **★を含めた実効値**(→docs/10 §3.53)。liveOvr は自分の訓練ぶん、upOf は相手の★ぶん
 const effOvr=(c,sub)=>Math.round((liveOvr(c)+upOf(c))*slotFit(c,sub));
 const effClass=(c,sub)=>({ a:"", b:" v-warn", c:" v-bad" })[fitTier(c,sub)];
 /**
@@ -1262,7 +1262,7 @@ function openCard(x,opts){
         : isLoaned(c)
         ? "<span class=\"loan\">(CLUBS)</span> クラブからの貸与 — 退任するとこのクラブに残ります"
         : "自分のカード — 移籍しても連れて行けます")+'</div>'
-      // 売却(→docs/03 §3.46)。**下見のときは出さない**(相手の選手なので)
+      // 売却(→docs/10 §3.46)。**下見のときは出さない**(相手の選手なので)
       +(foe?"":'<div class="cm-sell" id="cmSell"></div>')
     +'</div>';
   bindSkillPop(c.skills);
@@ -1271,14 +1271,14 @@ function openCard(x,opts){
   $("cardModal").classList.add("on");
 }
 /**
- * 売却の欄(→docs/03 §3.46)。**戻せない操作なので二段にする**。
+ * 売却の欄(→docs/10 §3.46)。**戻せない操作なので二段にする**。
  * 1回目で値段と確認、2回目で確定。理由があって売れないカードは、その理由を出す
  * (押せるのに何も起きない、を作らない)。
  */
 let _sellArm=null, _buyArm=null;
 function renderSell(c){
   const box=$("cmSell"); if(!box)return;
-  // **貸与の買い取り**(→docs/03 §3.59)。師弟の約束を結んだ選手だけ、
+  // **貸与の買い取り**(→docs/10 §3.59)。師弟の約束を結んだ選手だけ、
   // ここが「売る」ではなく「買い取る」になる
   if(isLoaned(c)){ renderBuy(c,box); return; }
   const why=sellWhy(c);
@@ -1299,7 +1299,7 @@ function renderSell(c){
   };
 }
 /**
- * 貸与の買い取り(→docs/03 §3.59)。**師弟の約束が鍵**。
+ * 貸与の買い取り(→docs/10 §3.59)。**師弟の約束が鍵**。
  * 結んでいなければ、何が足りないのかをそのまま出す(押せるのに何も起きない、を作らない)。
  */
 function renderBuy(c,box){
@@ -1367,7 +1367,7 @@ function figHtml(c,cls,extra,cond){
 /** 覚醒の★(→docs/03 §3.30)。名前の下に置く。 */
 // **★が上限まで並んだら金**(→docs/03 §3.30)。黄金の連携線(→§3.31)と同じ色で、
 // 「もう伸びしろが無い = 仕上がった」を盤面の上で一目で分かるようにする。
-// **相手の★も出す**(→docs/03 §3.53)。強さの差を段の数値ではなく★で出しているので、
+// **相手の★も出す**(→docs/10 §3.53)。強さの差を段の数値ではなく★で出しているので、
 // ここに出さないと「なぜ強いのか」が下見から読み取れなくなる。
 // 自分のカードは訓練の記録から、相手のカードは札の `up` から数える。
 const starRow=c=>{ const n=c?(trainStar(c.id)||upOf(c)):0;
@@ -1444,7 +1444,7 @@ function renderDeck(){
   const raw=squadPower(start.map(c=>c&&liveCard(c))), fit=myPower(cards);
   $("deckPower").textContent=fit;
   $("deckCoach").textContent=S.coach?("監督 "+S.coach):"監督";
-  // 自分の顔は**契約で選んだもの**(→docs/03 §3.45)。相手と同じ枠に同じ作りで出す
+  // 自分の顔は**契約で選んだもの**(→docs/10 §3.45)。相手と同じ枠に同じ作りで出す
   setFace("deckFace",managerArt());
   $("deckForm").textContent="陣形: "+S.form
     +(fit<raw?"　適性ロス −"+(raw-fit):"");
@@ -1564,13 +1564,13 @@ function renderFoe(){
   const cards=_foeCards=side.cards;
   const start=cards.slice(0,TUNING.squad.starters);
 
-  // **顔も出す**(→docs/03 §3.56)。DIV1 とカップの上位、メモラビリアは有名な顔
+  // **顔も出す**(→docs/10 §3.56)。DIV1 とカップの上位、メモラビリアは有名な顔
   const famous=mem?true
     :f.kind==="cup"?(cupById(f.cup).bias>=9)
     :(divOfClub(clubById(f.clubId))===1);
   setFace("foeFace",coachFace(mem?("mem:"+mem.id):(f.kind==="cup"
     ?("cup:"+f.cup+":"+f.slot):("club:"+f.clubId)),famous));
-  // **監督の性分も出す**(→docs/03 §3.56)。誰が指揮しているかで運びが変わる
+  // **監督の性分も出す**(→docs/10 §3.56)。誰が指揮しているかで運びが変わる
   const ct=side.coach?coachById(side.coach):null;
   $("foeCoach").innerHTML="監督 "+esc(coach)
     +(ct?'<i class="foe-ct">'+esc(ct.name)+'型</i>':"");
@@ -1612,7 +1612,7 @@ const shortName=c=>c.sur||c.name.split(" ").slice(-1)[0];
 // ---------- SCOUT(→docs/03 §3.22) ----------
 // **コインで引くパック。** 稼ぎをいつ補強に回すかを監督に選ばせる。
 /**
- * 見本市(→docs/06 §6.56)。**まだ持っていない実在選手を並べ、少しずつ入れ替える**。
+ * 見本市(→docs/11 §6.56)。**まだ持っていない実在選手を並べ、少しずつ入れ替える**。
  * 何が入っているのか分からないままコインを積むのは、補強ではなく賭けになる。
  *
  * **並びの始まりは節から決まる**(開くたびに総入れ替えだと落ち着かない)が、
@@ -1682,7 +1682,7 @@ function scoutArt(pk){
 }
 
 /**
- * 開封の演出(→docs/06 §6.56)。**紙のパックから出てくる**ように見せる。
+ * 開封の演出(→docs/11 §6.56)。**紙のパックから出てくる**ように見せる。
  *
  * 引いた瞬間に一覧が書き換わるだけだと、いちばん嬉しい所が一瞬で終わる。
  * ①袋が震える → ②裂ける → ③カードが裏から翻る → ④段の色で光る、の4拍。
@@ -1696,7 +1696,7 @@ function revealCards(cards,label){
   if(!box||!cards||!cards.length)return;
   _rvT.forEach(clearTimeout); _rvT=[];
   const c=cards[0];                                  // パックは1枚(→§3.22)
-  // **封の印**(→docs/06 §6.56)。実在選手の WC / LEGENDS を引いたときだけ
+  // **封の印**(→docs/11 §6.56)。実在選手の WC / LEGENDS を引いたときだけ
   // 「TOP SECRET!!!」になる。**開ける前に分かる**のが、この演出のいちばんの山
   const big=!!c.sig&&(c.rarity==="WC"||c.rarity==="LEG");
   const pn=$("rvPackName");
@@ -1758,7 +1758,7 @@ function renderScout(){
       +'<div class="sc-b"><div class="sc-nm">'+esc(t.name)
         +'　<i class="sc-n">×'+ticketCount(id)+'</i></div>'
         +'<div class="sc-de">'+esc(t.note)+'</div></div>'
-      // **枠を選ぶ券は、引くときに選ぶ**(→docs/03 §3.40a)。
+      // **枠を選ぶ券は、引くときに選ぶ**(→docs/10 §3.40a)。
       // 受け取りの時点で決めさせると、券のまま持っておく意味がなくなる
       +(t.pick
         ?'<span class="sc-pick">'+POS.map(x=>'<button class="btn sc-buy" '
@@ -1821,7 +1821,7 @@ function buyScout(id){
 }
 
 /**
- * 移籍市場(→docs/03 §3.67)。**能力も値段も全部見えている**のが、
+ * 移籍市場(→docs/10 §3.67)。**能力も値段も全部見えている**のが、
  * スカウト(引く)との違いそのものなので、隠すものは何も無い。
  * 一覧は買値の高い順。高い選手が上にあるほうが「今日の目玉」が伝わる。
  */
@@ -1872,7 +1872,7 @@ function renderSeason(){
   const r=rankOf(W.table,S.club.id), t=W.table[S.club.id];
   $("seasonHead").textContent="SEASON "+W.season+" · 任期スケジュール";
   // 見出しは引き出しの上に出るので、中では繰り返さない
-  // クラブの現況は CLUB へ移した(→docs/06 §6.50)
+  // クラブの現況は CLUB へ移した(→docs/11 §6.50)
   renderTenureBar();
   renderTenureCalendar();
 
@@ -1881,7 +1881,7 @@ function renderSeason(){
   $("seasonComps").innerHTML=
     // **ここが大会の一覧そのもの**(→docs/03 §3.23)。日程画面には出られる大会しか
     // 並べないので、「何があって何で開くのか」はこの引き出しだけが答えられる
-    // **説明文は置かない**(→docs/06 §6.42)。並んでいる札そのものが一覧で、
+    // **説明文は置かない**(→docs/11 §6.42)。並んでいる札そのものが一覧で、
     // 出られるかどうかは各行の状態に書いてある
     '<div class="comp-card live" data-comp="league">'
       +'<div class="cc-l"><b><i class="cc-k">LEAGUE</i>'+esc(lg.name)+' '+divName(W.div)+'</b>'
@@ -1902,7 +1902,7 @@ function renderSeason(){
       // 「なぜ出られないのか」のどちらかが分からなくなる
       else sub=cup.every+"の倍数の節 ／ "
         +(need||(cupNeedFull(cup)==="なし"?"参加条件なし":"参加条件クリア（"+cupNeedFull(cup)+"）"));
-      // **エントリー中は光らせる**(→docs/06 §6.42)。並びの中で「いま戦っている大会」が
+      // **エントリー中は光らせる**(→docs/11 §6.42)。並びの中で「いま戦っている大会」が
       // 一目で分かるようにする。リーグは常に戦っているので常に光る
       const live=!!(j&&j.alive);
       return '<div class="comp-card'+(j?"":" off")+(!j&&!need?" ok":"")
@@ -1945,9 +1945,9 @@ function renderTenureCalendar(){
   // --- 現在: 打ち手 → 試合 ---
   if(!C.over){
     if(lastSeason!==W.season||lastClub!==S.club.id)rows.push(seasonDivider(W.season,S.club.id));
-    // **節目は行き先まで連れていく**(→docs/06 §6.42)。ここで止まると
+    // **節目は行き先まで連れていく**(→docs/11 §6.42)。ここで止まると
     // 「HOMEへ行け」と書いてあるだけで、自分でタブを押しに行くことになる
-    // **この行が「いまの場所」**(→docs/06 §6.52)。目印(`cal-here`)を付けておかないと
+    // **この行が「いまの場所」**(→docs/11 §6.52)。目印(`cal-here`)を付けておかないと
     // 試合から戻ったときに scrollToCurrent が的を見失い、日程の先頭に飛ぶ。
     // **id は共有しない** — `calCur` には現在節のクリック(チャットを開く)が
     // 結び付いているので、判定行に付けると HOME ではなくチャットへ飛ぶ
@@ -1970,7 +1970,7 @@ function renderTenureCalendar(){
       +'<span class="lg">'+(p.comp==="cup"?"カップ戦":"リーグ戦")+'（予定確定）</span></span>'
       +'<span class="cal-r">▣</span></div>');
     // **カップの開催日は先に見せる**。エントリー後は大会の予定がそのまま並ぶ(→docs/03 §3.23)
-    // **出られない大会はトーンを落とす**(→docs/06 §6.31)。トロフィーも付けない。
+    // **出られない大会はトーンを落とす**(→docs/11 §6.31)。トロフィーも付けない。
     // 予定は見せるが、いま狙えるものと同じ強さで並べると選べる大会が埋もれる
     else if(cu)rows.push('<div class="cal fut '+cu.cls+(cu.open?" tr":" dim")+'">'
       +'<span class="cal-n num">'+n+'</span>'
@@ -1984,7 +1984,7 @@ function renderTenureCalendar(){
   }
 
   $("seasonCal").innerHTML=rows.join("");
-  // **節目の行き先**(→docs/06 §6.42)。押すとその画面へ連れていく
+  // **節目の行き先**(→docs/11 §6.42)。押すとその画面へ連れていく
   $("seasonCal").querySelectorAll("[data-go]").forEach(el=>{
     el.onclick=()=>show(el.dataset.go);
   });
@@ -2016,7 +2016,7 @@ function cupCalNote(n){
   // **その節に出られるか**。塞いでいるもの(進行中の大会・間隔・参加条件)が
   // ひとつでもあれば「見えるだけの予定」で、見た目のトーンもそこで分かれる
   const open=n>last&&n>=rest&&cupOpen(on[0]);
-  // **理由は書かない**(→docs/06 §6.31)。出られるかどうかは文字のトーンで分かり、
+  // **理由は書かない**(→docs/11 §6.31)。出られるかどうかは文字のトーンで分かり、
   // 条件そのものは日程タブ(大会と参加条件)が持っている。96行ぜんぶに但し書きを
   // 添えると、カレンダーが注意書きの列になってしまう
   return { label:on[0].name+(on.length>1?" 他":""), sub:also, cls:"cup soon",
@@ -2044,7 +2044,7 @@ function renderSchedule(){
     return '<div class="cal foe'+(next?" next":"")+(done?" done":"")+'"'
       +' data-club="'+opp+'" role="button" tabindex="0">'
       +'<span class="cal-n num">'+md+'</span>'
-      // **色の丸ではなくエンブレム**(→docs/03 §3.54)。同じ相手と2度当たるので、
+      // **色の丸ではなくエンブレム**(→docs/10 §3.54)。同じ相手と2度当たるので、
       // 節ごとに別の tag を渡して clipPath の id をぶつけない
       +'<span class="cal-c">'+embSvg(opp,clubName(opp),22,{ tag:"sc"+md })+'</span>'
       +'<span class="cal-b"><b>'+esc(clubName(opp))+'</b>'
@@ -2088,9 +2088,9 @@ function logRow(e){
   const name=cup?e.oppName:clubName(e.opp);
   const sub=cup?e.label+(e.champ?" ／ 優勝":"")
             :"S"+e.season+" 第"+e.md+"節 ／ "+(e.home?"HOME":"AWAY");
-  // **済んだ節に飾りは要らない**(→docs/06 §6.31)。ここで読みたいのはスコアなので、
+  // **済んだ節に飾りは要らない**(→docs/11 §6.31)。ここで読みたいのはスコアなので、
   // トロフィーの絵も打ち手の絵文字も置かない。打ち手は title に残す
-  // **どこと戦ったのかをエンブレムで出す**(→docs/06 §6.55)。名前だけだと、
+  // **どこと戦ったのかをエンブレムで出す**(→docs/11 §6.55)。名前だけだと、
   // 過去の行を辿るときに毎回読まないと分からない。カップの相手はクラブIDを
   // 持たないので、枠の名前をたねにする(予定のタイルと同じ作り)
   const emb=cup?embSvg("cup:"+name,name,22,{ tag:"lg"+e.node })
@@ -2116,16 +2116,16 @@ function currentRow(){
   // 相手が決まっていれば出す。決まるのはチャットで大会を選んでから
   const f=C.comp==="cup"?cupFixtureOf():null;
   const m=C.comp==="league"?myFixture():null;
-  // **相手はエンブレムで出す**(→docs/03 §3.54)。カップの相手はクラブIDを持たないので、
+  // **相手はエンブレムで出す**(→docs/10 §3.54)。カップの相手はクラブIDを持たないので、
   // 枠の名前をたねにする(架空の相手にも同じ作りの顔が付く)
   const foe=f?{ name:f.side.name, sub:f.label, emb:embSvg("cup:"+f.side.name,f.side.name,22,{ tag:"cur" }) }
     :m?{ name:clubName(m.opp), sub:"リーグ 第"+S.world.matchday+"節 ／ "+(m.home?"HOME":"AWAY"),
          emb:embSvg(m.opp,clubName(m.opp),22,{ tag:"cur" }) }:null;
   // **タイルごとリンク**。ボタンは置かず、行き先を見出しそのものにする(→docs/06 §6.8)。
   // 前は見出しが「この節の準備」で、行き先は右下に小さく置いていた。
-  // タイルの用は1つしかないので、**押したら何が起きるか**を見出しに上げた(→docs/06 §6.31)
+  // タイルの用は1つしかないので、**押したら何が起きるか**を見出しに上げた(→docs/11 §6.31)
   //
-  // **相手が決まったら、見出しを相手で上書きする**(→docs/06 §6.55)。
+  // **相手が決まったら、見出しを相手で上書きする**(→docs/11 §6.55)。
   // 以前は下に相手の行を足していたが、タイルが2段になるうえ、済んだ節の行と
   // 形が変わってしまう。決まった後は**済んだ節と同じ並び**にするのが正しい
   return '<div class="cal cur cal-here'+(foe?" set":"")+'" id="calCur" role="button" tabindex="0">'
@@ -2139,9 +2139,9 @@ function currentRow(){
          +(ch?'<span class="lg">'+esc(state)+'</span>':""))
     +'</span>'
     +'<span class="cal-r">›</span></div>'
-    // **いまの節はロッカーの絵で示す**(→docs/06 §6.31)。並んだ枠の中で1枚だけ絵が入る
+    // **いまの節はロッカーの絵で示す**(→docs/11 §6.31)。並んだ枠の中で1枚だけ絵が入る
     +'<div class="cur-st">'+stickerArt("locker")+'</div>'
-    // **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.54)。ロッカーを背に2人を並べる。
+    // **監督と秘書がブリーフィングへ向かう**(→docs/11 §6.54)。ロッカーを背に2人を並べる。
     // 枠は付けず、足元はタイルの縁で切り落とす(立ち止まっている絵ではなく、
     // 「これから始まる」に見せたい)
     // **秘書が先、監督が右**。並び順はそのまま見た目の左右になる
@@ -2212,7 +2212,7 @@ const chatLine=(a,seed)=>a[Math.abs(hashStr(seed))%a.length];
 const chatText=(v,seed,vars)=>chatFill(Array.isArray(v)?chatLine(v,seed):v,
   { ...secVars(), ...(vars||{}) });
 /**
- * 台詞の差し込み。**{x} をまとめて置き換える**(→docs/06 §6.23)。
+ * 台詞の差し込み。**{x} をまとめて置き換える**(→docs/11 §6.23)。
  * 名前を1つずつ列挙していたときは、足した差し込みを書き忘れて
  * 「{t} をやろう。」がそのまま画面に出た。ここで総なめにする。
  */
@@ -2273,7 +2273,7 @@ function chatEnter(st){
     if(b){
       chatSay("sec",chatText(CHAT.foeScout,"scout:"+C.node,b));
       if(b.kp)chatSay("sec",chatText(CHAT.foeKey,"key:"+C.node,{ n:b.kp }));
-      // **相手の采配**(→docs/03 §3.51)。何を盗めるかが先に分かる
+      // **相手の采配**(→docs/10 §3.51)。何を盗めるかが先に分かる
       if(b.tac)chatSay("sec",chatText(CHAT.foeTac,"ftc:"+C.node,{ t:b.tac }));
       chatSay("sec",chatText(CHAT.foeGap[b.gap],"gap:"+C.node));
     }
@@ -2400,7 +2400,7 @@ function chatEnter(st){
       chatSay("sec",chatText(CHAT.sponAsk,"sq:"+C.node));
       return true;
     }
-    // **トレード**(→docs/03 §3.49)。任期の折り返しと終盤に1度ずつ
+    // **トレード**(→docs/10 §3.49)。任期の折り返しと終盤に1度ずつ
     const tr=tradePending();
     if(tr){
       sel.trade=tr;
@@ -2415,7 +2415,7 @@ function chatEnter(st){
       chatSay(m,chatText(CHAT.mentorAsk,"mt:"+C.node+":"+m));
       return true;
     }
-    // **節の出来事**(→docs/03 §3.48)。10試合に1回くらい。同時には1つだけ
+    // **節の出来事**(→docs/10 §3.48)。10試合に1回くらい。同時には1つだけ
     const lk=luckPick();
     if(lk){
       sel.luck=lk;
@@ -2457,7 +2457,7 @@ function chatPick(id,label){
       { n:sponsorById(sp.id).name, g:sponGoalText(sp), d:String(sp.until) }));
   }
   else if(st==="event"&&sel.trade){
-    // トレード(→docs/03 §3.49)。**出すと決めてから、何が欲しいかを選ぶ**
+    // トレード(→docs/10 §3.49)。**出すと決めてから、何が欲しいかを選ぶ**
     if(id==="no"){
       tradeDo(null); sel.trade=null;
       chatSay("sec",chatText(CHAT.tradeNo,"tn:"+C.node));
@@ -2473,7 +2473,7 @@ function chatPick(id,label){
     }
   }
   else if(st==="event"&&sel.luck){
-    // 節の出来事の答え(→docs/03 §3.48)
+    // 節の出来事の答え(→docs/10 §3.48)
     const ev=sel.luck, r=luckApply(ev,id);
     chatSay(ev.who,chatText(r&&r.ok?CHAT.luckHit:CHAT.luckMiss,"lh:"+C.node+":"+ev.who));
     chatSay("sec",chatText(r&&r.ok?CHAT.luckHitSec:CHAT.luckMissSec,"ls:"+C.node,
@@ -2504,7 +2504,7 @@ function chatPick(id,label){
   save(); chatAdvance();
 }
 /**
- * 答えの要らない出来事を、その場で解決して喋る(→docs/03 §3.48)。
+ * 答えの要らない出来事を、その場で解決して喋る(→docs/10 §3.48)。
  * **効き目は先に反映する**。結果を見せてから効く、では順が逆になる。
  */
 function luckSay(ev){
@@ -2523,7 +2523,7 @@ function luckSay(ev){
 /** いま出す選択肢。 */
 function chatOptions(){
   const C=S.career, ch=C.chat, sel=ch.sel, st=ch&&ch.step;
-  // **監督は単語で返さない**(→docs/06 §6.23)。選択肢は短く、発言は文にする
+  // **監督は単語で返さない**(→docs/11 §6.23)。選択肢は短く、発言は文にする
   const N=C.node;
   if(st==="cup"){
     // **重なった日は大会ごとに選択肢を出す**(→docs/03 §3.23)。1つなら今までどおり
@@ -2539,7 +2539,7 @@ function chatOptions(){
         sub:"リーグ戦に集中します" }]) };
   }
   if(st==="event"){
-    // トレード(→docs/03 §3.49)。**まず出すかどうか、次に何が欲しいか**
+    // トレード(→docs/10 §3.49)。**まず出すかどうか、次に何が欲しいか**
     if(sel.trade&&!sel.tradePick)return { q:"トレードに応じますか", items:[
       { id:"yes", label:shortOf(sel.trade.out)+" を出す",
         sub:"かわりに希望の選手を1人もらえます",
@@ -2549,7 +2549,7 @@ function chatOptions(){
     if(sel.trade&&sel.tradePick)return { q:"どんな選手を希望しますか",
       items:sel.trade.cands.map((c,i)=>({ id:String(i), label:tradeHint(c),
         sub:RARITY[c.rarity].label, say:"「"+tradeHint(c)+"」を頼む。" })) };
-    // 節の出来事の3択(→docs/03 §3.48)。**当たりは節ごとに変わる**
+    // 節の出来事の3択(→docs/10 §3.48)。**当たりは節ごとに変わる**
     if(sel.luck&&sel.luck.id==="ask")return { q:"何を求めているか、伝えますか",
       items:LUCK_ROLES.map(r=>({ id:r.id, label:r.label,
         say:"お前には "+r.label+" であってほしい。" })) };
@@ -2563,7 +2563,7 @@ function chatOptions(){
       id:m.id, label:m.label, sub:m.sub, say:m.label+"。" })) };
   }
   if(st==="hand")return { q:"打ち手を選ぶ",
-    // **説明は添えない**(→docs/06 §6.24)。違いは覚えるもので、毎節読むものではない。
+    // **説明は添えない**(→docs/11 §6.24)。違いは覚えるもので、毎節読むものではない。
     // スポンサーが付いていれば4つ目が増える(→docs/03 §3.40)
     items:handsNow().map(h=>({ id:h.id, label:h.label,
       say:h.id==="spon"?chatText(CHAT.sponAid,"sa:"+N,{ a:h.label })
@@ -2601,12 +2601,12 @@ function chatSquad(except){
 }
 const shortOf=id=>{ const c=cardById(id); return c?shortName(c):"—"; };
 /**
- * 秘書の絵(→docs/06 §6.27)。**クラブごとに決まっていて、移れば替わる**。
+ * 秘書の絵(→docs/11 §6.27)。**クラブごとに決まっていて、移れば替わる**。
  * 誰になるかはクラブIDから決まるので、同じクラブなら毎回同じ人が座っている。
  * **絵を足しても JS は触らない** — ASSETS の並びをそのまま候補にする。
  */
 /**
- * 秘書の名前(→docs/03 §3.43a)。**クラブから決まる**ので、同じクラブならいつも同じ人。
+ * 秘書の名前(→docs/10 §3.43a)。**クラブから決まる**ので、同じクラブならいつも同じ人。
  * 呼び名(first)と、名乗るとき用のフルネーム(full)を返す。
  */
 function secretaryName(clubId){
@@ -2629,13 +2629,13 @@ function secretaryArt(clubId){
   return A[keys[Math.abs(hashStr("sec:"+id))%keys.length]];
 }
 /**
- * 話し手のアイコン(→docs/06 §6.23)。**秘書も監督も選手と同じ丸**。
+ * 話し手のアイコン(→docs/11 §6.23)。**秘書も監督も選手と同じ丸**。
  * 秘書と監督の絵はまだ無いので、シルエットのプレースホルダーを出す。
  * `src/assets/faces/sec.png` / `mgr.png` を置けば**そのまま差し替わる**
  * (絵を足すのに JS を触らない。選手の絵と同じ考え方 →docs/03 §3.19)。
  */
 /**
- * 監督の顔(→docs/03 §3.45)。契約書で選んだものを返す。
+ * 監督の顔(→docs/10 §3.45)。契約書で選んだものを返す。
  * **選んでいなければ監督名から決める**ので、絵が出ないことは無い
  * (古いセーブ、そして選ばずに進んだ場合の受け皿)。
  */
@@ -2649,7 +2649,7 @@ function managerArt(key){
   return A[keys[Math.abs(hashStr("mgr:"+(S.coach||"")))%keys.length]];
 }
 /**
- * 相手監督の顔(→docs/03 §3.56)。**key から決まる**ので、同じ相手はいつも同じ顔。
+ * 相手監督の顔(→docs/10 §3.56)。**key から決まる**ので、同じ相手はいつも同じ顔。
  *
  * **有名どころは有名な顔で出す**(プレイヤーが選ぶのと同じ mg01/mg02)。
  * それ以外は汎用の顔(mob01)。格の高い相手だけ顔で分かるようにしておくと、
@@ -2659,7 +2659,7 @@ function coachFace(key,famous){
   const A=(window.ASSETS&&window.ASSETS.manager)||{};
   const keys=Object.keys(A).sort();
   if(!keys.length)return null;
-  // **メモラビリアの監督は顔まで決め打ち**(→docs/03 §3.55)。実在の一戦を指す
+  // **メモラビリアの監督は顔まで決め打ち**(→docs/10 §3.55)。実在の一戦を指す
   // 記録なので、ハッシュで毎回ちがう顔が当たると記録として成り立たない
   if(String(key).indexOf("mem:")===0){
     const m=memById(String(key).slice(4));
@@ -2690,16 +2690,16 @@ function renderChat(){
   const C=S.career;
   if(!C.chat)chatStart();
   const ch=C.chat;
-  // **見出しは今節の相手**(→docs/06 §6.24)。自クラブ名はヘッダーに出ているので、
+  // **見出しは今節の相手**(→docs/11 §6.24)。自クラブ名はヘッダーに出ているので、
   // ここで繰り返すより「誰と戦うのか」を置いたほうがこの画面の役に立つ
   const f=C.comp==="cup"?cupFixtureOf():null;
   const m=f?null:myFixture();
   const foe=f?f.side.name:m?clubName(m.opp):null;
   $("chatClub").textContent=foe?"VS "+foe:clubName(S.club.id);
   $("chatSub").textContent="第"+C.node+"節";
-  // 節は見出しの副題に出ているので、ここでは繰り返さない(→docs/06 §6.24)
+  // 節は見出しの副題に出ているので、ここでは繰り返さない(→docs/11 §6.24)
   $("chatAv").innerHTML=chatAvatar("sec","ch-av-in");
-  // **本物のやりとりに見せる**(→docs/06 §6.36)。
+  // **本物のやりとりに見せる**(→docs/11 §6.36)。
   //   ・同じ人が続けて話したら、顔と名前は最初の1回だけ(いちばん効く手掛かり)
   //   ・時刻を添える。**節から決まる**ので、開き直しても同じ時刻に見える
   //   ・監督の最後の発言には「既読」を付ける(相手が読んだ、という形)
@@ -2714,7 +2714,7 @@ function renderChat(){
       +(i===lastMe?'<span class="ch-read">既読</span>':"")+'</div>'
       +'<div class="ch-b">'+esc(m.t)+'</div>'
       +(head?chatAvatar("mgr"):'<span class="ch-gap"></span>')+'</div>';
-    // **選手はポジションも添える**(→docs/06 §6.24)。誰を育てるかの手掛かりになる
+    // **選手はポジションも添える**(→docs/11 §6.24)。誰を育てるかの手掛かりになる
     const pc=m.w==="sec"?null:cardById(m.w);
     const nm=m.w==="sec"?esc(secretaryName().first):esc(shortOf(m.w))
       +(pc?' <i class="ch-pos">'+esc(primarySub(pc))+'</i>':"");
@@ -2747,7 +2747,7 @@ function renderChat(){
 }
 /** 会話は下が最新。**開いたら必ず最新まで送る**。 */
 /**
- * 発言の時刻(→docs/06 §6.36)。**節から決まる**ので、開き直しても同じ時刻に見える。
+ * 発言の時刻(→docs/11 §6.36)。**節から決まる**ので、開き直しても同じ時刻に見える。
  * 試合当日の朝、9時前後から数分おきに話している、という体。
  */
 function chatClock(node,i){
@@ -2756,7 +2756,7 @@ function chatClock(node,i){
   return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
 }
 /**
- * 試合収益の明細(→docs/03 §3.47)。**合計は今までと同じ**で、内訳の見せ方だけを変える。
+ * 試合収益の明細(→docs/10 §3.47)。**合計は今までと同じ**で、内訳の見せ方だけを変える。
  *   入場料 … 観客が入って落ちるお金。ホームのほうが多い
  *   成績給 … 勝ち・引き分け・負けで変わるぶん
  * カップ戦は賞金が大会の決着でまとめて入る(→docs/03 §3.23)ので、ここは入場料だけ。
@@ -2779,7 +2779,7 @@ function chatBottom(){
 SCREENS.chat.after=chatBottom;
 
 /**
- * 現在節が画面に入るまでスクロールする(96節あるので必須 →docs/06 §6.52)。
+ * 現在節が画面に入るまでスクロールする(96節あるので必須 →docs/11 §6.52)。
  *
  * **的が無い場面がある**。任期が明けたあと(`C.over`)は「いまの節」の行そのものが
  * 並ばない。そのときは**最後に消化した節**まで送る。ここで諦めると日程の先頭
@@ -2899,7 +2899,7 @@ function cupInfoBox(cup,c){
 /** 任期カレンダーを開いたら現在節へ寄せる(96節あるので必須)。 */
 SCREENS.season.after=()=>setTimeout(scrollToCurrent,30);
 /**
- * タイトルのステッカーの壁(→docs/06 §6.29)。**決定論的に敷き詰める**ので、
+ * タイトルのステッカーの壁(→docs/11 §6.29)。**決定論的に敷き詰める**ので、
  * 開くたびに絵面が変わることはない。枚数は画面の大きさから決める。
  * **絵を足しても JS は触らない** — ASSETS の並びをそのまま使う。
  */
@@ -2943,13 +2943,13 @@ function titleWall(){
  *  ハッシュの剰余だと色相が固まって数色しか出ないので、CLUBS の並び順から
  *  黄金角(137.5°)で回して均等に散らす。
  *
- *  **明るく・鮮やかに**(→docs/06 §6.28)。暗い盤面の上に暗い丸を置くと
+ *  **明るく・鮮やかに**(→docs/11 §6.28)。暗い盤面の上に暗い丸を置くと
  *  クラブの見分けが付かなかったので、パステル寄りのネオンに寄せてある。
  *  **文字を載せる丸は clubInk() を使う**(白では読めなくなる)。 */
-const CLUB_L=0.78, CLUB_C=0.22;   // **ビビッドに**(→docs/06 §6.45)
+const CLUB_L=0.78, CLUB_C=0.22;   // **ビビッドに**(→docs/11 §6.45)
 const clubHue=clubId=>((CLUBS.findIndex(c=>c.id===clubId)*137.5+20)%360).toFixed(1);
 /**
- * クラブの色。**エンブレムのホームカラーと同じ**(→docs/03 §3.54d)。
+ * クラブの色。**エンブレムのホームカラーと同じ**(→docs/10 §3.54d)。
  *
  * 以前は並び順から色相を振っていたので、盤面は虹色で、エンブレムとも別物だった。
  * いまは名前から引いた色(→embDesign)を1か所から配る。**マンチェスター・レッズは
@@ -2964,9 +2964,9 @@ function clubColor(clubId){
   return p?p.hex:"oklch("+CLUB_L+" "+CLUB_C+" "+clubHue(clubId)+")";
 }
 /**
- * 試合で使う色(→docs/06 §6.57)。**同じ色どうしが当たったらアウェイ側が着替える**。
+ * 試合で使う色(→docs/11 §6.57)。**同じ色どうしが当たったらアウェイ側が着替える**。
  *
- * 色をサッカーで実際に使う13色へ寄せた(→docs/03 §3.54d)ので、
+ * 色をサッカーで実際に使う13色へ寄せた(→docs/10 §3.54d)ので、
  * **別のクラブが同じ色を持つことが普通に起きる**。144クラブを13色で塗れば当然で、
  * そのままだと足元の影が同じ色になり、どちらのチームか見分けが付かない。
  * 現実と同じで、**替えるのはアウェイ側**。まずアウェイカラーへ、
@@ -3025,12 +3025,12 @@ function renderStandings(){
 // ---------- CLUB(クラブハウス) ----------
 
 /**
- * クラブの現況(→docs/03 §3.9)。**SEASON の引き出しから移した**(→docs/06 §6.50)。
+ * クラブの現況(→docs/03 §3.9)。**SEASON の引き出しから移した**(→docs/11 §6.50)。
  * 契約の話はクラブの話なので、監督の画面ではなくここに置く。
  */
 function renderClubStatus(){
   if(!S.club){ $("clubStatus").innerHTML=""; $("clubSpon").innerHTML=""; return; }
-  // **紋章に出しているものは繰り返さない**(→docs/06 §6.51)。
+  // **紋章に出しているものは繰り返さない**(→docs/11 §6.51)。
   // クラブ名・いまの舞台・現在順位はエンブレムの脇にある
   $("clubStatus").innerHTML=
     kv("クラブの資金",fmtNum(S.club.coins)+" コイン")
@@ -3041,7 +3041,7 @@ function renderClubStatus(){
   const sp=sponsor();
   $("clubSpon").innerHTML=!sp
     ? kv("スポンサー",sponPending()?"相談が来ています":"—")
-    // **看板のある会社は絵で出す**(→docs/06 §6.32)。相手の顔が見えるほうが
+    // **看板のある会社は絵で出す**(→docs/11 §6.32)。相手の顔が見えるほうが
     // 「どこと組んでいるか」が残る。**社名は下の行にあるので看板には添えない**
     : (sponAd("ad-ct")?'<div class="ct-spon">'+sponAd("ad-ct")+'</div>':"")
       +kv("スポンサー",esc(sponsorById(sp.id).name)+"（第"+sp.until+"節まで）")
@@ -3051,7 +3051,7 @@ function renderClubStatus(){
 }
 
 /**
- * **このクラブに来てからの戦績**(→docs/03 §3.9a)。
+ * **このクラブに来てからの戦績**(→docs/10 §3.9a)。
  *
  * 監督の生涯成績(MANAGER の CAREER)とは別物で、**いまの在任だけ**を抜く。
  * 経歴を末尾から遡り、クラブが変わったところで止める。残留(→§3.58)なら
@@ -3092,7 +3092,7 @@ function renderClubRecord(){
 }
 
 /**
- * MANAGER(→docs/06 §6.50)。**任期をまたいで残るもの**だけを置く。
+ * MANAGER(→docs/11 §6.50)。**任期をまたいで残るもの**だけを置く。
  * 顔と背景の設定、メモラビリア、生涯の経歴とトロフィー、カード見本。
  */
 function renderManager(){
@@ -3123,7 +3123,7 @@ function renderManager(){
     const t=trophyOf(d.id);
     // 2度目からは回数だけ増える。**初めて獲った季**が実績の中身なので消さない
     const sub=t?("SEASON "+t.season+(t.n>1?" ・ ×"+t.n:"")):d.note;
-    // **初優勝に何が付くかを棚に出す**(→docs/03 §3.52)。棚がそのまま
+    // **初優勝に何が付くかを棚に出す**(→docs/10 §3.52)。棚がそのまま
     // 「次にどれを獲りにいくか」の一覧になるので、報酬を隠す理由が無い
     // **短縮形で書く**。RARITY.label(WORLD CLASS)だと2行に折れて棚が読めなくなる
     const a=d.award, aw=!a?null:a.rar?"初優勝 "+RARITY[a.rar].abbr+" シグネチャ"
@@ -3141,7 +3141,7 @@ function renderManager(){
 }
 
 /**
- * CLUB(→docs/06 §6.50)。**いま預かっているクラブの話だけ**を置く。
+ * CLUB(→docs/11 §6.50)。**いま預かっているクラブの話だけ**を置く。
  * 現況・エンブレム・施設、そして**このクラブに来てからの戦績**(→§3.9a)。
  */
 function renderClubhouse(){
@@ -3298,7 +3298,7 @@ function matchLine(e,M){
                         +"　"+scOrder(M,e.hg,e.ag), cls:"goal" };
     case "sub":      return { text:"🔄 交代 "+mName(mPlayer(M,e.side,e.in))+" ← "
                         +mName(mPlayer(M,e.side,e.out)), cls:"info" };
-    // **敷き替えは実況にも出す**(→docs/06 §6.38)。盤面の帯だけだと、
+    // **敷き替えは実況にも出す**(→docs/11 §6.38)。盤面の帯だけだと、
     // あとから見返したときに「いつ変えたか」が残らない
     case "tactic":   return { text:(e.tactic?"⛨ <b>"+esc(e.label)+"</b>に切り替えた"
                         :"⛨ 采配を解除した"), cls:"info" };
@@ -3311,11 +3311,11 @@ function matchLine(e,M){
 // 位置もイベントが持っているので、選手が唐突に飛ぶことはない。
 let _M=null;          // 進行中の試合
 let _mTimer=null, _mSpeed=1, _mPaused=false;
-// **再生ループの周回札**(→docs/06 §6.43)。古いループが残っていても、
+// **再生ループの周回札**(→docs/11 §6.43)。古いループが残っていても、
 // 札が違えば次の一歩で捨てられる。二重に走ると試合が倍速で進み、
 // **1点のつもりが2点入る**(実際に起きた)
 let _mRun=0;
-// **見せ終えていないイベント**(→docs/06 §6.43)。止めた時点の続きから見せるために持つ。
+// **見せ終えていないイベント**(→docs/11 §6.43)。止めた時点の続きから見せるために持つ。
 // 持たずに再開すると stepMatch をやり直してしまい、**まだ見せていない分が捨てられる**。
 // 捨てた中にゴールがあると、次に出たイベントで**点が2つ増えたように見える**
 let _mEvs=null, _mIx=0;
@@ -3393,7 +3393,7 @@ function mDrawSquads(){
   mKpMark(); mTacBars();
 }
 /**
- * 敷いている采配の帯(→docs/06 §6.38)。**両チームぶん**、画面外から差し込む。
+ * 敷いている采配の帯(→docs/11 §6.38)。**両チームぶん**、画面外から差し込む。
  * 右上が相手・左下が自分。**いま盤面に効いているものだけ**を出す
  * (`_M` のチームが持っている采配であって、次の試合の設定ではない)。
  */
@@ -3412,7 +3412,7 @@ function mTacBars(){
   }
 }
 /**
- * ピッチの軸に印を付ける(→docs/03 §3.44 / docs/06 §6.37)。
+ * ピッチの軸に印を付ける(→docs/03 §3.44 / docs/11 §6.37)。
  * **両チームぶん**。自分の指名はタブを開かなくても分かり、相手の軸も盤面で分かる
  * (だから指名の画面から相手の軸の行を外せた)。
  * 光はクラブカラー(`--kit`)なので、**どちらの軸かは色で読む**。
@@ -3623,7 +3623,7 @@ function cutAvatar(p,side){
 }
 /** 選手1人ぶんの枠。cls に L/R と win/dim を渡す。 */
 /**
- * カットインの1人ぶん(→docs/06 §6.40)。
+ * カットインの1人ぶん(→docs/11 §6.40)。
  * **札はその選手の下に置く**。中央にまとめて並べていた頃は、2人出ている帯で
  * どちらの札なのかが読めなかった(攻守も送受も、両方が同時に出ることがある)。
  */
@@ -3639,7 +3639,7 @@ function cutShow(html,ms,extra){
   const c=$("mCut");
   c.className="mcut on"+(extra||"");
   c.innerHTML=html;
-  // **固有スキルの帯は一度だけ揺らす**(→docs/06 §6.34)。
+  // **固有スキルの帯は一度だけ揺らす**(→docs/11 §6.34)。
   // 出た瞬間に画面が動くので、札のバッジより先に「何か起きた」が伝わる
   if(c.querySelector(".cut.sig")){
     c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake");
@@ -3657,8 +3657,8 @@ function cutVs(e,atk,df,word,atkWon){
   const mineWon=ally?atkWon:!atkWon;
   // **勝敗は最初から見せない。** 両者が出そろってから決着させる
   // (同時に出すと速すぎて何が起きたか読めない → docs/06 §6.19)。
-  // **固有スキルが出た帯は特別扱い**(→docs/06 §6.34)。金の縁・きらめき・揺れ
-  // **どちらの札も出す**(→docs/06 §6.40)。攻守で同時に出ることがあるので、
+  // **固有スキルが出た帯は特別扱い**(→docs/11 §6.34)。金の縁・きらめき・揺れ
+  // **どちらの札も出す**(→docs/11 §6.40)。攻守で同時に出ることがあるので、
   // 片側だけ見せると「相手は何もしていない」ように読めてしまう
   const atkSk=e.sk, dfSk=e.dsk;
   const mineSk=mineSide===e.side?atkSk:dfSk, oppSk=mineSide===e.side?dfSk:atkSk;
@@ -3695,12 +3695,12 @@ function statNote(p,e){
   return head+" "+STAT_LABEL[k]+" "+p.c[k];
 }
 /**
- * 発動した札の帯(→docs/06 §6.26)。**何が効いたのかを言葉で見せる**。
+ * 発動した札の帯(→docs/11 §6.26)。**何が効いたのかを言葉で見せる**。
  * 固有スキル(→docs/03 §3.41)は金で光らせ、普通の札と見分けが付くようにする。
  */
-/** その札のなかに固有スキルが混ざっているか(→docs/06 §6.34)。 */
+/** その札のなかに固有スキルが混ざっているか(→docs/11 §6.34)。 */
 const sigIn=list=>(list||[]).some(n=>SKILL_FX[n]&&SKILL_FX[n].sig);
-/** きらめき(→docs/06 §6.34)。**位置と間は固定**。毎回散らすと帯がちらついて読めない。 */
+/** きらめき(→docs/11 §6.34)。**位置と間は固定**。毎回散らすと帯がちらついて読めない。 */
 const SPARKS=[[12,26,0],[27,68,.18],[41,18,.34],[56,74,.09],[68,32,.46],
               [79,62,.26],[88,22,.4],[47,44,.55]];
 const cutSparks=()=>'<div class="cut-spk">'+SPARKS.map(([x,y,d])=>
@@ -3713,12 +3713,12 @@ function cutSkills(list){
 }
 /** パス成功。左に出し手、右から受け手がスライドインする。 */
 function cutPass(e,from,to){
-  const sg=sigIn(e.sk);                                  // 固有スキル(→docs/06 §6.34)
+  const sg=sigIn(e.sk);                                  // 固有スキル(→docs/11 §6.34)
   return cutShow('<div class="cut'+(sg?" sig":"")+'">'
     +(sg?cutSparks():"")
     +'<div class="cut-hd">'+esc(e.label||"PASS")+'</div>'
     +'<div class="cut-row">'
-      // **出し手の下に置く**。パスの札は出した側のもの(→docs/06 §6.40)
+      // **出し手の下に置く**。パスの札は出した側のもの(→docs/11 §6.40)
       +cutFig(from,e.side,"L",null,e.sk)
       +'<div class="cut-arrow">▶</div>'
       +cutFig(to,e.side,"R win")
@@ -3735,7 +3735,7 @@ function cutShot(e,sc,keeper,word,scored,assist){
   const P=TUNING.play;
   const kSide=e.side==="H"?"A":"H";
   const ms=(e.type==="goal"?P.goalMs:P.cutMs)+P.shotHold;
-  const sg=sigIn(e.sk);                                   // 固有スキルの一撃(→docs/06 §6.34)
+  const sg=sigIn(e.sk);                                   // 固有スキルの一撃(→docs/11 §6.34)
   cutShow('<div class="cut'+(sg?" sig":"")+'">'
     +(sg?cutSparks():"")
     +'<div class="cut-hd">'+esc(e.flabel||"SHOT")+'</div>'
@@ -3842,7 +3842,7 @@ function cutCard(e,p){
  * クラブ名だけだと毎試合まったく同じ絵になり、誰の試合なのかが立ち上がらない。
  */
 /**
- * 試合中の監督の顔と名前(→docs/03 §3.56)。
+ * 試合中の監督の顔と名前(→docs/10 §3.56)。
  * 自分の側は契約書で選んだ顔、相手はクラブ(または大会の枠)から決まる顔。
  */
 function mCoach(side){
@@ -3857,7 +3857,7 @@ function mCoach(side){
   return { art:coachFace(key,divOfClub(clubById(id))===1), name:coachName(key) };
 }
 /**
- * 監督のカットイン(→docs/06 §6.46)。**バストアップ**で出す。
+ * 監督のカットイン(→docs/11 §6.46)。**バストアップ**で出す。
  * キックオフでは両監督、采配を敷き替えたときはその監督だけ。
  * 絵が無ければ顔の枠を出さない(字だけで成立させる)。
  */
@@ -3869,7 +3869,7 @@ function cutCoachFig(side,cls){
     +'<b>'+esc(c.name)+'</b></div>';
 }
 /**
- * 采配の帯1本(→docs/06 §6.46)。**チームカラーで染める**。
+ * 采配の帯1本(→docs/11 §6.46)。**チームカラーで染める**。
  * 自軍は上・左から、敵軍は下・右から走らせるので、どちらの手かが位置と色で分かる。
  */
 function cutTacBand(side,tacId,pos){
@@ -3884,7 +3884,7 @@ function cutTacBand(side,tacId,pos){
   +'</div>';
 }
 /**
- * 采配のカットイン(→docs/06 §6.46)。
+ * 采配のカットイン(→docs/11 §6.46)。
  * **両軍に采配があれば2本同時に走らせる**。片方だけなら1本。
  * 返り値は止めておく時間(何も無ければ 0)。
  */
@@ -3914,7 +3914,7 @@ function cutKick(){
       +'<span>'+(cap?"C "+esc(shortName(cap.c))+" · "+cap.sub:"")+'</span>'
     +'</div>';
   };
-  // **ピッチ脇の看板**(→docs/06 §6.32)。契約中で、その会社の絵があるときだけ出る
+  // **ピッチ脇の看板**(→docs/11 §6.32)。契約中で、その会社の絵があるときだけ出る
   return cutShow('<div class="cut">'
     +'<div class="cut-hd">KICK OFF</div>'
     +'<div class="cut-row">'+f(_M.home,"H","L")
@@ -3937,7 +3937,7 @@ function mCut(e){
   const gk=e.gk&&mPlayer(_M,e.side==="H"?"A":"H",e.gk);
   switch(e.type){
     case "kickoff": return cutKick();
-    // **采配を敷き替えたら監督が出る**(→docs/06 §6.46)
+    // **采配を敷き替えたら監督が出る**(→docs/11 §6.46)
     case "tactic":  return cutTactic(e);
     // セットプレーは**必ず見せる**。試合の山場であり、誰が蹴るかが読み物になる
     case "setpiece": return cutSet(e,by);
@@ -3952,7 +3952,7 @@ function mCut(e){
     case "origin":
     case "link":
       if(!vs)return 0;
-      // **固有スキルが出たら必ず見せる**(→docs/06 §6.34)。抽選で間引くと、
+      // **固有スキルが出たら必ず見せる**(→docs/11 §6.34)。抽選で間引くと、
       // 12人しか持っていない札が出た瞬間が流れてしまう(実際に流れていた)
       const sig=sigIn(e.sk)||sigIn(e.dsk);
       if(!e.ok)return (sig||Math.random()<P.cutStop)?cutVs(e,by,vs,"STOP!",false):0;
@@ -3973,7 +3973,7 @@ function mApply(e){
   $("mClock").classList.toggle("late",e.min>=80);
   if(e.hg!=null)$("mSc").textContent=mScore(e.hg,e.ag);
   if(e.type==="card"&&e.off)mDrawSquads();     // 退場した選手は盤面から消える
-  // **采配が実際に掛かった瞬間に帯を更新する**(→docs/06 §6.38)。
+  // **采配が実際に掛かった瞬間に帯を更新する**(→docs/11 §6.38)。
   // 押した瞬間ではなく、ティックの頭で適用されたときが「効き始め」
   if(e.type==="tactic")mTacBars();
   mFocus(e); mMoveBall(e); mLayout(e);
@@ -4081,7 +4081,7 @@ function psoShow(){
   };
   step();
 }
-// ---------- 選手交代(→docs/06 §6.21) ----------
+// ---------- 選手交代(→docs/11 §6.21) ----------
 // **開くと試合が止まる。** 走らせたまま選ばせると、決めている間に局面が進んで
 // 「誰を替えるつもりだったか」が変わってしまう。
 let _subOut=-1, _subIn=-1;
@@ -4091,7 +4091,7 @@ function subSide(){ return mMine()==="H"?_M.home:_M.away; }
 // ---------- 軸(キープレイヤー → docs/03 §3.44) ----------
 // **試合中に何度でも指名し直せる。** 回数で縛らないのは、軸を張った時間ぶんだけ
 // 消耗が残るから(それ自体がブレーキになる)。切り替えるほど疲れた選手が増える。
-// ---------- 試合中の引き出し(→docs/06 §6.39) ----------
+// ---------- 試合中の引き出し(→docs/11 §6.39) ----------
 // **同時に開けるのは1つだけ**。4つとも試合を止めて開くので、重なると
 // 「どれを閉じれば再開するのか」が分からなくなる。開くときに他を畳む。
 // 止めた/戻すの管理も**1つにまとめる**(引き出しごとに持つと、
@@ -4133,7 +4133,7 @@ function sigOf(card){
 }
 function openKp(){ mDrawerOpen("kpDrawer",()=>{ renderKp(); kpFit(); }); }
 /**
- * 引き出しの高さをピッチに合わせる(→docs/06 §6.37)。
+ * 引き出しの高さをピッチに合わせる(→docs/11 §6.37)。
  * **割合で決め打ちにしない**。ピッチは 3:4 の比で幅から高さが決まるので、
  * 端末が変われば高さも変わる。開くたびに実物を測って合わせる。
  */
@@ -4175,7 +4175,7 @@ function kpTabUI(){
   t.classList.toggle("on",!!(S.career&&S.career.kp));
 }
 /**
- * 軸の指名(→docs/03 §3.44 / docs/06 §6.37)。
+ * 軸の指名(→docs/03 §3.44 / docs/11 §6.37)。
  * **11人が一度に見えることがこの画面の要件**。試合を止めて開く画面なので、
  * 送って探すぶんだけ試合が止まる。説明も相手の軸もここには置かない
  * (軸の効果はヘルプへ、相手の軸はピッチの光へ)。
@@ -4194,7 +4194,7 @@ function renderKp(){
         +'<div class="sb-v">'+Math.round((p.stam==null?1:p.stam)*100)+'%</div></div>';
     }).join("");
   $("kpBody").querySelectorAll("[data-kp]").forEach(el=>{
-    // **選んだら閉じる**(→docs/06 §6.22 の采配と同じ作法)。
+    // **選んだら閉じる**(→docs/11 §6.22 の采配と同じ作法)。
     // 指名は1人だけなので、選んだあとに残っていても続きの操作が無い
     el.onclick=()=>{ const p=T.players[+el.dataset.kp]; if(p){ setKp(p.c.id); closeKp(); } };
   });
@@ -4205,7 +4205,7 @@ function openSub(){
 function closeSub(){ mDrawerClose(); }
 const subOpen=()=>$("subDrawer").classList.contains("on");
 
-// ---------- 采配(→docs/03 §3.28 / docs/06 §6.22) ----------
+// ---------- 采配(→docs/03 §3.28 / docs/11 §6.22) ----------
 // **同時に効くのは1つだけ。** 選んだ時点で閉じて試合が再開し、いつでも変えられる。
 // 指示は試合をまたいで持ち越す(監督の構え)ので、次の試合もその形で始まる。
 function renderOrd(){
@@ -4218,7 +4218,7 @@ function renderOrd(){
     +'<span class="od-i">'+o.icon+'</span><span class="od-l">'+esc(o.label)+'</span></button>';
   const up=ORDERS.find(o=>o.push>0), dn=ORDERS.find(o=>o.push<0);
   const lanes=ORDERS.filter(o=>o.lane!=null);
-  // **説明は置かない**(→docs/06 §6.39)。十字に並んだ5手は形そのものが意味で、
+  // **説明は置かない**(→docs/11 §6.39)。十字に並んだ5手は形そのものが意味で、
   // 選ばれている手は色で分かる。試合を止めて開く画面に読み物を置かない
   $("ordPad").innerHTML=btn(up)+lanes.map(btn).join("")+btn(dn);
   $("ordPad").querySelectorAll("[data-ord]").forEach(el=>{
@@ -4226,7 +4226,7 @@ function renderOrd(){
   });
 }
 /**
- * 特別采配(→docs/03 §3.50 / docs/06 §6.38)。
+ * 特別采配(→docs/10 §3.50 / docs/11 §6.38)。
  * **いま敷けるものだけ**を並べる。試合を止めて開く画面なので、
  * 「覚えていない手」「この陣形では使えない手」を混ぜると選ぶまでが遠くなる。
  * 何を目指せば増えるのかは、**残りの数を1行**で伝えれば足りる。
@@ -4254,11 +4254,11 @@ function tacTabUI(){
   const t=$("tacTab"); if(!t)return;
   t.classList.toggle("on",!!S.tactic);
 }
-/** 采配を選ぶ。**次の再開から効く**(→docs/03 §3.50)。 */
+/** 采配を選ぶ。**次の再開から効く**(→docs/10 §3.50)。 */
 function pickTactic(id){
   if(id&&!tacticOk(id)){ toast(tacticWhy(id)); return; }
   S.tactic=id||null;
-  // **試合中なら盤面にも積む**(→docs/03 §3.50)。次のティックの頭で掛かる。
+  // **試合中なら盤面にも積む**(→docs/10 §3.50)。次のティックの頭で掛かる。
   // 積まずに S だけ変えていた頃は、敷いても**次の試合まで何も起きなかった**
   if(_M&&!_M.over)orderMatch(_M,mMine(),{ type:"tactic", id:S.tactic });
   save(); renderTac(); tacTabUI();
@@ -4284,7 +4284,7 @@ function stamBar(v){
   return '<div class="sb-bar'+cls+'"><i style="width:'+pc+'%"></i></div>';
 }
 /**
- * 交代ドロワーの中身。**申請済みの交代を先に反映して見せる**(→docs/06 §6.21)。
+ * 交代ドロワーの中身。**申請済みの交代を先に反映して見せる**(→docs/11 §6.21)。
  * 実際の入れ替えは次の再開時だが、リスト上ですぐ入れ替わらないと
  * 「もう選んだのか、まだなのか」が分からず、3枠を続けて使えない。
  */
@@ -4374,10 +4374,10 @@ function mSkip(){
   mFinish();
 }
 /** 試合を始める。ここから先はエンジンが解いたものを再生するだけ。 */
-// いま戦っているメモラビリア(→docs/03 §3.55)。**節を進めない一戦**の目印
+// いま戦っているメモラビリア(→docs/10 §3.55)。**節を進めない一戦**の目印
 let _memNow=null;
 /**
- * メモラビリアの一戦(→docs/03 §3.55)。**キャリアの進行には触らない**。
+ * メモラビリアの一戦(→docs/10 §3.55)。**キャリアの進行には触らない**。
  * 日程も節も動かさないので、何度でも挑める。
  */
 function startMem(id){
@@ -4405,7 +4405,7 @@ function doMemDone(){
       win, draw:mine.score===foe.score, cup:true, label:m.name, mem:m.id },
     M, others:[], mem:r };
   save(); headUI(); show("result");
-  // **ここでは配らない**(→docs/03 §3.55)。届いたことだけ知らせ、受け取りは受信箱で
+  // **ここでは配らない**(→docs/10 §3.55)。届いたことだけ知らせ、受け取りは受信箱で
   if(r.card||r.tactic)toast("秘書から連絡が届いています");
 }
 function startMatch(pre){
@@ -4417,7 +4417,7 @@ function startMatch(pre){
   // **左が自分・右が相手**。ピッチの下が自分なのに、名前だけホーム基準だと読み替えになる
   const mine=mMine()==="H"?_M.home:_M.away, opp=mMine()==="H"?_M.away:_M.home;
   $("mNameH").textContent=mine.name; $("mNameA").textContent=opp.name;
-  // スコアボードもエンブレム(→docs/03 §3.54)。カップの相手はクラブIDを持たないので、
+  // スコアボードもエンブレム(→docs/10 §3.54)。カップの相手はクラブIDを持たないので、
   // 枠の名前をたねにする(架空の相手にも同じ作りの顔が付く)
   const eh=mMine()==="H"?_M.fixture.h:_M.fixture.a;
   const ea=mMine()==="H"?_M.fixture.a:_M.fixture.h;
@@ -4436,7 +4436,7 @@ function startMatch(pre){
   // キックオフのイベントは createMatch が積んでいるので、ここで自分で見せる
   // (stepMatch は返さない)。card-eleven と同じく**開始からカットインする**。
   const hold=mApply(_M.events[0]);
-  // **キックオフのあとに采配を見せる**(→docs/06 §6.46)。
+  // **キックオフのあとに采配を見せる**(→docs/11 §6.46)。
   // 開始の帯に監督まで載せると盛りだくさんになるので、段を分ける
   let extra=0;
   const P=TUNING.play;
@@ -4474,7 +4474,7 @@ function renderResult(){
   // PK戦で決まったなら、そのスコアを添える(→docs/03 §3.33)
   $("rsVerdict").textContent=(m.win?"勝利":m.draw?"引き分け":"敗戦")
     +(m.pso?"　PK "+m.pso.gf+"-"+m.pso.ga:"");
-  // 試合収益(→docs/03 §3.47)。**明細で出す**。「+900 コイン」だけだと
+  // 試合収益(→docs/10 §3.47)。**明細で出す**。「+900 コイン」だけだと
   // ゲームの点数に見えるが、入場料と成績給に割れば「クラブの帳簿」になる。
   // **チーム熟練度(EXP)は出さない** — 監督が見るものではないので
   const inc=matchIncome(m);
@@ -4485,7 +4485,7 @@ function renderResult(){
       +fmtNum(inc.reduce((a,r)=>a+r.v,0))+'</b></div>'
     :'<div class="rs-in none"><span>この試合の収入はありません</span>'
       +'<b>賞金は大会の決着で</b></div>';
-  // メモラビリアの戦利品(→docs/03 §3.55)。**引けなかったことも書く**
+  // メモラビリアの戦利品(→docs/10 §3.55)。**引けなかったことも書く**
   if(o.mem){
     const r=o.mem;
     $("rsReward").innerHTML+=
@@ -4498,7 +4498,7 @@ function renderResult(){
     +'<span class="num">'+x.hg+' - '+x.ag+'</span>'
     +'<span class="nm">'+esc(clubName(x.a))+'</span></div>').join("")||'<div class="lg">なし</div>';
   $("btnResultOk").onclick=()=>show("home");
-  // **メモラビリアは何度でも挑める**(→docs/03 §3.55)。次の予定ではなく再戦へ
+  // **メモラビリアは何度でも挑める**(→docs/10 §3.55)。次の予定ではなく再戦へ
   if(m.mem){
     $("btnResultNext").textContent="再戦する";
     $("btnResultNext").onclick=()=>startMem(m.mem);
@@ -4725,14 +4725,14 @@ function renderCareerEnd(){
 let _pickedClub=null;
 function renderOffers(){
   const fame=S.player.fame;
-  // **残留は必ず先頭に出す**(→docs/03 §3.58)。格で並べて12件で切ると、
+  // **残留は必ず先頭に出す**(→docs/10 §3.58)。格で並べて12件で切ると、
   // 下位クラブに居るときに「残る」という選択肢そのものが画面から消える
   const stay=stayClub();
   const all=offersFor(fame).sort((a,b)=>b.grade-a.grade||a.rank-b.rank);
   const list=all.filter(c=>c.id!==stay).slice(0,stay?11:12);
   if(stay&&clubById(stay))list.unshift(clubById(stay));
   $("offerHead").textContent="OFFERS · 名声 "+fmtNum(fame);
-  // **初めての就任か、次の行き先か**で言うことを変える(→docs/06 §6.47)。
+  // **初めての就任か、次の行き先か**で言うことを変える(→docs/11 §6.47)。
   // 一枚目は「これから監督人生が始まる」、二枚目からは「次はどこへ」
   const first=!S.club;
   const lgs=[...new Set(list.map(c=>leagueById(c.league).name))];
@@ -4806,7 +4806,7 @@ function openContract(){
   show("contract");
 }
 /**
- * 就任者の肖像(→docs/03 §3.45)。**顔は一度だけ選ぶ**もので、次の任期では聞かれない。
+ * 就任者の肖像(→docs/10 §3.45)。**顔は一度だけ選ぶ**もので、次の任期では聞かれない。
  * 選ばなくても進める(その場合は監督名から決まる)。
  */
 function renderFaces(id,after){
@@ -4821,7 +4821,7 @@ function renderFaces(id,after){
   });
 }
 /**
- * 監督の顔を選び直す(→docs/03 §3.45)。**契約書と同じ部品**を使う。
+ * 監督の顔を選び直す(→docs/10 §3.45)。**契約書と同じ部品**を使う。
  * 就任のときに一度きり、にしない — 顔は名前と同じで、あとから変えたくなる。
  */
 function openFace(){
@@ -4831,7 +4831,7 @@ function openFace(){
 }
 const closeFace=()=>$("faceModal").classList.remove("on");
 /**
- * エンブレムを組み替える(→docs/03 §3.54)。**自分のクラブだけ**。
+ * エンブレムを組み替える(→docs/10 §3.54)。**自分のクラブだけ**。
  * 形・地の柄・紋章を選ぶ。既定はクラブIDから決まる意匠で、ここは上書き。
  */
 function renderCrestPick(){
@@ -4872,7 +4872,7 @@ function renderCrestPick(){
       S.club.emblem={ shape:cur.shape, field:cur.field, crest:cur.crest, text:cur.text,
         orn:cur.orn, lay:cur.lay, home:cur.home||null, away:cur.away||null };
       S.club.emblem[el.dataset.k]=el.dataset.v;
-      // **色は盤面にも効く**ので、開いている画面を描き直す(→docs/03 §3.54)
+      // **色は盤面にも効く**ので、開いている画面を描き直す(→docs/10 §3.54)
       renderCrestPick(); renderClubCrest(); headUI(); save();
     };
   });
@@ -4885,7 +4885,7 @@ function renderClubCrest(){
   const id=S.club.id, nm=clubName(id);
   el.innerHTML=embSvg(id,nm,84,{tag:"cl"});
   $("clubCrestName").textContent=nm;
-  // **★の説明は書かない**(→docs/06 §6.51)。獲れば★が出るので説明が要らないうえ、
+  // **★の説明は書かない**(→docs/11 §6.51)。獲れば★が出るので説明が要らないうえ、
   // 空けたぶんに**いまの舞台と順位**を置けば、CLUB の段を1つ減らせる
   const n=embStars(id), W=S.world;
   const lg=leagueById(clubById(id).league);
@@ -4894,7 +4894,7 @@ function renderClubCrest(){
     +esc(lg.name+" "+divName(W.div))+(r?'　<b class="num">'+r+"位</b>":"");
 }
 /**
- * メモラビリア(→docs/03 §3.55)。**開いたものだけ並ぶ**。
+ * メモラビリア(→docs/10 §3.55)。**開いたものだけ並ぶ**。
  * 押すとその場で一戦できる。節も日程も消費しない。
  */
 function renderMem(){
@@ -4902,7 +4902,7 @@ function renderMem(){
   const list=memList();
   box.innerHTML=list.length?list.map(m=>{
     const t=m.tactic?tacticById(m.tactic):null;
-    // **見出しは下見へ、› で開戦**(→docs/03 §3.55)。下見はリーグ戦と同じ画面
+    // **見出しは下見へ、› で開戦**(→docs/10 §3.55)。下見はリーグ戦と同じ画面
     return '<div class="mem">'
       +'<div class="mem-l" data-look="'+esc(m.id)+'" role="button" tabindex="0">'
       +'<b>'+esc(m.name)+'</b>'
@@ -4921,7 +4921,7 @@ function renderMem(){
   });
 }
 /**
- * URL の後ろに付いた合言葉を読む(→docs/03 §3.55)。
+ * URL の後ろに付いた合言葉を読む(→docs/10 §3.55)。
  * **QRはこれを開くために配る** — `…/index.html#mem=ROSSONERI-2005` を読ませれば、
  * 起動しただけで開く。カメラを使わずに済むので、単一HTMLのまま成立する。
  * 一度読んだら URL からは消す(再読み込みで何度も知らせが出ないように)。
@@ -4986,7 +4986,7 @@ $("cfgModal").onclick=e=>{ if(e.target===$("cfgModal"))closeCfg(); };
 $("newsDone").onclick=closeNews;
 $("newsModal").onclick=e=>{ if(e.target===$("newsModal"))closeNews(); };
 $("tileMarket").onclick=()=>show("market",{push:1});
-// 開封は**1回目のタップで最後まで送り、2回目で閉じる**(→docs/06 §6.56)
+// 開封は**1回目のタップで最後まで送り、2回目で閉じる**(→docs/11 §6.56)
 $("scoutReveal").onclick=()=>{ if(_rvDone)_rvDone(); else closeReveal(); };
 $("tileTrophy").onclick=()=>show("clubhouse");
 $("crestDone").onclick=closeCrest;
@@ -5015,7 +5015,7 @@ $("tileDeck").onclick=()=>show("deck");
 function mPause(on){
   _mPaused=on;
   $("mPlay").textContent=on?"▶ 再生":"⏸ 一時停止";
-  // **再開する前に、待っている一歩を消す**(→docs/06 §6.43)。
+  // **再開する前に、待っている一歩を消す**(→docs/11 §6.43)。
   // 消さずに mTick() を呼ぶと、止める前の周回が生き返って**二重に走る**。
   // 引き出し(軸・采配・指示・交代)は開くたびに止めて閉じるたびに再開するので、
   // 開け閉てのたびに1本ずつ増えていた

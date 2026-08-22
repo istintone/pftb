@@ -1,5 +1,5 @@
 // ================= ドキュメントの検査 =================
-// docs は**コードから参照される**(「→docs/03 §3.54」の形)。
+// docs は**コードから参照される**(「→docs/10 §3.54」の形)。
 // 番号が重複したり、リンクが切れたり、参照先が消えたりすると、
 // **読み手が別の節に連れていかれる**。人が気づけないので機械で見張る。
 "use strict";
@@ -62,7 +62,7 @@ let refs = 0;
 for (const p of code) {
   const s = fs.readFileSync(p, "utf8");
   const rel = path.relative(ROOT, p).split(path.sep).join("/");
-  // 「docs/03 §3.54」「docs/03-game-design.md §3.54」の形
+  // 「docs/10 §3.54」「docs/10 §3.54」の形
   for (const m of s.matchAll(/docs\/(\d\d)[a-z0-9-]*(?:\.md)?\s*§(\d+(?:\.\d+)+[a-z]?)/g)) {
     refs++;
     const f = docOf(m[1]);

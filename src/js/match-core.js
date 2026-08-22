@@ -37,7 +37,7 @@ function skillsOf(card){
   return { ch, k };
 }
 /**
- * その場面で**実際に発動した札の名前**(→docs/06 §6.26)。カットインに出す。
+ * その場面で**実際に発動した札の名前**(→docs/11 §6.26)。カットインに出す。
  * 倍率が1のものは数えない(持っているだけで効いていない札を光らせないため)。
  */
 function skFired(p,at,ch,min){
@@ -134,7 +134,7 @@ function eff(p,k){
  * **これが交代の意味になる**: 終盤に消耗した選手を、万全の控えと入れ替える。
  */
 /**
- * 相互カバー(→docs/03 §3.63)。**周りに味方が居るほど消耗が緩い**。
+ * 相互カバー(→docs/10 §3.63)。**周りに味方が居るほど消耗が緩い**。
  *
  * 陣形の密度をそのまま消耗に効かせる。厚く構えた形は終盤に強くなり、
  * 前に人を割いた形は末脚が落ちる。**枠の位置は試合中変わらない**ので、
@@ -195,7 +195,7 @@ function refreshStamina(M,min){
       // **軸を張った時間を数える**。あとから外しても消えない(→staminaOf)
       if(isKp(p))p.kpMin=(p.kpMin||0)+TUNING.match.tickMin;
       p.stam=staminaOf(p,min);
-      // **点差を選手に持たせる**(→docs/03 §3.50)。条件付きの采配(パーク・ザ・バス)が
+      // **点差を選手に持たせる**(→docs/10 §3.50)。条件付きの采配(パーク・ザ・バス)が
       // 「いまリードしているか」を見る口。スキルの when は選手しか受け取らないので、
       // 盤面の状態はここで選手に降ろしておく
       p.lead=T.score-(T===M.home?M.away:M.home).score;
@@ -230,7 +230,7 @@ function lineup(cards,form){
 }
 
 /**
- * その枠の**オフザボールの走行量**(→docs/03 §3.65)。
+ * その枠の**オフザボールの走行量**(→docs/10 §3.65)。
  * 消耗が全員一律だと、90分ずっと往復するサイドハーフと、
  * 自陣の帯から出ない CB が同じだけ削れてしまい、sta を
  * 「誰をどこに置くか」で効かせられない。位置から素直に出す。
@@ -258,7 +258,7 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic,coach){
   const { xi, bench }=lineup(cards,form);
   xi.forEach(p=>{ p.side=side; p.enter=0; p.stam=1; p.cards=0; p.sk=skillsOf(p.c);
     p.y0=p.y; p.ordM=null;                      // y0 = 采配で動かす前の縦位置
-    p.off=offBall(p);                           // オフザボールの走行量(→docs/03 §3.65)
+    p.off=offBall(p);                           // オフザボールの走行量(→docs/10 §3.65)
     p.condK=ironK(p);                           // その日の出来(→docs/03 §3.32)
     p.stat={ shots:0, sog:0, goals:0, assists:0, blocks:0, saves:0, inv:0,
       pass:0, passOk:0, duelW:0, duelL:0 }; });
@@ -269,10 +269,10 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic,coach){
   const T={ players:xi, bench, form, name, side, score:0,
     kickers:kickers||null, captain:cap, subOut:[], sentOff:[], order:null, lane:null,
     tactic:null,
-    // 相手監督(→docs/03 §3.56)。**CPU側だけが持つ**。自分の側は UI が手を入れる
+    // 相手監督(→docs/10 §3.56)。**CPU側だけが持つ**。自分の側は UI が手を入れる
     coach:coach||null,
     med:med||1 };                                    // 医療施設のケガ倍率(→docs/03 §3.5)
-  // **采配が先**(→docs/03 §3.50)。指示の上げ下げを合成するので、
+  // **采配が先**(→docs/10 §3.50)。指示の上げ下げを合成するので、
   // setTeamOrder は T.tactic が決まったあとに呼ぶ
   setTeamTactic(T,tactic||null);
   setTeamOrder(T,order||null);
@@ -283,19 +283,19 @@ function buildTeam(cards,form,name,side,kickers,captain,order,med,tactic,coach){
  * 陣形の上下は y0 から取り直すので、指示を変えても位置がずれ続けない。
  */
 /**
- * 特別采配をチームに掛ける(→docs/03 §3.50)。
+ * 特別采配をチームに掛ける(→docs/10 §3.50)。
  *
  * **全員の札に混ぜる**。こうすると `skW`/`skS`/`skK` がそのまま効き、
  * **発動したときカットインのバッジに采配名が出る**(演出が自動で付いてくる)。
  * 新しい判定を1つも足さずに済むのが、この形にした理由。
  */
-/** 采配の効きの倍率(→docs/03 §3.50)。1からの隔たりを伸ばす(0.94 → もっと下へ)。 */
+/** 采配の効きの倍率(→docs/10 §3.50)。1からの隔たりを伸ばす(0.94 → もっと下へ)。 */
 const tacAmp=v=>v==null?v:1+(v-1)*TUNING.tactic.k;
 function setTeamTactic(T,id){
   const t=id?tacticById(id):null;
   T.tactic=t?t.id:null;
   for(const p of T.players.concat(T.bench||[])){
-    // **掛け直せるようにする**(→docs/03 §3.50)。札は積み、k は掛け算で混ぜるので、
+    // **掛け直せるようにする**(→docs/10 §3.50)。札は積み、k は掛け算で混ぜるので、
     // 素の状態を控えずに2度呼ぶと**前の采配が乗ったまま重なる**。
     // 試合中に敷き替えるには、毎回ここまで戻してから掛け直す
     if(!p.sk)p.sk={ ch:[], k:{} };
@@ -305,15 +305,15 @@ function setTeamTactic(T,id){
     p.fit=p.fit0;
     p.manMark=false; p.bondX=0; p.foulX=0;
     if(!t)continue;
-    // **所属で絞る采配**(→docs/03 §3.55)。メモラビリアから持ち帰った手は、
+    // **所属で絞る采配**(→docs/10 §3.55)。メモラビリアから持ち帰った手は、
     // その所属の選手にしか効かない(強い手を無条件に配らないための鍵)
     if(t.club&&(!p.c||p.c.club!==t.club))continue;
     if(t.role&&p.role!==t.role)continue;
     for(const e of (t.fx||[])){
-      // **効果ごとに役割を絞れる**(→docs/03 §3.50)。フォルス9のように
+      // **効果ごとに役割を絞れる**(→docs/10 §3.50)。フォルス9のように
       // 「前は下がり、2列目が出る」という采配は、1つの倍率では書けない
       if(e.role&&p.role!==e.role)continue;
-      // **強さだけ倍率で持ち上げる**(→docs/03 §3.50)。w(札の選ばれやすさ)は
+      // **強さだけ倍率で持ち上げる**(→docs/10 §3.50)。w(札の選ばれやすさ)は
       // 采配の「性格」そのものなので触らない。ここを一括で動かせるようにしてあるのは、
       // シュート側の勾配(→docs/07 §7.22)を変えると采配の効きも一緒に潰れるため
       if(e.grp)p.sk.ch.push({ name:t.label, at:e.at2||e.at, grp:e.grp,
@@ -337,7 +337,7 @@ function setTeamOrder(T,id){
   T.order=o?o.id:null;
   T.lane=o&&o.lane!=null?o.lane:null;
   T.laneK=(o&&o.laneK)||1;
-  // **采配は指示に足し算で乗る**(→docs/03 §3.50)。上げ下げも能力の倍率も合成する
+  // **采配は指示に足し算で乗る**(→docs/10 §3.50)。上げ下げも能力の倍率も合成する
   const tc=T.tactic?tacticById(T.tactic):null;
   const push=((o&&o.push)||0)+((tc&&tc.push)||0);
   // 攻撃重視は前に出るぶん ATK、守備重視は下がるぶん DEF が上がる。
@@ -347,7 +347,7 @@ function setTeamOrder(T,id){
     if(!om&&!(tc&&tc.ordM))return null;
     const out={};
     for(const k of STAT_KEYS){
-      // 采配ぶんだけ効きの倍率を掛ける(指示ぶんは素のまま →docs/03 §3.50)
+      // 采配ぶんだけ効きの倍率を掛ける(指示ぶんは素のまま →docs/10 §3.50)
       const a=(om&&om[k])||1, b=tacAmp((tc&&tc.ordM&&tc.ordM[k])||1);
       if(a*b!==1)out[k]=a*b;
     }
@@ -460,7 +460,7 @@ function chanceOf(assist,ach,shooter){
   const C=TUNING.chance;
   if(!assist||!ach)return 1;
   const q=clamp(1+(eff(assist,ach.stat)/STAT_MAX-C.mid)*C.k,C.lo,C.hi);
-  // **渡した側と撃つ側の呼吸**(→docs/03 §3.60)。連携の3つ目の掛かり先。
+  // **渡した側と撃つ側の呼吸**(→docs/10 §3.60)。連携の3つ目の掛かり先。
   // 好機の質そのものを上げるので、**同じシュートでも入り方が変わる**
   return q*(1+(bondBuilt(assist,shooter)-1)*TUNING.bond.cqK);
 }
@@ -475,7 +475,7 @@ function onTarget(rng,atk,gk,h,fin){
   if(fin&&fin.fixAcc!=null)return rng()<fin.fixAcc;          // PK/ヘディングは位置が決まっている
   if(fin&&fin.tecAcc)                                        // 直接FKは距離より技術
     return rng()<S.fkAccBase*(0.6+eff(atk,"tec")/STAT_MAX*0.6);
-  // **飛び出して角度を消す**(→docs/03 §3.62)。GKの死に能力に仕事を与える。
+  // **飛び出して角度を消す**(→docs/10 §3.62)。GKの死に能力に仕事を与える。
   // 二段に分ける — **間に合うか(spd)** と **詰め切れるか(atk)** は別の話で、
   // 掛け算1本にすると「速いだけのGK」と「立ちはだかるGK」が同じ絵になる。
   //   ① 出られたか … spd と距離で判定。**近いほど間に合う**
@@ -711,7 +711,7 @@ function addMom(M,side,v){
 /** キックオフ時のモメンタム。**強いチームが前から始められる**。 */
 function kickoffMom(H,A){
   const F=TUNING.mom;
-  // **★を含めて比べる**(→docs/03 §3.53)。素の ovr で比べると、
+  // **★を含めて比べる**(→docs/10 §3.53)。素の ovr で比べると、
   // 段の域内に収めたぶんだけ相手を弱く見積もり、勢いの初期値がつかなくなる
   const ovr=T=>T.players.reduce((s,p)=>s+ovrOf(p.c),0)/(T.players.length||1);
   return clamp((ovr(H)-ovr(A))/F.kickK,-F.kickCap,F.kickCap);
@@ -778,7 +778,7 @@ function pickOriginCh(rng,p,lastCh,stray,min){
  * 連携の値はカードの写しに載せて渡す(エンジンはセーブを見ない)。
  */
 /**
- * **積み上げた連携だけ**が見る倍率(→docs/03 §3.60)。黄金線の印は見ない。
+ * **積み上げた連携だけ**が見る倍率(→docs/10 §3.60)。黄金線の印は見ない。
  *
  * 黄金線は「印」なので、**強豪クラブには丸ごと無償で配られている**(→§3.53)。
  * 新しく増やした掛かり先(受け手の選び方・決定機の質)をそこにも効かせると、
@@ -801,7 +801,7 @@ function bondK(a,b){
   if(!a.c.bond)return 1;
   const sum=(a.c.bond[b.c.id]||0)*2;
   const m=sum>B.t3?B.k3:sum>B.t2?B.k2:sum>B.t1?B.k1:1;
-  // **積み上げの効きを増幅する采配**(オートマティズム →docs/03 §3.50)。
+  // **積み上げの効きを増幅する采配**(オートマティズム →docs/10 §3.50)。
   // 1からの隔たりを伸ばすので、**組んだことのない11人には何も起きない**
   return a.bondX?1+(m-1)*a.bondX:m;
 }
@@ -885,7 +885,7 @@ function pickCounterCh(rng,p,min){
  *            思い切った手ほど強い(k)が、そのぶん反則になりやすい(foul)。
  */
 /**
- * **受けに行く動き**(→docs/03 §3.66)。ボールの近くにいる味方が
+ * **受けに行く動き**(→docs/10 §3.66)。ボールの近くにいる味方が
  * 顔を出してボール保持者を助ける量。**tec と spd だけで決まる**。
  *
  * 助ける側の**スタミナが乗る**のが肝。wear(→§3.65)で pow は終盤まで残るので、
@@ -916,7 +916,7 @@ function offBallHelp(T,atk,h,x){
 }
 function resolveChannel(rng,atk,df,ch,dch,D,atkH,atkX,bk,min,T){
   const M=TUNING.matchup, O=TUNING.offb;
-  // **近くの味方が受けに動くぶんの加点**(→docs/03 §3.66)
+  // **近くの味方が受けに動くぶんの加点**(→docs/10 §3.66)
   const help=T?1+clamp(offBallHelp(T,atk,atkH,atkX),-O.max,O.max)*O.k:1;
   // **連携はパス系にだけ効く**(→docs/03 §3.31)。渡す相手が決まっている手だから
   const aSc=(eff(atk,"atk")*M.atkW+eff(atk,ch.stat)*(1-M.atkW))
@@ -993,7 +993,7 @@ function receiverAt(rng,T,tg,self,min){
     const dh=(heightOf(q)-tg.h)/C.sigmaH;
     const dx=((q.x-tg.x)/100)/C.sigmaX;
     const seek=1+eff(q,"atk")/STAT_MAX*C.recvAtk*skK(self,"vision")*clamp(tg.h,0,1);
-    // **分かり合った相手を探しに行く**(→docs/03 §3.60)。
+    // **分かり合った相手を探しに行く**(→docs/10 §3.60)。
     // 競り合いの倍率だけだと頭打ちになるので、**そもそも誰に預けるか**にも効かせる。
     // ここは「行き先」ではなく「誰が受けるか」なので、位置の重みは崩れない
     const bw=1+(bondBuilt(self,q)-1)*TUNING.bond.seekK;
@@ -1080,7 +1080,7 @@ function orderMatch(M,side,order){
   return true;
 }
 /**
- * 相手監督(→docs/03 §3.56)。**できるのは指示と交代の2つだけ**。
+ * 相手監督(→docs/10 §3.56)。**できるのは指示と交代の2つだけ**。
  * 采配は動かさない(掛け直すと編成の意味が薄れるので、そこは監督の領分にしない)。
  *
  * **自分のチームには一切触らない**。`T.coach` を持っているのはCPU側だけで、
@@ -1125,7 +1125,7 @@ function coachPick(c,T,D,rng){
     case "half":   return T.order==="attack"?"center":"attack";
     // 負けていれば前へ、勝っていれば後ろへ(ふつうの追い方)
     case "chase":  return lead<0?"attack":lead>0?"defend":"center";
-    // **勝っていれば押し切り、負けていれば畳む**(→docs/03 §3.56)
+    // **勝っていれば押し切り、負けていれば畳む**(→docs/10 §3.56)
     case "press":  return lead>0?"attack":lead<0?"defend":"center";
     case "keyman":{
       // 軸の居る側へ振る。軸が居なければ中央
@@ -1174,7 +1174,7 @@ function applyOrders(M,t){
         continue;
       }
       if(o.type==="tactic"){
-        // **特別采配も試合中に敷き替えられる**(→docs/03 §3.50)。
+        // **特別采配も試合中に敷き替えられる**(→docs/10 §3.50)。
         // 掛け直しは素の状態まで戻してから乗せるので、重ならない。
         // **指示を掛け直すのを忘れない**。上げ下げと能力の倍率は采配と合成しているので、
         // 采配だけ差し替えると前の合成が残る
@@ -1346,7 +1346,7 @@ function runChain(M,rng,push,T,D,carrier,h,x,step,assist,att,from,min){
  */
 function gkFeed(M,rng,D,from){
   // **GKの能力は掛けない。** 掛けようとして測ったが、効かないと分かっている
-  // (→docs/03 §3.61)。ゴールキックが起点になるのは1試合 33 回中 4.6 回で、
+  // (→docs/10 §3.61)。ゴールキックが起点になるのは1試合 33 回中 4.6 回で、
   // その中の数%を動かしても結果に出ない(札の効きで +0.003 = 誤差)
   if(rng()<TUNING.shot.feed)M.restart=D.side;
   return M.events.slice(from);
@@ -1644,7 +1644,7 @@ function teamStrength(cards,form){
   cards.forEach((c,i)=>{
     if(!c)return;
     const sub=slots[i]?slots[i][0]:null;
-    total+=ovrOf(c)*(sub?slotFit(c,sub):1);        // ★を含む(→docs/03 §3.53)
+    total+=ovrOf(c)*(sub?slotFit(c,sub):1);        // ★を含む(→docs/10 §3.53)
     n++;
   });
   return n?total/n:0;

@@ -84,7 +84,7 @@ body{
 }
 
 /* =========================================================================
-   セピア(→docs/06 §6.60)。**地の明るさを丸ごと入れ替える**。
+   セピア(→docs/11 §6.60)。**地の明るさを丸ごと入れ替える**。
    トークンだけを差し替えるので、これを書いた時点で全画面が追従する。
 
    色相は 85(金)寄りに倒す。青灰のまま明度だけ上げると「白い画面」になって
@@ -124,7 +124,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   border-bottom:1px solid var(--line-2);
 }
 #appHead.off{ display:none }
-/* **左右を同じ幅に伸ばす**(→docs/06 §6.48)。space-between だと左右の中身の
+/* **左右を同じ幅に伸ばす**(→docs/11 §6.48)。space-between だと左右の中身の
    幅の差がそのまま見出しのずれになる。flex:1 で割れば見出しは必ず真ん中に来る */
 .hd-l,.hd-r{ display:flex; align-items:center; gap:10px; flex:1 1 0; min-width:64px }
 .hd-r{ justify-content:flex-end }
@@ -140,12 +140,12 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 }
 #hdBack.off,#hdClub.off{ display:none }
 #hdClub{ display:flex; align-items:center; gap:10px; min-width:0 }
-/* ヘッダーのエンブレム(→docs/03 §3.54)。中身はSVGなので地も枠も持たない */
+/* ヘッダーのエンブレム(→docs/10 §3.54)。中身はSVGなので地も枠も持たない */
 .emblem{
   width:34px; height:34px; flex-shrink:0;
   display:flex; align-items:center; justify-content:center;
 }
-/* **監督の入口**(→docs/06 §6.50)。ヘッダーの右はコインから顔に替わった */
+/* **監督の入口**(→docs/11 §6.50)。ヘッダーの右はコインから顔に替わった */
 .hd-mgr{
   position:relative; width:34px; height:34px; border-radius:50%;
   flex-shrink:0; cursor:pointer; overflow:hidden;
@@ -155,10 +155,10 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 /* **顔の切り出しは .mgr-face と同じ**(→§6.23)。枠が変わっても顔がずれない */
 .hd-mgr img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
   transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
-/* クラブの戦績(→docs/03 §3.9a)。節の見出しは詰めて置く */
+/* クラブの戦績(→docs/10 §3.9a)。節の見出しは詰めて置く */
 .cr-t{ margin-top:12px }
 .cr-none{ padding:4px 0 }
-/* クラブは**3文字の略号**(→docs/03 §3.54e)。正式名称は title 属性に持たせる */
+/* クラブは**3文字の略号**(→docs/10 §3.54e)。正式名称は title 属性に持たせる */
 #hdClubName{
   font:600 14px/1.2 var(--f-head); letter-spacing:1px; color:var(--text);
   white-space:nowrap;
@@ -171,7 +171,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 }
 .pill .dot{ width:13px; height:13px; border-radius:50%; background:var(--accent) }
 .pill .dot.tk{ background:var(--special) }
-/* 設定の見本(→docs/06 §6.60)。**その配色の縮図**にする */
+/* 設定の見本(→docs/11 §6.60)。**その配色の縮図**にする */
 .sw-ui-dark{ background:linear-gradient(135deg,
   oklch(0.15 0.02 255) 0 55%, oklch(0.78 0.14 85) 55% 100%) }
 .sw-ui-sepia{ background:linear-gradient(135deg,
@@ -243,7 +243,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   border:1px dashed var(--line); border-radius:12px;
   padding:22px 16px; margin:10px 0; text-align:center; color:var(--text-mute);
 }
-/* **格子の中では全幅に張る**(→docs/06 §6.64)。1マスに収まると
+/* **格子の中では全幅に張る**(→docs/11 §6.64)。1マスに収まると
    カード1枚ぶんの幅に潰れ、格子の段の高さも一緒に崩れる */
 .grid > .stub{ grid-column:1 / -1; margin:0 }
 .stub b{ display:block; margin-bottom:6px; color:var(--text-dim);
@@ -264,7 +264,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   background:repeating-linear-gradient(115deg, transparent 0 46px,
     oklch(0.30 0.05 85 / .06) 46px, oklch(0.30 0.05 85 / .06) 48px);
 }
-/* ステッカーの壁(→docs/06 §6.29)。**貼り重ねた壁**に見せたいので、升目から
+/* ステッカーの壁(→docs/11 §6.29)。**貼り重ねた壁**に見せたいので、升目から
    ずらして回転させ、白い縁を CSS で描く(素材に縁は入っていない)。 */
 .t-wall{ position:absolute; inset:0; overflow:hidden; pointer-events:none }
 .t-wall img{
@@ -318,7 +318,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .t-btn.ghost{ background:oklch(0.96 0.02 88); color:oklch(0.26 0.03 255) }
 .t-btn:active{ transform:translateY(1px) }
 /* =========================================================================
-   端末の淵(→docs/06 §6.59)。**タイトルだけ**に出す。
+   端末の淵(→docs/11 §6.59)。**タイトルだけ**に出す。
    ここは「アプリを立ち上げた瞬間」なので、板を手に持っている感じから始めたい。
    本文の画面に出すと、実機のノッチと二重になって邪魔になるだけ。
    ========================================================================= */
@@ -339,7 +339,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   background:radial-gradient(circle at 34% 32%,
     oklch(0.40 0.06 250), oklch(0.10 0.02 255) 70%);
   box-shadow:inset 0 0 0 1px oklch(0.32 0.02 255) }
-/* **淵を1周させる**(→docs/06 §6.59)。ノッチだけだと「上に何か付いている」で
+/* **淵を1周させる**(→docs/11 §6.59)。ノッチだけだと「上に何か付いている」で
    終わってしまう。framing は4辺そろって初めて板に見える。
      1本目 … 淵そのもの(黒)
      2本目 … 淵の内側に走る細い光。**面と淵の境**をここで作る
@@ -505,7 +505,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .news{ padding:7px 0; font-size:11px; line-height:1.7; color:var(--text-2);
   border-bottom:1px solid oklch(0.24 0.02 255) }
 .news:last-child{ border-bottom:0 }
-/* CLUB NEWS の流し表示(→docs/06 §6.58)。**試合タイルの直下に1行**。
+/* CLUB NEWS の流し表示(→docs/11 §6.58)。**試合タイルの直下に1行**。
    知らせが増えても高さが変わらないので、HOME の下半分を押し出さない */
 .news-tick{
   display:flex; align-items:center; gap:9px; margin:8px 0 12px;
@@ -538,7 +538,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   font:500 12px/1 var(--f-head);
 }
 .chip.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
-/* 段の札(→docs/06 §6.62)。**その段の色を縁に出す**。略号だけだと
+/* 段の札(→docs/11 §6.62)。**その段の色を縁に出す**。略号だけだと
    ST と SP、WC と LE が並んだときに読み分けに時間がかかる */
 .chip.rar-std{ border-color:var(--rar-std) }
 .chip.rar-reg{ border-color:var(--rar-reg) }
@@ -561,7 +561,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
    外周の枠と縁線は**背景画像側**が持つ(CSSでは描かない)。
    ========================================================================= */
 .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px }
-/* CARDS だけ**4列**にする(→docs/06 §6.64)。スタメン11人が1画面に収まるので、
+/* CARDS だけ**4列**にする(→docs/11 §6.64)。スタメン11人が1画面に収まるので、
    「いま誰を持っているか」をスクロールせずに見渡せる。
    カードの文字は cqw(枠の幅基準)なので、列を増やせばそのまま比例して縮む */
 #cardsGrid{ grid-template-columns:repeat(4,1fr); gap:7px }
@@ -861,7 +861,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
    RESULT — 試合結果(→docs/06 §6.20)。モックの構成に準拠。
    ========================================================================= */
 .rs{ text-align:center }
-/* 結果画面の行き先(→docs/06 §6.41)。**下に貼り付ける**。
+/* 結果画面の行き先(→docs/11 §6.41)。**下に貼り付ける**。
    .pad の余白ぶん食い出させて全幅にし、下を流れる採点が横から覗かないようにする。
    上端をぼかすのは、**まだ下に続きがある**ことを隠さないため(硬い線で切ると
    そこで終わりに見える)。この画面は chrome:"bare" でタブ帯が無いので、
@@ -916,7 +916,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .rs-rt{ width:28px; text-align:right; font:700 14px/1 var(--f-head) }
 .rs-rt.hi{ color:var(--accent-hi) }
 .rs-rt.lo{ color:var(--fit-bad) }
-/* 試合収益(→docs/03 §3.47)。**帳簿の体**で出す。1行1項目、右に金額 */
+/* 試合収益(→docs/10 §3.47)。**帳簿の体**で出す。1行1項目、右に金額 */
 .rs-rw{ display:flex; flex-direction:column; gap:0; margin-bottom:20px }
 .rs-in{
   display:flex; align-items:baseline; justify-content:space-between; gap:12px;
@@ -941,7 +941,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 }
 .mteam{ width:76px; text-align:center; font-size:10px; color:var(--text-2);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-/* スコアボードのエンブレム(→docs/03 §3.54)。中身はSVGなので地色は要らない */
+/* スコアボードのエンブレム(→docs/10 §3.54)。中身はSVGなので地色は要らない */
 .memb{ width:34px; height:34px; margin:0 auto 6px; display:flex;
   align-items:center; justify-content:center }
 .memb .emb-svg,.emblem .emb-svg{ display:block }
@@ -992,7 +992,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .mp.on{ transform:scale(1.35) }
 .mp.on .mp-sh{ opacity:1; box-shadow:0 0 0 2px oklch(1 0 0 / .85) }
 .mp.vs .mp-sh{ opacity:1; box-shadow:0 0 0 2px var(--fit-bad) }
-/* 敷いている采配の帯(→docs/06 §6.38)。**画面外から差し込む**ので、
+/* 敷いている采配の帯(→docs/11 §6.38)。**画面外から差し込む**ので、
    ピッチの一部ではなく「外から掛かっているもの」に見える。
    .pitch は overflow:hidden なので、はみ出したぶんは切られて端で断ち落ちる。 */
 .pt-tac{
@@ -1018,7 +1018,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 /* 効いているあいだは光る。**消したら帯ごと消える**(.on が外れる) */
 .pt-tac.mine{ box-shadow:0 0 10px color-mix(in oklab, var(--kit) 70%, transparent) }
 .pt-tac.foe{ box-shadow:0 0 10px color-mix(in oklab, var(--kit) 70%, transparent) }
-/* 軸(→docs/03 §3.44 / docs/06 §6.37)。**クラブカラーで光らせる**ので、
+/* 軸(→docs/03 §3.44 / docs/11 §6.37)。**クラブカラーで光らせる**ので、
    どちらのチームの軸かは色で読む。両チームぶん出る。
    関与中(.on)や競り合い(.vs)は一瞬の印なので、そちらを上に出せるよう
    足元のリングは触らず、**絵そのものの発光**と足元の輪で分ける。 */
@@ -1171,7 +1171,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 /* 日本語のタブは 10px だと潰れるので、文字だけ少し大きくする */
 .side-tab{ font-size:11px; letter-spacing:3px }
 
-/* 交代タブ(→docs/06 §6.21)。HELP と同じ形で、**試合中だけ**右端に出す。
+/* 交代タブ(→docs/11 §6.21)。HELP と同じ形で、**試合中だけ**右端に出す。
    HELP は試合画面に出ないので、同じ位置を使ってよい。 */
 #subTab{
   position:absolute; right:0; top:56%; transform:translateY(-50%); z-index:48;
@@ -1184,7 +1184,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 }
 #subTab:active{ background:oklch(0.32 0.08 255) }
 #subTab.off{ display:none }
-/* 試合中の左端のタブ(→docs/06 §6.39)。**3つとも同じ見た目**にする。
+/* 試合中の左端のタブ(→docs/11 §6.39)。**3つとも同じ見た目**にする。
    ここを別々に書いていたら KP だけ縁が明るく、TAC と ORD が沈んで見えた。
    違うのは**縦の位置と、効いているときの光り方**だけ。 */
 #kpTab, #tacTab, #ordTab{
@@ -1206,7 +1206,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
    わけではなく、無指示も普通の状態なので、光を「異常」の合図に使わない) */
 #kpTab.on, #tacTab.on{ border-color:var(--accent-hi);
   box-shadow:2px 0 16px oklch(0.70 0.14 85 / .6) }
-/* **左から出る引き出しは .hd-in を左右反転する**(→docs/06 §6.39)。
+/* **左から出る引き出しは .hd-in を左右反転する**(→docs/11 §6.39)。
    .hd-in は右から出る引き出し(HELP など)の形で、あとから定義されているぶん
    `.od-in` の角丸を打ち消していた。**KP だけID付きで書いていたので生き残り**、
    TAC と ORD だけ右角が四角いまま、という食い違いになっていた。
@@ -1223,7 +1223,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 #kpTab{ top:calc(50% - 76px) }
 #tacTab{ top:50% }
 #ordTab{ top:calc(50% + 76px) }
-/* 引き出し。高さと上端は openKp() が**ピッチの実寸から**入れる(→docs/06 §6.37) */
+/* 引き出し。高さと上端は openKp() が**ピッチの実寸から**入れる(→docs/11 §6.37) */
 #kpDrawer{
   position:absolute; left:0; top:13%; z-index:70; width:min(88%,340px); height:70%;
   transform:translateX(-105%); transition:transform .28s cubic-bezier(.2,.8,.2,1);
@@ -1236,7 +1236,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   justify-content:center; overflow:hidden }
 /* 軸に選ばれている行 */
 .sb-r.kp-on{ border-color:var(--accent); background:oklch(0.26 0.05 85) }
-/* **11人が一度に見えること**が要件(→docs/06 §6.37)。名前と固有スキルを横並びにし、
+/* **11人が一度に見えること**が要件(→docs/11 §6.37)。名前と固有スキルを横並びにし、
    行を薄くする。ここは #kpDrawer の中だけに効かせる(.sb-r は交代の引き出しと共用) */
 #kpDrawer .sb-r{ padding:7px 10px; margin-bottom:3px; gap:8px }
 #kpDrawer .sb-r:last-child{ margin-bottom:0 }
@@ -1253,7 +1253,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 }
 #ordDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
 .od-note{ font-size:11px; color:var(--text-dim); margin-bottom:10px }
-/* 特別采配(→docs/03 §3.50)。**使えないものも理由付きで並べる** */
+/* 特別采配(→docs/10 §3.50)。**使えないものも理由付きで並べる** */
 .od-k{ margin:14px 0 6px; font:10px/1 var(--f-mono); letter-spacing:1.5px; color:var(--accent) }
 #tacDrawer{
   position:absolute; left:0; top:56%; z-index:70; width:min(84%,320px);
@@ -1295,7 +1295,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   pointer-events:none;
 }
 #subDrawer.on{ transform:translate(0,-50%); pointer-events:auto }
-/* **説明とボタンは固定、選手だけスクロール**(→docs/06 §6.21)。
+/* **説明とボタンは固定、選手だけスクロール**(→docs/11 §6.21)。
    替える相手を探して上下する画面なので、決定ボタンが流れて消えると押せなくなる。 */
 #subDrawer .hd-in{ height:100%; max-height:100%; overflow:hidden;
   display:flex; flex-direction:column }
@@ -1344,7 +1344,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   background:oklch(0.30 0.03 255); display:flex; align-items:center; justify-content:center;
   font:8px/1 var(--f-mono); color:var(--text-dim);
 }
-/* 顔が入ったら座布団を明るくする(→docs/03 §3.56)。
+/* 顔が入ったら座布団を明るくする(→docs/10 §3.56)。
    切り出しはチャットの丸・契約書と同じ(→§6.23)ので、枠が違っても顔がずれない */
 .mgr-av.has{ background:oklch(0.90 0.02 85) }
 .mgr-av img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
@@ -1411,7 +1411,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   font:9px/1 var(--f-mono); color:oklch(1 0 0 / .62) }
 .fit-chip i{ font-style:normal }
 .fit-chip .pk-ovr{ flex:none; font:700 12px/1 var(--f-head); color:#fff }
-/* PK戦(→docs/06 §6.24)。1本ずつ積み上げて、最後に決着を出す */
+/* PK戦(→docs/11 §6.24)。1本ずつ積み上げて、最後に決着を出す */
 .pso{
   margin-top:10px; padding:10px 12px; border-radius:10px;
   background:var(--panel); border:1px solid var(--accent-dim);
@@ -1576,7 +1576,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .pick .sl-pos{ padding:2px 5px; border-radius:3px; background:oklch(0.28 0.07 150) }
 
 /* ベンチ(横スクロール) */
-/* 交代ドロワーの中身(→docs/06 §6.21)。
+/* 交代ドロワーの中身(→docs/11 §6.21)。
    **スタミナで選ぶ画面**なので、名前より先にバーが目に入るように積む。 */
 .sb-sec{ font:600 10px/1 var(--f-head); letter-spacing:1.5px; color:var(--text-dim);
   margin:12px 0 6px }
@@ -1625,7 +1625,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .trophy.off{ background:var(--panel-2); border-color:var(--line) }
 .trophy.off i{ filter:grayscale(1); opacity:.5 }
 .trophy.off b{ color:var(--text-2) }
-/* 初優勝に付く報酬(→docs/03 §3.52)。**シグネチャだけ金で立てる**。
+/* 初優勝に付く報酬(→docs/10 §3.52)。**シグネチャだけ金で立てる**。
    棚を眺めたときに「次はどれを獲りにいくか」が色で決まるようにする */
 .tr-aw{
   display:block; margin-top:3px; font-style:normal;
@@ -1634,8 +1634,8 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 }
 .tr-aw.sig{ color:oklch(0.86 0.12 88) }
 .trophy.off .tr-aw.sig{ color:oklch(0.78 0.11 88) }
-/* 発動した札の帯(→docs/06 §6.26)。カットインの見出しの下に小さく並べる */
-/* 発動した札(→docs/06 §6.40 / §6.46)。**選手の絵に半透明で重ねる**。
+/* 発動した札の帯(→docs/11 §6.26)。カットインの見出しの下に小さく並べる */
+/* 発動した札(→docs/11 §6.40 / §6.46)。**選手の絵に半透明で重ねる**。
    下に置いていた頃は札の数だけ帯が縦に伸びて肥大し、
    端に寄せた頃は枠に収まらず**札の名前が途中で切れていた**。
    重ねてしまえば、幅に縛られず全文が載る。 */
@@ -1666,7 +1666,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   background:linear-gradient(135deg, oklch(0.50 0.13 85 / .88), oklch(0.34 0.09 80 / .88));
   box-shadow:0 0 10px oklch(0.75 0.15 85 / .45);
 }
-/* 固有スキルが出た帯(→docs/06 §6.34)。**金の縁・強い掃引・きらめき・揺れ**。
+/* 固有スキルが出た帯(→docs/11 §6.34)。**金の縁・強い掃引・きらめき・揺れ**。
    バッジだけだと「何か出た」が試合の速さに埋もれる。帯ごと様子を変える */
 .cut.sig{
   border-color:var(--accent);
@@ -1695,7 +1695,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   60%{ opacity:.55; transform:scale(.8) }
   100%{ opacity:0; transform:scale(.35) }
 }
-/* 就任者の肖像(→docs/03 §3.45)。契約書の中なので**紙の上の証明写真**として置く。
+/* 就任者の肖像(→docs/10 §3.45)。契約書の中なので**紙の上の証明写真**として置く。
    丸ではなく角丸の枠にして、チャットの丸とは役割を分ける */
 .ct-faces{ display:flex; gap:6px; overflow-x:auto; padding:2px 0 6px; }
 .ct-face{
@@ -1707,8 +1707,8 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .ct-face img{ position:absolute; left:50%; top:0; width:224%; height:auto; max-width:none;
   transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
 .ct-face.on{ border-color:oklch(0.55 0.14 60); box-shadow:0 0 0 2px oklch(0.55 0.14 60) }
-/* CLUB のエンブレム(→docs/03 §3.54)。**押すと組み替えられる** */
-/* 紋章と名前の横並び(→docs/06 §6.63)。**見出しはタイルの内側**に置くので、
+/* CLUB のエンブレム(→docs/10 §3.54)。**押すと組み替えられる** */
+/* 紋章と名前の横並び(→docs/11 §6.63)。**見出しはタイルの内側**に置くので、
    横並びは card そのものではなく中の1枚が持つ */
 .crest-card{ display:flex; align-items:center; gap:14px }
 .crest-big{ flex:0 0 auto; cursor:pointer; position:relative; line-height:0 }
@@ -1734,7 +1734,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .cr-c{ padding:2px }
 .cr-sw{ display:block; width:26px; height:26px; border-radius:6px;
   border:1px solid oklch(1 0 0 / .18) }
-/* CLUB の監督の顔(→docs/03 §3.45)。**押すと選び直せる**。
+/* CLUB の監督の顔(→docs/10 §3.45)。**押すと選び直せる**。
    .emblem と同じ大きさに収めて、名前との並びを変えない */
 .mgr-face{
   position:relative; width:34px; height:34px; flex:0 0 auto; overflow:hidden;
@@ -1757,7 +1757,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 /* 顔を選び直すモーダル。**契約書と同じ .ct-faces を中で使う** */
 .fm-sheet{ max-width:340px }
 .fm-list{ flex-wrap:wrap; overflow:visible }
-/* ページ送り(→docs/06 §6.35)。1ページに収まるときは出さない */
+/* ページ送り(→docs/11 §6.35)。1ページに収まるときは出さない */
 .pager{ display:flex; align-items:center; justify-content:center; gap:14px; margin:14px 0 4px }
 .pg-b{
   padding:9px 18px; border-radius:999px; cursor:pointer;
@@ -1766,7 +1766,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 }
 .pg-b:disabled{ opacity:.35; cursor:default }
 .pg-n{ font-size:12px; color:var(--text-dim); min-width:52px; text-align:center }
-/* 売却(→docs/03 §3.46)。**戻せない操作なので二段**。1回目は値段、2回目で確定 */
+/* 売却(→docs/10 §3.46)。**戻せない操作なので二段**。1回目は値段、2回目で確定 */
 .cm-sell{
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
   margin-top:12px; padding-top:12px; border-top:1px solid var(--line);
@@ -1778,7 +1778,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .cm-sell-b.arm{ background:oklch(0.55 0.19 25); border-color:oklch(0.55 0.19 25); color:#fff }
 .cm-sell-w{ width:100%; font-size:10px; color:oklch(0.65 0.16 25) }
 .cm-sell-no{ font-size:11px; color:var(--text-mute) }
-/* まとめて売る(→docs/03 §3.68)。**モードに入ったことが分かる見た目**にする。
+/* まとめて売る(→docs/10 §3.68)。**モードに入ったことが分かる見た目**にする。
    札のタップの意味が「開く」から「選ぶ」に変わるので、曖昧にしてはいけない */
 .cd-bar{ display:flex; align-items:center; gap:10px; margin-bottom:4px }
 .cd-bar .lg{ flex:1; min-width:0 }
@@ -1878,7 +1878,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .ml-gift b{ font:600 12px/1.4 var(--f-head); color:var(--accent-hi) }
 .ml-take{ width:auto; padding:9px 16px; flex:none }
 /* 枠を選ぶ報酬(→docs/03 §3.40)。**受け取る前に決める**ので、ボタンを4つ並べる */
-/* 枠を選ぶ券(→docs/03 §3.40a)。**受け取りではなく SCOUT で引くときに選ぶ** */
+/* 枠を選ぶ券(→docs/10 §3.40a)。**受け取りではなく SCOUT で引くときに選ぶ** */
 .sc-pick{ display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end }
 .sc-pick .sc-buy{ padding:8px 11px; font-size:11px; min-width:0 }
 .ml-done{ font-size:10px; color:var(--text-dim) }
@@ -1899,7 +1899,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 
 /* NEXT MATCH のタイル(→docs/06 §6.8)。モックの構成。
    **ボタンを置かず、タイルごとタップ**して日程へ送る。 */
-/* **少し小さくする**(→docs/06 §6.44)。下のタイルが4枚に増えたので、
+/* **少し小さくする**(→docs/11 §6.44)。下のタイルが4枚に増えたので、
    ここが重いと「次に触るもの」が画面の外へ押し出される */
 .nx{
   position:relative; overflow:hidden; margin-bottom:12px; cursor:pointer;
@@ -1908,7 +1908,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   border:1px solid oklch(0.35 0.06 85);
 }
 .nx:active{ border-color:var(--accent-dim) }
-/* 右上はステッカーの席(→docs/06 §6.30)。**光源は置かない**。
+/* 右上はステッカーの席(→docs/11 §6.30)。**光源は置かない**。
    飾りが2つ重なると、どちらも主張しきれずに濁る */
 .nx-md{ font:10px/1 var(--f-mono); letter-spacing:2px; color:oklch(0.75 0.13 85) }
 .nx-tag{
@@ -1927,7 +1927,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .nx-vs b:last-of-type{ text-align:left }
 .nx-vs span{ font:700 12px/1 var(--f-head); letter-spacing:1px; color:var(--accent) }
 .nx-sub{ font-size:11px; color:var(--text-dim); margin-top:6px }
-/* スポンサーの看板(→docs/06 §6.25)。ピッチ脇の広告板のつもりで、
+/* スポンサーの看板(→docs/11 §6.25)。ピッチ脇の広告板のつもりで、
    タイルの下に細い帯として敷く。**契約中だけ**出る */
 .nx-spon{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -1936,7 +1936,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .nx-spon i{ font-style:normal; font:9px/1 var(--f-mono); letter-spacing:2px;
   color:var(--text-mute) }
 .nx-spon b{ font:600 12px/1 var(--f-head); letter-spacing:.5px; color:oklch(0.80 0.09 85) }
-/* スポンサーの看板(→docs/06 §6.32)。**ピッチ脇の広告板**として置く。
+/* スポンサーの看板(→docs/11 §6.32)。**ピッチ脇の広告板**として置く。
    絵そのものが横長なので、枠を作らず**帯として置くだけ**にする。 */
 .ad{ overflow:hidden; border-radius:4px; line-height:0 }
 .ad img{ display:block; width:100%; height:auto }
@@ -1953,7 +1953,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 
 /* HOME の2枚タイル(→docs/06 §6.8)。試合の次に触る導線を並べる。 */
 .tiles{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px }
-/* **4枚のタイルは一回り低く**(→docs/06 §6.58)。HOME は縦に長くなりがちなので、
+/* **4枚のタイルは一回り低く**(→docs/11 §6.58)。HOME は縦に長くなりがちなので、
    絵の見える面積を保ったまま、余白と字の分だけ詰める */
 .tile{ border-radius:12px; padding:11px 12px; background:var(--panel);
   border:1px solid var(--line); cursor:pointer }
@@ -1961,7 +1961,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .tile-i{ font-size:17px; margin-bottom:3px; color:var(--accent) }
 .tile-t{ font:600 13px/1 var(--f-head); color:var(--text) }
 .tile-s{ font-size:11px; color:var(--text-dim); margin-top:2px }
-/* タイルとマッチタイルに貼るステッカー(→docs/06 §6.30)。
+/* タイルとマッチタイルに貼るステッカー(→docs/11 §6.30)。
    **文字の下に潜らせて、枠から少しはみ出させる**。きれいに収めると
    絵が枠の中の飾りになってしまい、「貼ってある」感じが出ない。 */
 .tile{ position:relative; overflow:hidden }
@@ -1989,7 +1989,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 /* .btn は width:100% なので、行の中に置くときは**幅を明示して奪い返す** */
 .sc-buy{ flex:0 0 auto; width:auto; min-width:98px; padding:12px 14px }
 .sc-buy:disabled{ opacity:.45 }
-/* 移籍市場(→docs/03 §3.67)。スカウトの行と**同じ骨格**にする。
+/* 移籍市場(→docs/10 §3.67)。スカウトの行と**同じ骨格**にする。
    やることは同じ「コインで選手を得る」で、違うのは引くか選ぶかだけ。 */
 .mk-note{ display:block; margin-top:4px; font-size:11px; color:var(--text-dim) }
 .mk-row{
@@ -2114,7 +2114,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 }
 /* **9つ並んでもスクロールさせない**(→docs/03 §3.23)。種別は見出し行に畳んで2行に収める */
 .comp-card.off{ opacity:.55 }
-/* **いま戦っている大会は光らせる**(→docs/06 §6.42)。9つ並ぶ中で、
+/* **いま戦っている大会は光らせる**(→docs/11 §6.42)。9つ並ぶ中で、
    エントリー中のものが分からないと「次にどこへ行くか」が読めない */
 .comp-card.live{
   border-color:var(--accent); background:linear-gradient(90deg,
@@ -2142,7 +2142,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .ch-div.up{ color:oklch(0.86 0.13 150); border-color:oklch(0.50 0.10 150) }
 .ch-div.dn{ color:var(--fit-bad); border-color:color-mix(in srgb, var(--fit-bad) 45%, var(--line)) }
 .ch-more{ margin-top:6px; text-align:center; color:var(--text-mute) }
-/* 契約中のスポンサーの看板(→docs/06 §6.42)。**契約の話をしている場所**なので、
+/* 契約中のスポンサーの看板(→docs/11 §6.42)。**契約の話をしている場所**なので、
    相手の顔が見えるほうが「どこと組んでいるか」が残る */
 .ct-spon{ margin:2px 0 10px }
 .ct-spon .ad{ border-radius:8px; overflow:hidden; border:1px solid var(--line) }
@@ -2150,7 +2150,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 /* **社名は看板に添えない**(→§6.51)。すぐ下の行に社名が出るので二度になる */
 /* 紋章の脇の★(→§6.51)。舞台と順位と同じ行に置くので、字だけ金にする */
 .cr-star{ font-style:normal; color:var(--accent) }
-/* 背景(→docs/06 §6.45)。**端末枠の外側だけ**を着せ替える。
+/* 背景(→docs/11 §6.45)。**端末枠の外側だけ**を着せ替える。
    盤面(#app)の中は触らないので、どれを選んでも読みやすさは変わらない */
 body.bg-pitch{
   background-color:oklch(0.30 0.07 150);
@@ -2164,13 +2164,13 @@ body.bg-pitch{
   background-position:center center, 0 0;
   background-repeat:no-repeat, repeat;
 }
-/* **黒と白はテーマから独立させる**(→docs/06 §6.61)。
+/* **黒と白はテーマから独立させる**(→docs/11 §6.61)。
    以前「ブラック」は `--bg` をそのまま使っていたので、セピアにすると白くなった。
    地の明るさ(ナイト/セピア)と、外周の色は**別の好み**なので、別々に選ばせる */
 body.bg-black{ background-color:oklch(0.10 0.01 255) }
 body.bg-white{ background-color:oklch(0.94 0.008 90) }
 body.bg-wall{ background-color:oklch(0.97 0.005 95) }
-/* ロゴウォール(→docs/06 §6.45)。**本物の要素**で敷くので、
+/* ロゴウォール(→docs/11 §6.45)。**本物の要素**で敷くので、
    タイトルと同じフォント(Oswald)がそのまま効く。データURIのSVGでは届かない。
    45度に倒し、盤面より後ろに置く */
 #bgWall{
@@ -2185,7 +2185,7 @@ body.bg-wall{ background-color:oklch(0.97 0.005 95) }
 }
 /* 盤面は必ず壁より前に出す */
 body.bg-wall #app{ position:relative; z-index:1 }
-/* 設定(→docs/06 §6.45)。監督の欄の右端に小さく置く */
+/* 設定(→docs/11 §6.45)。監督の欄の右端に小さく置く */
 .cfg-b{
   flex:0 0 auto; width:30px; height:30px; border-radius:8px; cursor:pointer;
   background:var(--panel-2); border:1px solid var(--line);
@@ -2211,7 +2211,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   repeating-linear-gradient(90deg, oklch(0.32 0.075 150) 0 6px, oklch(0.28 0.065 150) 6px 12px) }
 .sw-wall{ background:linear-gradient(135deg,#761AFF 0 20%,#F8FF26 20% 40%,
   #23FFB5 40% 60%,#FF21B2 60% 80%,#1BFAFF 80% 100%) }
-/* 監督のカットイン(→docs/06 §6.46)。**バストアップ**で見せる。
+/* 監督のカットイン(→docs/11 §6.46)。**バストアップ**で見せる。
    立ち絵の上のほう(顔から胸まで)だけを枠で抜く */
 .cut-mgr{
   position:relative; width:56px; height:56px; margin:0 auto 6px;
@@ -2223,7 +2223,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   transform:translate(-50%,-2%); image-rendering:pixelated }
 .cut-mgr.none{ display:flex; align-items:center; justify-content:center }
 .cut-mgr i{ font-style:normal; font:8px/1 var(--f-mono); color:oklch(1 0 0 / .6) }
-/* 采配の帯(→docs/06 §6.46)。**両軍ぶんを上下に同時に走らせる**。
+/* 采配の帯(→docs/11 §6.46)。**両軍ぶんを上下に同時に走らせる**。
    自軍は上・左から、敵軍は下・右から。色はそれぞれのクラブカラー。 */
 .mcut.tacpair{ flex-direction:column; justify-content:center; gap:14px }
 .cut.tac{
@@ -2262,7 +2262,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 /* 采配のときは1人だけ。中央に置く */
 .cut-one{ justify-content:center }
 .cut-one .cut-fig{ width:auto; min-width:38% }
-/* 就任の導入(→docs/06 §6.47)。**オファーが届いた**という出来事にしてから、
+/* 就任の導入(→docs/11 §6.47)。**オファーが届いた**という出来事にしてから、
    次にすること(選んで契約)を最後の行で示す。オーナーのタイル(→§6.8)と同じ組み立て */
 .of-intro{
   position:relative; overflow:hidden; margin-bottom:14px;
@@ -2281,13 +2281,13 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .of-meta{ margin-top:7px; font:10px/1.5 var(--f-mono); color:var(--text-mute) }
 .of-go{ margin-top:11px; font:600 12px/1 var(--f-head); letter-spacing:.5px;
   color:var(--accent) }
-/* 相手監督の性分(→docs/03 §3.56)。名前の右に小さく添える */
+/* 相手監督の性分(→docs/10 §3.56)。名前の右に小さく添える */
 .foe-ct{
   font-style:normal; margin-left:8px; padding:2px 6px; border-radius:4px;
   font:600 10px/1 var(--f-head); letter-spacing:.5px;
   color:var(--accent-hi); background:oklch(0.28 0.05 85); border:1px solid var(--accent-dim);
 }
-/* メモラビリア(→docs/03 §3.55)。開いたものだけ並ぶ */
+/* メモラビリア(→docs/10 §3.55)。開いたものだけ並ぶ */
 .mem{ display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:6px;
   border-radius:11px;
   background:linear-gradient(100deg, oklch(0.24 0.05 85), var(--panel) 62%);
@@ -2309,7 +2309,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 /* **ボタンは伸ばさない**。.btn は幅いっぱいに広がるので、ここで止める */
 .mem-key .btn{ flex:0 0 auto; width:auto; padding:8px 16px }
 .rs-in.mem-got b{ color:var(--accent-hi) }
-/* HOME のタイルに載せる状態(→docs/06 §6.44) */
+/* HOME のタイルに載せる状態(→docs/11 §6.44) */
 .tl-hot{ color:var(--accent-hi); font-weight:600 }
 .tl-num{ color:var(--accent-hi); font:700 14px/1 var(--f-head) }
 .tl-next{ display:block; margin-top:2px; font-size:10px; color:var(--text-mute);
@@ -2356,7 +2356,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .tb-note{ margin-top:6px; font-size:10px; color:var(--text-dim) }
 .tb-note.warn{ color:var(--accent-hi) }
 
-/* **節の枠はどれも同じ高さ**(→docs/06 §6.53)。
+/* **節の枠はどれも同じ高さ**(→docs/11 §6.53)。
    済んだ節は「相手＋節・HOME/AWAY」の2行、予定と空枠は1行しかないため、
    放っておくと 28 / 39 / 42 / 60px が混ざって並びが不揃いに見える。
    **いちばん背の高い「済んだ節」を基準**にそろえる(2行ぶん + 上下の余白)。 */
@@ -2367,7 +2367,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 }
 .cal-n{ width:26px; text-align:center; font-size:10px; color:var(--text-dim); flex-shrink:0 }
 .cal-h{ width:22px; text-align:center; font-size:14px; flex-shrink:0 }
-/* 相手の印(→docs/03 §3.54)。**色の丸ではなくエンブレム**。
+/* 相手の印(→docs/10 §3.54)。**色の丸ではなくエンブレム**。
    中身がSVGなので地色も丸めも要らない */
 .cal-c{ width:22px; height:22px; flex-shrink:0; display:flex;
   align-items:center; justify-content:center; line-height:0 }
@@ -2440,8 +2440,8 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .news-x{ color:oklch(0.72 0.15 25) }      /* 治療中の選手名 */
 .cm-body{ color:var(--accent) }   /* 体つき(→docs/03 §3.27)。持つ選手にだけ付く */
 .news-up{ color:var(--accent) }           /* 施設の完成(→docs/03 §3.5)。1節だけ出る */
-/* クラブチャット(→docs/06 §6.23)。モックの秘書チャットを踏襲した吹き出し。
-   **明るいのは吹き出しのほう**(→docs/06 §6.24)。地はアプリ共通の暗いままにして、
+/* クラブチャット(→docs/11 §6.23)。モックの秘書チャットを踏襲した吹き出し。
+   **明るいのは吹き出しのほう**(→docs/11 §6.24)。地はアプリ共通の暗いままにして、
    会話の塊だけをクリームで浮かせる。地を明るくして吹き出しを暗くする形も試したが、
    周りの画面と地が変わるぶん視認性がかえって落ちた(2026-08-09 に反転して戻した)。
    色は画面の中だけで閉じるので、ここで作った変数を .ch-* 側が参照する。 */
@@ -2452,7 +2452,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   --ch-line:oklch(0.855 0.022 90);      /* 吹き出しの縁 */
   --ch-me:oklch(0.86 0.105 88);         /* 監督の吹き出し。金 */
   min-height:100%;
-  /* **壁紙**(→docs/06 §6.36)。ベタ塗りの地はUIに見える。ごく薄い斜めの綾を
+  /* **壁紙**(→docs/11 §6.36)。ベタ塗りの地はUIに見える。ごく薄い斜めの綾を
      敷くと「アプリの中の会話画面」らしくなる。柄が読めるほど濃くしない */
   background-image:
     repeating-linear-gradient(135deg,
@@ -2476,7 +2476,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   background:oklch(0.22 0.03 265 / .85); border:1px solid oklch(0.32 0.03 265);
   font:400 9px/1 var(--f-mono); letter-spacing:1px; color:var(--text-dim);
 }
-/* **同じ人の続きは詰める**(→docs/06 §6.36)。まとまりの先頭だけ間を空けると、
+/* **同じ人の続きは詰める**(→docs/11 §6.36)。まとまりの先頭だけ間を空けると、
    誰がひと続きに話しているかが、名前を読まなくても分かる */
 .ch-log{ display:flex; flex-direction:column; gap:3px }
 .ch-row{ display:flex; align-items:flex-end; gap:7px }
@@ -2492,12 +2492,12 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .ch-row.me .ch-meta{ align-items:flex-start; order:-1 }
 /* 監督の丸は右端に来るので、HELPタブに隠れないぶんだけ内側へ寄せる */
 .ch-row.me{ justify-content:flex-end; padding-right:30px }
-/* **顔の丸は3者とも同じ形**(→docs/06 §6.23)。色だけで役割を分ける */
+/* **顔の丸は3者とも同じ形**(→docs/11 §6.23)。色だけで役割を分ける */
 .ch-sm, .ch-av-in{
   width:36px; height:36px; border-radius:50%; flex-shrink:0; overflow:hidden;
   display:flex; align-items:center; justify-content:center; position:relative;
 }
-/* 丸も**パステル寄りのネオン**でそろえる(→docs/06 §6.28)。暗い地の上で、
+/* 丸も**パステル寄りのネオン**でそろえる(→docs/11 §6.28)。暗い地の上で、
    誰が話しているかが色だけで分かる。絵はこの上に乗るので文字の読みは関わらない */
 .ch-sm.sec, .ch-av-in.sec{ background:oklch(0.78 0.11 300); border:1px solid oklch(0.86 0.09 300);
   color:oklch(0.40 0.09 300) }
@@ -2517,7 +2517,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   width:66%; height:52%; border-radius:50% 50% 0 0; background:currentColor;
   transform:translateX(-50%);
 }
-/* **バストアップに収める**(→docs/06 §6.23)。素材は全身の立ち絵(420×500)で、
+/* **バストアップに収める**(→docs/11 §6.23)。素材は全身の立ち絵(420×500)で、
    そのまま丸に入れると腹が中心に来て顔が潰れ、寄せすぎると顔だけになって窮屈になる。
    頭上に少し余白を残し、図の上から約38% = 頭〜胸 が入る位置で組む。
      幅224%  … 丸の直径の2.2倍まで拡大
@@ -2539,7 +2539,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .ch-row.me .ch-b{
   background:var(--ch-me); color:oklch(0.26 0.03 80);
 }
-/* **尻尾はまとまりの先頭だけ**(→docs/06 §6.36)。全部に付けると鋸の歯になる */
+/* **尻尾はまとまりの先頭だけ**(→docs/11 §6.36)。全部に付けると鋸の歯になる */
 #scr-chat .ch-row.hd .ch-b::before{
   content:""; position:absolute; bottom:7px; left:-5px; width:10px; height:10px;
   background:var(--ch-card); clip-path:polygon(100% 0, 100% 100%, 0 78%);
@@ -2550,7 +2550,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 }
 /* 名前は**発言と同じ濃さ**。落とすと吹き出しのクリームに沈んで誰の発言か読み取れない */
 .ch-nm{ display:block; font:400 9px/1 var(--f-mono); color:var(--ch-ink); margin-bottom:4px }
-/* 発言者のポジション(→docs/06 §6.24)。名前の右に小さく置く */
+/* 発言者のポジション(→docs/11 §6.24)。名前の右に小さく置く */
 .ch-pos{
   font-style:normal; letter-spacing:1px; color:oklch(0.42 0.10 85);
   background:oklch(0.88 0.055 88); border-radius:4px; padding:1px 4px; margin-left:3px;
@@ -2683,7 +2683,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 /* 着地(そのシーズンの結末) */
 .cal.judge{ background:oklch(0.22 0.02 255); border-style:dashed }
 .cal.judge b{ font-size:11px; color:var(--text-2) }
-/* **節目は行き先まで連れていく**(→docs/06 §6.42)。押せる行は実線に戻し、
+/* **節目は行き先まで連れていく**(→docs/11 §6.42)。押せる行は実線に戻し、
    右端に行き先を書く(点線のままだと「まだ何も無い枠」に見える) */
 .cal.judge.go{
   border-style:solid; border-color:var(--accent-dim); cursor:pointer;
@@ -2704,7 +2704,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 /* **タイルは入口だけ**(→docs/03 §3.29)。中身の操作はクラブチャットが持つ */
 .cal.cur{ cursor:pointer }
 .cal.cur .cal-r{ margin-left:auto; font-size:18px; color:var(--accent) }
-/* **押したら何が起きるか**が見出し(→docs/06 §6.31)。右下の小さな案内から昇格した */
+/* **押したら何が起きるか**が見出し(→docs/11 §6.31)。右下の小さな案内から昇格した */
 .cur-go{ color:var(--accent); font:600 14px/1.3 var(--f-head); letter-spacing:1px }
 /* いまの節にだけロッカーの絵を貼る。**並んだ枠の中で1枚だけ絵が入る**ので、
    どこが「いま」かが、数字を読まなくても分かる */
@@ -2715,7 +2715,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cur-st{ position:absolute; right:-16px; top:50%; width:124px; z-index:0;
   transform:translateY(-50%) rotate(4deg); pointer-events:none }
 .cur-st .stk{ opacity:.40 }
-/* **監督と秘書がブリーフィングへ向かう**(→docs/06 §6.54)。ロッカーを背に2人を並べる。
+/* **監督と秘書がブリーフィングへ向かう**(→docs/11 §6.54)。ロッカーを背に2人を並べる。
    立ち絵は 420x500 の全身で、膝がだいたい高さの 78% にある。
    **枠は付けず、足元はタイルの縁で切り落とす** ので、タイルの高さから逆算して
    「膝上まで」が出るように図の高さを決めてある(104px の枠に 132px の図)。 */
@@ -2735,7 +2735,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .cur-crew .cc-m{ margin-left:-26px }
 /* 相手が決まっても**タイルは1段のまま**(→§6.55)。見出しを相手で上書きするので、
    2段にする必要がない。他の節と同じ高さで並ぶ(→§6.53) */
-/* 予定の行のトロフィー(→docs/06 §6.31)。**行の右に大きく置いて、枠で切り落とす**。
+/* 予定の行のトロフィー(→docs/11 §6.31)。**行の右に大きく置いて、枠で切り落とす**。
    アイコンの枠(22px)に収めると豆粒で何の絵か分からない。行の高さは変えずに、
    はみ出たぶんは overflow で切る(タイトルの壁と同じ「貼ってある」見せ方) */
 .cal.tr{ position:relative; overflow:hidden }
@@ -2762,7 +2762,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .compbtn:disabled{ opacity:.35; cursor:default }
 /* 予定が確定している枠(カップの連戦など) */
 .cal.planned{ border-color:var(--accent-dim); background:oklch(0.20 0.03 85 / .18) }
-/* 空枠。**高さは詰めない**(→docs/06 §6.53)。96〜120枠あるので以前は
+/* 空枠。**高さは詰めない**(→docs/11 §6.53)。96〜120枠あるので以前は
    padding を削っていたが、そこだけ背が低いと並びが不揃いに見える。
    字だけ落として、枠の大きさは他の節と同じにする */
 .cal.none .cal-b b{ font-size:10px; color:var(--text-mute); font-weight:400 }
@@ -2800,7 +2800,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .offer .of-l{ flex:1; min-width:0 }
 .offer .of-l b{ font:600 13px/1.4 var(--f-head); letter-spacing:.5px }
 .offer .of-r{ font-size:11px; color:var(--accent-dim) }
-/* 必要名声(→docs/06 §6.47)。**0 のときは数字を出さない**。裸の 0 が並ぶと読めない */
+/* 必要名声(→docs/11 §6.47)。**0 のときは数字を出さない**。裸の 0 が並ぶと読めない */
 .of-r i{ display:block; font-style:normal; font:9px/1 var(--f-mono);
   letter-spacing:.5px; color:var(--text-mute); margin-bottom:2px }
 .of-r b{ font:700 13px/1 var(--f-head); color:var(--accent) }
@@ -2813,7 +2813,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
   *{ animation:none!important; transition:none!important }
 }
 
-/* ---------- SCOUT の見本市と開封(→docs/06 §6.56) ---------- */
+/* ---------- SCOUT の見本市と開封(→docs/11 §6.56) ---------- */
 /* 見本市。**横に流す**。縦に積むとパックの行が画面から押し出される */
 .sc-fair{ margin:10px 0 14px }
 .sc-fair-h{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px }
@@ -2932,7 +2932,7 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .rv-sub{ display:block; font-size:11px; color:var(--text-dim) }
 .rv-hint{ margin-top:10px; font:10px/1 var(--f-mono); letter-spacing:2px; color:var(--text-mute) }
 
-/* 残留の行(→docs/03 §3.58)。**一覧の中で1行だけ性質が違う**ので、
+/* 残留の行(→docs/10 §3.58)。**一覧の中で1行だけ性質が違う**ので、
    格の数字ではなく「引き継げる」ことを見出しの高さで示す */
 .offer.stay{ border-color:var(--accent); background:oklch(0.24 0.05 85 / .22) }
 .offer.stay .of-r.ok{ color:var(--accent) }
@@ -2942,13 +2942,13 @@ body.bg-wall #app{ position:relative; z-index:1 }
   background:var(--accent); color:var(--surface);
 }
 
-/* 買い取りの但し書き(→docs/03 §3.59)。値段の下に小さく添える */
+/* 買い取りの但し書き(→docs/10 §3.59)。値段の下に小さく添える */
 .cm-buy-n{ display:block; margin-top:3px; font-style:normal;
   font-size:10px; color:var(--text-mute) }
 
 
 /* =========================================================================
-   セピア: 暗い面の一括置き換え(→docs/06 §6.60)
+   セピア: 暗い面の一括置き換え(→docs/11 §6.60)
    **手で1つずつ潰すと必ず漏れる**。CSS から「暗い面を持つ宣言」を機械で拾い、
    宣言から遡ってセレクタを引き、明度を反転して当てたもの
    (oklch の L を 0.985-L*0.58、色相は金寄りへ、彩度は 0.085 で頭打ち)。
@@ -3039,7 +3039,7 @@ body.ui-sepia .rv-pack i{ background:linear-gradient(150deg,oklch(0.799 0.048 82
 body.ui-sepia .offer.stay{ background:oklch(0.846 0.048 85 / .22) }
 
 /* =========================================================================
-   セピア: 明るい字の一括置き換え(→docs/06 §6.60)
+   セピア: 明るい字の一括置き換え(→docs/11 §6.60)
    背景と同じ理屈で、**直書きの明るい字**も機械で拾って濃くする。
    明るい地では白い字がそのまま消えるが、面と違って「消えた」ことに気づきにくい。
    元の明暗の順序は保つ(0.95→0.26 / 0.72→0.50)ので、強弱の付け方は変わらない。
@@ -3085,7 +3085,7 @@ body.ui-sepia .rv-pn{ color:oklch(0.343 0.045 88) }
 
 
 /* =========================================================================
-   セピア: 派生ルールの再発行(→docs/06 §6.61)
+   セピア: 派生ルールの再発行(→docs/11 §6.61)
    **上の一括置き換えは、後から来るはずの派生を潰してしまう**。
    `body.ui-sepia .fc-bar i` は `.fc-bar i.on` と同じ詳細度だが後に書かれるので、
    建った段の金色が消えて**全部が空きマスに見えた**。
@@ -3144,7 +3144,7 @@ body.ui-sepia .rv-pn.secret{ color:oklch(0.66 0.24 26) }
 body.ui-sepia .offer.stay .of-r.ok{ color:var(--accent) }
 
 /* =========================================================================
-   セピアの手当て(→docs/06 §6.60)
+   セピアの手当て(→docs/11 §6.60)
    トークンで届かないところだけを名指しで直す。**塗り面だけ**が対象で、
    カードの段・ピッチの緑・カットインには触らない(意匠そのものなので)。
    ========================================================================= */
@@ -3181,7 +3181,7 @@ body.ui-sepia .mgr-name{ color:var(--text) }
 /* 絵の上に載る字(OVR・選手名)は**白のまま**。下が絵なので地の色に関係ない */
 
 /* =========================================================================
-   セピアの手当て その2(→docs/06 §6.60)。
+   セピアの手当て その2(→docs/11 §6.60)。
    **状態が付いたときだけ現れる面**は、機械の走査では見つからない
    (取得済みの実績・完了した節・コイン不足・試合中……その状態を作らないと出ない)。
    監督から報告のあった9箇所を名指しで直す。
@@ -3242,7 +3242,7 @@ body.ui-sepia .slot.on,body.ui-sepia .fm.on,body.ui-sepia .fm-o.on{
 body.ui-sepia #toast{ background:var(--panel-2); border-color:var(--line); color:var(--text) }
 /* ---- 結果の判定(勝利/引き分け/敗戦)。**画面でいちばん大きい字** ---- */
 body.ui-sepia .rs-verdict{ color:var(--text) }
-/* ---- **暗いままが正しい覆い**(→docs/06 §6.60)。一括置き換えから外している ---- */
+/* ---- **暗いままが正しい覆い**(→docs/11 §6.60)。一括置き換えから外している ---- */
 /* .mcut  … カットイン中に盤面を沈める覆い。明るくすると芝が白茶ける */
 /* .t-scrim / .t-wall … タイトルの壁と覆い。ここは常に夜の見立て */
 

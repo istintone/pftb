@@ -18,7 +18,7 @@ window.addEventListener("unhandledrejection",ev=>showErr(ev.reason));
 // 続きがあるのに誤タップで消えては困るので、セーブがある間は全画面タップを無効にする。
 function setupTitle(exists){
   const t=document.getElementById("scr-title");
-  // ステッカーの壁(→docs/06 §6.29)。**画面の大きさが決まってから**敷く
+  // ステッカーの壁(→docs/11 §6.29)。**画面の大きさが決まってから**敷く
   const wall=document.getElementById("tWall");
   if(wall)wall.innerHTML=titleWall();
   const start=document.getElementById("tStart"), menu=document.getElementById("tMenu");
@@ -35,7 +35,7 @@ function setupTitle(exists){
   };
   const resume=async()=>{
     await loadGame(); headUI(); applyBg(); applyUi();
-    // **QRで配った合言葉**(→docs/03 §3.55)。URL に付いていればここで開く
+    // **QRで配った合言葉**(→docs/10 §3.55)。URL に付いていればここで開く
     const got=memFromUrl();
     if(got){ await save(); toast("「"+got.name+"」が開きました"); }
     show(S.club?"home":"offer");         // 就任前で終わっていたら就任先選択から

@@ -38,7 +38,7 @@ const E=setup({tmpName:"_tmp_ord.js"});
   {
     const M=E.createMatch(side(),side(),2);
     const T=M.home, p=T.players.find(q=>q.role!=="GK");
-    // **★のぶんを含める**(→docs/03 §3.53)。eff() は p.c.up を足すので、
+    // **★のぶんを含める**(→docs/10 §3.53)。eff() は p.c.up を足すので、
     // 素の p.c.atk で基準を作ると相手の選手ぶんだけずれる
     const up=k=>(p.c.up&&p.c.up[k])||0;
     const a0=(p.c.atk+up("atk"))*p.fit*p.stam, d0=(p.c.def+up("def"))*p.fit*p.stam;
@@ -160,7 +160,7 @@ const E=setup({tmpName:"_tmp_ord.js"});
       + " ／ 相手の軸も決定的");
   }
 
-  // ---------- 特別采配(→docs/03 §3.50) ----------
+  // ---------- 特別采配(→docs/10 §3.50) ----------
   {
     await E.newGame();
     const S = E.getS(); S.coach = "検証"; E.startTenure("sam-8");
@@ -216,7 +216,7 @@ const E=setup({tmpName:"_tmp_ord.js"});
       + " 札として全員に混ざる ／ 指示と足し算");
   }
 
-  // ---------- 采配を盗む(→docs/03 §3.51) ----------
+  // ---------- 采配を盗む(→docs/10 §3.51) ----------
   {
     await E.newGame();
     const S = E.getS(); S.coach = "検証"; S.world.seed = 20260814;
@@ -262,7 +262,7 @@ const E=setup({tmpName:"_tmp_ord.js"});
     }
     assert.ok(lo < got, "負けたときのほうが覚えにくい: " + lo + " < " + got);
 
-    // **連絡が届き、受け取って初めて覚える**(→docs/03 §3.50)。
+    // **連絡が届き、受け取って初めて覚える**(→docs/10 §3.50)。
     // 選手も采配も、届くものは秘書の受信箱を通す
     S.player.tactics = ["direct"]; S.player.mail = []; S.player.mailSent = {}; S.career.node = 1;
     for (let i = 1; i <= 200; i++) { S.career.node = i;
