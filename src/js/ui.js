@@ -783,7 +783,8 @@ let _cardWhere="ALL";     // deck=編成に入っている / bench=入ってい�
 let _cardSort="ovr";      // ovr=総合力順 / rar=段順
 // 1ページに出す枚数(→docs/06 §6.35)。**全部並べると数百枚のスクロールになる**ので
 // 区切る。絞り込みを変えたら1ページ目へ戻す(前のページ番号が残ると空振りする)。
-const CARDS_PER_PAGE=12;
+// **4列×4段**(→docs/06 §6.64)。スタメン11人+控え5人がちょうど1ページ
+const CARDS_PER_PAGE=16;
 let _cardPage=1;
 let _bulk=false;                    // まとめて売るモード(→docs/03 §3.68)
 function renderCards(){

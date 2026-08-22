@@ -558,6 +558,12 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
    外周の枠と縁線は**背景画像側**が持つ(CSSでは描かない)。
    ========================================================================= */
 .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px }
+/* CARDS だけ**4列**にする(→docs/06 §6.64)。スタメン11人が1画面に収まるので、
+   「いま誰を持っているか」をスクロールせずに見渡せる。
+   カードの文字は cqw(枠の幅基準)なので、列を増やせばそのまま比例して縮む */
+#cardsGrid{ grid-template-columns:repeat(4,1fr); gap:7px }
+/* 札が小さいぶん、文字の縁取りを太くする(→上の --ha) */
+#cardsGrid .pcard *{ --ha:.8cqw }
 .pcard{
   /* --ink  … クレスト・OVR・名前(カードの「顔」になる文字。レアリティの色を出す)
      --stat … 6能力の文字(常に白か黒。地の明暗で決める)
@@ -607,9 +613,12 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
 .pc-crest,.pc-ovr,.pc-pos,.pc-stats,.pc-name{ z-index:3 }
 .pc-crest,.pc-ovr,.pc-pos b,.pc-pos i,.pc-stats span,.pc-stats b,.pc-name b,.pc-name span{
   /* 小さいぼかしを3回重ねて実質のアウトラインにする。1発のぼかしだと
-     一覧サイズ(カード幅120px)では選手の色に負けて読めない。 */
-  text-shadow:0 0 .55cqw var(--halo), 0 0 .55cqw var(--halo),
-              0 0 .55cqw var(--halo), 0 0 1.8cqw var(--halo);
+     一覧サイズ(カード幅120px)では選手の色に負けて読めない。
+     **太さは cqw なので、札が小さいほど絶対値では細くなる**。
+     4列(→§6.64)では札が 120px → 85px になるので、そのぶん太くする(--ha) */
+  --ha:.55cqw;
+  text-shadow:0 0 var(--ha) var(--halo), 0 0 var(--ha) var(--halo),
+              0 0 var(--ha) var(--halo), 0 0 calc(var(--ha) * 3.3) var(--halo);
 }
 
 /* 左上のクレスト(背景画像の盾の中に置く。正式名称は入らないので2文字)。

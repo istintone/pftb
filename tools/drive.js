@@ -2897,7 +2897,7 @@ const STEPS = [
           const pick=(box,id)=>document.querySelector('#'+box+' [data-f="'+id+'"]').click();
           const shown=()=>document.querySelectorAll('#cardsGrid [data-card]').length;
           const all=availableCards();
-          const per=12;
+          const per=CARDS_PER_PAGE;   // 1ページの枚数は定数から取る
           const want=f=>Math.min(per,all.filter(f).length);
           pick('cardsRar','REG');
           if(shown()!==want(c=>c.rarity==='REG'))
