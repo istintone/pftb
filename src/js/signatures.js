@@ -42,7 +42,7 @@ const SIGNATURES=[
     name:"R. カルロス", short:"カルロス",
     club:"マドリー・ブランコス", nation:"bra",
     pos:"DF", subs:["LSB","LMF"], age:27,
-    atk:9, def:16, pow:18, tec:14, spd:20, sta:12,               // 89
+    atk:10, def:16, pow:19, tec:14, spd:20, sta:11,              // 90
     skills:["弾丸の左足","オーバーラップ","スピード","正確なクロス"],
   },
   {
@@ -84,7 +84,7 @@ const SIGNATURES=[
     club:"マドリー・ブランコス", nation:"fra",
     // **LWG も**(2026-08-22)。左に流れて組み立てる形をこの1枚で賄えるようにする
     pos:"MF", subs:["OMF","CMF","LWG"], age:29,
-    atk:15, def:8, pow:15, tec:20, spd:13, sta:14,               // 85
+    atk:19, def:8, pow:17, tec:20, spd:15, sta:11,               // 90
     skills:["マエストロ","視野の広さ","キープ力","パスの精度"],
   },
   {
@@ -723,7 +723,7 @@ const SIGNATURES=[
     name:"I. カシージャス", short:"カシージャス",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"GK", subs:["GK"], age:26,
-    atk:3, def:19, pow:14, tec:16, spd:18, sta:14,               // 84
+    atk:4, def:20, pow:14, tec:17, spd:18, sta:15,               // 88
     skills:["神の手前","反射神経","1対1の強さ","守備の統率"],
   },
   {
@@ -731,7 +731,7 @@ const SIGNATURES=[
     name:"F. イエロ", short:"イエロ",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"DF", subs:["CB","DMF"], age:31,
-    atk:10, def:20, pow:18, tec:15, spd:9, sta:13,               // 85
+    atk:11, def:20, pow:18, tec:16, spd:9, sta:14,               // 88
     skills:["闘将の采配","空中戦","正確なフィード","キャプテンシー"],
   },
   {
@@ -739,7 +739,7 @@ const SIGNATURES=[
     name:"I. エルゲラ", short:"エルゲラ",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"DF", subs:["CB","DMF","RSB"], age:27,
-    atk:8, def:19, pow:15, tec:14, spd:13, sta:14,               // 83
+    atk:9, def:19, pow:16, tec:14, spd:13, sta:15,               // 86
     skills:["万能の柱","ビルドアップ","対人守備","セカンドボール"],
   },
   {
@@ -755,7 +755,7 @@ const SIGNATURES=[
     name:"M. サルガド", short:"サルガド",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"DF", subs:["RSB","RMF"], age:27,
-    atk:9, def:17, pow:14, tec:12, spd:15, sta:18,               // 85
+    atk:10, def:17, pow:14, tec:13, spd:15, sta:18,              // 87
     skills:["右の推進","オーバーラップ","厳しい寄せ","運動量"],
   },
   {
@@ -765,7 +765,7 @@ const SIGNATURES=[
     pos:"MF", subs:["DMF","CMF"], age:29,
     // **守備のキーマン**(→docs/03 §3.13d)。DEF は上限なので、走力を削って
     // 対人の地力(pow)と読み(tec)へ回す。攻撃は捨てる
-    atk:3, def:20, pow:18, tec:15, spd:15, sta:17,               // 88
+    atk:4, def:20, pow:18, tec:15, spd:16, sta:17,               // 90
     skills:["掃除屋","ボール奪取","間合いの読み","対人守備"],
   },
   {
@@ -783,7 +783,7 @@ const SIGNATURES=[
     pos:"MF", subs:["CMF","OMF","DMF"], age:26,
     // **DMF で使う**(→docs/03 §3.13e)。守れない選手が5人では中盤が空くので、
     // 技巧を保ったまま守備の枚数を1人ぶん足す(20→18 と引き換えに DEF 9→14)
-    atk:13, def:14, pow:13, tec:18, spd:12, sta:13,               // 83
+    atk:15, def:14, pow:13, tec:19, spd:13, sta:13,              // 87
     skills:["スペースの発明","視野の広さ","スルーパス","パスの精度"],
   },
   {
@@ -791,7 +791,7 @@ const SIGNATURES=[
     name:"R. ゴンサレス", short:"ラウール",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"FW", subs:["OMF","CF","ST"], age:26,
-    atk:19, def:8, pow:12, tec:17, spd:14, sta:15,               // 85
+    atk:20, def:8, pow:15, tec:20, spd:15, sta:12,               // 90
     skills:["セブンの帰還","ゴール前の嗅覚","オフザボール","キャプテンシー"],
   },
   {
@@ -799,7 +799,7 @@ const SIGNATURES=[
     name:"L. フィーゴ", short:"フィーゴ",
     club:"マドリー・ブランコス", nation:"por",
     pos:"MF", subs:["RWG","RMF","OMF"], age:29,
-    atk:15, def:8, pow:13, tec:19, spd:15, sta:14,               // 84
+    atk:19, def:8, pow:14, tec:20, spd:17, sta:11,               // 89
     skills:["白い矢","ドリブル突破","正確なクロス","キープ力"],
   },
   {
@@ -825,7 +825,7 @@ const SIGNATURES=[
     name:"R. ナザーリオ", short:"ロナウド",
     club:"マドリー・ブランコス", nation:"bra",
     pos:"FW", subs:["CF","ST","RWG"], age:27,
-    atk:20, def:3, pow:17, tec:18, spd:18, sta:11,               // 87
+    atk:20, def:3, pow:19, tec:19, spd:19, sta:10,               // 90
     skills:["怪物","ドリブル突破","決定力","初速"],
   },
   {
