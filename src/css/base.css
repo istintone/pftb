@@ -2300,7 +2300,10 @@ body.bg-wall #app{ position:relative; z-index:1 }
 .mem-r{ flex:0 0 auto; cursor:pointer; padding:6px 10px; margin:-6px -4px -6px 0;
   font:600 20px/1 var(--f-head); color:var(--accent) }
 .mem-r:active{ color:var(--accent-hi) }
-.mem-key{ display:flex; gap:8px; margin-top:10px; align-items:stretch }
+/* 合言葉の枠は**一覧の上**(→docs/11 §6.66)。余白も上ではなく下に付ける */
+.mem-key{ display:flex; gap:8px; margin-bottom:12px; align-items:stretch }
+/* 1つも開いていないときは一覧が空になるので、下の余白を殺す */
+.mem-key:last-child{ margin-bottom:0 }
 .mem-key input{
   flex:1 1 auto; min-width:0; padding:8px 10px; border-radius:8px;
   background:var(--panel-2); border:1px solid var(--line); color:var(--text);

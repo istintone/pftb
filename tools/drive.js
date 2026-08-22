@@ -2427,6 +2427,22 @@ const STEPS = [
     // 新しい2画面(→docs/11 §6.66)
     await ctx.js("show('exhibition')"); await ctx.wait(250);
     await ctx.shot("19d-exhibition");
+    // **1つも開いていない状態**も見る(合言葉の枠だけが残る)
+    await ctx.js(`(()=>{ window.__memKeep=S.player.mem.slice();
+      S.player.mem=[]; renderExhibition(); })()`);
+    await ctx.wait(200); await ctx.shot("19d2-exhibition-empty");
+    // **合言葉の枠はいちばん上**(→docs/11 §6.66)
+    ctx.log("  エキシビジョン:", await ctx.js(`(()=>{
+      const card=document.querySelector('#scr-exhibition .card');
+      const kids=[...card.children].map(e=>e.className||e.id);
+      const key=kids.findIndex(c=>c.indexOf('mem-key')>=0);
+      const list=kids.findIndex(c=>c==='');
+      const li=[...card.children].findIndex(e=>e.id==='memList');
+      if(key<0)throw new Error('合言葉の枠が無い');
+      if(li>=0&&key>li)throw new Error('合言葉が一覧より下にある');
+      S.player.mem=window.__memKeep; renderExhibition();
+      return '合言葉が最上段 ／ 見出し → 合言葉 → 一覧';
+    })()`));
     await ctx.js("show('mission')"); await ctx.wait(250);
     await ctx.shot("19e-mission");
     // 実績タイルは MANAGER の棚まで送る(→docs/11 §6.66)
