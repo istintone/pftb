@@ -3047,8 +3047,6 @@ body.ui-sepia .offer.stay{ background:oklch(0.846 0.048 85 / .22) }
    ========================================================================= */
 body.ui-sepia .pill{ color:oklch(0.302 0.016 90) }
 body.ui-sepia .ct-btn{ color:oklch(0.251 0.016 90) }
-body.ui-sepia .holo-rainbow .spark{ color:oklch(0.302 0.045 70) }
-body.ui-sepia .holo-gold .spark{ color:oklch(0.322 0.045 85) }
 body.ui-sepia .cm-name{ color:oklch(0.241 0.016 90) }
 body.ui-sepia .cm-facts b{ color:oklch(0.282 0.016 90) }
 body.ui-sepia .cm-bio{ color:oklch(0.455 0.016 90) }
@@ -3245,4 +3243,6 @@ body.ui-sepia .rs-verdict{ color:var(--text) }
 /* ---- **暗いままが正しい覆い**(→docs/11 §6.60)。一括置き換えから外している ---- */
 /* .mcut  … カットイン中に盤面を沈める覆い。明るくすると芝が白茶ける */
 /* .t-scrim / .t-wall … タイトルの壁と覆い。ここは常に夜の見立て */
-
+/* ---- **✦粒子は地の色に関係なく光る**(→docs/11 §6.60) ---- */
+/* 一括置き換えが色を反転させ、白い光が「黒く光る」ようになっていた。
+   カード・ホロ・段の色と同じで、粒子も**意匠そのもの**なので触らない */

@@ -2893,6 +2893,33 @@ const STEPS = [
       await ctx.shot(name);
       if (tab === "cards") {
         // **絞り込みと並べ替え**(→docs/11 §6.62)。軸ごとに1つずつ、重ねて効く
+        // **✦粒子は地の色に関係なく光る**(→docs/11 §6.60)。
+        // 一括置き換えが色を反転させ、白い光が「黒く光る」ようになっていた
+        ctx.log("  カードの粒子:", await ctx.js(`(()=>{
+          // **色は oklch のまま返ってくる**ことがある。canvas に1px 塗って
+          // 実際に描かれる RGB を読み、そこから明るさを出す
+          const cv=document.createElement('canvas'); cv.width=cv.height=1;
+          const cx=cv.getContext('2d');
+          const lum=c=>{
+            cx.clearRect(0,0,1,1); cx.fillStyle='#000';
+            cx.fillStyle=c; cx.fillRect(0,0,1,1);
+            const d=cx.getImageData(0,0,1,1).data;
+            return (0.2126*d[0]+0.7152*d[1]+0.0722*d[2])/255;
+          };
+          // **粒子はホロを持つ段だけ**(SP/WC/LE)。見本の格子で確かめる
+          const keep=S.player.ui; const out=[];
+          for(const ui of ['dark','sepia']){
+            S.player.ui=ui; applyUi(); show('gallery');
+            const sp=[...document.querySelectorAll('#galleryGrid .spark')];
+            if(!sp.length)throw new Error('粒子が1つも無い');
+            let lo=1;
+            for(const e of sp) lo=Math.min(lo,lum(getComputedStyle(e).color));
+            if(lo<0.55)throw new Error(ui+' で粒子が暗い(黒く光る): '+lo.toFixed(2));
+            out.push(ui+' '+lo.toFixed(2));
+          }
+          S.player.ui=keep; applyUi(); show('cards');
+          return 'どちらの地でも白く光る（'+out.join(' / ')+'）';
+        })()`));
         ctx.log("  絞り込みと並べ替え:", await ctx.js(`(()=>{
           const pick=(box,id)=>document.querySelector('#'+box+' [data-f="'+id+'"]').click();
           const shown=()=>document.querySelectorAll('#cardsGrid [data-card]').length;
