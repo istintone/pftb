@@ -276,6 +276,46 @@ const SKILL_FX={
     fx:[{ at:"finish", grp:"far", w:2.00, s:1.07 },{ at:"origin", grp:"spd", s:1.07 }] },
   "本能":           { sig:"inzaghi", move:"一瞬の抜け出し",
     fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"recv", k:1.30 }] },
+  // --- 銀河系軍団の固有スキル(2026-08-22 →docs/03 §3.13) ---
+  // **既に証明されている形だけを使う**(→docs/08 §8.6④)。層と群と w/s の組み合わせは、
+  // 上の12枚で careertest の帯に収まることが分かっているものから採る。
+  // 新しい形を試すと、値の妥当性と札の妥当性が同時に動いて切り分けられない。
+  "神の手前":       { sig:"casillas",
+    fx:[{ at:"gk", k:1.10 },{ at:"psoGk", k:1.30 }] },
+  "闘将の采配":     { sig:"hierro", move:"最終ラインの号令",
+    fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"aerial", k:1.20 }] },
+  "掃除屋":         { sig:"makelele", move:"刈り取り",
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"stam", k:0.85 }] },
+  // **w は付けない**。w で選ばれやすくしたうえに s も上げると帯を大きく超える
+  // (w:1.85 + s:1.14 で 40.3。目標 23.1 の帯は 16.2〜30.0)
+  "白い矢":         { sig:"figo", move:"縦への一閃",
+    fx:[{ at:"origin", grp:"cut", s:1.13 },{ at:"spDeliver", k:1.15 }] },
+  "セブンの帰還":   { sig:"raul", move:"ゴール前の予感",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"mood", k:1.06 }] },
+  // **条件付きは1.2〜1.8枚ぶんに収める**。2つ目に finish を足すと合わせて2.0枚に
+  // なるので、2つ目は倍率の小さい単独の掛かり先にする
+  "怪物":           { sig:"ronaldo9", move:"ラ・クレベータ",
+    fx:[{ at:"origin", grp:"carry", w:1.40, s:1.20, when:"fresh" },{ at:"mood", k:1.06 }] },
+  "万能の柱":       { sig:"helguera",
+    fx:[{ at:"counter", grp:"tec", s:1.14 },{ at:"aerial", k:1.20 }] },
+  "壁になる男":     { sig:"pavon",
+    fx:[{ at:"counter", grp:"press", s:1.12 },{ at:"stam", k:0.85 }] },
+  "右の推進":       { sig:"salgado", move:"止まらない上下動",
+    fx:[{ at:"origin", grp:"cross", s:1.13 },{ at:"stam", k:0.85 }] },
+  "隠れた心臓":     { sig:"cambiasso",
+    fx:[{ at:"counter", grp:"press", s:1.12 },{ at:"recv", k:1.25 }] },
+  // **spd は発動率が高い群**。s:1.13 だと 43.3 になり帯(16.2〜30.0)を大きく超えた
+  "静かな加速":     { sig:"solari", move:"外を破る",
+    fx:[{ at:"origin", grp:"spd", s:1.07 },{ at:"mood", k:1.06 }] },
+  // **finish は目標が高い層**(56.9)。origin と同じ s では届かない
+  "背中で語る":     { sig:"morientes", move:"落としの一手",
+    fx:[{ at:"finish", grp:"close", w:1.70, s:1.13 },{ at:"aerial", k:1.20 }] },
+  // **同じ人物でも、カードが違えば固有スキルも別**(→docs/03 §3.13d)。
+  // 固有スキルは sig(カードのid)に紐づくので、マンチェスターの「精密機械」は使えない
+  "白い背番号23":   { sig:"beckham_rm", move:"ハリウッドパス",
+    fx:[{ at:"origin", grp:"long", s:1.09 },{ at:"spDeliver", k:1.15 }] },
+  "スペースの発明": { sig:"guti", move:"見えないパス",
+    fx:[{ at:"origin", grp:"passTec", w:1.85, s:1.08 },{ at:"recv", k:1.25 }] },
   // --- WORLD CLASS の固有スキル(2026-08-12) ---
   // **LEGENDS と同じ物差し**で置く(→docs/03 §3.41)。段が違っても札の強さは変えない。
   // 段の差は能力(76〜85 と 82〜90)と札の枚数(3枚と4枚)で付いている。

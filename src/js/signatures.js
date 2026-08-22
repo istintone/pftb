@@ -82,7 +82,8 @@ const SIGNATURES=[
     n:7, id:"zidane", art:"le_omf01_zidane", rarity:"LEG",
     name:"Z. ジダン", short:"ジダン",
     club:"マドリー・ブランコス", nation:"fra",
-    pos:"MF", subs:["OMF","CMF"], age:29,
+    // **LWG も**(2026-08-22)。左に流れて組み立てる形をこの1枚で賄えるようにする
+    pos:"MF", subs:["OMF","CMF","LWG"], age:29,
     atk:15, def:8, pow:15, tec:20, spd:13, sta:14,               // 85
     skills:["マエストロ","視野の広さ","キープ力","パスの精度"],
   },
@@ -713,6 +714,123 @@ const SIGNATURES=[
     pos:"FW", subs:["LWG","CF"], age:28,
     atk:18, def:7, pow:13, tec:17, spd:17, sta:13,               // 85
     skills:["外から中へ","決定力","カットイン","オフザボール"],
+  },
+  // ---------- 銀河系軍団(→docs/03 §3.13d) ----------
+  // **同じ人物の別の時代は別のカード**にする(→§3.13d)。ベッカムは
+  // マンチェスター(le_rmf01)と、この時代の2枚がある。
+  {
+    n:85, id:"casillas", art:"le_gk06_casillas", rarity:"LEG",
+    name:"I. カシージャス", short:"カシージャス",
+    club:"マドリー・ブランコス", nation:"esp",
+    pos:"GK", subs:["GK"], age:26,
+    atk:3, def:19, pow:14, tec:16, spd:18, sta:14,               // 84
+    skills:["神の手前","反射神経","1対1の強さ","守備の統率"],
+  },
+  {
+    n:86, id:"hierro", art:"le_cb09_hierro", rarity:"LEG",
+    name:"F. イエロ", short:"イエロ",
+    club:"マドリー・ブランコス", nation:"esp",
+    pos:"DF", subs:["CB","DMF"], age:31,
+    atk:11, def:19, pow:18, tec:15, spd:9, sta:13,               // 85
+    skills:["闘将の采配","空中戦","正確なフィード","キャプテンシー"],
+  },
+  {
+    n:87, id:"helguera", art:"le_cb10_helguera", rarity:"LEG",
+    name:"I. エルゲラ", short:"エルゲラ",
+    club:"マドリー・ブランコス", nation:"esp",
+    pos:"DF", subs:["CB","DMF","RSB"], age:27,
+    atk:9, def:17, pow:16, tec:14, spd:13, sta:14,               // 83
+    skills:["万能の柱","ビルドアップ","対人守備","セカンドボール"],
+  },
+  {
+    n:88, id:"pavon", art:"le_cb11_pavon", rarity:"LEG",
+    name:"F. パボン", short:"パボン",
+    club:"マドリー・ブランコス", nation:"esp",
+    pos:"DF", subs:["CB"], age:22,
+    atk:5, def:18, pow:17, tec:11, spd:15, sta:16,               // 82
+    skills:["壁になる男","対人守備","カバーリング","ケガ耐性"],
+  },
+  {
+    n:89, id:"salgado", art:"le_rsb05_salgado", rarity:"LEG",
+    name:"M. サルガド", short:"サルガド",
+    club:"マドリー・ブランコス", nation:"esp",
+    pos:"DF", subs:["RSB","RMF"], age:27,
+    atk:10, def:16, pow:14, tec:12, spd:15, sta:18,              // 85
+    skills:["右の推進","オーバーラップ","厳しい寄せ","運動量"],
+  },
+  {
+    n:90, id:"makelele", art:"le_dmf08_makelele", rarity:"LEG",
+    name:"C. マケレレ", short:"マケレレ",
+    club:"マドリー・ブランコス", nation:"fra",
+    pos:"MF", subs:["DMF","CMF"], age:29,
+    atk:6, def:20, pow:15, tec:14, spd:15, sta:18,               // 88
+    skills:["掃除屋","ボール奪取","間合いの読み","運動量"],
+  },
+  {
+    n:91, id:"cambiasso", art:"le_dmf09_cambiasso", rarity:"LEG",
+    name:"E. カンビアッソ", short:"カンビアッソ",
+    club:"マドリー・ブランコス", nation:"arg",
+    pos:"MF", subs:["DMF","CMF"], age:22,
+    atk:9, def:16, pow:14, tec:15, spd:12, sta:17,               // 83
+    skills:["隠れた心臓","ボール奪取","展開力","運動量"],
+  },
+  {
+    n:92, id:"guti", art:"le_dmf07_guti", rarity:"LEG",
+    name:"J. グティ", short:"グティ",
+    club:"マドリー・ブランコス", nation:"esp",
+    pos:"MF", subs:["CMF","OMF","DMF"], age:26,
+    atk:15, def:9, pow:12, tec:20, spd:13, sta:14,               // 83
+    skills:["スペースの発明","視野の広さ","スルーパス","パスの精度"],
+  },
+  {
+    n:93, id:"raul", art:"le_omf04_raul", rarity:"LEG",
+    name:"R. ゴンサレス", short:"ラウール",
+    club:"マドリー・ブランコス", nation:"esp",
+    pos:"FW", subs:["OMF","CF","ST"], age:26,
+    atk:19, def:8, pow:12, tec:17, spd:14, sta:15,               // 85
+    skills:["セブンの帰還","ゴール前の嗅覚","オフザボール","キャプテンシー"],
+  },
+  {
+    n:94, id:"figo", art:"le_rwg04_figo", rarity:"LEG",
+    name:"L. フィーゴ", short:"フィーゴ",
+    club:"マドリー・ブランコス", nation:"por",
+    pos:"MF", subs:["RWG","RMF","OMF"], age:29,
+    atk:15, def:8, pow:13, tec:19, spd:15, sta:14,               // 84
+    skills:["白い矢","ドリブル突破","正確なクロス","キープ力"],
+  },
+  {
+    // **同じ人物の別の時代**(→§3.13d)。マンチェスターの le_rmf01 とは別のカード
+    n:95, id:"beckham_rm", art:"le_rwg03_beckham", rarity:"LEG",
+    name:"D. ベッカム", short:"ベッカム",
+    club:"マドリー・ブランコス", nation:"eng",
+    pos:"MF", subs:["RMF","RWG","CMF"], age:29,
+    atk:14, def:10, pow:13, tec:19, spd:12, sta:16,              // 84
+    skills:["白い背番号23","正確なクロス","サイドチェンジ","運動量"],
+  },
+  {
+    n:96, id:"solari", art:"le_lwg04_solari", rarity:"LEG",
+    name:"S. ソラーリ", short:"ソラーリ",
+    club:"マドリー・ブランコス", nation:"arg",
+    pos:"MF", subs:["LWG","LMF","ST"], age:26,
+    atk:14, def:8, pow:11, tec:15, spd:19, sta:15,               // 82
+    skills:["静かな加速","スピード","ドリブル突破","オフザボール"],
+  },
+  {
+    // **ナザーリオのほう**(→§3.13d)。C. ロナウド(le_rwg01)とは別人
+    n:97, id:"ronaldo9", art:"le_cf06_ronaldo", rarity:"LEG",
+    name:"R. ナザーリオ", short:"ロナウド",
+    club:"マドリー・ブランコス", nation:"bra",
+    pos:"FW", subs:["CF","ST","RWG"], age:27,
+    atk:20, def:3, pow:17, tec:18, spd:18, sta:11,               // 87
+    skills:["怪物","ドリブル突破","決定力","初速"],
+  },
+  {
+    n:98, id:"morientes", art:"le_cf05_morientes", rarity:"LEG",
+    name:"F. モリエンテス", short:"モリエンテス",
+    club:"マドリー・ブランコス", nation:"esp",
+    pos:"FW", subs:["CF","ST"], age:26,
+    atk:18, def:7, pow:18, tec:14, spd:12, sta:14,               // 83
+    skills:["背中で語る","ポストプレー","決定力","冷静なフィニッシュ"],
   },
 ];
 const signatureById=id=>SIGNATURES.find(s=>s.id===id);
