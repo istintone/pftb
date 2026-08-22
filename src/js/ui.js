@@ -776,6 +776,11 @@ const evalLabel=v=>v>=TUNING.eval.extendNeed?"良好":v>=45?"普通":v>=20?"不�
 
 // ---------- CARDS(コレクション) ----------
 let _cardFilter="ALL";
+// 絞り込みと並べ替え(→docs/06 §6.62)。**軸ごとに1つずつ**持つ
+let _cardRar="ALL";       // 段(STD/REG/SPE/WC/LEG)
+let _cardWhere="ALL";     // deck=編成に入っている / bench=入っていない
+                          // mine=自分のカード / loan=クラブからの貸与
+let _cardSort="ovr";      // ovr=総合力順 / rar=段順
 // 1ページに出す枚数(→docs/06 §6.35)。**全部並べると数百枚のスクロールになる**ので
 // 区切る。絞り込みを変えたら1ページ目へ戻す(前のページ番号が残ると空振りする)。
 const CARDS_PER_PAGE=12;
@@ -783,23 +788,57 @@ let _cardPage=1;
 let _bulk=false;                    // まとめて売るモード(→docs/03 §3.68)
 function renderCards(){
   const all=availableCards(), own=S.player.coll.length;
-  $("cardsFilter").innerHTML=["ALL"].concat(POS).map(p=>
-    '<button class="chip'+(p===_cardFilter?" on":"")+'" data-f="'+p+'">'+p+'</button>').join("");
-  $("cardsFilter").querySelectorAll("button").forEach(b=>{
-    b.onclick=()=>{ _cardFilter=b.dataset.f; _cardPage=1; renderCards(); };
-  });
+  // **軸ごとに1列**(→docs/06 §6.62)。押すと1ページ目に戻す(絞ったのに
+  // 3ページ目のままだと「何も無い」と読めてしまう)
+  const chips=(box,items,cur,set)=>{
+    $(box).innerHTML=items.map(([id,label,cls])=>
+      '<button class="chip'+(cls?" "+cls:"")+(id===cur?" on":"")+'" data-f="'+id+'">'
+      +esc(label)+'</button>').join("");
+    $(box).querySelectorAll("button").forEach(b=>{
+      b.onclick=()=>{ set(b.dataset.f); _cardPage=1; renderCards(); };
+    });
+  };
+  chips("cardsFilter",[["ALL","ALL"]].concat(POS.map(p=>[p,p])),
+    _cardFilter,v=>{ _cardFilter=v; });
+  // 段は**略号で出す**。WORLD CLASS のような正式名は列に収まらない
+  chips("cardsRar",[["ALL","FULL"]].concat(
+      Object.keys(RARITY).map(k=>[k,RARITY[k].abbr,"rar-"+k.toLowerCase()])),
+    _cardRar,v=>{ _cardRar=v; });
+  // **居場所**。編成に入っているか、自分のものか
+  chips("cardsWhere",[["ALL","全員"],["deck","編成"],["bench","編成外"],
+      ["mine","自分"],["loan","貸与"]],
+    _cardWhere,v=>{ _cardWhere=v; });
   // **まとめて売るモード**(→docs/03 §3.68)。入ると札のタップが「開く」から
   // 「選ぶ」に変わるので、いま何のモードなのかを必ず画面に出す
   $("cardsBulk").textContent=_bulk?"やめる":"まとめて売る";
   $("cardsBulk").classList.toggle("on",_bulk);
   $("scr-cards").classList.toggle("bulk",_bulk);
-  const list=all.filter(c=>_cardFilter==="ALL"||c.pos===_cardFilter).sort((a,b)=>b.ovr-a.ovr);
+  // **絞り込みは重ねて効く**。それぞれ別の軸なので、掛け合わせで探せる
+  const inDeck=new Set((S.squad||[]).filter(x=>x!=null));
+  const mine=new Set(S.player.coll.map(c=>c.id));
+  const RAR_ORDER=Object.keys(RARITY);
+  const list=all.filter(c=>{
+    if(_cardFilter!=="ALL"&&c.pos!==_cardFilter)return false;
+    if(_cardRar!=="ALL"&&c.rarity!==_cardRar)return false;
+    if(_cardWhere==="deck"&&!inDeck.has(c.id))return false;
+    if(_cardWhere==="bench"&&inDeck.has(c.id))return false;
+    if(_cardWhere==="mine"&&!mine.has(c.id))return false;
+    if(_cardWhere==="loan"&&mine.has(c.id))return false;
+    return true;
+  }).sort((a,b)=>_cardSort==="rar"
+    // 段順のときも、同じ段の中は総合力で並べる(段だけだと並びが毎回変わる)
+    ? (RAR_ORDER.indexOf(b.rarity)-RAR_ORDER.indexOf(a.rarity))||(b.ovr-a.ovr)
+    : (b.ovr-a.ovr)||(RAR_ORDER.indexOf(b.rarity)-RAR_ORDER.indexOf(a.rarity)));
   const pages=Math.max(1,Math.ceil(list.length/CARDS_PER_PAGE));
   if(_cardPage>pages)_cardPage=pages;                    // 売って減ったときの受け皿
   const from=(_cardPage-1)*CARDS_PER_PAGE;
   const page=list.slice(from,from+CARDS_PER_PAGE);
   $("cardsCount").innerHTML="所持カード "+list.length+" / "+all.length
     +"　<span class=\"loan\">(CLUBS)</span> クラブからの貸与 "+(all.length-own)+" 枚";
+  // 並べ替え(→docs/06 §6.62)。**2つしかないので押して入れ替える**
+  $("cardsSort").textContent=_cardSort==="ovr"?"総合力順":"段順";
+  $("cardsSort").onclick=()=>{ _cardSort=_cardSort==="ovr"?"rar":"ovr";
+    _cardPage=1; renderCards(); };
   $("cardsGrid").innerHTML=page.length
     ?page.map(c=>_bulk?bulkTile(c):cardTile(c)).join("")
     :'<div class="stub"><b>該当するカードがありません</b><span>絞り込みを変えてみてください</span></div>';

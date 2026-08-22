@@ -2891,6 +2891,59 @@ const STEPS = [
       await ctx.wait(250);
       ctx.log(tab, "→", await ctx.screen(), "/", await ctx.js("document.getElementById('hdTitle').textContent"));
       await ctx.shot(name);
+      if (tab === "cards") {
+        // **絞り込みと並べ替え**(→docs/06 §6.62)。軸ごとに1つずつ、重ねて効く
+        ctx.log("  絞り込みと並べ替え:", await ctx.js(`(()=>{
+          const pick=(box,id)=>document.querySelector('#'+box+' [data-f="'+id+'"]').click();
+          const shown=()=>document.querySelectorAll('#cardsGrid [data-card]').length;
+          const all=availableCards();
+          const per=12;
+          const want=f=>Math.min(per,all.filter(f).length);
+          pick('cardsRar','REG');
+          if(shown()!==want(c=>c.rarity==='REG'))
+            throw new Error('段の絞り込みが合わない: '+shown());
+          pick('cardsRar','ALL');
+          const inDeck=new Set((S.squad||[]).filter(x=>x!=null));
+          pick('cardsWhere','deck');
+          if(shown()!==want(c=>inDeck.has(c.id)))
+            throw new Error('編成の絞り込みが合わない: '+shown());
+          pick('cardsWhere','bench');
+          if(shown()!==want(c=>!inDeck.has(c.id)))
+            throw new Error('編成外の絞り込みが合わない: '+shown());
+          const mine=new Set(S.player.coll.map(c=>c.id));
+          pick('cardsWhere','loan');
+          if(shown()!==want(c=>!mine.has(c.id)))
+            throw new Error('貸与の絞り込みが合わない: '+shown());
+          pick('cardsWhere','ALL');
+          // **軸は重ねて効く**
+          pick('cardsFilter','GK'); pick('cardsRar','REG');
+          if(shown()!==want(c=>c.pos==='GK'&&c.rarity==='REG'))
+            throw new Error('軸を重ねると合わない: '+shown());
+          pick('cardsFilter','ALL'); pick('cardsRar','ALL');
+          // 並べ替え。**押すと入れ替わり、並びが実際に変わる**
+          const R=Object.keys(RARITY);
+          const rarOf=()=>[...document.querySelectorAll('#cardsGrid [data-card]')]
+            .map(e=>R.indexOf(cardById(Number(e.dataset.card)).rarity));
+          const btn=document.getElementById('cardsSort');
+          if(btn.textContent!=='総合力順')btn.click();
+          const a=rarOf();
+          btn.click();
+          if(btn.textContent!=='段順')throw new Error('並べ替えが切り替わらない');
+          const b=rarOf();
+          if(b.join()!==b.slice().sort((x,y)=>y-x).join())
+            throw new Error('段順になっていない: '+b.join());
+          if(a.join()===b.join()&&new Set(a).size>1)
+            throw new Error('押しても並びが変わらない');
+          btn.click();
+          if(btn.textContent!=='総合力順')throw new Error('戻らない');
+          return '段5種 ／ 編成・編成外・自分・貸与 ／ 軸は重ねて効く ／ 総合力順⇄段順';
+        })()`));
+        // 段順に並べ替えた画も撮る(上から LE → WC → SP → RG → ST)
+        await ctx.js("document.getElementById('cardsSort').click()");
+        await ctx.wait(200); await ctx.shot("09c-cards-sort");
+        await ctx.js("document.getElementById('cardsSort').click()");
+        await ctx.wait(200); await ctx.shot("09c-cards-filter");
+      }
       if (tab === "clubhouse") {
         // **CLUB はいま預かっているクラブの話だけ**(→docs/06 §6.50)
         ctx.log("  クラブの現況:", await ctx.js(`(()=>{

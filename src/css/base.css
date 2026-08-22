@@ -534,6 +534,22 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   font:500 12px/1 var(--f-head);
 }
 .chip.on{ background:var(--accent); border-color:var(--accent); color:var(--surface) }
+/* 段の札(→docs/06 §6.62)。**その段の色を縁に出す**。略号だけだと
+   ST と SP、WC と LE が並んだときに読み分けに時間がかかる */
+.chip.rar-std{ border-color:var(--rar-std) }
+.chip.rar-reg{ border-color:var(--rar-reg) }
+.chip.rar-spe{ border-color:var(--rar-spe) }
+.chip.rar-wc { border-color:var(--rar-wc)  }
+.chip.rar-leg{ border-color:var(--rar-leg) }
+.chip.rar-std.on{ background:var(--rar-std); border-color:var(--rar-std) }
+.chip.rar-reg.on{ background:var(--rar-reg); border-color:var(--rar-reg) }
+.chip.rar-spe.on{ background:var(--rar-spe); border-color:var(--rar-spe) }
+.chip.rar-wc.on { background:var(--rar-wc);  border-color:var(--rar-wc)  }
+.chip.rar-leg.on{ background:var(--rar-leg); border-color:var(--rar-leg) }
+/* 絞り込みの列を続けて置くので、間を詰める(3列で 36px 取られると札が沈む) */
+.filters + .filters{ margin-top:-6px }
+/* 並べ替え(→§6.62)。まとめて売るの左に、同じ高さで置く */
+.cd-sort{ width:auto; flex:none; padding:9px 14px; font-size:11px }
 
 /* =========================================================================
    選手カード — 背景は画像、枠と文字はすべて CSS。
