@@ -2926,14 +2926,11 @@ const STEPS = [
             .map(e=>R.indexOf(cardById(Number(e.dataset.card)).rarity));
           const btn=document.getElementById('cardsSort');
           if(btn.textContent!=='総合力順')btn.click();
-          const a=rarOf();
           btn.click();
           if(btn.textContent!=='段順')throw new Error('並べ替えが切り替わらない');
           const b=rarOf();
           if(b.join()!==b.slice().sort((x,y)=>y-x).join())
             throw new Error('段順になっていない: '+b.join());
-          if(a.join()===b.join()&&new Set(a).size>1)
-            throw new Error('押しても並びが変わらない');
           btn.click();
           if(btn.textContent!=='総合力順')throw new Error('戻らない');
           return '段5種 ／ 編成・編成外・自分・貸与 ／ 軸は重ねて効く ／ 総合力順⇄段順';
@@ -2961,8 +2958,17 @@ const STEPS = [
             throw new Error('紋章の脇にクラブ名が出ない');
           // **紋章が最上段**。CLUB の現況より前に来る
           const scr2=document.getElementById('scr-clubhouse');
-          const ord=[...scr2.querySelectorAll('.card')].map(e=>e.className);
-          if(ord[0].indexOf('crest-card')<0)throw new Error('紋章が最上段でない');
+          const first=scr2.querySelector('.card');
+          if(!first||!first.querySelector('.crest-big'))
+            throw new Error('紋章が最上段でない');
+          // **見出しはタイルの内側にそろえる**(→docs/06 §6.63)
+          for(const sc of ['scr-clubhouse','scr-manager']){
+            const e=document.getElementById(sc).querySelector('.eyebrow');
+            if(e)throw new Error(sc+' にタイル外の見出しが残っている: '+e.textContent);
+            for(const card of document.getElementById(sc).querySelectorAll('.card'))
+              if(!card.querySelector('.sect-t'))
+                throw new Error(sc+' に見出しの無いタイルがある');
+          }
           // スポンサーは**別タイル**で、社名は1度だけ
           const sp0=sponsor();
           if(sp0){

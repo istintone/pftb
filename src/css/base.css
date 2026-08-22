@@ -201,7 +201,8 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   font:10px/1.4 var(--f-mono); letter-spacing:2px; text-transform:uppercase;
   color:var(--text-dim);
 }
-.sect-t{ font:600 13px/1 var(--f-head); letter-spacing:1.5px; text-transform:uppercase; color:var(--text-2) }
+.sect-t{ font:600 13px/1 var(--f-head); letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--text-2); margin-bottom:10px }
 .lg{ font-size:11px; color:var(--text-dim) }
 .num{ font-family:var(--f-mono) }
 
@@ -1695,6 +1696,8 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   transform:translate(-52.4%,-3.3%); image-rendering:pixelated }
 .ct-face.on{ border-color:oklch(0.55 0.14 60); box-shadow:0 0 0 2px oklch(0.55 0.14 60) }
 /* CLUB のエンブレム(→docs/03 §3.54)。**押すと組み替えられる** */
+/* 紋章と名前の横並び(→docs/06 §6.63)。**見出しはタイルの内側**に置くので、
+   横並びは card そのものではなく中の1枚が持つ */
 .crest-card{ display:flex; align-items:center; gap:14px }
 .crest-big{ flex:0 0 auto; cursor:pointer; position:relative; line-height:0 }
 .crest-big::after{
