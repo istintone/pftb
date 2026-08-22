@@ -319,7 +319,7 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
    本文の画面に出すと、実機のノッチと二重になって邪魔になるだけ。
    ========================================================================= */
 .t-notch{
-  position:absolute; top:0; left:50%; transform:translateX(-50%);
+  position:absolute; top:calc(var(--bz-w) - 1px); left:50%; transform:translateX(-50%);
   width:154px; height:27px; z-index:6; pointer-events:none;
   background:oklch(0.06 0.005 255);
   border-radius:0 0 15px 15px;
@@ -335,15 +335,31 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   background:radial-gradient(circle at 34% 32%,
     oklch(0.40 0.06 250), oklch(0.10 0.02 255) 70%);
   box-shadow:inset 0 0 0 1px oklch(0.32 0.02 255) }
+/* **淵を1周させる**(→docs/06 §6.59)。ノッチだけだと「上に何か付いている」で
+   終わってしまう。framing は4辺そろって初めて板に見える。
+     1本目 … 淵そのもの(黒)
+     2本目 … 淵の内側に走る細い光。**面と淵の境**をここで作る
+     3本目 … 画面の縁の落ち込み。中身が淵の下へ潜っていくように見せる */
+.t-bezel{
+  position:absolute; inset:0; z-index:5; pointer-events:none;
+  border-radius:var(--bz-r);
+  box-shadow:
+    inset 0 0 0 var(--bz-w) oklch(0.055 0.004 255),
+    inset 0 0 0 calc(var(--bz-w) + 1px) oklch(0.42 0.012 255 / .5),
+    inset 0 0 26px calc(var(--bz-w) + 2px) oklch(0 0 0 / .38);
+}
+/* 淵の太さと丸み。**画面の幅で変える**(狭い画面ほど細く) */
+#scr-title{ --bz-w:9px; --bz-r:30px }
 /* 下の指示バー。**細く薄く**。太いと操作できるものに見える */
 .t-home{
-  position:absolute; left:50%; bottom:8px; transform:translateX(-50%);
+  position:absolute; left:50%; bottom:calc(var(--bz-w) + 5px); transform:translateX(-50%);
   width:120px; height:4px; border-radius:3px; z-index:6; pointer-events:none;
   background:oklch(0.92 0 0 / .5);
 }
 /* **狭い画面でも出す**(→§6.59)。ブラウザで遊ぶので実機のノッチは画面の外にあり、
    二重にはならない。幅に合わせて少しだけ細くする */
 @media (max-width:440px){
+  #scr-title{ --bz-w:7px; --bz-r:24px }
   .t-notch{ width:142px; height:25px }
   .t-home{ width:112px }
 }

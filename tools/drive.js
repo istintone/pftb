@@ -104,23 +104,36 @@ const STEPS = [
     // **端末の淵**(→docs/06 §6.59)。タイトルだけに出す演出
     ctx.log("  端末の淵:", await ctx.js(`(()=>{
       const n=document.querySelector('.t-notch'), hm=document.querySelector('.t-home');
+      const bz=document.querySelector('.t-bezel');
       if(!n||!hm)throw new Error('ノッチか指示バーが無い');
+      if(!bz)throw new Error('淵が無い');
       const r=n.getBoundingClientRect(), r2=hm.getBoundingClientRect();
       if(getComputedStyle(n).display==='none')throw new Error('ノッチが出ていない');
-      if(Math.round(r.top)!==0)throw new Error('ノッチが上端に無い: '+Math.round(r.top));
+      // **淵は1周する**(→docs/06 §6.59)。4辺そろって初めて板に見える
+      const rb=bz.getBoundingClientRect(), sc=document.getElementById('scr-title')
+        .getBoundingClientRect();
+      for(const [k,v] of [['上',rb.top-sc.top],['下',sc.bottom-rb.bottom],
+                          ['左',rb.left-sc.left],['右',sc.right-rb.right]])
+        if(Math.abs(v)>1)throw new Error('淵が'+k+'まで届いていない: '+v.toFixed(1));
+      const w=parseFloat(getComputedStyle(document.getElementById('scr-title'))
+        .getPropertyValue('--bz-w'));
+      if(!(w>=4&&w<=14))throw new Error('淵の太さが極端: '+w);
+      // ノッチは**淵の中に収まる**(上端ぴったりだと淵から浮く)
+      if(Math.round(r.top-sc.top)>w+2||Math.round(r.top-sc.top)<0)
+        throw new Error('ノッチが淵に収まっていない: '+Math.round(r.top-sc.top));
       // **真ん中に来る**。ずれると汚れに見える
       const mid=Math.abs((r.left+r.right)/2-innerWidth/2);
       if(mid>1.5)throw new Error('ノッチが中央でない: '+mid.toFixed(1)+'px ずれ');
       if(Math.abs((r2.left+r2.right)/2-innerWidth/2)>1.5)
         throw new Error('指示バーが中央でない');
       // **触りは通す**。押せる場所に見えてはいけない
-      for(const el of [n,hm])
+      for(const el of [n,hm,bz])
         if(getComputedStyle(el).pointerEvents!=='none')
           throw new Error('淵が触りを食っている');
       // **タイトル以外には出さない**(実機のノッチと二重にならないように)
       if(!n.closest('#scr-title'))throw new Error('タイトルの外に居る');
-      return 'ノッチ '+Math.round(r.width)+'x'+Math.round(r.height)
-        +' 上端中央 ／ 指示バー '+Math.round(r2.width)+'px ／ どちらも触りは通す';
+      return '淵 '+w+'px が1周 ／ ノッチ '+Math.round(r.width)+'x'+Math.round(r.height)
+        +' ／ 指示バー '+Math.round(r2.width)+'px ／ どれも触りは通す';
     })()`));
     await ctx.shot("01-title");
   }],
