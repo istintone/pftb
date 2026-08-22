@@ -42,7 +42,7 @@ const SIGNATURES=[
     name:"R. カルロス", short:"カルロス",
     club:"マドリー・ブランコス", nation:"bra",
     pos:"DF", subs:["LSB","LMF"], age:27,
-    atk:10, def:15, pow:18, tec:14, spd:20, sta:12,              // 89
+    atk:9, def:16, pow:18, tec:14, spd:20, sta:12,               // 89
     skills:["弾丸の左足","オーバーラップ","スピード","正確なクロス"],
   },
   {
@@ -731,7 +731,7 @@ const SIGNATURES=[
     name:"F. イエロ", short:"イエロ",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"DF", subs:["CB","DMF"], age:31,
-    atk:11, def:19, pow:18, tec:15, spd:9, sta:13,               // 85
+    atk:10, def:20, pow:18, tec:15, spd:9, sta:13,               // 85
     skills:["闘将の采配","空中戦","正確なフィード","キャプテンシー"],
   },
   {
@@ -739,7 +739,7 @@ const SIGNATURES=[
     name:"I. エルゲラ", short:"エルゲラ",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"DF", subs:["CB","DMF","RSB"], age:27,
-    atk:9, def:17, pow:16, tec:14, spd:13, sta:14,               // 83
+    atk:8, def:19, pow:15, tec:14, spd:13, sta:14,               // 83
     skills:["万能の柱","ビルドアップ","対人守備","セカンドボール"],
   },
   {
@@ -755,7 +755,7 @@ const SIGNATURES=[
     name:"M. サルガド", short:"サルガド",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"DF", subs:["RSB","RMF"], age:27,
-    atk:10, def:16, pow:14, tec:12, spd:15, sta:18,              // 85
+    atk:9, def:17, pow:14, tec:12, spd:15, sta:18,               // 85
     skills:["右の推進","オーバーラップ","厳しい寄せ","運動量"],
   },
   {
@@ -763,8 +763,10 @@ const SIGNATURES=[
     name:"C. マケレレ", short:"マケレレ",
     club:"マドリー・ブランコス", nation:"fra",
     pos:"MF", subs:["DMF","CMF"], age:29,
-    atk:6, def:20, pow:15, tec:14, spd:15, sta:18,               // 88
-    skills:["掃除屋","ボール奪取","間合いの読み","運動量"],
+    // **守備のキーマン**(→docs/03 §3.13d)。DEF は上限なので、走力を削って
+    // 対人の地力(pow)と読み(tec)へ回す。攻撃は捨てる
+    atk:3, def:20, pow:18, tec:15, spd:15, sta:17,               // 88
+    skills:["掃除屋","ボール奪取","間合いの読み","対人守備"],
   },
   {
     n:91, id:"cambiasso", art:"le_dmf09_cambiasso", rarity:"LEG",
@@ -779,7 +781,9 @@ const SIGNATURES=[
     name:"J. グティ", short:"グティ",
     club:"マドリー・ブランコス", nation:"esp",
     pos:"MF", subs:["CMF","OMF","DMF"], age:26,
-    atk:15, def:9, pow:12, tec:20, spd:13, sta:14,               // 83
+    // **DMF で使う**(→docs/03 §3.13e)。守れない選手が5人では中盤が空くので、
+    // 技巧を保ったまま守備の枚数を1人ぶん足す(20→18 と引き換えに DEF 9→14)
+    atk:13, def:14, pow:13, tec:18, spd:12, sta:13,               // 83
     skills:["スペースの発明","視野の広さ","スルーパス","パスの精度"],
   },
   {

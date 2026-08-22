@@ -284,8 +284,11 @@ const SKILL_FX={
     fx:[{ at:"gk", k:1.10 },{ at:"psoGk", k:1.30 }] },
   "闘将の采配":     { sig:"hierro", move:"最終ラインの号令",
     fx:[{ at:"counter", grp:"all", s:1.05 },{ at:"aerial", k:1.20 }] },
+  // **2つとも守備に置く**。消耗が緩いだけでは「守備のキーマン」に見えない。
+  // 迎撃の群は press / spd / tec の3つ(def という群は無い →SK_GRP)。
+  // 荒く潰す(press)と、読んで刈る(tec)の両方をこの1枚で賄う
   "掃除屋":         { sig:"makelele", move:"刈り取り",
-    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"stam", k:0.85 }] },
+    fx:[{ at:"counter", grp:"press", w:1.60, s:1.10 },{ at:"counter", grp:"tec", s:1.14 }] },
   // **w は付けない**。w で選ばれやすくしたうえに s も上げると帯を大きく超える
   // (w:1.85 + s:1.14 で 40.3。目標 23.1 の帯は 16.2〜30.0)
   "白い矢":         { sig:"figo", move:"縦への一閃",
@@ -1425,6 +1428,21 @@ const TACTICS=[
     fx:[{ at:"aerial", k:0.90 }],
     line:"回して崩せ！",
   },
+  {
+    // **記念の名前をそのまま采配に**。技巧・速さ・技と速さ に続いて、
+    // ここは**個の力**。3つと違う軸(atk/def)を動かす
+    id:"galacticos", label:"ロス・ガラクティコス", icon:"✧",
+    form:["4-2-3-1"], exp:0, mem:true, club:"マドリー・ブランコス",
+    desc:"個で決める。マドリー・ブランコスの選手だけが背負える、守備を捨てた形",
+    // **威力は他の記念采配と揃える**(攻+10 守-4 ≒ メラヴィリオーゾの技+10 力-4)。
+    // 傾きを上げても勝敗はほとんど動かない(実測 atk1.10→1.22 で +0.20)。
+    // この11人が他の3チームに競り負けるのは**編成そのもの**の話で、
+    // DEF の平均が 12.9(他は 13.8〜14.9)しかない。采配で埋める筋合いではない
+    ordM:{ atk:1.10, def:0.96 },
+    // **奪い返しに行けない**。前がかりのまま置き去りになる
+    fx:[{ at:"counter", grp:"press", s:0.96 }],
+    line:"個で決めろ！",
+  },
 ];
 const tacticById=id=>TACTICS.find(t=>t.id===id);
 
@@ -1495,6 +1513,26 @@ const MEMORABILIA=[
     kp:"messibar",
     order:"center",
     tactic:"mesqueunclub",
+  },
+  {
+    id:"rma2004",
+    hash:"GALACTICOS-2004",
+    name:"2002-04 銀河系軍団",
+    sub:"星を並べた11人",
+    note:"世界中の主役を1枚の紙に並べた、白の時代。",
+    club:"マドリー・ブランコス",
+    coach:"V. デル・ボスケ",
+    face:"mg02g",
+    coachType:"steady",  // 最初の形を変えない(→§3.56)
+    form:"4-2-3-1",
+    // 枠の並びは FORMATIONS["4-2-3-1"] と同じ順に置く
+    //   GK / LSB / CB / CB / RSB / DMF / DMF / LWG / OMF / RWG / CF
+    xi:["casillas","rcarlos","helguera","hierro","salgado",
+        "makelele","guti","zidane","raul","figo","ronaldo9"],
+    bench:["pavon","cambiasso","beckham_rm","solari","morientes"],
+    kp:"zidane",
+    order:"attack",
+    tactic:"galacticos",
   },
 ];
 const memById=id=>MEMORABILIA.find(m=>m.id===id);
