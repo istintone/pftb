@@ -243,6 +243,9 @@ body.ui-sepia #app{ box-shadow:0 24px 60px oklch(0.45 0.05 70 / .35) }
   border:1px dashed var(--line); border-radius:12px;
   padding:22px 16px; margin:10px 0; text-align:center; color:var(--text-mute);
 }
+/* **格子の中では全幅に張る**(→docs/06 §6.64)。1マスに収まると
+   カード1枚ぶんの幅に潰れ、格子の段の高さも一緒に崩れる */
+.grid > .stub{ grid-column:1 / -1; margin:0 }
 .stub b{ display:block; margin-bottom:6px; color:var(--text-dim);
   font:600 12px/1 var(--f-head); letter-spacing:1.5px; text-transform:uppercase }
 .stub span{ font-size:11px; line-height:1.7 }

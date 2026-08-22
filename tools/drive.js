@@ -2920,6 +2920,16 @@ const STEPS = [
           if(shown()!==want(c=>c.pos==='GK'&&c.rarity==='REG'))
             throw new Error('軸を重ねると合わない: '+shown());
           pick('cardsFilter','ALL'); pick('cardsRar','ALL');
+          // **該当なしのときは全幅に張る**(→docs/06 §6.64)。
+          // 1マスに収まるとカード1枚ぶんの幅に潰れ、段の高さも崩れる
+          pick('cardsFilter','GK'); pick('cardsRar','LEG');
+          const stub=document.querySelector('#cardsGrid .stub');
+          if(!stub)throw new Error('該当なしの表示が出ない');
+          const gw=document.getElementById('cardsGrid').getBoundingClientRect().width;
+          const sw=stub.getBoundingClientRect().width;
+          if(sw < gw-2)throw new Error('該当なしの枠が全幅でない: '+Math.round(sw)
+            +' / '+Math.round(gw));
+          window.__stubShot=1;
           // 並べ替え。**押すと入れ替わり、並びが実際に変わる**
           const R=Object.keys(RARITY);
           const rarOf=()=>[...document.querySelectorAll('#cardsGrid [data-card]')]
@@ -2935,6 +2945,9 @@ const STEPS = [
           if(btn.textContent!=='総合力順')throw new Error('戻らない');
           return '段5種 ／ 編成・編成外・自分・貸与 ／ 軸は重ねて効く ／ 総合力順⇄段順';
         })()`));
+        await ctx.shot("09d-cards-empty");   // 該当なしの見え方
+        await ctx.js(`(()=>{ document.querySelector('#cardsFilter [data-f="ALL"]').click();
+          document.querySelector('#cardsRar [data-f="ALL"]').click(); })()`);
         // 段順に並べ替えた画も撮る(上から LE → WC → SP → RG → ST)
         await ctx.js("document.getElementById('cardsSort').click()");
         await ctx.wait(200); await ctx.shot("09c-cards-sort");
