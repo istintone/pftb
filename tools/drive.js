@@ -87,7 +87,8 @@ const STEPS = [
     // **どのビルドを見ているか**が分かること(→SPEC.md)
     ctx.log("  版の表記:", await ctx.js(`(()=>{
       const t=document.getElementById('tFoot').textContent;
-      if(t.indexOf('v'+VERSION)<0)throw new Error('版が出ていない: '+t);
+      if(t.indexOf('v'+VERSION)<0)throw new Error('版が出ていない: '+t
+        +' / 起動帯: '+document.getElementById('bootStat').textContent);
       if(t.indexOf('save v'+SAVE_VER)<0)throw new Error('セーブの形式が出ていない: '+t);
       const r=document.getElementById('tFoot').getBoundingClientRect();
       if(r.width<=0||r.bottom>innerHeight)throw new Error('画面の外にある');
@@ -781,10 +782,23 @@ const STEPS = [
     await ctx.js("if(window.__adId){sponsor().id=window.__adId;show('home');}");
     await ctx.wait(200);
     await ctx.shot("03d-home-banner");
-    // HOME のタイル(→docs/11 §6.44)。**4枚**。市場と実績はそれぞれ行き先を持つ
+    // HOME のタイル(→docs/11 §6.44 / §6.66)。**6枚を2枚ずつ3段**。
+    // 上から スカウト/編成 → 市場/エキシビジョン → 実績/ミッション
     ctx.log("  HOMEのタイル:", await ctx.js(`(()=>{
       const t=[...document.querySelectorAll('#scr-home .tiles .tile')];
-      if(t.length!==4)throw new Error('タイルが4枚でない: '+t.length);
+      if(t.length!==6)throw new Error('タイルが6枚でない: '+t.length);
+      const wantIds=['tileScout','tileDeck','tileMarket','tileExhib',
+                     'tileTrophy','tileMission'];
+      const gotIds=t.map(e=>e.id);
+      if(gotIds.join()!==wantIds.join())throw new Error('並びが違う: '+gotIds.join('/'));
+      // **どのタイルも行き先を持つ**(押して何も起きないタイルを置かない)
+      for(const [id,dest] of [['tileExhib','scr-exhibition'],['tileMission','scr-mission'],
+                              ['tileTrophy','scr-manager']]){
+        document.getElementById(id).click();
+        const now=(document.querySelector('.screen.on')||{}).id;
+        if(now!==dest)throw new Error(id+' が '+dest+' へ行かない: '+now);
+        goBack();
+      }
       // **実績は 獲った数/全部 と 次に狙うもの**
       const tr=document.getElementById('tileTrophySub').textContent;
       const defs=trophyDefs(), got=defs.filter(d=>trophyOf(d.id)).length;
@@ -809,11 +823,13 @@ const STEPS = [
       if((document.querySelector('.screen.on')||{}).id!=='scr-market')
         throw new Error('市場へ飛ばない');
       goBack();
+      // **実績の棚は MANAGER**(→docs/11 §6.50 で移した)
       document.getElementById('tileTrophy').click();
-      if((document.querySelector('.screen.on')||{}).id!=='scr-clubhouse')
-        throw new Error('実績（CLUB）へ飛ばない');
+      if((document.querySelector('.screen.on')||{}).id!=='scr-manager')
+        throw new Error('実績（MANAGER）へ飛ばない');
+      if(!document.getElementById('clubTrophies'))throw new Error('棚が無い');
       show('home');
-      return '4枚 ／ 実績「'+tr.replace(/\s+/g,' ')+'」 ／ 市場「'+mk+'」'
+      return '6枚 ／ 実績「'+tr.replace(/\s+/g,' ')+'」 ／ 市場「'+mk+'」'
         +(hot.length?'（WC '+hot.length+'人）':'');
     })()`));
     await ctx.shot("03e-home-tiles");
@@ -1688,7 +1704,13 @@ const STEPS = [
       const dr=document.getElementById('kpDrawer').getBoundingClientRect();
       const pr=document.getElementById('mPitch').getBoundingClientRect();
       if(Math.abs(dr.top-pr.top)>2||Math.abs(dr.height-pr.height)>2)
-        throw new Error('ピッチと高さが合っていない: 引き出し '
+        throw new Error('ピッチと高さ['
+          +(()=>{ let e=document.getElementById('mPitch'),out=[];
+            while(e&&e!==document.body){ const c=getComputedStyle(e);
+              out.push(e.id||e.className||e.tagName); 
+              if(c.display==='none')out.push('←none'); e=e.parentElement; }
+            return out.slice(0,6).join('>'); })()+']['
+          +(document.querySelector('.screen.on')||{}).id+']: 引き出し '
           +Math.round(dr.top)+'/'+Math.round(dr.height)
           +' ピッチ '+Math.round(pr.top)+'/'+Math.round(pr.height));
       // 1行の高さ。**詰めすぎると押しにくい**ので下限を見る
@@ -2322,7 +2344,7 @@ const STEPS = [
     })()`));
     // 状態が付いた画も撮っておく(目でも確かめられるように)
     await ctx.js(`(()=>{ S.player.trophies=[{id:'kings',name:'k',kind:'cup',n:1,season:1,last:1}];
-      memUnlock(MEMORABILIA[0].hash); show('manager'); renderManager(); })()`);
+      memUnlock(MEMORABILIA[0].hash); show('exhibition'); renderExhibition(); })()`);
     await ctx.wait(250); await ctx.shot("30h-sepia-trophy");
     await ctx.js(`(()=>{ S.world.matchday=S.world.fixtures.length+1;
       show('season'); renderSeason(); scrollToCurrent(); })()`);
@@ -2377,7 +2399,7 @@ const STEPS = [
     await ctx.wait(250);
     ctx.log("HOMEのタイル:", await ctx.js(`(()=>{
       const t=[...document.querySelectorAll('.tiles .tile')];
-      if(t.length!==4)throw new Error('タイルが4枚ではない: '+t.length);
+      if(t.length!==6)throw new Error('タイルが6枚ではない: '+t.length);
       return t.map(e=>e.querySelector('.tile-t').textContent+'('
         +e.querySelector('.tile-s').textContent+')').join(' / ');
     })()`));
@@ -2402,6 +2424,16 @@ const STEPS = [
       return 'タイル2枚は固定 ／ 次戦は8節で '+seen.size+' 種 ／ 描き直しても不変';
     })()`));
     await ctx.shot("19-home-tiles");
+    // 新しい2画面(→docs/11 §6.66)
+    await ctx.js("show('exhibition')"); await ctx.wait(250);
+    await ctx.shot("19d-exhibition");
+    await ctx.js("show('mission')"); await ctx.wait(250);
+    await ctx.shot("19e-mission");
+    // 実績タイルは MANAGER の棚まで送る(→docs/11 §6.66)
+    await ctx.js("show('home'); document.getElementById('tileTrophy').click();");
+    await ctx.wait(350);
+    await ctx.shot("19f-trophy-jump");
+    await ctx.js("show('home')");
     await ctx.js("document.getElementById('tileScout').click()");
     await ctx.wait(300);
     ctx.log("スカウト:", await ctx.screen(), "/", await ctx.js(
@@ -3020,7 +3052,7 @@ const STEPS = [
           }
           // **監督の話は混ざらない**。ここに経歴やトロフィーの棚があってはいけない
           const scr=document.getElementById('scr-clubhouse');
-          for(const id of ['clubHistory','clubTrophies','memList','clubMgrFace'])
+          for(const id of ['clubHistory','clubTrophies','clubMgrFace'])
             if(scr.querySelector('#'+id))throw new Error('CLUB に監督の '+id+' が残っている');
           // **このクラブに来てからの記録だけ**(→docs/10 §3.9a)
           const keep=S.player.history.slice(), kw=(S.club.won||[]).slice();
@@ -3128,7 +3160,7 @@ const STEPS = [
         await ctx.wait(300);
         await ctx.shot("12g-club-crest");
         // メモラビリア(→docs/10 §3.55)
-        await ctx.js("show('manager')");          // メモラビリアは MANAGER
+        await ctx.js("show('exhibition')");       // メモラビリアは EXHIBITION
         // **全部のメモラビリアを構造で見張る**(→docs/10 §3.55)。
         // 1つだけ手で確かめていると、足したときの綴り違いや枠のずれに気づけない
         ctx.log("  メモラビリアの整合:", await ctx.js(`(()=>{

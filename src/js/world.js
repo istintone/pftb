@@ -1360,8 +1360,8 @@ function memInvite(m){
     from:"sec", title:m.name+" から招待が届いています",
     text:"監督、「"+m.name+"」から練習試合の申し入れがありました。"
       +m.sub+"が相手です。節も日程も使いません、いつでも受けられます。"
-      +"MANAGER のメモラビリアから挑めますよ。……胸を借りるつもりで、どうぞ。",
-    go:"manager",
+      +"HOME のエキシビジョンから挑めますよ。……胸を借りるつもりで、どうぞ。",
+    go:"exhibition",
   });
 }
 function memUnlock(code){

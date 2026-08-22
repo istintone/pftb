@@ -28,6 +28,9 @@ const SCREENS={
   clubhouse: { title:"CLUB",      tab:"clubhouse", chrome:"full", render:()=>renderClubhouse() },
   // **監督はクラブと別の入れ物**(→docs/11 §6.50)。ヘッダーの顔から入る
   manager:   { title:"MANAGER",   chrome:"back",   render:()=>renderManager() },
+  // **日程に依らない一戦**(→docs/11 §6.66)。いまはメモラビリアだけ
+  exhibition:{ title:"EXHIBITION", under:"home",  chrome:"back", render:()=>renderExhibition() },
+  mission:   { title:"MISSION",   under:"home",   chrome:"back", render:()=>renderMission() },
   schedule:  { title:"FIXTURES",  under:"season",  chrome:"back", render:()=>renderSchedule() },
   standings: { title:"STANDINGS", under:"season",  chrome:"back", render:()=>renderStandings() },
   foe:       { title:"OPPONENT",  under:"season",  chrome:"back", render:()=>renderFoe() },
@@ -349,6 +352,23 @@ function renderHomeMarket(){
  * 実績のタイル(→docs/11 §6.44)。**獲った数と、次に狙うもの**。
  * 棚(→§3.36)は易しい順に並んでいるので、まだ獲っていない先頭がそのまま次の目標。
  */
+/**
+ * エキシビジョン(→docs/11 §6.66)。**節も日程も使わない試合**を集める。
+ * いまはメモラビリアだけなので、開いた数をそのまま出す。
+ */
+function renderHomeExhib(){
+  const n=memList().length, all=MEMORABILIA.length;
+  $("tileExhibSub").innerHTML=n
+    ? '<b class="tl-num">'+n+'</b> / '+all+' 戦'
+    : "合言葉で開きます";
+  // **1つも開いていなければ絵も出さない**(→docs/11 §6.30)
+  $("tileExhibArt").innerHTML=n?stickerArt("trophy"):"";
+}
+/** ミッション(→docs/11 §6.66)。**中身はこれから**なので、入口だけ置く。 */
+function renderHomeMission(){
+  $("tileMissionSub").textContent="準備中";
+  $("tileMissionArt").innerHTML="";
+}
 function renderHomeTrophy(){
   const defs=trophyDefs();
   const got=defs.filter(d=>trophyOf(d.id)).length;
@@ -457,6 +477,8 @@ function renderHome(){
   $("tileScoutArt").innerHTML=stickerArt("scout");
   $("tileDeckArt").innerHTML=stickerArt("board");
   renderHomeMarket();
+  renderHomeExhib();
+  renderHomeMission();
   renderHomeTrophy();
   // **節と HOME/AWAY は1行にまとめる**(→docs/11 §6.58)。以前は下にもう1行
   // 「AWAY ／ 第2節」を置いていたが、節は上の MATCHDAY と同じことを言っていた
@@ -3095,9 +3117,19 @@ function renderClubRecord(){
  * MANAGER(→docs/11 §6.50)。**任期をまたいで残るもの**だけを置く。
  * 顔と背景の設定、メモラビリア、生涯の経歴とトロフィー、カード見本。
  */
+/** エキシビジョン(→docs/11 §6.66)。いまはメモラビリアの一覧がそのまま中身。 */
+function renderExhibition(){ renderMem(); }
+/**
+ * ミッション(→docs/11 §6.66)。**まだ何も無い**。
+ * 入口だけ先に置いて、HOME からの導線を通しておく。
+ */
+function renderMission(){
+  $("missionList").innerHTML='<div class="stub"><b>準備中</b>'
+    +'<span>クラブやキャリアの目標を、ここに並べる予定です。</span></div>';
+}
 function renderManager(){
   $("clubMgrName").textContent=S.coach||"監督";
-  renderClubMgr(); renderMem();
+  renderClubMgr();
   $("clubFame").textContent=fmtNum(S.player.fame);
   $("clubTickets").textContent=ticketTotal();
   // **直近だけ見せる**(→docs/03 §3.2.3)。長く続けるほど経歴は伸びるので、
@@ -4986,9 +5018,17 @@ $("cfgModal").onclick=e=>{ if(e.target===$("cfgModal"))closeCfg(); };
 $("newsDone").onclick=closeNews;
 $("newsModal").onclick=e=>{ if(e.target===$("newsModal"))closeNews(); };
 $("tileMarket").onclick=()=>show("market",{push:1});
+$("tileExhib").onclick=()=>show("exhibition",{push:1});
+$("tileMission").onclick=()=>show("mission",{push:1});
 // 開封は**1回目のタップで最後まで送り、2回目で閉じる**(→docs/11 §6.56)
 $("scoutReveal").onclick=()=>{ if(_rvDone)_rvDone(); else closeReveal(); };
-$("tileTrophy").onclick=()=>show("clubhouse");
+// **実績の棚は MANAGER にある**(→docs/11 §6.50 で移した)。
+// 押したら棚まで送る — 画面を開いただけでは、上の顔と経歴の下に埋もれている
+$("tileTrophy").onclick=()=>{
+  show("manager",{push:1});
+  setTimeout(()=>{ const el=$("clubTrophies");
+    if(el)try{ el.scrollIntoView({block:"start"}); }catch(e){} },30);
+};
 $("crestDone").onclick=closeCrest;
 $("crestModal").onclick=e=>{ if(e.target===$("crestModal"))closeCrest(); };
 $("faceDone").onclick=closeFace;

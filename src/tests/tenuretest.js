@@ -427,8 +427,9 @@ function runSeason(hand) {
       assert.ok(m1 && m1 !== "have", "合言葉で開く");
       assert.strictEqual(inv(), 1, "合言葉で開いても招待が届く");
       const d = E.mailDef(E.mailList()[0]);
-      assert.ok(d.text.indexOf("メモラビリア") >= 0, "どこから挑むかが書いてある");
-      assert.strictEqual(d.go, "manager", "メモラビリアのある画面へ連れていく");
+      // **HOME のエキシビジョンへ**(→docs/11 §6.66)。MANAGER から移した
+      assert.ok(d.text.indexOf("エキシビジョン") >= 0, "どこから挑むかが書いてある");
+      assert.strictEqual(d.go, "exhibition", "メモラビリアのある画面へ連れていく");
       // **重ねて開いても増えない**
       E.memUnlock(E.MEMORABILIA[0].hash); E.memUnlock(E.MEMORABILIA[0].hash);
       assert.strictEqual(inv(), 1, "二度目は届かない");
